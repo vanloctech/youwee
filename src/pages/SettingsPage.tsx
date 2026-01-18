@@ -2,8 +2,7 @@ import { useTheme } from '@/contexts/ThemeContext';
 import { themes } from '@/lib/themes';
 import type { ThemeName } from '@/lib/themes';
 import { cn } from '@/lib/utils';
-import { Check, Sun, Moon } from 'lucide-react';
-import { Label } from '@/components/ui/label';
+import { Check, Sun, Moon, Github, ExternalLink } from 'lucide-react';
 
 // Gradient backgrounds for theme preview
 const themeGradients: Record<ThemeName, string> = {
@@ -26,138 +25,175 @@ export function SettingsPage() {
       </header>
 
       {/* Content */}
-      <div className="flex-1 overflow-auto p-6 space-y-6">
-        {/* Appearance */}
+      <div className="flex-1 overflow-auto p-4 sm:p-6 space-y-6">
+        {/* Appearance Section */}
         <div className="space-y-4">
           <div>
-            <h2 className="text-sm font-medium">Appearance</h2>
+            <h2 className="text-sm font-semibold">Appearance</h2>
             <p className="text-xs text-muted-foreground">
-              Customize the look and feel of the app
+              Customize how Youwee looks
             </p>
           </div>
 
-          {/* Mode Selection */}
-          <div className="rounded-xl border bg-card/50 backdrop-blur-sm p-4 space-y-4">
-            <Label className="text-xs text-muted-foreground">Mode</Label>
-            <div className="grid grid-cols-2 gap-3">
-              <button
-                onClick={() => setMode('light')}
-                className={cn(
-                  'flex items-center gap-3 p-4 rounded-xl border-2 transition-all',
-                  mode === 'light'
-                    ? 'border-primary bg-primary/5'
-                    : 'border-transparent bg-accent/30 hover:bg-accent/50'
-                )}
-              >
-                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-amber-200 to-orange-300 flex items-center justify-center shadow-lg">
-                  <Sun className="w-5 h-5 text-amber-700" />
-                </div>
-                <div className="text-left">
-                  <p className="text-sm font-medium">Light</p>
-                  <p className="text-xs text-muted-foreground">Clean & bright</p>
-                </div>
-                {mode === 'light' && (
-                  <Check className="w-5 h-5 text-primary ml-auto" />
-                )}
-              </button>
-
-              <button
-                onClick={() => setMode('dark')}
-                className={cn(
-                  'flex items-center gap-3 p-4 rounded-xl border-2 transition-all',
-                  mode === 'dark'
-                    ? 'border-primary bg-primary/5'
-                    : 'border-transparent bg-accent/30 hover:bg-accent/50'
-                )}
-              >
-                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-slate-700 to-slate-900 flex items-center justify-center shadow-lg">
-                  <Moon className="w-5 h-5 text-slate-300" />
-                </div>
-                <div className="text-left">
-                  <p className="text-sm font-medium">Dark</p>
-                  <p className="text-xs text-muted-foreground">Easy on the eyes</p>
-                </div>
-                {mode === 'dark' && (
-                  <Check className="w-5 h-5 text-primary ml-auto" />
-                )}
-              </button>
-            </div>
-          </div>
-
-          {/* Theme Selection */}
-          <div className="rounded-xl border bg-card/50 backdrop-blur-sm p-4 space-y-4">
-            <Label className="text-xs text-muted-foreground">Theme Color</Label>
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
-              {themes.map((t) => (
+          <div className="rounded-xl border bg-card/50 backdrop-blur-sm p-4 space-y-5">
+            {/* Mode Toggle - Compact */}
+            <div className="flex items-center justify-between">
+              <span className="text-sm font-medium">Mode</span>
+              <div className="flex items-center gap-1 p-1 rounded-lg bg-muted/50">
                 <button
-                  key={t.name}
-                  onClick={() => setTheme(t.name)}
+                  onClick={() => setMode('light')}
                   className={cn(
-                    'flex flex-col items-center gap-2.5 p-4 rounded-xl border-2 transition-all group',
-                    theme === t.name
-                      ? 'border-primary bg-primary/5'
-                      : 'border-transparent hover:bg-accent/50'
+                    'flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-all',
+                    mode === 'light'
+                      ? 'bg-background text-foreground shadow-sm'
+                      : 'text-muted-foreground hover:text-foreground'
                   )}
                 >
-                  <div
+                  <Sun className="w-4 h-4" />
+                  <span className="hidden sm:inline">Light</span>
+                </button>
+                <button
+                  onClick={() => setMode('dark')}
+                  className={cn(
+                    'flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-all',
+                    mode === 'dark'
+                      ? 'bg-background text-foreground shadow-sm'
+                      : 'text-muted-foreground hover:text-foreground'
+                  )}
+                >
+                  <Moon className="w-4 h-4" />
+                  <span className="hidden sm:inline">Dark</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Divider */}
+            <div className="border-t" />
+
+            {/* Theme Colors - Compact Grid */}
+            <div className="space-y-3">
+              <span className="text-sm font-medium">Theme</span>
+              <div className="flex flex-wrap gap-2">
+                {themes.map((t) => (
+                  <button
+                    key={t.name}
+                    onClick={() => setTheme(t.name)}
                     className={cn(
-                      'w-12 h-12 rounded-full flex items-center justify-center shadow-lg transition-transform group-hover:scale-110',
-                      themeGradients[t.name]
+                      'group relative flex items-center gap-2 px-3 py-2 rounded-lg border transition-all',
+                      theme === t.name
+                        ? 'border-primary bg-primary/5 ring-1 ring-primary/20'
+                        : 'border-transparent bg-muted/30 hover:bg-muted/50'
                     )}
                   >
-                    {theme === t.name ? (
-                      <Check className="w-5 h-5 text-white drop-shadow" />
-                    ) : (
-                      <span className="text-lg">{t.emoji}</span>
-                    )}
-                  </div>
-                  <span className="text-sm font-medium">{t.label}</span>
-                </button>
-              ))}
+                    <div
+                      className={cn(
+                        'w-5 h-5 rounded-full shadow-sm flex items-center justify-center',
+                        themeGradients[t.name]
+                      )}
+                    >
+                      {theme === t.name && (
+                        <Check className="w-3 h-3 text-white drop-shadow" />
+                      )}
+                    </div>
+                    <span className="text-xs font-medium">{t.label}</span>
+                  </button>
+                ))}
+              </div>
             </div>
           </div>
         </div>
 
-        {/* About */}
+        {/* About Section */}
         <div className="space-y-4">
           <div>
-            <h2 className="text-sm font-medium">About</h2>
+            <h2 className="text-sm font-semibold">About</h2>
             <p className="text-xs text-muted-foreground">
-              App information
+              Application information
             </p>
           </div>
 
-          <div className="rounded-xl border bg-card/50 backdrop-blur-sm p-4 space-y-3">
-            <div className="flex items-center gap-3">
-              <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-primary/80 to-primary flex items-center justify-center shadow-lg">
-                <svg 
-                  viewBox="0 0 24 24" 
-                  className="w-7 h-7 text-primary-foreground"
-                  fill="currentColor"
-                >
-                  <path d="M19.615 3.184c-3.604-.246-11.631-.245-15.23 0-3.897.266-4.356 2.62-4.385 8.816.029 6.185.484 8.549 4.385 8.816 3.6.245 11.626.246 15.23 0 3.897-.266 4.356-2.62 4.385-8.816-.029-6.185-.484-8.549-4.385-8.816zm-10.615 12.816v-8l8 3.993-8 4.007z"/>
-                </svg>
+          <div className="rounded-xl border bg-card/50 backdrop-blur-sm overflow-hidden">
+            {/* App Info Header */}
+            <div className="p-5 flex items-center gap-4 border-b bg-gradient-to-r from-primary/5 to-transparent">
+              <div className="w-16 h-16 rounded-2xl overflow-hidden shadow-lg ring-1 ring-border">
+                <img 
+                  src="/logo-128.png" 
+                  alt="Youwee" 
+                  className="w-full h-full object-cover"
+                />
               </div>
-              <div>
-                <h3 className="font-semibold gradient-text">Youwee</h3>
-                <p className="text-xs text-muted-foreground">Version 0.1.0</p>
+              <div className="flex-1">
+                <h3 className="text-xl font-bold gradient-text">Youwee</h3>
+                <p className="text-sm text-muted-foreground">Version 0.1.0</p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Modern YouTube Video Downloader
+                </p>
               </div>
             </div>
-            <p className="text-sm text-muted-foreground">
-              A modern YouTube video downloader powered by yt-dlp. 
-              Download videos in various qualities and formats.
-            </p>
-            <div className="flex gap-2 text-xs text-muted-foreground">
-              <span>Built with Tauri + React</span>
-              <span>•</span>
-              <a 
-                href="https://github.com/vanloctech/youtube-downloader" 
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-primary hover:underline"
-              >
-                GitHub
-              </a>
+
+            {/* Description */}
+            <div className="p-4 border-b">
+              <p className="text-sm text-muted-foreground leading-relaxed">
+                A beautiful, fast, and modern YouTube video downloader built with Tauri and React. 
+                Download videos in various qualities (up to 4K) and formats with H.264 codec support for maximum compatibility.
+              </p>
+            </div>
+
+            {/* Features */}
+            <div className="p-4 border-b">
+              <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-3">Features</h4>
+              <div className="grid grid-cols-2 gap-2 text-xs">
+                <div className="flex items-center gap-2">
+                  <span className="w-1.5 h-1.5 rounded-full bg-primary" />
+                  <span>Batch downloads</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="w-1.5 h-1.5 rounded-full bg-primary" />
+                  <span>Playlist support</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="w-1.5 h-1.5 rounded-full bg-primary" />
+                  <span>4K/2K/1080p quality</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="w-1.5 h-1.5 rounded-full bg-primary" />
+                  <span>H.264 codec</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="w-1.5 h-1.5 rounded-full bg-primary" />
+                  <span>Audio extraction</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="w-1.5 h-1.5 rounded-full bg-primary" />
+                  <span>6 color themes</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Tech Stack & Links */}
+            <div className="p-4 flex flex-wrap items-center justify-between gap-3">
+              <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                <span className="px-2 py-1 rounded bg-muted/50">Tauri 2.0</span>
+                <span className="px-2 py-1 rounded bg-muted/50">React 19</span>
+                <span className="px-2 py-1 rounded bg-muted/50">yt-dlp</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <a 
+                  href="https://github.com/vanloctech/youtube-downloader" 
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-foreground text-background hover:opacity-90 transition-opacity"
+                >
+                  <Github className="w-4 h-4" />
+                  <span>GitHub</span>
+                  <ExternalLink className="w-3 h-3" />
+                </a>
+              </div>
+            </div>
+
+            {/* License */}
+            <div className="px-4 py-3 bg-muted/30 text-xs text-muted-foreground text-center">
+              Open source under MIT License • Made with ❤️ by vanloctech
             </div>
           </div>
         </div>
