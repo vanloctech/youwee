@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 use std::process::Stdio;
 use std::sync::atomic::{AtomicBool, Ordering};
-use tauri::{AppHandle, Emitter};
+use tauri::{AppHandle, Emitter, Manager};
 use tauri_plugin_shell::ShellExt;
 use tauri_plugin_shell::process::CommandEvent;
 use tokio::io::{AsyncBufReadExt, BufReader};
@@ -607,6 +607,207 @@ async fn stop_download() -> Result<(), String> {
     Ok(())
 }
 
+/// yt-dlp version information
+#[derive(Clone, Serialize)]
+pub struct YtdlpVersionInfo {
+    pub version: String,
+    pub latest_version: Option<String>,
+    pub update_available: bool,
+    pub is_bundled: bool,
+    pub binary_path: String,
+}
+
+/// Get yt-dlp version by running --version command
+#[tauri::command]
+async fn get_ytdlp_version(app: AppHandle) -> Result<YtdlpVersionInfo, String> {
+    let sidecar_result = app.shell().sidecar("yt-dlp");
+    
+    let (version, is_bundled, binary_path) = match sidecar_result {
+        Ok(sidecar) => {
+            let (mut rx, _child) = sidecar
+                .args(["--version"])
+                .spawn()
+                .map_err(|e| format!("Failed to start yt-dlp: {}", e))?;
+            
+            let mut output = String::new();
+            while let Some(event) = rx.recv().await {
+                if let CommandEvent::Stdout(bytes) = event {
+                    output.push_str(&String::from_utf8_lossy(&bytes));
+                }
+            }
+            
+            let version = output.trim().to_string();
+            // Get bundled binary path
+            let resource_dir = app.path().resource_dir().ok();
+            let bin_path = resource_dir
+                .map(|p| p.join("bin").join("yt-dlp").to_string_lossy().to_string())
+                .unwrap_or_else(|| "bundled".to_string());
+            
+            (version, true, bin_path)
+        }
+        Err(_) => {
+            // Fallback to system yt-dlp
+            let output = Command::new("yt-dlp")
+                .args(["--version"])
+                .stdout(Stdio::piped())
+                .stderr(Stdio::piped())
+                .output()
+                .await
+                .map_err(|e| format!("yt-dlp not found: {}", e))?;
+            
+            let version = String::from_utf8_lossy(&output.stdout).trim().to_string();
+            
+            // Try to find system binary path
+            let which_output = Command::new("which")
+                .arg("yt-dlp")
+                .output()
+                .await
+                .ok();
+            
+            let bin_path = which_output
+                .map(|o| String::from_utf8_lossy(&o.stdout).trim().to_string())
+                .unwrap_or_else(|| "system".to_string());
+            
+            (version, false, bin_path)
+        }
+    };
+    
+    Ok(YtdlpVersionInfo {
+        version,
+        latest_version: None,
+        update_available: false,
+        is_bundled,
+        binary_path,
+    })
+}
+
+/// GitHub release info structure
+#[derive(Deserialize)]
+struct GitHubRelease {
+    tag_name: String,
+}
+
+/// Check for yt-dlp updates from GitHub
+#[tauri::command]
+async fn check_ytdlp_update() -> Result<String, String> {
+    let client = reqwest::Client::builder()
+        .user_agent("Youwee/0.1.0")
+        .build()
+        .map_err(|e| format!("Failed to create HTTP client: {}", e))?;
+    
+    let response = client
+        .get("https://api.github.com/repos/yt-dlp/yt-dlp/releases/latest")
+        .send()
+        .await
+        .map_err(|e| format!("Failed to check for updates: {}", e))?;
+    
+    if !response.status().is_success() {
+        return Err("Failed to fetch release info".to_string());
+    }
+    
+    let release: GitHubRelease = response
+        .json()
+        .await
+        .map_err(|e| format!("Failed to parse release info: {}", e))?;
+    
+    Ok(release.tag_name)
+}
+
+/// Get the appropriate download URL for current platform
+fn get_ytdlp_download_url() -> (&'static str, &'static str) {
+    #[cfg(target_os = "macos")]
+    {
+        #[cfg(target_arch = "aarch64")]
+        { ("https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp_macos", "yt-dlp") }
+        #[cfg(target_arch = "x86_64")]
+        { ("https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp_macos_legacy", "yt-dlp") }
+        #[cfg(not(any(target_arch = "aarch64", target_arch = "x86_64")))]
+        { ("https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp_macos", "yt-dlp") }
+    }
+    #[cfg(target_os = "linux")]
+    { ("https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp_linux", "yt-dlp") }
+    #[cfg(target_os = "windows")]
+    { ("https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp.exe", "yt-dlp.exe") }
+    #[cfg(not(any(target_os = "macos", target_os = "linux", target_os = "windows")))]
+    { ("https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp", "yt-dlp") }
+}
+
+/// Update yt-dlp by downloading latest binary from GitHub
+#[tauri::command]
+async fn update_ytdlp(app: AppHandle) -> Result<String, String> {
+    let (download_url, filename) = get_ytdlp_download_url();
+    
+    // Get app data directory for storing updated binary
+    let app_data_dir = app.path().app_data_dir()
+        .map_err(|e| format!("Failed to get app data directory: {}", e))?;
+    
+    let bin_dir = app_data_dir.join("bin");
+    
+    // Create bin directory if it doesn't exist
+    tokio::fs::create_dir_all(&bin_dir)
+        .await
+        .map_err(|e| format!("Failed to create bin directory: {}", e))?;
+    
+    let binary_path = bin_dir.join(filename);
+    
+    // Download the binary
+    let client = reqwest::Client::builder()
+        .user_agent("Youwee/0.1.0")
+        .build()
+        .map_err(|e| format!("Failed to create HTTP client: {}", e))?;
+    
+    let response = client
+        .get(download_url)
+        .send()
+        .await
+        .map_err(|e| format!("Failed to download yt-dlp: {}", e))?;
+    
+    if !response.status().is_success() {
+        return Err(format!("Download failed with status: {}", response.status()));
+    }
+    
+    let bytes = response
+        .bytes()
+        .await
+        .map_err(|e| format!("Failed to read response: {}", e))?;
+    
+    // Write to temporary file first, then rename
+    let temp_path = binary_path.with_extension("tmp");
+    tokio::fs::write(&temp_path, &bytes)
+        .await
+        .map_err(|e| format!("Failed to write binary: {}", e))?;
+    
+    // Set executable permission on Unix
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        let mut perms = tokio::fs::metadata(&temp_path)
+            .await
+            .map_err(|e| format!("Failed to get file metadata: {}", e))?
+            .permissions();
+        perms.set_mode(0o755);
+        tokio::fs::set_permissions(&temp_path, perms)
+            .await
+            .map_err(|e| format!("Failed to set permissions: {}", e))?;
+    }
+    
+    // Rename temp file to final path
+    tokio::fs::rename(&temp_path, &binary_path)
+        .await
+        .map_err(|e| format!("Failed to rename binary: {}", e))?;
+    
+    // Get the new version
+    let output = Command::new(&binary_path)
+        .args(["--version"])
+        .output()
+        .await
+        .map_err(|e| format!("Failed to verify update: {}", e))?;
+    
+    let new_version = String::from_utf8_lossy(&output.stdout).trim().to_string();
+    
+    Ok(new_version)
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -623,7 +824,14 @@ pub fn run() {
             }
             Ok(())
         })
-        .invoke_handler(tauri::generate_handler![download_video, stop_download, get_video_info])
+        .invoke_handler(tauri::generate_handler![
+            download_video, 
+            stop_download, 
+            get_video_info,
+            get_ytdlp_version,
+            check_ytdlp_update,
+            update_ytdlp
+        ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }

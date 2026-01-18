@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { ThemeProvider } from '@/contexts/ThemeContext';
+import { DependenciesProvider } from '@/contexts/DependenciesContext';
 import { MainLayout } from '@/components/layout';
 import type { Page } from '@/components/layout';
 import { DownloadPage, SettingsPage } from '@/pages';
@@ -18,7 +19,9 @@ function AppContent() {
 function App() {
   return (
     <ThemeProvider>
-      <AppContent />
+      <DependenciesProvider>
+        <AppContent />
+      </DependenciesProvider>
     </ThemeProvider>
   );
 }

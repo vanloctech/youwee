@@ -21,6 +21,10 @@
     "fs:allow-download-read-recursive",
     "fs:allow-download-write-recursive",
     "fs:allow-home-read-recursive",
-    "fs:allow-home-write-recursive"
+    "fs:allow-home-write-recursive",
+    "fs:allow-app-read",
+    "fs:allow-app-write",
+    "fs:allow-app-read-recursive",
+    "fs:allow-app-write-recursive"
   ]
 }
