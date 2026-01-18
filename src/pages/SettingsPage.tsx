@@ -193,7 +193,7 @@ export function SettingsPage() {
 
             {/* License */}
             <div className="px-4 py-3 bg-muted/30 text-xs text-muted-foreground text-center">
-              Open source under MIT License • Made with ❤️ by vanloctech
+              Open source under MIT License • Made with ❤️ by VietNam
             </div>
           </div>
         </div>
