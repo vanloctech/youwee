@@ -116,7 +116,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           tagName: ${{ github.ref_name }}
-          releaseName: 'YouTube Downloader ${{ github.ref_name }}'
+          releaseName: 'Youwee ${{ github.ref_name }}'
           releaseBody: |
             ## 📥 Download
             
@@ -130,9 +130,10 @@ jobs:
             ## ✨ Features
             - Download YouTube videos in batch
             - Support for playlists
-            - Multiple quality options (Best, 1080p, 720p, 480p, 360p)
-            - Multiple formats (MP4, MKV, WebM, MP3)
-            - Dark/Light theme
+            - Multiple quality options (Best, 4K, 2K, 1080p, 720p, 480p, 360p, Audio Only)
+            - Multiple formats (MP4, MKV, WebM, MP3, M4A, Opus)
+            - 6 color themes with Dark/Light mode
+            - Modern responsive UI
             - yt-dlp bundled - no external dependencies needed
             
             ## 📋 Requirements
@@ -149,7 +150,7 @@ jobs:
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: youtube-downloader-${{ matrix.os_name }}-${{ matrix.arch }}
+          name: youwee-${{ matrix.os_name }}-${{ matrix.arch }}
           path: |
             src-tauri/target/${{ matrix.target }}/release/bundle/dmg/*.dmg
             src-tauri/target/${{ matrix.target }}/release/bundle/macos/*.app
