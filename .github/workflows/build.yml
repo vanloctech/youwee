@@ -33,7 +33,7 @@ jobs:
             yt_dlp_name: yt-dlp-aarch64-apple-darwin
           
           # macOS Intel
-          - platform: macos-13
+          - platform: macos-13-large
             target: x86_64-apple-darwin
             os_name: macos
             arch: x86_64
