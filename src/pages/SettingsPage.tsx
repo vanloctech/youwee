@@ -171,7 +171,7 @@ export function SettingsPage() {
                     <div className="flex items-center gap-2 flex-wrap">
                       <span className="font-medium">Youwee</span>
                       <Badge variant="secondary" className="text-xs font-mono">
-                        v0.2.0
+                        v0.2.1
                       </Badge>
                     </div>
                     <p className="text-xs text-muted-foreground mt-1">
@@ -389,7 +389,7 @@ export function SettingsPage() {
               </div>
               <div className="flex-1">
                 <h3 className="text-xl font-bold gradient-text">Youwee</h3>
-                <p className="text-sm text-muted-foreground">Version 0.2.0</p>
+                <p className="text-sm text-muted-foreground">Version 0.2.1</p>
                 <p className="text-xs text-muted-foreground mt-1">
                   Modern YouTube Video Downloader
                 </p>
