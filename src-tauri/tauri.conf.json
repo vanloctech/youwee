@@ -28,7 +28,7 @@
   },
   "bundle": {
     "active": true,
-    "targets": ["app", "dmg", "deb", "appimage"],
+    "targets": ["app", "dmg", "deb", "appimage", "msi", "nsis"],
     "externalBin": ["bin/yt-dlp"],
     "icon": [
       "icons/32x32.png",
@@ -39,11 +39,18 @@
     ],
     "macOS": {
       "minimumSystemVersion": "10.15"
-    }
+    },
+    "createUpdaterArtifacts": true
   },
   "plugins": {
     "shell": {
       "open": true
+    },
+    "updater": {
+      "endpoints": [
+        "https://github.com/vanloctech/youwee/releases/latest/download/latest.json"
+      ],
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDk0MzYxNjBFRDQwMzlEM0MKUldROG5RUFVEaFkybE5laTlyUVJXczNRdmFQS1dtc3hpalA3NWw1R2VmUlBDRC9FZCtoR2dlVWcK"
     }
   }
 }

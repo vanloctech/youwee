@@ -113,10 +113,12 @@ jobs:
           Invoke-WebRequest -Uri "${{ matrix.yt_dlp_url }}" -OutFile "src-tauri/bin/${{ matrix.yt_dlp_name }}"
           Get-ChildItem src-tauri/bin/
 
-      - name: Build Tauri app
+      - name: Build Tauri app with signing
         uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         with:
           tauriScript: bun run tauri
           args: --target ${{ matrix.target }}
@@ -181,10 +183,15 @@ jobs:
           name: youwee-${{ matrix.os_name }}-${{ matrix.arch }}
           path: |
             src-tauri/target/${{ matrix.target }}/release/bundle/dmg/*.dmg
+            src-tauri/target/${{ matrix.target }}/release/bundle/macos/*.app.tar.gz
+            src-tauri/target/${{ matrix.target }}/release/bundle/macos/*.app.tar.gz.sig
             src-tauri/target/${{ matrix.target }}/release/bundle/deb/*.deb
             src-tauri/target/${{ matrix.target }}/release/bundle/appimage/*.AppImage
+            src-tauri/target/${{ matrix.target }}/release/bundle/appimage/*.AppImage.sig
             src-tauri/target/${{ matrix.target }}/release/bundle/msi/*.msi
+            src-tauri/target/${{ matrix.target }}/release/bundle/msi/*.msi.sig
             src-tauri/target/${{ matrix.target }}/release/bundle/nsis/*.exe
+            src-tauri/target/${{ matrix.target }}/release/bundle/nsis/*.exe.sig
           if-no-files-found: ignore
 
   # Create release after all builds complete
@@ -209,6 +216,92 @@ jobs:
       - name: Get version from tag
         id: version
         run: echo "version=${GITHUB_REF_NAME#v}" >> $GITHUB_OUTPUT
+
+      - name: Generate latest.json for updater
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          PUB_DATE=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+          
+          # Find signature files and create platform entries
+          cat > latest.json << EOF
+          {
+            "version": "$VERSION",
+            "notes": "Youwee $GITHUB_REF_NAME - Check release notes for details",
+            "pub_date": "$PUB_DATE",
+            "platforms": {
+          EOF
+          
+          FIRST=true
+          
+          # macOS Apple Silicon
+          if [ -f "artifacts/Youwee.app.tar.gz.sig" ] || [ -f "artifacts/macos/Youwee.app.tar.gz.sig" ]; then
+            SIG_FILE=$(find artifacts -name "*.app.tar.gz.sig" -path "*aarch64*" 2>/dev/null | head -1)
+            if [ -z "$SIG_FILE" ]; then
+              SIG_FILE=$(find artifacts -name "*.app.tar.gz.sig" | head -1)
+            fi
+            if [ -n "$SIG_FILE" ] && [ -f "$SIG_FILE" ]; then
+              SIG=$(cat "$SIG_FILE")
+              if [ "$FIRST" = false ]; then echo "," >> latest.json; fi
+              FIRST=false
+              cat >> latest.json << PLATFORM
+              "darwin-aarch64": {
+                "signature": "$SIG",
+                "url": "https://github.com/${{ github.repository }}/releases/download/$GITHUB_REF_NAME/Youwee.app.tar.gz"
+              }
+          PLATFORM
+            fi
+          fi
+          
+          # macOS Intel
+          INTEL_SIG=$(find artifacts -name "*.app.tar.gz.sig" -path "*x86_64*" 2>/dev/null | head -1)
+          if [ -n "$INTEL_SIG" ] && [ -f "$INTEL_SIG" ]; then
+            SIG=$(cat "$INTEL_SIG")
+            if [ "$FIRST" = false ]; then echo "," >> latest.json; fi
+            FIRST=false
+            cat >> latest.json << PLATFORM
+              "darwin-x86_64": {
+                "signature": "$SIG",
+                "url": "https://github.com/${{ github.repository }}/releases/download/$GITHUB_REF_NAME/Youwee.app.tar.gz"
+              }
+          PLATFORM
+          fi
+          
+          # Linux
+          LINUX_SIG=$(find artifacts -name "*.AppImage.sig" 2>/dev/null | head -1)
+          if [ -n "$LINUX_SIG" ] && [ -f "$LINUX_SIG" ]; then
+            SIG=$(cat "$LINUX_SIG")
+            if [ "$FIRST" = false ]; then echo "," >> latest.json; fi
+            FIRST=false
+            cat >> latest.json << PLATFORM
+              "linux-x86_64": {
+                "signature": "$SIG",
+                "url": "https://github.com/${{ github.repository }}/releases/download/$GITHUB_REF_NAME/Youwee-Linux.AppImage"
+              }
+          PLATFORM
+          fi
+          
+          # Windows NSIS
+          WIN_SIG=$(find artifacts -name "*.exe.sig" 2>/dev/null | head -1)
+          if [ -n "$WIN_SIG" ] && [ -f "$WIN_SIG" ]; then
+            SIG=$(cat "$WIN_SIG")
+            if [ "$FIRST" = false ]; then echo "," >> latest.json; fi
+            FIRST=false
+            cat >> latest.json << PLATFORM
+              "windows-x86_64": {
+                "signature": "$SIG",
+                "url": "https://github.com/${{ github.repository }}/releases/download/$GITHUB_REF_NAME/Youwee-Windows-Setup.exe"
+              }
+          PLATFORM
+          fi
+          
+          # Close JSON
+          cat >> latest.json << EOF
+            }
+          }
+          EOF
+          
+          echo "Generated latest.json:"
+          cat latest.json
 
       - name: Create Release
         uses: softprops/action-gh-release@v2
@@ -241,6 +334,7 @@ jobs:
             - 🎬 Multiple formats (MP4, MKV, WebM, MP3, M4A, Opus)
             - 🎨 6 beautiful color themes with Dark/Light mode
             - ⚡ Concurrent downloads (up to 5 parallel)
+            - 🔄 Auto-update with secure signature verification
             - 🔒 Secure - SHA256 verified yt-dlp updates
             - 📦 yt-dlp bundled - no external dependencies needed
             
@@ -255,8 +349,14 @@ jobs:
             artifacts/**/*.dmg
             artifacts/**/*.deb
             artifacts/**/*.AppImage
+            artifacts/**/*.AppImage.sig
             artifacts/**/*.msi
+            artifacts/**/*.msi.sig
             artifacts/**/*.exe
+            artifacts/**/*.exe.sig
+            artifacts/**/*.app.tar.gz
+            artifacts/**/*.app.tar.gz.sig
+            latest.json
 
       - name: Update 'latest' tag
         run: |
@@ -293,9 +393,18 @@ jobs:
             | 🍎 **Mac (Intel)** | `Youwee-Mac-Intel.dmg` |
             | 🪟 **Windows** | `Youwee-Windows.msi` or `Youwee-Windows-Setup.exe` |
             | 🐧 **Linux** | `Youwee-Linux.deb` or `Youwee-Linux.AppImage` |
+            
+            ## 🔄 Auto-Update
+            The app will automatically check for updates and notify you when a new version is available.
           files: |
             artifacts/**/*.dmg
             artifacts/**/*.deb
             artifacts/**/*.AppImage
+            artifacts/**/*.AppImage.sig
             artifacts/**/*.msi
+            artifacts/**/*.msi.sig
             artifacts/**/*.exe
+            artifacts/**/*.exe.sig
+            artifacts/**/*.app.tar.gz
+            artifacts/**/*.app.tar.gz.sig
+            latest.json

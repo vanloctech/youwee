@@ -25,6 +25,8 @@
     "fs:allow-app-read",
     "fs:allow-app-write",
     "fs:allow-app-read-recursive",
-    "fs:allow-app-write-recursive"
+    "fs:allow-app-write-recursive",
+    "updater:default",
+    "process:allow-restart"
   ]
 }
