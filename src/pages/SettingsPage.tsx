@@ -70,6 +70,86 @@ export function SettingsPage() {
 
       {/* Content */}
       <div className="flex-1 overflow-auto p-4 sm:p-6 space-y-6">
+        {/* Appearance Section */}
+        <div className="space-y-4">
+          <div>
+            <h2 className="text-sm font-semibold">Appearance</h2>
+            <p className="text-xs text-muted-foreground">
+              Customize how Youwee looks
+            </p>
+          </div>
+
+          <div className="rounded-xl border bg-card/50 backdrop-blur-sm p-4 space-y-5">
+            {/* Mode Toggle - Compact */}
+            <div className="flex items-center justify-between">
+              <span className="text-sm font-medium">Mode</span>
+              <div className="flex items-center gap-1 p-1 rounded-lg bg-muted/50">
+                <button
+                  onClick={() => setMode('light')}
+                  className={cn(
+                    'flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-all',
+                    mode === 'light'
+                      ? 'bg-background text-foreground shadow-sm'
+                      : 'text-muted-foreground hover:text-foreground'
+                  )}
+                  title="Light mode"
+                >
+                  <Sun className="w-4 h-4" />
+                  <span className="hidden sm:inline">Light</span>
+                </button>
+                <button
+                  onClick={() => setMode('dark')}
+                  className={cn(
+                    'flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-all',
+                    mode === 'dark'
+                      ? 'bg-background text-foreground shadow-sm'
+                      : 'text-muted-foreground hover:text-foreground'
+                  )}
+                  title="Dark mode"
+                >
+                  <Moon className="w-4 h-4" />
+                  <span className="hidden sm:inline">Dark</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Divider */}
+            <div className="border-t" />
+
+            {/* Theme Colors - Compact Grid */}
+            <div className="space-y-3">
+              <span className="text-sm font-medium">Theme</span>
+              <div className="flex flex-wrap gap-2">
+                {themes.map((t) => (
+                  <button
+                    key={t.name}
+                    onClick={() => setTheme(t.name)}
+                    className={cn(
+                      'group relative flex items-center gap-2 px-3 py-2 rounded-lg border transition-all',
+                      theme === t.name
+                        ? 'border-primary bg-primary/5 ring-1 ring-primary/20'
+                        : 'border-transparent bg-muted/30 hover:bg-muted/50'
+                    )}
+                    title={`${t.label} theme`}
+                  >
+                    <div
+                      className={cn(
+                        'w-5 h-5 rounded-full shadow-sm flex items-center justify-center',
+                        themeGradients[t.name]
+                      )}
+                    >
+                      {theme === t.name && (
+                        <Check className="w-3 h-3 text-white drop-shadow" />
+                      )}
+                    </div>
+                    <span className="text-xs font-medium">{t.label}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+
         {/* App Updates Section */}
         <div className="space-y-4">
           <div>
@@ -284,86 +364,6 @@ export function SettingsPage() {
                 <span>yt-dlp/yt-dlp</span>
                 <ExternalLink className="w-3 h-3" />
               </a>
-            </div>
-          </div>
-        </div>
-
-        {/* Appearance Section */}
-        <div className="space-y-4">
-          <div>
-            <h2 className="text-sm font-semibold">Appearance</h2>
-            <p className="text-xs text-muted-foreground">
-              Customize how Youwee looks
-            </p>
-          </div>
-
-          <div className="rounded-xl border bg-card/50 backdrop-blur-sm p-4 space-y-5">
-            {/* Mode Toggle - Compact */}
-            <div className="flex items-center justify-between">
-              <span className="text-sm font-medium">Mode</span>
-              <div className="flex items-center gap-1 p-1 rounded-lg bg-muted/50">
-                <button
-                  onClick={() => setMode('light')}
-                  className={cn(
-                    'flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-all',
-                    mode === 'light'
-                      ? 'bg-background text-foreground shadow-sm'
-                      : 'text-muted-foreground hover:text-foreground'
-                  )}
-                  title="Light mode"
-                >
-                  <Sun className="w-4 h-4" />
-                  <span className="hidden sm:inline">Light</span>
-                </button>
-                <button
-                  onClick={() => setMode('dark')}
-                  className={cn(
-                    'flex items-center gap-1.5 px-3 py-1.5 rounded-md text-sm font-medium transition-all',
-                    mode === 'dark'
-                      ? 'bg-background text-foreground shadow-sm'
-                      : 'text-muted-foreground hover:text-foreground'
-                  )}
-                  title="Dark mode"
-                >
-                  <Moon className="w-4 h-4" />
-                  <span className="hidden sm:inline">Dark</span>
-                </button>
-              </div>
-            </div>
-
-            {/* Divider */}
-            <div className="border-t" />
-
-            {/* Theme Colors - Compact Grid */}
-            <div className="space-y-3">
-              <span className="text-sm font-medium">Theme</span>
-              <div className="flex flex-wrap gap-2">
-                {themes.map((t) => (
-                  <button
-                    key={t.name}
-                    onClick={() => setTheme(t.name)}
-                    className={cn(
-                      'group relative flex items-center gap-2 px-3 py-2 rounded-lg border transition-all',
-                      theme === t.name
-                        ? 'border-primary bg-primary/5 ring-1 ring-primary/20'
-                        : 'border-transparent bg-muted/30 hover:bg-muted/50'
-                    )}
-                    title={`${t.label} theme`}
-                  >
-                    <div
-                      className={cn(
-                        'w-5 h-5 rounded-full shadow-sm flex items-center justify-center',
-                        themeGradients[t.name]
-                      )}
-                    >
-                      {theme === t.name && (
-                        <Check className="w-3 h-3 text-white drop-shadow" />
-                      )}
-                    </div>
-                    <span className="text-xs font-medium">{t.label}</span>
-                  </button>
-                ))}
-              </div>
             </div>
           </div>
         </div>
