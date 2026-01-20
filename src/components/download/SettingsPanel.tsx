@@ -122,7 +122,7 @@ export function SettingsPanel({
         >
           <div className="flex items-center gap-1.5">
             {isAudioOnly ? <Music className="w-3.5 h-3.5" /> : <FileVideo className="w-3.5 h-3.5" />}
-            <SelectValue />
+            <span>{qualityOptions.find(q => q.value === settings.quality)?.shortLabel}</span>
           </div>
         </SelectTrigger>
         <SelectContent className="min-w-[220px]">
