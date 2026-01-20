@@ -263,16 +263,31 @@ fn build_format_string(quality: &str, format: &str, video_codec: &str) -> String
     
     // Build codec filter based on selection
     // h264 = avc, vp9 = vp9/vp09, av1 = av01
-    let codec_filter = match video_codec {
-        "h264" => "[vcodec^=avc]",
-        "vp9" => "[vcodec^=vp9]",
-        "av1" => "[vcodec^=av01]",
-        _ => "", // auto - no codec filter
+    // NOTE: YouTube does NOT offer 4K/2K in H.264, only VP9 or AV1
+    // So we only apply codec filter for 1080p and below
+    let is_high_res = matches!(quality, "4k" | "2k");
+    let codec_filter = if is_high_res {
+        "" // No codec filter for 4K/2K - they're only available in VP9/AV1
+    } else {
+        match video_codec {
+            "h264" => "[vcodec^=avc]",
+            "vp9" => "[vcodec^=vp9]",
+            "av1" => "[vcodec^=av01]",
+            _ => "", // auto - no codec filter
+        }
     };
     
+    // For 4K/2K, we need to use MKV or WebM as container since MP4 doesn't support VP9/AV1 well
+    // But yt-dlp's --merge-output-format will handle the conversion
     if format == "mp4" {
         if let Some(h) = height {
-            if !codec_filter.is_empty() {
+            if is_high_res {
+                // For 4K/2K: prioritize resolution over codec, let FFmpeg handle conversion
+                format!(
+                    "bestvideo[height<={}]+bestaudio/best[height<={}]/best",
+                    h, h
+                )
+            } else if !codec_filter.is_empty() {
                 format!(
                     "bestvideo[height<={}]{}[ext=mp4]+bestaudio[ext=m4a]/bestvideo[height<={}]{}+bestaudio/bestvideo[height<={}][ext=mp4]+bestaudio[ext=m4a]/bestvideo[height<={}]+bestaudio/best[height<={}]/best",
                     h, codec_filter, h, codec_filter, h, h, h
