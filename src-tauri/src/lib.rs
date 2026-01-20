@@ -252,6 +252,7 @@ fn build_format_string(quality: &str, format: &str, video_codec: &str) -> String
     }
     
     let height = match quality {
+        "8k" => Some("4320"),
         "4k" => Some("2160"),
         "2k" => Some("1440"),
         "1080" => Some("1080"),
@@ -263,11 +264,11 @@ fn build_format_string(quality: &str, format: &str, video_codec: &str) -> String
     
     // Build codec filter based on selection
     // h264 = avc, vp9 = vp9/vp09, av1 = av01
-    // NOTE: YouTube does NOT offer 4K/2K in H.264, only VP9 or AV1
-    // So we only apply codec filter for 1080p and below
-    let is_high_res = matches!(quality, "4k" | "2k");
+    // NOTE: YouTube does NOT offer 4K/2K/8K in H.264, only VP9 or AV1
+    // We prefer VP9 over AV1 for better compatibility (macOS QuickTime, etc.)
+    let is_high_res = matches!(quality, "8k" | "4k" | "2k");
     let codec_filter = if is_high_res {
-        "" // No codec filter for 4K/2K - they're only available in VP9/AV1
+        "[vcodec^=vp9]" // Prefer VP9 for high-res (better compatibility than AV1)
     } else {
         match video_codec {
             "h264" => "[vcodec^=avc]",
@@ -277,15 +278,15 @@ fn build_format_string(quality: &str, format: &str, video_codec: &str) -> String
         }
     };
     
-    // For 4K/2K, we need to use MKV or WebM as container since MP4 doesn't support VP9/AV1 well
-    // But yt-dlp's --merge-output-format will handle the conversion
+    // For high-res, we need fallback chain: VP9 -> any codec
+    // This ensures we still get the video if VP9 is not available
     if format == "mp4" {
         if let Some(h) = height {
             if is_high_res {
-                // For 4K/2K: prioritize resolution over codec, let FFmpeg handle conversion
+                // For 8K/4K/2K: prefer VP9 for compatibility, fallback to any codec
                 format!(
-                    "bestvideo[height<={}]+bestaudio/best[height<={}]/best",
-                    h, h
+                    "bestvideo[height<={}][vcodec^=vp9]+bestaudio/bestvideo[height<={}]+bestaudio/best[height<={}]/best",
+                    h, h, h
                 )
             } else if !codec_filter.is_empty() {
                 format!(
@@ -299,19 +300,18 @@ fn build_format_string(quality: &str, format: &str, video_codec: &str) -> String
                 )
             }
         } else {
-            // Best quality
-            if !codec_filter.is_empty() {
-                format!(
-                    "bestvideo{}[ext=mp4]+bestaudio[ext=m4a]/bestvideo{}+bestaudio/bestvideo[ext=mp4]+bestaudio[ext=m4a]/bestvideo+bestaudio/best",
-                    codec_filter, codec_filter
-                )
-            } else {
-                "bestvideo[ext=mp4]+bestaudio[ext=m4a]/bestvideo+bestaudio/best".to_string()
-            }
+            // Best quality - prefer VP9 for compatibility
+            "bestvideo[vcodec^=vp9]+bestaudio/bestvideo+bestaudio/best".to_string()
         }
     } else if let Some(h) = height {
         // Non-MP4 formats (MKV, WebM)
-        if !codec_filter.is_empty() {
+        if is_high_res {
+            // Prefer VP9 for high-res
+            format!(
+                "bestvideo[height<={}][vcodec^=vp9]+bestaudio/bestvideo[height<={}]+bestaudio/best[height<={}]/best",
+                h, h, h
+            )
+        } else if !codec_filter.is_empty() {
             format!(
                 "bestvideo[height<={}]{}+bestaudio/bestvideo[height<={}]+bestaudio/best[height<={}]/best",
                 h, codec_filter, h, h
@@ -320,11 +320,8 @@ fn build_format_string(quality: &str, format: &str, video_codec: &str) -> String
             format!("bestvideo[height<={}]+bestaudio/best[height<={}]/best", h, h)
         }
     } else {
-        if !codec_filter.is_empty() {
-            format!("bestvideo{}+bestaudio/bestvideo+bestaudio/best", codec_filter)
-        } else {
-            "bestvideo+bestaudio/best".to_string()
-        }
+        // Best quality - prefer VP9
+        "bestvideo[vcodec^=vp9]+bestaudio/bestvideo+bestaudio/best".to_string()
     }
 }
 

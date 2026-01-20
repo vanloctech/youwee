@@ -38,12 +38,13 @@ function formatFileSize(bytes: number): string {
 
 const qualityOptions: { value: Quality; label: string; shortLabel: string }[] = [
   { value: 'best', label: 'Best Available', shortLabel: 'Best' },
-  { value: '4k', label: '4K (2160p)', shortLabel: '4K' },
-  { value: '2k', label: '2K (1440p)', shortLabel: '2K' },
-  { value: '1080', label: '1080p', shortLabel: '1080p' },
-  { value: '720', label: '720p', shortLabel: '720p' },
-  { value: '480', label: '480p', shortLabel: '480p' },
-  { value: '360', label: '360p', shortLabel: '360p' },
+  { value: '8k', label: '8K Ultra HD — 7680 × 4320', shortLabel: '8K' },
+  { value: '4k', label: '4K Ultra HD — 3840 × 2160', shortLabel: '4K' },
+  { value: '2k', label: '2K Quad HD — 2560 × 1440', shortLabel: '2K' },
+  { value: '1080', label: 'Full HD — 1920 × 1080', shortLabel: '1080p' },
+  { value: '720', label: 'HD — 1280 × 720', shortLabel: '720p' },
+  { value: '480', label: 'SD — 854 × 480', shortLabel: '480p' },
+  { value: '360', label: 'Low — 640 × 360', shortLabel: '360p' },
   { value: 'audio', label: 'Audio Only', shortLabel: 'Audio' },
 ];
 
