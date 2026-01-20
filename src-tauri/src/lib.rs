@@ -653,7 +653,8 @@ async fn download_video(
             let mut current_title: Option<String> = None;
             let mut current_index: Option<u32> = None;
             let mut total_count: Option<u32> = None;
-            let mut last_filesize: Option<u64> = None;
+            let mut total_filesize: u64 = 0; // Sum of all stream sizes
+            let mut current_stream_size: Option<u64> = None; // Current stream being downloaded
             
             // Use quality setting as resolution display
             let quality_display = match quality.as_str() {
@@ -702,8 +703,9 @@ async fn download_video(
                             }
                         }
                         
-                        // Parse filesize from progress line: "[download] 100% of 50.5MiB" or "50.5MiB"
-                        // Also matches speed like "5.00MiB/s" so we look for "of X.XMiB"
+                        // Parse filesize from progress line: "[download] 100% of 50.5MiB"
+                        // When downloading video+audio, yt-dlp shows size for each stream
+                        // We need to sum them up to get total file size
                         if line.contains(" of ") && (line.contains("MiB") || line.contains("GiB") || line.contains("KiB")) {
                             // Pattern: "of 123.45MiB" or "of 1.23GiB"
                             let size_re = regex::Regex::new(r"of\s+(\d+(?:\.\d+)?)\s*(GiB|MiB|KiB)").ok();
@@ -711,12 +713,20 @@ async fn download_video(
                                 if let Some(caps) = re.captures(&line) {
                                     if let (Some(num), Some(unit)) = (caps.get(1), caps.get(2)) {
                                         if let Ok(size) = num.as_str().parse::<f64>() {
-                                            last_filesize = Some(match unit.as_str() {
+                                            let size_bytes = match unit.as_str() {
                                                 "GiB" => (size * 1024.0 * 1024.0 * 1024.0) as u64,
                                                 "MiB" => (size * 1024.0 * 1024.0) as u64,
                                                 "KiB" => (size * 1024.0) as u64,
                                                 _ => size as u64,
-                                            });
+                                            };
+                                            // If this is a new stream size (different from current), add to total
+                                            if current_stream_size != Some(size_bytes) {
+                                                if let Some(prev_size) = current_stream_size {
+                                                    // We're seeing a new stream, add previous to total
+                                                    total_filesize += prev_size;
+                                                }
+                                                current_stream_size = Some(size_bytes);
+                                            }
                                         }
                                     }
                                 }
@@ -753,6 +763,11 @@ async fn download_video(
                         }
                         
                         if status.code == Some(0) {
+                            // Add the last stream size to total
+                            if let Some(last_size) = current_stream_size {
+                                total_filesize += last_size;
+                            }
+                            
                             let progress = DownloadProgress {
                                 id: id.clone(),
                                 percent: 100.0,
@@ -762,7 +777,7 @@ async fn download_video(
                                 title: current_title.clone(),
                                 playlist_index: current_index,
                                 playlist_count: total_count,
-                                filesize: last_filesize,
+                                filesize: if total_filesize > 0 { Some(total_filesize) } else { None },
                                 resolution: quality_display.clone(),
                                 format_ext: Some(format.clone()),
                             };
@@ -804,7 +819,8 @@ async fn handle_tokio_download(
     let mut current_title: Option<String> = None;
     let mut current_index: Option<u32> = None;
     let mut total_count: Option<u32> = None;
-    let mut last_filesize: Option<u64> = None;
+    let mut total_filesize: u64 = 0;
+    let mut current_stream_size: Option<u64> = None;
     
     // Use quality setting as resolution display
     let quality_display = match quality.as_str() {
@@ -855,12 +871,19 @@ async fn handle_tokio_download(
                 if let Some(caps) = re.captures(&line) {
                     if let (Some(num), Some(unit)) = (caps.get(1), caps.get(2)) {
                         if let Ok(size) = num.as_str().parse::<f64>() {
-                            last_filesize = Some(match unit.as_str() {
+                            let size_bytes = match unit.as_str() {
                                 "GiB" => (size * 1024.0 * 1024.0 * 1024.0) as u64,
                                 "MiB" => (size * 1024.0 * 1024.0) as u64,
                                 "KiB" => (size * 1024.0) as u64,
                                 _ => size as u64,
-                            });
+                            };
+                            // If this is a new stream size, add previous to total
+                            if current_stream_size != Some(size_bytes) {
+                                if let Some(prev_size) = current_stream_size {
+                                    total_filesize += prev_size;
+                                }
+                                current_stream_size = Some(size_bytes);
+                            }
                         }
                     }
                 }
@@ -895,6 +918,11 @@ async fn handle_tokio_download(
     }
     
     if status.success() {
+        // Add the last stream size to total
+        if let Some(last_size) = current_stream_size {
+            total_filesize += last_size;
+        }
+        
         let progress = DownloadProgress {
             id: id.clone(),
             percent: 100.0,
@@ -904,7 +932,7 @@ async fn handle_tokio_download(
             title: current_title,
             playlist_index: current_index,
             playlist_count: total_count,
-            filesize: last_filesize,
+            filesize: if total_filesize > 0 { Some(total_filesize) } else { None },
             resolution: quality_display,
             format_ext: Some(format),
         };
