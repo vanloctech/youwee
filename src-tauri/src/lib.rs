@@ -631,10 +631,16 @@ async fn download_video(
         args.push("--merge-output-format".to_string());
         args.push(format.clone());
         
-        // For video, we can also set audio quality for the audio track
+        // For video downloads with specific audio bitrate:
+        // We need to re-encode the audio track after merging
+        // Using --postprocessor-args with proper FFmpeg flags
         if audio_bitrate != "auto" {
+            // Use FFmpeg to re-encode audio to specified bitrate
+            // -c:v copy = copy video stream without re-encoding
+            // -c:a aac = encode audio to AAC
+            // -b:a = target audio bitrate
             args.push("--postprocessor-args".to_string());
-            args.push(format!("ffmpeg:-b:a {}k", audio_bitrate));
+            args.push(format!("Merger+ffmpeg:-c:v copy -c:a aac -b:a {}k", audio_bitrate));
         }
     }
     
