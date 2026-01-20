@@ -329,30 +329,6 @@ jobs:
           cd ..
           echo "Generated SHA256SUMS.txt:"
           cat SHA256SUMS.txt
-          
-          # Create markdown table for release notes
-          echo "" > CHECKSUMS_TABLE.md
-          echo "| File | SHA256 |" >> CHECKSUMS_TABLE.md
-          echo "|------|--------|" >> CHECKSUMS_TABLE.md
-          
-          cd artifacts
-          find . -type f \( \
-            -name "*.dmg" -o \
-            -name "*.msi" -o \
-            -name "*.exe" -o \
-            -name "*.deb" -o \
-            -name "*.AppImage" \
-          \) ! -name "*.sig" | sort | while read file; do
-            filename=$(basename "$file")
-            hash=$(sha256sum "$file" | cut -d' ' -f1)
-            short_hash="${hash:0:16}..."
-            echo "| \`$filename\` | \`$short_hash\` |" >> ../CHECKSUMS_TABLE.md
-          done
-          
-          cd ..
-          echo ""
-          echo "Generated CHECKSUMS_TABLE.md:"
-          cat CHECKSUMS_TABLE.md
 
       - name: Create release body
         run: |
@@ -375,8 +351,9 @@ jobs:
           ## ✨ Features
           - 📹 Download YouTube videos in batch
           - 📋 Support for playlists
-          - 🎯 Multiple quality options (Best, 4K, 2K, 1080p, 720p, 480p, Audio Only)
+          - 🎯 Multiple quality options (Best, 8K, 4K, 2K, 1080p, 720p, 480p, Audio Only)
           - 🎬 Multiple formats (MP4, MKV, WebM, MP3, M4A, Opus)
+          - 📝 Subtitle download with language selection
           - 🎨 6 beautiful color themes with Dark/Light mode
           - ⚡ Concurrent downloads (up to 5 parallel)
           - 🔄 Auto-update with secure signature verification
@@ -389,36 +366,15 @@ jobs:
           - **Linux**: Ubuntu 22.04 or equivalent
           
           ## 🔧 Optional
-          - FFmpeg (recommended for best compatibility)
+          - FFmpeg (recommended for best compatibility, auto-download available)
           
-          ## 🔐 SHA256 Checksums
+          ## 🔐 Verify Downloads
           
-          HEADER
-          
-          # Append checksums table
-          cat CHECKSUMS_TABLE.md >> RELEASE_BODY.md
-          
-          # Add footer
-          cat >> RELEASE_BODY.md << 'FOOTER'
-          
-          <details>
-          <summary>📄 Full checksums (click to expand)</summary>
-          
-          ```
-          FOOTER
-          
-          # Add full checksums
-          grep -v "^#" SHA256SUMS.txt | grep -v "^$" >> RELEASE_BODY.md
-          
-          cat >> RELEASE_BODY.md << 'END'
-          ```
-          
-          Download `SHA256SUMS.txt` for automated verification:
+          Download `SHA256SUMS.txt` and verify:
           ```bash
           sha256sum -c SHA256SUMS.txt
           ```
-          </details>
-          END
+          HEADER
           
           echo "Generated RELEASE_BODY.md:"
           cat RELEASE_BODY.md
