@@ -47,7 +47,7 @@ export function DownloadPage() {
     <div className="flex-1 flex flex-col overflow-hidden">
       {/* Header */}
       <header className="flex-shrink-0 flex items-center justify-between h-12 sm:h-14 px-4 sm:px-6">
-        <h1 className="text-base sm:text-lg font-semibold">Download</h1>
+        <h1 className="text-base sm:text-lg font-semibold">YouTube</h1>
         <ThemePicker />
       </header>
 
