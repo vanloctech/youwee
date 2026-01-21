@@ -5,7 +5,6 @@ import { useUpdater } from '@/contexts/UpdaterContext';
 import { useHistory } from '@/contexts/HistoryContext';
 import { themes } from '@/lib/themes';
 import type { ThemeName } from '@/lib/themes';
-import type { YouTubePlayerClient } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import { 
   Check, 
@@ -24,7 +23,6 @@ import {
   Package,
   Info,
   Database,
-  Youtube,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -49,7 +47,7 @@ const themeGradients: Record<ThemeName, string> = {
 
 export function SettingsPage() {
   const { theme, setTheme, mode, setMode } = useTheme();
-  const { settings, updateAutoCheckUpdate, updateYouTubePlayerClient } = useDownload();
+  const { settings, updateAutoCheckUpdate, updateUseBunRuntime } = useDownload();
   const { maxEntries, setMaxEntries, totalCount } = useHistory();
   const updater = useUpdater();
   
@@ -70,6 +68,13 @@ export function SettingsPage() {
     ffmpegSuccess,
     checkFfmpeg,
     downloadFfmpeg,
+    bunStatus,
+    bunLoading,
+    bunDownloading,
+    bunError,
+    bunSuccess,
+    checkBun,
+    downloadBun,
   } = useDependencies();
 
   const isUpdateAvailable = latestVersion && ytdlpInfo && latestVersion !== ytdlpInfo.version;
@@ -398,48 +403,83 @@ export function SettingsPage() {
                   <ExternalLink className="w-3 h-3" />
                 </a>
               </div>
-            </div>
-          </section>
 
-          {/* Divider */}
-          <div className="h-px bg-gradient-to-r from-transparent via-border to-transparent" />
-
-          {/* YouTube Section */}
-          <section className="space-y-4">
-            <div className="flex items-center gap-3">
-              <div className="p-2 rounded-xl bg-gradient-to-br from-red-500 to-red-600 shadow-lg shadow-red-500/20">
-                <Youtube className="w-5 h-5 text-white" />
-              </div>
-              <div>
-                <h2 className="text-base font-semibold">YouTube</h2>
-                <p className="text-xs text-muted-foreground">Advanced YouTube download settings</p>
-              </div>
-            </div>
-
-            <div className="space-y-3 pl-12">
-              {/* Player Client */}
-              <div className="flex items-center justify-between py-3">
-                <div>
-                  <p className="text-sm font-medium">Player Client</p>
-                  <p className="text-xs text-muted-foreground">
-                    Only change if having format/quality issues
-                  </p>
+              {/* Bun Runtime */}
+              <div className="p-4 rounded-xl bg-muted/30">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center shadow-lg shadow-amber-500/20">
+                      <Terminal className="w-5 h-5 text-white" />
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <span className="font-medium">Bun Runtime</span>
+                        {bunLoading ? (
+                          <Loader2 className="w-3 h-3 animate-spin text-muted-foreground" />
+                        ) : bunStatus?.installed ? (
+                          <Badge variant="secondary" className="font-mono text-xs">
+                            {bunStatus.version || 'Installed'}
+                          </Badge>
+                        ) : (
+                          <Badge variant="outline" className="text-xs">Optional</Badge>
+                        )}
+                      </div>
+                      <p className="text-xs text-muted-foreground mt-0.5">
+                        {bunDownloading ? (
+                          <span className="flex items-center gap-1 text-primary">
+                            <Loader2 className="w-3 h-3 animate-spin" />
+                            Installing...
+                          </span>
+                        ) : bunSuccess ? (
+                          <span className="text-emerald-500">Installed!</span>
+                        ) : bunError ? (
+                          <span className="text-destructive">{bunError}</span>
+                        ) : !bunStatus?.installed ? (
+                          <span className="text-amber-500">Enable in download settings if only 360p available</span>
+                        ) : (
+                          'JavaScript runtime for YouTube'
+                        )}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    {!bunStatus?.installed && !bunLoading && (
+                      <Button size="sm" onClick={downloadBun} disabled={bunDownloading}>
+                        {bunDownloading ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Install'}
+                      </Button>
+                    )}
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={checkBun}
+                      disabled={bunLoading || bunDownloading}
+                    >
+                      <RefreshCw className={cn("w-4 h-4", bunLoading && "animate-spin")} />
+                    </Button>
+                  </div>
                 </div>
-                <Select
-                  value={settings.youtubePlayerClient}
-                  onValueChange={(v) => updateYouTubePlayerClient(v as YouTubePlayerClient)}
+                <div className="mt-3 pt-3 border-t border-border/50">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-xs font-medium">Use Bun for YouTube</p>
+                      <p className="text-xs text-muted-foreground">Fixes 360p-only issue on some systems</p>
+                    </div>
+                    <Switch
+                      checked={settings.useBunRuntime}
+                      onCheckedChange={updateUseBunRuntime}
+                      disabled={!bunStatus?.installed}
+                    />
+                  </div>
+                </div>
+                <a 
+                  href="https://bun.sh" 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground mt-3 pt-3 border-t border-border/50"
                 >
-                  <SelectTrigger className="w-[140px] h-9">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="default">Default</SelectItem>
-                    <SelectItem value="tv_embedded">TV Embedded</SelectItem>
-                    <SelectItem value="ios">iOS</SelectItem>
-                    <SelectItem value="android">Android</SelectItem>
-                    <SelectItem value="mweb">Mobile Web</SelectItem>
-                  </SelectContent>
-                </Select>
+                  bun.sh
+                  <ExternalLink className="w-3 h-3" />
+                </a>
               </div>
             </div>
           </section>

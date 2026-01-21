@@ -16,6 +16,13 @@ export interface FfmpegStatus {
   is_system: boolean;
 }
 
+export interface BunStatus {
+  installed: boolean;
+  version: string | null;
+  binary_path: string | null;
+  is_system: boolean;
+}
+
 interface DependenciesContextType {
   // yt-dlp state
   ytdlpInfo: YtdlpVersionInfo | null;
@@ -41,6 +48,17 @@ interface DependenciesContextType {
   // FFmpeg actions
   checkFfmpeg: () => Promise<void>;
   downloadFfmpeg: () => Promise<void>;
+  
+  // Bun state
+  bunStatus: BunStatus | null;
+  bunLoading: boolean;
+  bunDownloading: boolean;
+  bunError: string | null;
+  bunSuccess: boolean;
+  
+  // Bun actions
+  checkBun: () => Promise<void>;
+  downloadBun: () => Promise<void>;
 }
 
 const DependenciesContext = createContext<DependenciesContextType | null>(null);
@@ -61,6 +79,13 @@ export function DependenciesProvider({ children }: { children: ReactNode }) {
   const [ffmpegDownloading, setFfmpegDownloading] = useState(false);
   const [ffmpegError, setFfmpegError] = useState<string | null>(null);
   const [ffmpegSuccess, setFfmpegSuccess] = useState(false);
+  
+  // Bun state
+  const [bunStatus, setBunStatus] = useState<BunStatus | null>(null);
+  const [bunLoading, setBunLoading] = useState(false);
+  const [bunDownloading, setBunDownloading] = useState(false);
+  const [bunError, setBunError] = useState<string | null>(null);
+  const [bunSuccess, setBunSuccess] = useState(false);
 
   // Load yt-dlp version (only once on first mount)
   const refreshYtdlpVersion = useCallback(async () => {
@@ -115,14 +140,54 @@ export function DependenciesProvider({ children }: { children: ReactNode }) {
     }
   }, [checkFfmpeg]);
 
+  // Check Bun status
+  const checkBun = useCallback(async () => {
+    setBunLoading(true);
+    setBunError(null);
+    try {
+      const status = await invoke<BunStatus>('check_bun');
+      setBunStatus(status);
+    } catch (err) {
+      setBunError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setBunLoading(false);
+    }
+  }, []);
+
+  // Download Bun
+  const downloadBun = useCallback(async () => {
+    setBunDownloading(true);
+    setBunError(null);
+    setBunSuccess(false);
+    try {
+      const version = await invoke<string>('download_bun');
+      setBunStatus({
+        installed: true,
+        version,
+        binary_path: null, // Will be updated on next check
+        is_system: false,
+      });
+      setBunSuccess(true);
+      // Hide success message after 3 seconds
+      setTimeout(() => setBunSuccess(false), 3000);
+      // Refresh to get full status
+      await checkBun();
+    } catch (err) {
+      setBunError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setBunDownloading(false);
+    }
+  }, [checkBun]);
+
   // Initialize on first mount
   useEffect(() => {
     if (!initialized) {
       setInitialized(true);
       refreshYtdlpVersion();
       checkFfmpeg();
+      checkBun();
     }
-  }, [initialized, refreshYtdlpVersion, checkFfmpeg]);
+  }, [initialized, refreshYtdlpVersion, checkFfmpeg, checkBun]);
 
   // Check for updates
   const checkForUpdate = useCallback(async () => {
@@ -179,6 +244,14 @@ export function DependenciesProvider({ children }: { children: ReactNode }) {
         ffmpegSuccess,
         checkFfmpeg,
         downloadFfmpeg,
+        // Bun
+        bunStatus,
+        bunLoading,
+        bunDownloading,
+        bunError,
+        bunSuccess,
+        checkBun,
+        downloadBun,
       }}
     >
       {children}

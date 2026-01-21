@@ -4,7 +4,6 @@ export type VideoCodec = 'h264' | 'vp9' | 'av1' | 'auto';
 export type AudioBitrate = 'auto' | '128';
 export type SubtitleMode = 'off' | 'auto' | 'manual';
 export type SubtitleFormat = 'srt' | 'vtt' | 'ass';
-export type YouTubePlayerClient = 'default' | 'tv_embedded' | 'ios' | 'android' | 'mweb';
 
 // Source platforms supported by yt-dlp
 export type SourcePlatform = 
@@ -74,7 +73,7 @@ export interface DownloadSettings {
   subtitleEmbed: boolean; // true = embed into video, false = separate file
   subtitleFormat: SubtitleFormat; // srt, vtt, ass
   // YouTube specific settings
-  youtubePlayerClient: YouTubePlayerClient; // default, tv_embedded, ios, android, mweb
+  useBunRuntime: boolean; // Use Bun runtime for YouTube downloads (fixes 360p issue)
 }
 
 export interface DownloadProgress {

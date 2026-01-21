@@ -14,7 +14,6 @@ import type {
   AudioBitrate,
   SubtitleMode,
   SubtitleFormat,
-  YouTubePlayerClient,
   PlaylistVideoEntry,
   ItemDownloadSettings,
 } from '@/lib/types';
@@ -51,7 +50,7 @@ function saveSettings(settings: DownloadSettings) {
       subtitleLangs: settings.subtitleLangs,
       subtitleEmbed: settings.subtitleEmbed,
       subtitleFormat: settings.subtitleFormat,
-      youtubePlayerClient: settings.youtubePlayerClient,
+      useBunRuntime: settings.useBunRuntime,
     }));
   } catch (e) {
     console.error('Failed to save settings:', e);
@@ -94,7 +93,7 @@ interface DownloadContextType {
   updateSubtitleEmbed: (embed: boolean) => void;
   updateSubtitleFormat: (format: SubtitleFormat) => void;
   // YouTube specific settings
-  updateYouTubePlayerClient: (client: YouTubePlayerClient) => void;
+  updateUseBunRuntime: (enabled: boolean) => void;
 }
 
 const DownloadContext = createContext<DownloadContextType | null>(null);
@@ -123,7 +122,7 @@ export function DownloadProvider({ children }: { children: ReactNode }) {
       subtitleEmbed: saved.subtitleEmbed || false,
       subtitleFormat: saved.subtitleFormat || 'srt',
       // YouTube specific settings
-      youtubePlayerClient: saved.youtubePlayerClient || 'default',
+      useBunRuntime: saved.useBunRuntime || false,
     };
   });
   
@@ -487,7 +486,7 @@ export function DownloadProvider({ children }: { children: ReactNode }) {
           // Logging settings
           logStderr,
           // YouTube specific settings
-          youtubePlayerClient: settings.youtubePlayerClient,
+          useBunRuntime: settings.useBunRuntime,
         });
         
         setItems(items => items.map(i => 
@@ -646,9 +645,9 @@ export function DownloadProvider({ children }: { children: ReactNode }) {
     });
   }, []);
 
-  const updateYouTubePlayerClient = useCallback((youtubePlayerClient: YouTubePlayerClient) => {
+  const updateUseBunRuntime = useCallback((useBunRuntime: boolean) => {
     setSettings(s => {
-      const newSettings = { ...s, youtubePlayerClient };
+      const newSettings = { ...s, useBunRuntime };
       saveSettings(newSettings);
       return newSettings;
     });
@@ -682,7 +681,7 @@ export function DownloadProvider({ children }: { children: ReactNode }) {
     updateSubtitleLangs,
     updateSubtitleEmbed,
     updateSubtitleFormat,
-    updateYouTubePlayerClient,
+    updateUseBunRuntime,
   };
 
   return (

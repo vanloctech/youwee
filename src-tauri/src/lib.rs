@@ -887,7 +887,7 @@ async fn download_video(
     // Logging settings
     log_stderr: Option<bool>,
     // YouTube specific settings
-    youtube_player_client: Option<String>,
+    use_bun_runtime: Option<bool>,
 ) -> Result<(), String> {
     CANCEL_FLAG.store(false, Ordering::SeqCst);
     
@@ -915,11 +915,12 @@ async fn download_video(
         "--no-keep-fragments".to_string(),
     ];
     
-    // Add YouTube player client if specified and URL is YouTube
-    if let Some(ref client) = youtube_player_client {
-        if client != "default" && (url.contains("youtube.com") || url.contains("youtu.be")) {
+    // Add Bun runtime args if enabled and URL is YouTube
+    if use_bun_runtime.unwrap_or(false) && (url.contains("youtube.com") || url.contains("youtu.be")) {
+        if let Some(bun_path) = get_bun_path(&app).await {
+            // Add extractor args to use Bun runtime
             args.push("--extractor-args".to_string());
-            args.push(format!("youtube:player_client={}", client));
+            args.push(format!("youtube:ejs_runtimes=bun;ejs_bun_path={}", bun_path.to_string_lossy()));
         }
     }
     
@@ -1652,6 +1653,15 @@ pub struct FfmpegVersionInfo {
 /// FFmpeg status response
 #[derive(Clone, Serialize)]
 pub struct FfmpegStatus {
+    pub installed: bool,
+    pub version: Option<String>,
+    pub binary_path: Option<String>,
+    pub is_system: bool,
+}
+
+/// Bun runtime status response
+#[derive(Clone, Serialize)]
+pub struct BunStatus {
     pub installed: bool,
     pub version: Option<String>,
     pub binary_path: Option<String>,
@@ -2552,6 +2562,293 @@ fn check_file_exists(filepath: String) -> bool {
     std::path::Path::new(&filepath).exists()
 }
 
+/// Get the Bun binary path (bundled or system)
+async fn get_bun_path(app: &AppHandle) -> Option<std::path::PathBuf> {
+    // First check app data directory for bundled bun
+    if let Ok(app_data_dir) = app.path().app_data_dir() {
+        let bin_dir = app_data_dir.join("bin");
+        #[cfg(windows)]
+        let bun_path = bin_dir.join("bun.exe");
+        #[cfg(not(windows))]
+        let bun_path = bin_dir.join("bun");
+        
+        if bun_path.exists() {
+            return Some(bun_path);
+        }
+    }
+    
+    // Check system bun
+    #[cfg(unix)]
+    {
+        let output = Command::new("which")
+            .arg("bun")
+            .output()
+            .await
+            .ok()?;
+        
+        if output.status.success() {
+            let path = String::from_utf8_lossy(&output.stdout).trim().to_string();
+            if !path.is_empty() {
+                return Some(std::path::PathBuf::from(path));
+            }
+        }
+    }
+    
+    #[cfg(windows)]
+    {
+        let output = Command::new("where")
+            .arg("bun")
+            .output()
+            .await
+            .ok()?;
+        
+        if output.status.success() {
+            let path = String::from_utf8_lossy(&output.stdout)
+                .lines()
+                .next()
+                .unwrap_or("")
+                .to_string();
+            if !path.is_empty() {
+                return Some(std::path::PathBuf::from(path));
+            }
+        }
+    }
+    
+    None
+}
+
+/// Check if Bun is installed and get its status
+#[tauri::command]
+async fn check_bun(app: AppHandle) -> Result<BunStatus, String> {
+    // First check app data directory for bundled bun
+    if let Ok(app_data_dir) = app.path().app_data_dir() {
+        let bin_dir = app_data_dir.join("bin");
+        #[cfg(windows)]
+        let bun_path = bin_dir.join("bun.exe");
+        #[cfg(not(windows))]
+        let bun_path = bin_dir.join("bun");
+        
+        if bun_path.exists() {
+            // Get version
+            let output = Command::new(&bun_path)
+                .args(["--version"])
+                .stdout(Stdio::piped())
+                .stderr(Stdio::piped())
+                .output()
+                .await;
+            
+            if let Ok(output) = output {
+                let stdout = String::from_utf8_lossy(&output.stdout);
+                let version = stdout.trim().to_string();
+                return Ok(BunStatus {
+                    installed: true,
+                    version: Some(version),
+                    binary_path: Some(bun_path.to_string_lossy().to_string()),
+                    is_system: false,
+                });
+            }
+        }
+    }
+    
+    // Check system bun
+    let output = Command::new("bun")
+        .args(["--version"])
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .output()
+        .await;
+    
+    match output {
+        Ok(output) if output.status.success() => {
+            let stdout = String::from_utf8_lossy(&output.stdout);
+            let version = stdout.trim().to_string();
+            
+            // Get binary path
+            #[cfg(unix)]
+            let path = Command::new("which")
+                .arg("bun")
+                .output()
+                .await
+                .ok()
+                .map(|o| String::from_utf8_lossy(&o.stdout).trim().to_string());
+            
+            #[cfg(windows)]
+            let path = Command::new("where")
+                .arg("bun")
+                .output()
+                .await
+                .ok()
+                .map(|o| String::from_utf8_lossy(&o.stdout).lines().next().unwrap_or("").to_string());
+            
+            Ok(BunStatus {
+                installed: true,
+                version: Some(version),
+                binary_path: path,
+                is_system: true,
+            })
+        }
+        _ => Ok(BunStatus {
+            installed: false,
+            version: None,
+            binary_path: None,
+            is_system: false,
+        }),
+    }
+}
+
+/// Get the appropriate Bun download URL for current platform
+fn get_bun_download_url() -> &'static str {
+    // Bun releases: https://github.com/oven-sh/bun/releases
+    #[cfg(target_os = "macos")]
+    {
+        #[cfg(target_arch = "aarch64")]
+        { "https://github.com/oven-sh/bun/releases/latest/download/bun-darwin-aarch64.zip" }
+        #[cfg(target_arch = "x86_64")]
+        { "https://github.com/oven-sh/bun/releases/latest/download/bun-darwin-x64.zip" }
+        #[cfg(not(any(target_arch = "aarch64", target_arch = "x86_64")))]
+        { "" }
+    }
+    #[cfg(target_os = "windows")]
+    { "https://github.com/oven-sh/bun/releases/latest/download/bun-windows-x64.zip" }
+    #[cfg(target_os = "linux")]
+    {
+        #[cfg(target_arch = "aarch64")]
+        { "https://github.com/oven-sh/bun/releases/latest/download/bun-linux-aarch64.zip" }
+        #[cfg(target_arch = "x86_64")]
+        { "https://github.com/oven-sh/bun/releases/latest/download/bun-linux-x64.zip" }
+        #[cfg(not(any(target_arch = "aarch64", target_arch = "x86_64")))]
+        { "" }
+    }
+    #[cfg(not(any(target_os = "macos", target_os = "windows", target_os = "linux")))]
+    { "" }
+}
+
+/// Download and install Bun runtime
+#[tauri::command]
+async fn download_bun(app: AppHandle) -> Result<String, String> {
+    let download_url = get_bun_download_url();
+    
+    if download_url.is_empty() {
+        return Err("Unsupported platform".to_string());
+    }
+    
+    // Get app data directory
+    let app_data_dir = app.path().app_data_dir()
+        .map_err(|e| format!("Failed to get app data directory: {}", e))?;
+    
+    let bin_dir = app_data_dir.join("bin");
+    
+    // Create bin directory if it doesn't exist
+    tokio::fs::create_dir_all(&bin_dir)
+        .await
+        .map_err(|e| format!("Failed to create bin directory: {}", e))?;
+    
+    // Create HTTP client
+    let client = reqwest::Client::builder()
+        .user_agent("Youwee/0.3.0")
+        .timeout(std::time::Duration::from_secs(300)) // 5 min timeout
+        .build()
+        .map_err(|e| format!("Failed to create HTTP client: {}", e))?;
+    
+    // Download the zip
+    let response = client
+        .get(download_url)
+        .send()
+        .await
+        .map_err(|e| {
+            if e.is_timeout() {
+                "Download timed out. Please try again.".to_string()
+            } else if e.is_connect() {
+                "Unable to connect. Please check your internet connection.".to_string()
+            } else {
+                format!("Failed to download Bun: {}", e)
+            }
+        })?;
+    
+    let status = response.status();
+    if !status.is_success() {
+        return Err(format!("Download failed with status: {}", status));
+    }
+    
+    let bytes = response
+        .bytes()
+        .await
+        .map_err(|e| format!("Failed to read response: {}", e))?;
+    
+    // Extract bun from zip
+    #[cfg(windows)]
+    let bun_binary = "bun.exe";
+    #[cfg(not(windows))]
+    let bun_binary = "bun";
+    
+    let bun_path = bin_dir.join(bun_binary);
+    
+    // Extract the zip
+    extract_bun_from_zip(&bytes, &bin_dir, bun_binary).await?;
+    
+    // Set executable permission on Unix
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        let mut perms = tokio::fs::metadata(&bun_path)
+            .await
+            .map_err(|e| format!("Failed to get file metadata: {}", e))?
+            .permissions();
+        perms.set_mode(0o755);
+        tokio::fs::set_permissions(&bun_path, perms)
+            .await
+            .map_err(|e| format!("Failed to set permissions: {}", e))?;
+    }
+    
+    // Verify installation by getting version
+    let output = Command::new(&bun_path)
+        .args(["--version"])
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .output()
+        .await
+        .map_err(|e| format!("Failed to verify Bun installation: {}", e))?;
+    
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    let version = stdout.trim().to_string();
+    
+    Ok(version)
+}
+
+/// Extract bun binary from zip archive
+async fn extract_bun_from_zip(data: &[u8], dest_dir: &std::path::Path, target_binary: &str) -> Result<(), String> {
+    use zip::ZipArchive;
+    use std::io::Cursor;
+    
+    let cursor = Cursor::new(data);
+    let mut archive = ZipArchive::new(cursor)
+        .map_err(|e| format!("Failed to open zip: {}", e))?;
+    
+    for i in 0..archive.len() {
+        let mut file = archive.by_index(i)
+            .map_err(|e| format!("Failed to read zip entry: {}", e))?;
+        
+        let name = file.name().to_string();
+        
+        // Look for bun binary - it's usually in a folder like bun-darwin-aarch64/bun
+        #[cfg(windows)]
+        let is_bun = name.ends_with("/bun.exe") || name == "bun.exe";
+        #[cfg(not(windows))]
+        let is_bun = (name.ends_with("/bun") || name == "bun") && !name.ends_with(".dSYM/bun");
+        
+        if is_bun {
+            let dest_path = dest_dir.join(target_binary);
+            let mut outfile = std::fs::File::create(&dest_path)
+                .map_err(|e| format!("Failed to create file: {}", e))?;
+            std::io::copy(&mut file, &mut outfile)
+                .map_err(|e| format!("Failed to extract: {}", e))?;
+            return Ok(());
+        }
+    }
+    
+    Err("Bun binary not found in archive".to_string())
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -2598,7 +2895,10 @@ pub fn run() {
             clear_history,
             get_history_count,
             open_file_location,
-            check_file_exists
+            check_file_exists,
+            // Bun runtime commands
+            check_bun,
+            download_bun
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
