@@ -10,6 +10,27 @@ export type SourcePlatform =
   | 'youtube' | 'tiktok' | 'instagram' | 'twitter' | 'facebook' 
   | 'vimeo' | 'twitch' | 'bilibili' | 'soundcloud' | 'dailymotion' | 'other';
 
+// Settings snapshot saved with each queue item (YouTube page)
+export interface ItemDownloadSettings {
+  quality: Quality;
+  format: Format;
+  outputPath: string;
+  videoCodec: VideoCodec;
+  audioBitrate: AudioBitrate;
+  subtitleMode: SubtitleMode;
+  subtitleLangs: string[];
+  subtitleEmbed: boolean;
+  subtitleFormat: SubtitleFormat;
+}
+
+// Simplified settings snapshot for Universal page
+export interface ItemUniversalSettings {
+  quality: Quality;
+  format: Format;
+  outputPath: string;
+  audioBitrate: AudioBitrate;
+}
+
 export interface DownloadItem {
   id: string;
   url: string;
@@ -32,6 +53,8 @@ export interface DownloadItem {
   completedFormat?: string; // e.g. "mp4"
   // Source detection
   extractor?: string; // e.g. "youtube", "tiktok", "instagram"
+  // Settings snapshot when item was added to queue
+  settings?: ItemDownloadSettings | ItemUniversalSettings;
 }
 
 export interface DownloadSettings {

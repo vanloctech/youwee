@@ -15,6 +15,7 @@ import type {
   SubtitleMode,
   SubtitleFormat,
   PlaylistVideoEntry,
+  ItemDownloadSettings,
 } from '@/lib/types';
 
 const STORAGE_KEY = 'youwee-settings';
@@ -213,6 +214,20 @@ export function DownloadProvider({ children }: { children: ReactNode }) {
     if (urls.length === 0) return 0;
 
     const currentItems = itemsRef.current;
+    
+    // Snapshot current settings for these items
+    const settingsSnapshot: ItemDownloadSettings = {
+      quality: settings.quality,
+      format: settings.format,
+      outputPath: settings.outputPath,
+      videoCodec: settings.videoCodec,
+      audioBitrate: settings.audioBitrate,
+      subtitleMode: settings.subtitleMode,
+      subtitleLangs: [...settings.subtitleLangs],
+      subtitleEmbed: settings.subtitleEmbed,
+      subtitleFormat: settings.subtitleFormat,
+    };
+    
     const newItems: DownloadItem[] = urls
       .filter(url => !currentItems.some(item => item.url === url))
       .map((url, index) => ({
@@ -227,6 +242,8 @@ export function DownloadProvider({ children }: { children: ReactNode }) {
         // Store playlist context for display
         playlistIndex: playlistId ? index + 1 : undefined,
         playlistTotal: playlistId ? urls.length : undefined,
+        // Store settings snapshot
+        settings: settingsSnapshot,
       }));
     
     if (newItems.length > 0) {
@@ -234,7 +251,7 @@ export function DownloadProvider({ children }: { children: ReactNode }) {
     }
     
     return newItems.length;
-  }, []);
+  }, [settings]);
 
   // Expand playlist URL to individual videos
   const expandPlaylistUrl = useCallback(async (url: string): Promise<string[]> => {
@@ -244,6 +261,19 @@ export function DownloadProvider({ children }: { children: ReactNode }) {
         url, 
         limit 
       });
+      
+      // Snapshot current settings for these items
+      const settingsSnapshot: ItemDownloadSettings = {
+        quality: settings.quality,
+        format: settings.format,
+        outputPath: settings.outputPath,
+        videoCodec: settings.videoCodec,
+        audioBitrate: settings.audioBitrate,
+        subtitleMode: settings.subtitleMode,
+        subtitleLangs: [...settings.subtitleLangs],
+        subtitleEmbed: settings.subtitleEmbed,
+        subtitleFormat: settings.subtitleFormat,
+      };
       
       // Add items with titles and thumbnails from playlist data
       const currentItems = itemsRef.current;
@@ -263,6 +293,8 @@ export function DownloadProvider({ children }: { children: ReactNode }) {
           channel: entry.channel,
           playlistIndex: index + 1,
           playlistTotal: entries.length,
+          // Store settings snapshot
+          settings: settingsSnapshot,
         }));
       
       if (newItems.length > 0) {
@@ -274,7 +306,7 @@ export function DownloadProvider({ children }: { children: ReactNode }) {
       console.error('Failed to expand playlist:', error);
       throw error;
     }
-  }, [settings.playlistLimit]);
+  }, [settings]);
 
   // Format duration from seconds to "mm:ss" or "hh:mm:ss"
   const formatDuration = (seconds: number): string => {
@@ -426,25 +458,26 @@ export function DownloadProvider({ children }: { children: ReactNode }) {
       ));
 
       try {
-        // Each item is now a single video, so disable playlist mode
-        // Get logStderr setting from localStorage
+        // Use item's saved settings (snapshot from when it was added)
+        // Fallback to current global settings if not available
+        const itemSettings = item.settings as ItemDownloadSettings | undefined;
         const logStderr = localStorage.getItem('youwee_log_stderr') !== 'false';
         
         await invoke('download_video', {
           id: item.id,
           url: item.url,
-          outputPath: settings.outputPath,
-          quality: settings.quality,
-          format: settings.format,
+          outputPath: itemSettings?.outputPath ?? settings.outputPath,
+          quality: itemSettings?.quality ?? settings.quality,
+          format: itemSettings?.format ?? settings.format,
           downloadPlaylist: false, // Always false - playlist already expanded
-          videoCodec: settings.videoCodec,
-          audioBitrate: settings.audioBitrate,
+          videoCodec: itemSettings?.videoCodec ?? settings.videoCodec,
+          audioBitrate: itemSettings?.audioBitrate ?? settings.audioBitrate,
           playlistLimit: null, // Not needed
           // Subtitle settings
-          subtitleMode: settings.subtitleMode,
-          subtitleLangs: settings.subtitleLangs.join(','),
-          subtitleEmbed: settings.subtitleEmbed,
-          subtitleFormat: settings.subtitleFormat,
+          subtitleMode: itemSettings?.subtitleMode ?? settings.subtitleMode,
+          subtitleLangs: (itemSettings?.subtitleLangs ?? settings.subtitleLangs).join(','),
+          subtitleEmbed: itemSettings?.subtitleEmbed ?? settings.subtitleEmbed,
+          subtitleFormat: itemSettings?.subtitleFormat ?? settings.subtitleFormat,
           // Logging settings
           logStderr,
         });

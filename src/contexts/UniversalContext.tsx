@@ -11,6 +11,7 @@ import type {
   Quality, 
   Format,
   AudioBitrate,
+  ItemUniversalSettings,
 } from '@/lib/types';
 
 const STORAGE_KEY = 'youwee-universal-settings';
@@ -152,6 +153,15 @@ export function UniversalProvider({ children }: { children: ReactNode }) {
     if (urls.length === 0) return 0;
 
     const currentItems = itemsRef.current;
+    
+    // Snapshot current settings for these items
+    const settingsSnapshot: ItemUniversalSettings = {
+      quality: settings.quality,
+      format: settings.format,
+      outputPath: settings.outputPath,
+      audioBitrate: settings.audioBitrate,
+    };
+    
     const newItems: DownloadItem[] = urls
       .filter(url => !currentItems.some(item => item.url === url))
       .map(url => ({
@@ -162,6 +172,8 @@ export function UniversalProvider({ children }: { children: ReactNode }) {
         progress: 0,
         speed: '',
         eta: '',
+        // Store settings snapshot
+        settings: settingsSnapshot,
       }));
     
     if (newItems.length > 0) {
@@ -169,7 +181,7 @@ export function UniversalProvider({ children }: { children: ReactNode }) {
     }
     
     return newItems.length;
-  }, []);
+  }, [settings]);
 
   const importFromFile = useCallback(async (): Promise<number> => {
     try {
@@ -268,18 +280,20 @@ export function UniversalProvider({ children }: { children: ReactNode }) {
       ));
 
       try {
-        // Get logStderr setting from localStorage
+        // Use item's saved settings (snapshot from when it was added)
+        // Fallback to current global settings if not available
+        const itemSettings = item.settings as ItemUniversalSettings | undefined;
         const logStderr = localStorage.getItem('youwee_log_stderr') !== 'false';
         
         await invoke('download_video', {
           id: item.id,
           url: item.url,
-          outputPath: settings.outputPath,
-          quality: settings.quality,
-          format: settings.format,
+          outputPath: itemSettings?.outputPath ?? settings.outputPath,
+          quality: itemSettings?.quality ?? settings.quality,
+          format: itemSettings?.format ?? settings.format,
           downloadPlaylist: false,
           videoCodec: 'auto', // Use auto for universal downloads
-          audioBitrate: settings.audioBitrate,
+          audioBitrate: itemSettings?.audioBitrate ?? settings.audioBitrate,
           playlistLimit: null,
           subtitleMode: 'off',
           subtitleLangs: '',
