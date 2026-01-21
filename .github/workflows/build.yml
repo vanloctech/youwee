@@ -126,11 +126,23 @@ jobs:
       - name: Rename artifacts with friendly names (macOS)
         if: matrix.os_name == 'macos'
         run: |
-          cd src-tauri/target/${{ matrix.target }}/release/bundle/dmg
+          cd src-tauri/target/${{ matrix.target }}/release/bundle
+          # Rename .dmg
+          cd dmg
           for f in *.dmg; do
             mv "$f" "Youwee-${{ matrix.friendly_name }}.dmg"
           done
-          ls -la
+          cd ..
+          # Rename .app.tar.gz and .app.tar.gz.sig for updater (must be unique per arch)
+          cd macos
+          for f in *.app.tar.gz; do
+            mv "$f" "Youwee-${{ matrix.arch }}.app.tar.gz"
+          done
+          for f in *.app.tar.gz.sig; do
+            mv "$f" "Youwee-${{ matrix.arch }}.app.tar.gz.sig"
+          done
+          cd ..
+          ls -laR
 
       - name: Rename artifacts with friendly names (Linux)
         if: matrix.os_name == 'linux'
@@ -271,35 +283,30 @@ jobs:
           FIRST=true
           
           # macOS Apple Silicon
-          if [ -f "artifacts/Youwee.app.tar.gz.sig" ] || [ -f "artifacts/macos/Youwee.app.tar.gz.sig" ]; then
-            SIG_FILE=$(find artifacts -name "*.app.tar.gz.sig" -path "*aarch64*" 2>/dev/null | head -1)
-            if [ -z "$SIG_FILE" ]; then
-              SIG_FILE=$(find artifacts -name "*.app.tar.gz.sig" | head -1)
-            fi
-            if [ -n "$SIG_FILE" ] && [ -f "$SIG_FILE" ]; then
-              SIG=$(cat "$SIG_FILE")
-              if [ "$FIRST" = false ]; then echo "," >> latest.json; fi
-              FIRST=false
-              cat >> latest.json << PLATFORM
-              "darwin-aarch64": {
-                "signature": "$SIG",
-                "url": "https://github.com/${{ github.repository }}/releases/download/$GITHUB_REF_NAME/Youwee.app.tar.gz"
-              }
-          PLATFORM
-            fi
-          fi
-          
-          # macOS Intel
-          INTEL_SIG=$(find artifacts -name "*.app.tar.gz.sig" -path "*x86_64*" 2>/dev/null | head -1)
-          if [ -n "$INTEL_SIG" ] && [ -f "$INTEL_SIG" ]; then
-            SIG=$(cat "$INTEL_SIG")
+          AARCH64_SIG=$(find artifacts -name "Youwee-aarch64.app.tar.gz.sig" 2>/dev/null | head -1)
+          if [ -n "$AARCH64_SIG" ] && [ -f "$AARCH64_SIG" ]; then
+            SIG=$(cat "$AARCH64_SIG")
             if [ "$FIRST" = false ]; then echo "," >> latest.json; fi
             FIRST=false
             cat >> latest.json << PLATFORM
-              "darwin-x86_64": {
-                "signature": "$SIG",
-                "url": "https://github.com/${{ github.repository }}/releases/download/$GITHUB_REF_NAME/Youwee.app.tar.gz"
-              }
+            "darwin-aarch64": {
+              "signature": "$SIG",
+              "url": "https://github.com/${{ github.repository }}/releases/download/$GITHUB_REF_NAME/Youwee-aarch64.app.tar.gz"
+            }
+          PLATFORM
+          fi
+          
+          # macOS Intel
+          X86_64_SIG=$(find artifacts -name "Youwee-x86_64.app.tar.gz.sig" 2>/dev/null | head -1)
+          if [ -n "$X86_64_SIG" ] && [ -f "$X86_64_SIG" ]; then
+            SIG=$(cat "$X86_64_SIG")
+            if [ "$FIRST" = false ]; then echo "," >> latest.json; fi
+            FIRST=false
+            cat >> latest.json << PLATFORM
+            "darwin-x86_64": {
+              "signature": "$SIG",
+              "url": "https://github.com/${{ github.repository }}/releases/download/$GITHUB_REF_NAME/Youwee-x86_64.app.tar.gz"
+            }
           PLATFORM
           fi
           
