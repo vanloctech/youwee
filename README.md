@@ -15,19 +15,28 @@
 
 ## ✨ Features
 
-- 🎬 **Batch Downloads** - Download multiple videos at once
-- 📋 **Playlist Support** - Download entire YouTube playlists
-- 🎥 **Multiple Quality Options** - From 360p to 4K Ultra HD
-- 🎵 **Audio Extraction** - Extract audio in MP3, M4A, or Opus formats
-- 🎨 **6 Beautiful Themes** - Midnight, Aurora, Sunset, Ocean, Forest, Candy
-- 🌓 **Dark/Light Mode** - Choose your preferred appearance
-- 📦 **H.264 Codec** - Maximum compatibility with all players
-- 💾 **File Size Estimation** - Know the size before downloading
-- 🚀 **Fast & Lightweight** - Built with Tauri for minimal resource usage
-- 🔒 **No External Dependencies** - yt-dlp bundled with the app
+- **Batch Downloads** - Download multiple videos at once
+- **Playlist Support** - Download entire YouTube playlists
+- **Multiple Quality Options** - From 360p to 4K Ultra HD
+- **Subtitle Support** - Ability to embed subtitles into videos or save them as separate files.
+- **Batch Downloading** - Support for downloading multiple videos simultaneously.
+- **Expanded Compatibility** - Added support for 1800+ websites powered by yt-dlp.
+- **Download Management** - Added Download History and Library sections.
+- **8K Resolution Support** - High-quality video downloading now supports up to 8K resolution.
+- **Developer Tools** - Added access to yt-dlp logs and execution commands for debugging.
+- **Audio Extraction** - Extract audio in MP3, M4A, or Opus formats
+- **6 Beautiful Themes** - Midnight, Aurora, Sunset, Ocean, Forest, Candy
+- **Dark/Light Mode** - Choose your preferred appearance
+- **H.264 Codec** - Maximum compatibility with all players
+- **File Size Estimation** - Know the size before downloading
+- **Fast & Lightweight** - Built with Tauri for minimal resource usage
+- **No External Dependencies** - yt-dlp bundled with the app
 
 ## 📸 Screenshots
-![Youwee](docs/screenshots/youwee.png)
+|                 Download                 |                     Setting                      |
+|:----------------------------------------:|:------------------------------------------------:|
+| ![Youwee](docs/screenshots/youwee-1.png) | ![Youwee setting](docs/screenshots/youwee-3.png) |
+
 
 ## 🚀 Installation
 
