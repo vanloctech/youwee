@@ -3,19 +3,20 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Button } from '@/components/ui/button';
 import { UniversalQueueItem } from './UniversalQueueItem';
 import type { DownloadItem } from '@/lib/types';
+import { cn } from '@/lib/utils';
 
-// Popular supported sites
+// Popular supported sites with Font Awesome v4 icons
 const POPULAR_SITES = [
-  { name: 'TikTok', icon: '🎵' },
-  { name: 'Instagram', icon: '📷' },
-  { name: 'Twitter/X', icon: '𝕏' },
-  { name: 'Facebook', icon: '📘' },
-  { name: 'Vimeo', icon: '🎬' },
-  { name: 'Twitch', icon: '📺' },
-  { name: 'Bilibili', icon: '📺' },
-  { name: 'SoundCloud', icon: '🎧' },
-  { name: 'Dailymotion', icon: '▶️' },
-  { name: 'Reddit', icon: '🔴' },
+  { name: 'TikTok', faIcon: 'fa-music', color: 'text-pink-500' },
+  { name: 'Instagram', faIcon: 'fa-instagram', color: 'text-purple-500' },
+  { name: 'Twitter/X', faIcon: 'fa-twitter', color: 'text-sky-400' },
+  { name: 'Facebook', faIcon: 'fa-facebook', color: 'text-blue-600' },
+  { name: 'Vimeo', faIcon: 'fa-vimeo', color: 'text-cyan-500' },
+  { name: 'Twitch', faIcon: 'fa-twitch', color: 'text-purple-400' },
+  { name: 'SoundCloud', faIcon: 'fa-soundcloud', color: 'text-orange-500' },
+  { name: 'Reddit', faIcon: 'fa-reddit', color: 'text-orange-600' },
+  { name: 'Spotify', faIcon: 'fa-spotify', color: 'text-green-500' },
+  { name: 'Tumblr', faIcon: 'fa-tumblr', color: 'text-blue-900' },
 ];
 
 interface UniversalQueueListProps {
@@ -46,18 +47,22 @@ export function UniversalQueueList({
         </p>
         
         {/* Popular sites grid */}
-        <div className="flex flex-wrap justify-center gap-2 mb-4 max-w-[320px]">
+        <div className="flex flex-wrap justify-center gap-2 mb-4 max-w-[340px]">
           {POPULAR_SITES.map((site) => (
             <span 
               key={site.name}
-              className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-muted/50 text-[11px] text-muted-foreground"
+              className={cn(
+                "inline-flex items-center gap-1.5 px-2 py-1 rounded-full bg-muted/50 text-[11px]",
+                site.color
+              )}
             >
-              <span>{site.icon}</span>
+              <i className={cn("fa", site.faIcon, "text-[10px]")} aria-hidden="true" />
               <span>{site.name}</span>
             </span>
           ))}
-          <span className="inline-flex items-center px-2 py-1 rounded-full bg-muted/50 text-[11px] text-muted-foreground">
-            +1,790 more
+          <span className="inline-flex items-center gap-1.5 px-2 py-1 rounded-full bg-muted/50 text-[11px] text-muted-foreground">
+            <i className="fa fa-plus text-[10px]" aria-hidden="true" />
+            <span>1,790 more</span>
           </span>
         </div>
         

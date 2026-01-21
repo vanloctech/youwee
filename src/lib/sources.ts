@@ -2,77 +2,127 @@ import type { SourcePlatform } from './types';
 
 export interface SourceInfo {
   platform: SourcePlatform;
-  icon: string;
+  faIcon: string;  // Font Awesome v4 icon class (e.g., "fa-youtube-play")
   color: string;
   label: string;
 }
 
+// Font Awesome v4 brand icons mapping
+// Reference: https://fontawesome.com/v4/icons/#brand
 const SOURCE_MAP: Record<string, SourceInfo> = {
   youtube: { 
     platform: 'youtube', 
-    icon: '📺', 
+    faIcon: 'fa-youtube-play', 
     color: 'text-red-500', 
     label: 'YouTube' 
   },
   tiktok: { 
     platform: 'tiktok', 
-    icon: '🎵', 
+    faIcon: 'fa-music',  // TikTok not in FA v4, use music as fallback
     color: 'text-pink-500', 
     label: 'TikTok' 
   },
   instagram: { 
     platform: 'instagram', 
-    icon: '📷', 
+    faIcon: 'fa-instagram', 
     color: 'text-purple-500', 
     label: 'Instagram' 
   },
   twitter: { 
     platform: 'twitter', 
-    icon: '𝕏', 
-    color: 'text-foreground', 
+    faIcon: 'fa-twitter', 
+    color: 'text-sky-400', 
     label: 'X/Twitter' 
   },
   facebook: { 
     platform: 'facebook', 
-    icon: '📘', 
+    faIcon: 'fa-facebook', 
     color: 'text-blue-600', 
     label: 'Facebook' 
   },
   vimeo: { 
     platform: 'vimeo', 
-    icon: '🎬', 
+    faIcon: 'fa-vimeo', 
     color: 'text-cyan-500', 
     label: 'Vimeo' 
   },
   twitch: { 
     platform: 'twitch', 
-    icon: '📺', 
+    faIcon: 'fa-twitch', 
     color: 'text-purple-400', 
     label: 'Twitch' 
   },
   bilibili: { 
     platform: 'bilibili', 
-    icon: '📺', 
+    faIcon: 'fa-television',  // Bilibili not in FA v4
     color: 'text-pink-400', 
     label: 'Bilibili' 
   },
   soundcloud: { 
     platform: 'soundcloud', 
-    icon: '🎧', 
+    faIcon: 'fa-soundcloud', 
     color: 'text-orange-500', 
     label: 'SoundCloud' 
   },
   dailymotion: { 
     platform: 'dailymotion', 
-    icon: '▶️', 
+    faIcon: 'fa-play-circle', // Dailymotion not in FA v4
     color: 'text-blue-400', 
     label: 'Dailymotion' 
+  },
+  reddit: {
+    platform: 'other',
+    faIcon: 'fa-reddit',
+    color: 'text-orange-600',
+    label: 'Reddit'
+  },
+  vine: {
+    platform: 'other',
+    faIcon: 'fa-vine',
+    color: 'text-green-500',
+    label: 'Vine'
+  },
+  spotify: {
+    platform: 'other',
+    faIcon: 'fa-spotify',
+    color: 'text-green-500',
+    label: 'Spotify'
+  },
+  tumblr: {
+    platform: 'other',
+    faIcon: 'fa-tumblr',
+    color: 'text-blue-900',
+    label: 'Tumblr'
+  },
+  flickr: {
+    platform: 'other',
+    faIcon: 'fa-flickr',
+    color: 'text-pink-500',
+    label: 'Flickr'
+  },
+  vk: {
+    platform: 'other',
+    faIcon: 'fa-vk',
+    color: 'text-blue-500',
+    label: 'VK'
+  },
+  pinterest: {
+    platform: 'other',
+    faIcon: 'fa-pinterest',
+    color: 'text-red-600',
+    label: 'Pinterest'
+  },
+  linkedin: {
+    platform: 'other',
+    faIcon: 'fa-linkedin',
+    color: 'text-blue-700',
+    label: 'LinkedIn'
   },
 };
 
 const DEFAULT_SOURCE: SourceInfo = {
   platform: 'other',
-  icon: '🌐',
+  faIcon: 'fa-globe',
   color: 'text-muted-foreground',
   label: 'Video',
 };
