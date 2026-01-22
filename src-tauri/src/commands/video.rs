@@ -1,8 +1,10 @@
 use std::process::Stdio;
+use std::time::Duration;
 use tauri::AppHandle;
 use tauri_plugin_shell::ShellExt;
 use tauri_plugin_shell::process::CommandEvent;
 use tokio::process::Command;
+use tokio::time::timeout;
 use crate::types::{VideoInfo, FormatOption, VideoInfoResponse, PlaylistVideoEntry, SubtitleInfo};
 use crate::services::run_ytdlp_json;
 
@@ -16,9 +18,8 @@ pub async fn get_video_transcript(app: AppHandle, url: String) -> Result<String,
     let temp_path = temp_dir.join("transcript");
     let temp_path_str = temp_path.to_string_lossy().to_string();
     
-    // Try to download auto-generated and manual subtitles
-    // Use pattern matching for all language variants (en.*, vi.*, etc.)
-    let args = [
+    // Try to download subtitles with timeout (30 seconds)
+    let subtitle_args = [
         "--skip-download",
         "--write-auto-subs",
         "--write-subs",
@@ -27,31 +28,37 @@ pub async fn get_video_transcript(app: AppHandle, url: String) -> Result<String,
         "-o", &temp_path_str,
         "--no-warnings",
         "--no-check-certificates",
+        "--socket-timeout", "15",
         &url,
     ];
     
-    let _ = run_ytdlp_json(&app, &args).await;
+    // Run with timeout
+    let subtitle_result = timeout(
+        Duration::from_secs(30),
+        run_ytdlp_json(&app, &subtitle_args)
+    ).await;
     
-    // Look for downloaded subtitle files
+    // Check for downloaded subtitle files
     let mut subtitle_files: Vec<std::path::PathBuf> = Vec::new();
     
-    if let Ok(entries) = std::fs::read_dir(&temp_dir) {
-        for entry in entries.flatten() {
-            let path = entry.path();
-            if let Some(ext) = path.extension() {
-                if ext == "vtt" || ext == "srt" {
-                    subtitle_files.push(path);
+    if subtitle_result.is_ok() {
+        if let Ok(entries) = std::fs::read_dir(&temp_dir) {
+            for entry in entries.flatten() {
+                let path = entry.path();
+                if let Some(ext) = path.extension() {
+                    if ext == "vtt" || ext == "srt" {
+                        subtitle_files.push(path);
+                    }
                 }
             }
         }
     }
     
-    // Sort files: prefer shorter names (usually manual subs) and English
+    // Sort files: prefer English and shorter names (manual subs)
     subtitle_files.sort_by(|a, b| {
         let a_name = a.file_name().unwrap_or_default().to_string_lossy();
         let b_name = b.file_name().unwrap_or_default().to_string_lossy();
         
-        // Prefer English
         let a_is_en = a_name.contains(".en.") || a_name.contains(".en-");
         let b_is_en = b_name.contains(".en.") || b_name.contains(".en-");
         
@@ -62,16 +69,15 @@ pub async fn get_video_transcript(app: AppHandle, url: String) -> Result<String,
             return std::cmp::Ordering::Greater;
         }
         
-        // Then prefer shorter names (manual subs tend to be simpler)
         a_name.len().cmp(&b_name.len())
     });
     
-    // Try to parse each subtitle file until we get content
+    // Try to parse each subtitle file
     for path in &subtitle_files {
         if let Ok(content) = std::fs::read_to_string(path) {
             let transcript = parse_subtitle_file(&content);
             if !transcript.trim().is_empty() && transcript.split_whitespace().count() > 10 {
-                // Clean up all files
+                // Clean up
                 for p in &subtitle_files {
                     std::fs::remove_file(p).ok();
                 }
@@ -81,25 +87,118 @@ pub async fn get_video_transcript(app: AppHandle, url: String) -> Result<String,
         }
     }
     
-    // Clean up
+    // Clean up subtitle files
     std::fs::remove_dir_all(&temp_dir).ok();
     
-    // If no subtitles found, try to get video description as fallback context
-    let desc_args = [
+    // No subtitles found - try to get title and description as fallback
+    let info_args = [
         "--skip-download",
-        "--print", "%(description)s",
+        "--print", "%(title)s|||%(description)s",
         "--no-warnings",
+        "--socket-timeout", "10",
         &url,
     ];
     
-    if let Ok(description) = run_ytdlp_json(&app, &desc_args).await {
-        let desc = description.trim();
-        if !desc.is_empty() && desc.len() > 100 {
-            return Ok(format!("[Video Description]\n{}", desc));
+    let info_result = timeout(
+        Duration::from_secs(15),
+        run_ytdlp_json(&app, &info_args)
+    ).await;
+    
+    if let Ok(Ok(info_str)) = info_result {
+        let parts: Vec<&str> = info_str.splitn(2, "|||").collect();
+        let title = parts.first().map(|s| s.trim()).unwrap_or("");
+        let description = parts.get(1).map(|s| s.trim()).unwrap_or("");
+        
+        if !description.is_empty() && description.len() > 50 {
+            // Check if description seems to contain actual content (not just promo/links)
+            if is_description_content_relevant(title, description) {
+                return Ok(format!("[Video Description - No subtitles available]\nTitle: {}\n\n{}", title, description));
+            }
         }
     }
     
-    Err("No transcript available for this video. The video may not have subtitles or auto-generated captions.".to_string())
+    Err("No transcript available. This video has no subtitles, auto-generated captions, or meaningful description to summarize.".to_string())
+}
+
+/// Check if video description contains relevant content (lyrics, transcript, etc.)
+/// Returns false if it's mostly promotional content, links, or author info
+fn is_description_content_relevant(title: &str, description: &str) -> bool {
+    let desc_lower = description.to_lowercase();
+    let title_lower = title.to_lowercase();
+    
+    // Positive indicators - description likely contains actual content
+    let content_indicators = [
+        "lyrics", "lời bài hát", "가사", "歌詞", // lyrics indicators
+        "transcript", "subtitles", "phụ đề",
+        "verse", "chorus", "bridge", "outro", "intro", // song structure
+        "chapter", "timestamp", "00:", // timestamps/chapters
+    ];
+    
+    for indicator in content_indicators {
+        if desc_lower.contains(indicator) {
+            return true;
+        }
+    }
+    
+    // Check if description is mostly just links and social media
+    let link_count = description.matches("http").count() + description.matches("www.").count();
+    let line_count = description.lines().count().max(1);
+    let link_ratio = link_count as f32 / line_count as f32;
+    
+    // If more than 50% of lines are links, it's probably just promo
+    if link_ratio > 0.5 {
+        return false;
+    }
+    
+    // Negative indicators - description is mostly promotional
+    let promo_indicators = [
+        "subscribe", "đăng ký", "follow me", "theo dõi",
+        "business inquiries", "liên hệ công việc",
+        "copyright", "bản quyền",
+        "patreon", "paypal", "donate",
+        "merch", "merchandise",
+        "social media", "mạng xã hội",
+    ];
+    
+    let promo_count = promo_indicators.iter()
+        .filter(|&ind| desc_lower.contains(ind))
+        .count();
+    
+    // If too many promo indicators and short description, probably not useful
+    if promo_count >= 3 && description.len() < 500 {
+        return false;
+    }
+    
+    // Check if description has substantial text content (at least 200 chars of non-link text)
+    let text_without_links: String = description
+        .lines()
+        .filter(|line| !line.contains("http") && !line.contains("www."))
+        .collect::<Vec<_>>()
+        .join("\n");
+    
+    if text_without_links.len() < 200 {
+        return false;
+    }
+    
+    // Check word overlap with title (description should be related to video topic)
+    let title_words: Vec<&str> = title_lower
+        .split_whitespace()
+        .filter(|w| w.len() > 3)
+        .collect();
+    
+    if !title_words.is_empty() {
+        let matching_words = title_words.iter()
+            .filter(|&w| desc_lower.contains(w))
+            .count();
+        
+        // At least some title words should appear in description
+        if matching_words == 0 && title_words.len() >= 3 {
+            return false;
+        }
+    }
+    
+    // Default to true if we have enough text content
+    text_without_links.split_whitespace().count() > 50
 }
 
 /// Parse VTT or SRT subtitle file to plain text
