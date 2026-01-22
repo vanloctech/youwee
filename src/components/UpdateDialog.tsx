@@ -1,6 +1,7 @@
 import { Download, RefreshCw, X, Sparkles, RotateCcw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
+import { SimpleMarkdown } from '@/components/ui/simple-markdown';
 import type { UpdateInfo, UpdateProgress, UpdateStatus } from '@/hooks/useAppUpdater';
 
 interface UpdateDialogProps {
@@ -79,10 +80,11 @@ export function UpdateDialog({
                 A new version of Youwee is available. Would you like to update now?
               </p>
               {updateInfo?.body && (
-                <div className="p-3 bg-muted/50 rounded-lg max-h-32 overflow-y-auto">
-                  <p className="text-xs text-muted-foreground whitespace-pre-wrap">
-                    {updateInfo.body}
-                  </p>
+                <div className="p-3 bg-muted/50 rounded-lg max-h-48 overflow-y-auto">
+                  <SimpleMarkdown 
+                    content={updateInfo.body} 
+                    className="text-xs text-muted-foreground"
+                  />
                 </div>
               )}
             </div>

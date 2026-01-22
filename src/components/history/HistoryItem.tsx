@@ -2,6 +2,7 @@ import { useState, useCallback } from 'react';
 import { useHistory } from '@/contexts/HistoryContext';
 import { useAI } from '@/contexts/AIContext';
 import { cn } from '@/lib/utils';
+import { SimpleMarkdown } from '@/components/ui/simple-markdown';
 import type { HistoryEntry } from '@/lib/types';
 import { 
   FolderOpen, 
@@ -226,13 +227,13 @@ export function HistoryItem({ entry }: HistoryItemProps) {
                     <div className="flex items-start gap-2">
                       <Sparkles className="w-3.5 h-3.5 text-purple-500 flex-shrink-0 mt-0.5" />
                       <div className="flex-1 min-w-0">
-                        <p className={cn(
-                          "text-xs text-muted-foreground leading-relaxed",
-                          !showFullSummary && "line-clamp-2"
+                        <div className={cn(
+                          "text-xs text-muted-foreground",
+                          !showFullSummary && "line-clamp-3"
                         )}>
-                          {localSummary}
-                        </p>
-                        {localSummary.length > 150 && (
+                          <SimpleMarkdown content={localSummary} />
+                        </div>
+                        {localSummary.length > 200 && (
                           <button
                             onClick={() => setShowFullSummary(!showFullSummary)}
                             className="text-xs text-purple-500 hover:text-purple-400 mt-1 flex items-center gap-0.5"
