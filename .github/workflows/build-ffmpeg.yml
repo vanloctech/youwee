@@ -53,13 +53,13 @@ jobs:
         run: |
           cd $BUILD_DIR
           git clone --depth 1 https://bitbucket.org/multicoreware/x265_git.git x265
-          cd x265/build/darwin
+          mkdir -p x265/build_dir && cd x265/build_dir
           cmake -G "Unix Makefiles" \
                 -DCMAKE_INSTALL_PREFIX=$INSTALL_DIR \
                 -DENABLE_SHARED=OFF \
                 -DENABLE_STATIC=ON \
                 -DENABLE_CLI=OFF \
-                ../../source
+                ../source
           make -j$(sysctl -n hw.ncpu)
           make install
 
@@ -82,7 +82,7 @@ jobs:
         run: |
           cd $BUILD_DIR
           git clone --depth 1 https://aomedia.googlesource.com/aom
-          mkdir aom/build_aom && cd aom/build_aom
+          mkdir -p aom/build_aom && cd aom/build_aom
           cmake -DCMAKE_INSTALL_PREFIX=$INSTALL_DIR \
                 -DENABLE_SHARED=0 \
                 -DENABLE_STATIC=1 \
@@ -159,7 +159,7 @@ jobs:
             ffmpeg-macos-arm64.tar.gz.sha256
 
   build-macos-intel:
-    runs-on: macos-13  # Intel runner
+    runs-on: macos-15  # Intel runner
     
     steps:
       - name: Checkout repository
@@ -198,13 +198,13 @@ jobs:
         run: |
           cd $BUILD_DIR
           git clone --depth 1 https://bitbucket.org/multicoreware/x265_git.git x265
-          cd x265/build/darwin
+          mkdir -p x265/build_dir && cd x265/build_dir
           cmake -G "Unix Makefiles" \
                 -DCMAKE_INSTALL_PREFIX=$INSTALL_DIR \
                 -DENABLE_SHARED=OFF \
                 -DENABLE_STATIC=ON \
                 -DENABLE_CLI=OFF \
-                ../../source
+                ../source
           make -j$(sysctl -n hw.ncpu)
           make install
 
@@ -227,7 +227,7 @@ jobs:
         run: |
           cd $BUILD_DIR
           git clone --depth 1 https://aomedia.googlesource.com/aom
-          mkdir aom/build_aom && cd aom/build_aom
+          mkdir -p aom/build_aom && cd aom/build_aom
           cmake -DCMAKE_INSTALL_PREFIX=$INSTALL_DIR \
                 -DENABLE_SHARED=0 \
                 -DENABLE_STATIC=1 \
