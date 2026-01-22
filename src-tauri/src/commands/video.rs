@@ -54,7 +54,8 @@ pub async fn get_video_transcript(app: AppHandle, url: String) -> Result<String,
     #[cfg(debug_assertions)]
     println!("[TRANSCRIPT] Running yt-dlp for subtitles...");
     
-    add_log_internal("command", "yt-dlp: Fetching subtitles", Some(&subtitle_args.join(" ")), Some(&url)).ok();
+    let subtitle_cmd = format!("yt-dlp {}", subtitle_args.join(" "));
+    add_log_internal("command", &subtitle_cmd, None, Some(&url)).ok();
     
     // Run with timeout (60 seconds)
     let subtitle_result = timeout(
@@ -153,7 +154,8 @@ pub async fn get_video_transcript(app: AppHandle, url: String) -> Result<String,
         &url_for_info,
     ];
     
-    add_log_internal("command", "yt-dlp: Fetching video info", Some(&info_args.join(" ")), Some(&url)).ok();
+    let info_cmd = format!("yt-dlp {}", info_args.join(" "));
+    add_log_internal("command", &info_cmd, None, Some(&url)).ok();
     
     let info_result = timeout(
         Duration::from_secs(45),  // Increased from 15
