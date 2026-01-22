@@ -76,18 +76,17 @@ pub async fn generate_video_summary(
 pub fn get_ai_models(provider: String) -> Vec<ModelOption> {
     match provider.to_lowercase().as_str() {
         "gemini" => vec![
-            ModelOption { value: "gemini-2.0-flash".to_string(), label: "Gemini 2.0 Flash (Recommended)".to_string() },
+            ModelOption { value: "gemini-3-pro-preview".to_string(), label: "Gemini 3 Pro".to_string() },
+            ModelOption { value: "gemini-3-flash-preview".to_string(), label: "Gemini 3 Flash (Recommended)".to_string() },
+            ModelOption { value: "gemini-2.5-flash".to_string(), label: "Gemini 2.5 Flash".to_string() },
+            ModelOption { value: "gemini-2.0-flash".to_string(), label: "Gemini 2.0 Flash".to_string() },
             ModelOption { value: "gemini-2.0-flash-lite".to_string(), label: "Gemini 2.0 Flash Lite".to_string() },
-            ModelOption { value: "gemini-1.5-flash".to_string(), label: "Gemini 1.5 Flash".to_string() },
-            ModelOption { value: "gemini-1.5-flash-8b".to_string(), label: "Gemini 1.5 Flash 8B".to_string() },
-            ModelOption { value: "gemini-1.5-pro".to_string(), label: "Gemini 1.5 Pro".to_string() },
         ],
         "openai" => vec![
             ModelOption { value: "gpt-4o-mini".to_string(), label: "GPT-4o Mini (Recommended)".to_string() },
             ModelOption { value: "gpt-4o".to_string(), label: "GPT-4o".to_string() },
             ModelOption { value: "gpt-4-turbo".to_string(), label: "GPT-4 Turbo".to_string() },
             ModelOption { value: "gpt-3.5-turbo".to_string(), label: "GPT-3.5 Turbo".to_string() },
-            ModelOption { value: "o1-mini".to_string(), label: "o1-mini (Reasoning)".to_string() },
         ],
         "ollama" => vec![
             ModelOption { value: "llama3.2".to_string(), label: "Llama 3.2 (Recommended)".to_string() },

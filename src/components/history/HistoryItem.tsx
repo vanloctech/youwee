@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { useHistory } from '@/contexts/HistoryContext';
 import { useAI } from '@/contexts/AIContext';
 import { cn } from '@/lib/utils';
@@ -76,12 +76,24 @@ export function HistoryItem({ entry }: HistoryItemProps) {
   const [isRedownloading, setIsRedownloading] = useState(false);
   const [redownloadError, setRedownloadError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
-  const [isGeneratingSummary, setIsGeneratingSummary] = useState(false);
-  const [summaryError, setSummaryError] = useState<string | null>(null);
   const [localSummary, setLocalSummary] = useState<string | undefined>(entry.summary);
   const [showFullSummary, setShowFullSummary] = useState(false);
 
   const sourceConfig = getSourceConfig(entry.source);
+  
+  // Get background task status from context
+  const task = ai.getSummaryTask(entry.id);
+  const isGeneratingSummary = task?.status === 'fetching' || task?.status === 'generating';
+  const summaryError = task?.status === 'error' ? task.error : null;
+  
+  // Update local summary when task completes
+  useEffect(() => {
+    if (task?.status === 'completed' && task.summary) {
+      setLocalSummary(task.summary);
+      // Clear task after applying
+      ai.clearSummaryTask(entry.id);
+    }
+  }, [task, entry.id, ai]);
 
   const handleOpenFolder = useCallback(async () => {
     try {
@@ -122,24 +134,10 @@ export function HistoryItem({ entry }: HistoryItemProps) {
     setTimeout(() => setCopied(false), 2000);
   }, [entry.url]);
 
-  const handleGenerateSummary = useCallback(async () => {
+  const handleGenerateSummary = useCallback(() => {
     if (!ai.config.enabled) return;
-    
-    setIsGeneratingSummary(true);
-    setSummaryError(null);
-    
-    try {
-      // Fetch transcript first
-      const transcript = await ai.fetchTranscript(entry.url);
-      // Generate summary
-      const summary = await ai.generateSummary(transcript, entry.id);
-      setLocalSummary(summary);
-    } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
-      setSummaryError(message);
-    } finally {
-      setIsGeneratingSummary(false);
-    }
+    // Start background task - this will continue even if component unmounts
+    ai.startSummaryTask(entry.id, entry.url);
   }, [ai, entry.url, entry.id]);
 
   return (
@@ -272,7 +270,7 @@ export function HistoryItem({ entry }: HistoryItemProps) {
                     {isGeneratingSummary ? (
                       <>
                         <Loader2 className="w-3 h-3 animate-spin" />
-                        Generating summary...
+                        {task?.status === 'fetching' ? 'Fetching transcript...' : 'Generating summary...'}
                       </>
                     ) : (
                       <>

@@ -624,7 +624,7 @@ export function SettingsPage() {
                     value={ai.config.summary_style}
                     onValueChange={(v) => ai.updateConfig({ summary_style: v as SummaryStyle })}
                   >
-                    <SelectTrigger className="w-[140px] h-9">
+                    <SelectTrigger className="w-[200px] h-9">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
