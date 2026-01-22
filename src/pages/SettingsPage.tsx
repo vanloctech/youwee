@@ -1,3 +1,5 @@
+import { useState, useEffect } from 'react';
+import { getVersion } from '@tauri-apps/api/app';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useDependencies } from '@/contexts/DependenciesContext';
 import { useDownload } from '@/contexts/DownloadContext';
@@ -50,6 +52,12 @@ export function SettingsPage() {
   const { settings, updateAutoCheckUpdate, updateUseBunRuntime } = useDownload();
   const { maxEntries, setMaxEntries, totalCount } = useHistory();
   const updater = useUpdater();
+  const [appVersion, setAppVersion] = useState('');
+
+  // Get app version from Tauri
+  useEffect(() => {
+    getVersion().then(setAppVersion);
+  }, []);
   
   const {
     ytdlpInfo,
@@ -200,7 +208,7 @@ export function SettingsPage() {
                   <div>
                     <div className="flex items-center gap-2">
                       <span className="font-semibold">Youwee</span>
-                      <Badge variant="secondary" className="font-mono text-xs">v0.3.1</Badge>
+                      <Badge variant="secondary" className="font-mono text-xs">v{appVersion}</Badge>
                     </div>
                     <p className="text-xs text-muted-foreground mt-0.5">
                       {isAppChecking ? (
@@ -550,7 +558,7 @@ export function SettingsPage() {
                   </div>
                   <div className="flex-1 min-w-0">
                     <h3 className="text-xl font-bold gradient-text">Youwee</h3>
-                    <p className="text-sm text-muted-foreground">Version 0.3.1</p>
+                    <p className="text-sm text-muted-foreground">Version {appVersion}</p>
                     <p className="text-xs text-muted-foreground mt-2 leading-relaxed">
                       A beautiful, fast, and modern YouTube video downloader. 
                       Download videos up to 8K with VP9 codec support.
