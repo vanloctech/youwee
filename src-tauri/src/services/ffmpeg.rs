@@ -144,21 +144,84 @@ pub fn parse_ffmpeg_version(output: &str) -> String {
     "unknown".to_string()
 }
 
+/// FFmpeg download info with checksum support
+pub struct FfmpegDownloadInfo {
+    pub url: &'static str,
+    pub archive_type: &'static str,
+    pub checksum_url: &'static str,
+    pub checksum_filename: &'static str,
+}
+
 /// Get FFmpeg download URL for current platform
-pub fn get_ffmpeg_download_info() -> (&'static str, &'static str) {
+/// All platforms now support SHA256 checksum verification
+pub fn get_ffmpeg_download_info() -> FfmpegDownloadInfo {
     #[cfg(target_os = "macos")]
     {
         #[cfg(target_arch = "aarch64")]
-        { ("https://github.com/vanloctech/youwee/releases/download/ffmpeg-v1.0.0/ffmpeg-macos-arm64.tar.gz", "tar.gz") }
+        {
+            FfmpegDownloadInfo {
+                url: "https://github.com/vanloctech/ffmpeg-macos/releases/latest/download/ffmpeg-macos-arm64.tar.gz",
+                archive_type: "tar.gz",
+                checksum_url: "https://github.com/vanloctech/ffmpeg-macos/releases/latest/download/ffmpeg-macos-arm64.tar.gz.sha256",
+                checksum_filename: "ffmpeg-macos-arm64.tar.gz",
+            }
+        }
         #[cfg(target_arch = "x86_64")]
-        { ("https://github.com/vanloctech/youwee/releases/download/ffmpeg-v1.0.0/ffmpeg-macos-x64.tar.gz", "tar.gz") }
+        {
+            FfmpegDownloadInfo {
+                url: "https://github.com/vanloctech/ffmpeg-macos/releases/latest/download/ffmpeg-macos-x64.tar.gz",
+                archive_type: "tar.gz",
+                checksum_url: "https://github.com/vanloctech/ffmpeg-macos/releases/latest/download/ffmpeg-macos-x64.tar.gz.sha256",
+                checksum_filename: "ffmpeg-macos-x64.tar.gz",
+            }
+        }
         #[cfg(not(any(target_arch = "aarch64", target_arch = "x86_64")))]
-        { ("https://github.com/vanloctech/youwee/releases/download/ffmpeg-v1.0.0/ffmpeg-macos-arm64.tar.gz", "tar.gz") }
+        {
+            FfmpegDownloadInfo {
+                url: "https://github.com/vanloctech/ffmpeg-macos/releases/latest/download/ffmpeg-macos-arm64.tar.gz",
+                archive_type: "tar.gz",
+                checksum_url: "https://github.com/vanloctech/ffmpeg-macos/releases/latest/download/ffmpeg-macos-arm64.tar.gz.sha256",
+                checksum_filename: "ffmpeg-macos-arm64.tar.gz",
+            }
+        }
     }
     #[cfg(target_os = "windows")]
-    { ("https://www.gyan.dev/ffmpeg/builds/ffmpeg-release-essentials.zip", "zip") }
+    {
+        FfmpegDownloadInfo {
+            url: "https://github.com/BtbN/FFmpeg-Builds/releases/latest/download/ffmpeg-master-latest-win64-gpl.zip",
+            archive_type: "zip",
+            checksum_url: "https://github.com/BtbN/FFmpeg-Builds/releases/latest/download/checksums.sha256",
+            checksum_filename: "ffmpeg-master-latest-win64-gpl.zip",
+        }
+    }
     #[cfg(target_os = "linux")]
-    { ("https://johnvansickle.com/ffmpeg/releases/ffmpeg-release-amd64-static.tar.xz", "tar.xz") }
+    {
+        #[cfg(target_arch = "aarch64")]
+        {
+            FfmpegDownloadInfo {
+                url: "https://github.com/BtbN/FFmpeg-Builds/releases/latest/download/ffmpeg-master-latest-linuxarm64-gpl.tar.xz",
+                archive_type: "tar.xz",
+                checksum_url: "https://github.com/BtbN/FFmpeg-Builds/releases/latest/download/checksums.sha256",
+                checksum_filename: "ffmpeg-master-latest-linuxarm64-gpl.tar.xz",
+            }
+        }
+        #[cfg(not(target_arch = "aarch64"))]
+        {
+            FfmpegDownloadInfo {
+                url: "https://github.com/BtbN/FFmpeg-Builds/releases/latest/download/ffmpeg-master-latest-linux64-gpl.tar.xz",
+                archive_type: "tar.xz",
+                checksum_url: "https://github.com/BtbN/FFmpeg-Builds/releases/latest/download/checksums.sha256",
+                checksum_filename: "ffmpeg-master-latest-linux64-gpl.tar.xz",
+            }
+        }
+    }
     #[cfg(not(any(target_os = "macos", target_os = "windows", target_os = "linux")))]
-    { ("", "") }
+    {
+        FfmpegDownloadInfo {
+            url: "",
+            archive_type: "",
+            checksum_url: "",
+            checksum_filename: "",
+        }
+    }
 }

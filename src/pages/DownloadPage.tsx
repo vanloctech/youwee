@@ -3,9 +3,14 @@ import { Button } from '@/components/ui/button';
 import { UrlInput, SettingsPanel, QueueList } from '@/components/download';
 import { ThemePicker } from '@/components/settings/ThemePicker';
 import { useDownload } from '@/contexts/DownloadContext';
+import { useDependencies } from '@/contexts/DependenciesContext';
 import { cn } from '@/lib/utils';
 
-export function DownloadPage() {
+interface DownloadPageProps {
+  onNavigateToSettings?: () => void;
+}
+
+export function DownloadPage({ onNavigateToSettings }: DownloadPageProps) {
   const {
     items,
     isDownloading,
@@ -33,6 +38,8 @@ export function DownloadPage() {
     updateSubtitleEmbed,
     updateSubtitleFormat,
   } = useDownload();
+
+  const { ffmpegStatus } = useDependencies();
 
   const pendingCount = items.filter(i => i.status !== 'completed').length;
   const hasItems = items.length > 0;
@@ -72,6 +79,7 @@ export function DownloadPage() {
             settings={settings}
             disabled={isDownloading}
             totalFileSize={totalFileSize > 0 ? totalFileSize : undefined}
+            ffmpegInstalled={ffmpegStatus?.installed ?? true}
             onQualityChange={updateQuality}
             onFormatChange={updateFormat}
             onVideoCodecChange={updateVideoCodec}
@@ -84,6 +92,7 @@ export function DownloadPage() {
             onSubtitleLangsChange={updateSubtitleLangs}
             onSubtitleEmbedChange={updateSubtitleEmbed}
             onSubtitleFormatChange={updateSubtitleFormat}
+            onGoToSettings={onNavigateToSettings}
           />
         </div>
 

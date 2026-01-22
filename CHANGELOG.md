@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.3.2] - 2026-01-22
+
+### Added
+- FFmpeg warning dialog when selecting 2K/4K/8K/best quality without FFmpeg installed
+- SHA256 checksum verification for FFmpeg downloads on all platforms
+- Linux ARM64 support for FFmpeg downloads
+
+### Changed
+- FFmpeg source for Windows/Linux changed to BtbN/FFmpeg-Builds (more reliable, with checksums)
+- FFmpeg source for macOS now uses vanloctech/ffmpeg-macos repository
+
+### Fixed
+- macOS Intel FFmpeg download URL (now uses universal binary from ffmpeg-macos repo)
+
 ## [0.3.1] - 2025-01-21
 
 ### Added

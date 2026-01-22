@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { 
   FolderOpen,
   ListVideo,
@@ -24,8 +25,12 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from '@/components/ui/popover';
+import { FFmpegRequiredDialog } from '@/components/FFmpegRequiredDialog';
 import type { Quality, Format, DownloadSettings, VideoCodec, AudioBitrate, SubtitleMode, SubtitleFormat } from '@/lib/types';
 import { cn } from '@/lib/utils';
+
+// Qualities that require FFmpeg for video+audio merging
+const FFMPEG_REQUIRED_QUALITIES: Quality[] = ['best', '8k', '4k', '2k'];
 
 function formatFileSize(bytes: number): string {
   if (bytes >= 1024 * 1024 * 1024) {
@@ -91,6 +96,7 @@ interface SettingsPanelProps {
   settings: DownloadSettings;
   disabled?: boolean;
   totalFileSize?: number;
+  ffmpegInstalled?: boolean;
   onQualityChange: (quality: Quality) => void;
   onFormatChange: (format: Format) => void;
   onVideoCodecChange: (codec: VideoCodec) => void;
@@ -104,12 +110,15 @@ interface SettingsPanelProps {
   onSubtitleLangsChange: (langs: string[]) => void;
   onSubtitleEmbedChange: (embed: boolean) => void;
   onSubtitleFormatChange: (format: SubtitleFormat) => void;
+  // Navigation callback for FFmpeg dialog
+  onGoToSettings?: () => void;
 }
 
 export function SettingsPanel({
   settings,
   disabled,
   totalFileSize,
+  ffmpegInstalled = true,
   onQualityChange,
   onFormatChange,
   onVideoCodecChange,
@@ -122,7 +131,11 @@ export function SettingsPanel({
   onSubtitleLangsChange,
   onSubtitleEmbedChange,
   onSubtitleFormatChange,
+  onGoToSettings,
 }: SettingsPanelProps) {
+  const [showFfmpegDialog, setShowFfmpegDialog] = useState(false);
+  const [pendingQuality, setPendingQuality] = useState<Quality | null>(null);
+
   const isAudioOnly = settings.quality === 'audio' || ['mp3', 'm4a', 'opus'].includes(settings.format);
   const formatOptions = isAudioOnly ? audioFormatOptions : videoFormatOptions;
 
@@ -131,6 +144,17 @@ export function SettingsPanel({
     : '';
 
   const handleQualityChange = (quality: Quality) => {
+    // Check if FFmpeg is required but not installed
+    if (FFMPEG_REQUIRED_QUALITIES.includes(quality) && !ffmpegInstalled) {
+      setPendingQuality(quality);
+      setShowFfmpegDialog(true);
+      return;
+    }
+
+    applyQualityChange(quality);
+  };
+
+  const applyQualityChange = (quality: Quality) => {
     onQualityChange(quality);
     if (quality === 'audio' && !['mp3', 'm4a', 'opus'].includes(settings.format)) {
       onFormatChange('mp3');
@@ -140,11 +164,25 @@ export function SettingsPanel({
     }
   };
 
+  const handleFfmpegDialogDismiss = () => {
+    setShowFfmpegDialog(false);
+    setPendingQuality(null);
+  };
+
+  const handleFfmpegDialogContinue = () => {
+    setShowFfmpegDialog(false);
+    if (pendingQuality) {
+      applyQualityChange(pendingQuality);
+    }
+    setPendingQuality(null);
+  };
+
   const outputFolderName = settings.outputPath 
     ? settings.outputPath.split('/').pop() || settings.outputPath
     : 'Downloads';
 
   return (
+    <>
     <div className="flex flex-wrap items-center gap-2">
       {/* Quality Select */}
       <Select
@@ -523,5 +561,16 @@ export function SettingsPanel({
         </Badge>
       )}
     </div>
+
+    {/* FFmpeg Required Dialog */}
+    {showFfmpegDialog && pendingQuality && (
+      <FFmpegRequiredDialog
+        quality={pendingQuality}
+        onDismiss={handleFfmpegDialogDismiss}
+        onContinue={handleFfmpegDialogContinue}
+        onGoToSettings={onGoToSettings}
+      />
+    )}
+    </>
   );
 }

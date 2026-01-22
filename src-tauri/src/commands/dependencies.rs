@@ -24,7 +24,7 @@ pub async fn get_ytdlp_version(app: AppHandle) -> Result<YtdlpVersionInfo, Strin
 #[tauri::command]
 pub async fn check_ytdlp_update() -> Result<String, String> {
     let client = reqwest::Client::builder()
-        .user_agent("Youwee/0.3.1")
+        .user_agent("Youwee/0.3.2")
         .timeout(std::time::Duration::from_secs(10))
         .build()
         .map_err(|e| format!("Failed to create HTTP client: {}", e))?;
@@ -77,7 +77,7 @@ pub async fn update_ytdlp(app: AppHandle) -> Result<String, String> {
     let binary_path = bin_dir.join(filename);
     
     let client = reqwest::Client::builder()
-        .user_agent("Youwee/0.3.1")
+        .user_agent("Youwee/0.3.2")
         .timeout(std::time::Duration::from_secs(300))
         .build()
         .map_err(|e| format!("Failed to create HTTP client: {}", e))?;
@@ -158,9 +158,9 @@ pub async fn check_ffmpeg(app: AppHandle) -> Result<FfmpegStatus, String> {
 
 #[tauri::command]
 pub async fn download_ffmpeg(app: AppHandle) -> Result<String, String> {
-    let (download_url, archive_type) = get_ffmpeg_download_info();
+    let info = get_ffmpeg_download_info();
     
-    if download_url.is_empty() {
+    if info.url.is_empty() {
         return Err("Unsupported platform".to_string());
     }
     
@@ -173,12 +173,40 @@ pub async fn download_ffmpeg(app: AppHandle) -> Result<String, String> {
         .map_err(|e| format!("Failed to create bin directory: {}", e))?;
     
     let client = reqwest::Client::builder()
-        .user_agent("Youwee/0.3.1")
+        .user_agent("Youwee/0.3.2")
         .timeout(std::time::Duration::from_secs(600))
         .build()
         .map_err(|e| format!("Failed to create HTTP client: {}", e))?;
     
-    let response = client.get(download_url).send().await
+    // Download checksum file
+    let checksum_response = client.get(info.checksum_url).send().await
+        .map_err(|e| format!("Failed to download checksum: {}", e))?;
+    
+    if !checksum_response.status().is_success() {
+        return Err(format!("Failed to download checksum: HTTP {}", checksum_response.status()));
+    }
+    
+    let checksum_text = checksum_response.text().await
+        .map_err(|e| format!("Failed to read checksum: {}", e))?;
+    
+    // Parse checksum - format: "<hash>  <filename>" or just "<hash>"
+    let expected_hash = checksum_text
+        .lines()
+        .find_map(|line| {
+            let parts: Vec<&str> = line.split_whitespace().collect();
+            if parts.len() >= 2 && parts[1] == info.checksum_filename {
+                Some(parts[0].to_string())
+            } else if parts.len() == 1 {
+                // Single hash format (macOS individual .sha256 files)
+                Some(parts[0].to_string())
+            } else {
+                None
+            }
+        })
+        .ok_or_else(|| format!("Checksum not found for {}", info.checksum_filename))?;
+    
+    // Download FFmpeg archive
+    let response = client.get(info.url).send().await
         .map_err(|e| format!("Failed to download FFmpeg: {}", e))?;
     
     if !response.status().is_success() {
@@ -188,6 +216,11 @@ pub async fn download_ffmpeg(app: AppHandle) -> Result<String, String> {
     let bytes = response.bytes().await
         .map_err(|e| format!("Failed to read response: {}", e))?;
     
+    // Verify checksum
+    if !verify_sha256(&bytes, &expected_hash) {
+        return Err("Security error: SHA256 checksum verification failed.".to_string());
+    }
+    
     #[cfg(windows)]
     let ffmpeg_binary = "ffmpeg.exe";
     #[cfg(not(windows))]
@@ -195,7 +228,7 @@ pub async fn download_ffmpeg(app: AppHandle) -> Result<String, String> {
     
     let ffmpeg_path = bin_dir.join(ffmpeg_binary);
     
-    match archive_type {
+    match info.archive_type {
         "tar.gz" => extract_tar_gz(&bytes, &bin_dir, ffmpeg_binary).await?,
         "tar.xz" => extract_tar_xz(&bytes, &bin_dir, ffmpeg_binary).await?,
         "zip" => extract_zip(&bytes, &bin_dir, ffmpeg_binary).await?,
@@ -251,7 +284,7 @@ pub async fn download_bun(app: AppHandle) -> Result<String, String> {
         .map_err(|e| format!("Failed to create bin directory: {}", e))?;
     
     let client = reqwest::Client::builder()
-        .user_agent("Youwee/0.3.1")
+        .user_agent("Youwee/0.3.2")
         .timeout(std::time::Duration::from_secs(300))
         .build()
         .map_err(|e| format!("Failed to create HTTP client: {}", e))?;

@@ -43,7 +43,7 @@ function AppContent() {
   return (
     <>
       <MainLayout currentPage={currentPage} onPageChange={setCurrentPage}>
-        {currentPage === 'youtube' && <DownloadPage />}
+        {currentPage === 'youtube' && <DownloadPage onNavigateToSettings={() => setCurrentPage('settings')} />}
         {currentPage === 'universal' && <UniversalPage />}
         {currentPage === 'library' && <HistoryPage />}
         {currentPage === 'logs' && <LogsPage />}
