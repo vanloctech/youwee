@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Changed
+- Redesigned download settings with clear Video/Audio toggle for better UX
 - Merged App Updates section into About section in Settings for cleaner UI
 
 ### Fixed

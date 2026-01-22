@@ -43,16 +43,15 @@ function formatFileSize(bytes: number): string {
   return `${bytes} B`;
 }
 
-const qualityOptions: { value: Quality; label: string; shortLabel: string }[] = [
+const videoQualityOptions: { value: Quality; label: string; shortLabel: string }[] = [
   { value: 'best', label: 'Best Available', shortLabel: 'Best' },
-  { value: '8k', label: '8K Ultra HD — 7680 × 4320', shortLabel: '8K' },
-  { value: '4k', label: '4K Ultra HD — 3840 × 2160', shortLabel: '4K' },
-  { value: '2k', label: '2K Quad HD — 2560 × 1440', shortLabel: '2K' },
-  { value: '1080', label: 'Full HD — 1920 × 1080', shortLabel: '1080p' },
-  { value: '720', label: 'HD — 1280 × 720', shortLabel: '720p' },
-  { value: '480', label: 'SD — 854 × 480', shortLabel: '480p' },
-  { value: '360', label: 'Low — 640 × 360', shortLabel: '360p' },
-  { value: 'audio', label: 'Audio Only', shortLabel: 'Audio' },
+  { value: '8k', label: '8K Ultra HD', shortLabel: '8K' },
+  { value: '4k', label: '4K Ultra HD', shortLabel: '4K' },
+  { value: '2k', label: '2K Quad HD', shortLabel: '2K' },
+  { value: '1080', label: 'Full HD 1080p', shortLabel: '1080p' },
+  { value: '720', label: 'HD 720p', shortLabel: '720p' },
+  { value: '480', label: 'SD 480p', shortLabel: '480p' },
+  { value: '360', label: 'Low 360p', shortLabel: '360p' },
 ];
 
 const videoFormatOptions: { value: Format; label: string }[] = [
@@ -138,20 +137,37 @@ export function SettingsPanel({
 
   const isAudioOnly = settings.quality === 'audio' || ['mp3', 'm4a', 'opus'].includes(settings.format);
   const formatOptions = isAudioOnly ? audioFormatOptions : videoFormatOptions;
+  const currentVideoQuality = isAudioOnly ? '1080' : settings.quality;
 
   const fileSizeDisplay = totalFileSize && totalFileSize > 0 
     ? formatFileSize(totalFileSize) 
     : '';
 
-  const handleQualityChange = (quality: Quality) => {
+  const handleModeChange = (mode: 'video' | 'audio') => {
+    if (mode === 'audio') {
+      onQualityChange('audio');
+      if (!['mp3', 'm4a', 'opus'].includes(settings.format)) {
+        onFormatChange('mp3');
+      }
+    } else {
+      // Switch to video mode with last quality or default to 1080p
+      if (settings.quality === 'audio') {
+        onQualityChange('1080');
+      }
+      if (['mp3', 'm4a', 'opus'].includes(settings.format)) {
+        onFormatChange('mp4');
+      }
+    }
+  };
+
+  const handleVideoQualityChange = (quality: Quality) => {
     // Check if FFmpeg is required but not installed
     if (FFMPEG_REQUIRED_QUALITIES.includes(quality) && !ffmpegInstalled) {
       setPendingQuality(quality);
       setShowFfmpegDialog(true);
       return;
     }
-
-    applyQualityChange(quality);
+    onQualityChange(quality);
   };
 
   const applyQualityChange = (quality: Quality) => {
@@ -184,29 +200,60 @@ export function SettingsPanel({
   return (
     <>
     <div className="flex flex-wrap items-center gap-2">
-      {/* Quality Select */}
-      <Select
-        value={settings.quality}
-        onValueChange={handleQualityChange}
-        disabled={disabled}
-      >
-        <SelectTrigger 
-          className="w-[90px] sm:w-[100px] h-9 text-xs bg-card/50 border-border/50"
-          title="Video quality"
+      {/* Download Mode Toggle - Video/Audio */}
+      <div className="flex items-center p-0.5 rounded-lg bg-muted/50 border border-border/50">
+        <button
+          onClick={() => handleModeChange('video')}
+          disabled={disabled}
+          className={cn(
+            "h-8 px-3 rounded-md text-xs font-medium transition-all flex items-center gap-1.5",
+            !isAudioOnly
+              ? "bg-background text-foreground shadow-sm"
+              : "text-muted-foreground hover:text-foreground"
+          )}
         >
-          <div className="flex items-center gap-1.5">
-            {isAudioOnly ? <Music className="w-3.5 h-3.5" /> : <FileVideo className="w-3.5 h-3.5" />}
-            <span>{qualityOptions.find(q => q.value === settings.quality)?.shortLabel}</span>
-          </div>
-        </SelectTrigger>
-        <SelectContent className="min-w-[220px]">
-          {qualityOptions.map((opt) => (
-            <SelectItem key={opt.value} value={opt.value} className="text-xs">
-              {opt.label}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
+          <FileVideo className="w-3.5 h-3.5" />
+          Video
+        </button>
+        <button
+          onClick={() => handleModeChange('audio')}
+          disabled={disabled}
+          className={cn(
+            "h-8 px-3 rounded-md text-xs font-medium transition-all flex items-center gap-1.5",
+            isAudioOnly
+              ? "bg-background text-foreground shadow-sm"
+              : "text-muted-foreground hover:text-foreground"
+          )}
+        >
+          <Music className="w-3.5 h-3.5" />
+          Audio
+        </button>
+      </div>
+
+      {/* Quality Select - Only for Video mode */}
+      {!isAudioOnly && (
+        <Select
+          value={currentVideoQuality}
+          onValueChange={handleVideoQualityChange}
+          disabled={disabled}
+        >
+          <SelectTrigger 
+            className="w-[85px] h-9 text-xs bg-card/50 border-border/50"
+            title="Video quality"
+          >
+            <SelectValue>
+              {videoQualityOptions.find(q => q.value === currentVideoQuality)?.shortLabel}
+            </SelectValue>
+          </SelectTrigger>
+          <SelectContent className="min-w-[180px]">
+            {videoQualityOptions.map((opt) => (
+              <SelectItem key={opt.value} value={opt.value} className="text-xs">
+                {opt.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      )}
 
       {/* Format Select */}
       <Select
@@ -215,7 +262,7 @@ export function SettingsPanel({
         disabled={disabled}
       >
         <SelectTrigger 
-          className="w-[75px] sm:w-[80px] h-9 text-xs bg-card/50 border-border/50"
+          className="w-[75px] h-9 text-xs bg-card/50 border-border/50"
           title="Output format"
         >
           <SelectValue />
