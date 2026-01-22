@@ -5,6 +5,106 @@ use tauri_plugin_shell::process::CommandEvent;
 use tokio::process::Command;
 use crate::types::YtdlpVersionInfo;
 
+/// Result of yt-dlp command with both stdout and stderr
+pub struct YtdlpOutput {
+    pub stdout: String,
+    pub stderr: String,
+    pub success: bool,
+}
+
+/// Helper to run yt-dlp command and get output with stderr
+pub async fn run_ytdlp_with_stderr(app: &AppHandle, args: &[&str]) -> Result<YtdlpOutput, String> {
+    let sidecar_result = app.shell().sidecar("yt-dlp");
+    
+    match sidecar_result {
+        Ok(sidecar) => {
+            let (mut rx, _child) = sidecar
+                .args(args)
+                .spawn()
+                .map_err(|e| format!("Failed to start yt-dlp: {}", e))?;
+            
+            let mut stdout = String::new();
+            let mut stderr = String::new();
+            let mut success = true;
+            
+            while let Some(event) = rx.recv().await {
+                match event {
+                    CommandEvent::Stdout(bytes) => {
+                        stdout.push_str(&String::from_utf8_lossy(&bytes));
+                    }
+                    CommandEvent::Stderr(bytes) => {
+                        stderr.push_str(&String::from_utf8_lossy(&bytes));
+                    }
+                    CommandEvent::Error(err) => {
+                        return Err(format!("Process error: {}", err));
+                    }
+                    CommandEvent::Terminated(status) => {
+                        success = status.code == Some(0);
+                    }
+                    _ => {}
+                }
+            }
+            
+            Ok(YtdlpOutput { stdout, stderr, success })
+        }
+        Err(_) => {
+            // Fallback to system yt-dlp
+            let output = Command::new("yt-dlp")
+                .args(args)
+                .stdout(Stdio::piped())
+                .stderr(Stdio::piped())
+                .output()
+                .await
+                .map_err(|e| format!("Failed to run yt-dlp: {}", e))?;
+            
+            Ok(YtdlpOutput {
+                stdout: String::from_utf8_lossy(&output.stdout).to_string(),
+                stderr: String::from_utf8_lossy(&output.stderr).to_string(),
+                success: output.status.success(),
+            })
+        }
+    }
+}
+
+/// Parse yt-dlp stderr for common errors and return user-friendly message
+pub fn parse_ytdlp_error(stderr: &str) -> Option<String> {
+    let stderr_lower = stderr.to_lowercase();
+    
+    // Rate limiting
+    if stderr_lower.contains("429") || stderr_lower.contains("too many requests") {
+        return Some("YouTube rate limited. Please wait a few minutes before trying again.".to_string());
+    }
+    
+    // Video unavailable
+    if stderr_lower.contains("video unavailable") || stderr_lower.contains("private video") {
+        return Some("This video is unavailable or private.".to_string());
+    }
+    
+    // Age restricted
+    if stderr_lower.contains("age-restricted") || stderr_lower.contains("sign in to confirm your age") {
+        return Some("This video is age-restricted and requires sign-in.".to_string());
+    }
+    
+    // Geographic restriction
+    if stderr_lower.contains("not available in your country") || stderr_lower.contains("geo") {
+        return Some("This video is not available in your region.".to_string());
+    }
+    
+    // No subtitles
+    if stderr_lower.contains("no subtitles") || stderr_lower.contains("subtitles are disabled") {
+        return Some("This video has no subtitles available.".to_string());
+    }
+    
+    // Network errors
+    if stderr_lower.contains("unable to download") || stderr_lower.contains("connection") {
+        if let Some(line) = stderr.lines().find(|l| l.to_lowercase().contains("error")) {
+            return Some(format!("Download error: {}", line.trim()));
+        }
+    }
+    
+    None
+}
+
 /// Helper to run yt-dlp command and get JSON output
 pub async fn run_ytdlp_json(app: &AppHandle, args: &[&str]) -> Result<String, String> {
     let sidecar_result = app.shell().sidecar("yt-dlp");

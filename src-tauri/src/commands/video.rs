@@ -7,7 +7,7 @@ use tokio::process::Command;
 use tokio::time::timeout;
 use uuid::Uuid;
 use crate::types::{VideoInfo, FormatOption, VideoInfoResponse, PlaylistVideoEntry, SubtitleInfo};
-use crate::services::run_ytdlp_json;
+use crate::services::{run_ytdlp_json, run_ytdlp_with_stderr, parse_ytdlp_error};
 use crate::database::add_log_internal;
 
 /// Get video transcript/subtitles for AI summarization
@@ -57,17 +57,38 @@ pub async fn get_video_transcript(app: AppHandle, url: String) -> Result<String,
     let subtitle_cmd = format!("yt-dlp {}", subtitle_args.join(" "));
     add_log_internal("command", &subtitle_cmd, None, Some(&url)).ok();
     
-    // Run with timeout (60 seconds)
+    // Run with timeout (60 seconds) - use run_ytdlp_with_stderr to capture errors
     let subtitle_result = timeout(
         Duration::from_secs(60),
-        run_ytdlp_json(&app, &subtitle_args.iter().map(|s| *s).collect::<Vec<_>>())
+        run_ytdlp_with_stderr(&app, &subtitle_args.iter().map(|s| *s).collect::<Vec<_>>())
     ).await;
+    
+    // Track if we hit a rate limit error
+    let mut rate_limited = false;
+    let mut specific_error: Option<String> = None;
     
     // Check for downloaded subtitle files
     let mut subtitle_files: Vec<std::path::PathBuf> = Vec::new();
     
     match &subtitle_result {
-        Ok(Ok(_)) => {
+        Ok(Ok(output)) => {
+            // Check stderr for errors
+            if !output.stderr.is_empty() {
+                #[cfg(debug_assertions)]
+                println!("[TRANSCRIPT] yt-dlp stderr: {}", output.stderr.trim());
+                
+                // Parse for known errors
+                if let Some(error_msg) = parse_ytdlp_error(&output.stderr) {
+                    add_log_internal("stderr", &error_msg, None, Some(&url)).ok();
+                    specific_error = Some(error_msg.clone());
+                    
+                    if output.stderr.to_lowercase().contains("429") {
+                        rate_limited = true;
+                    }
+                }
+            }
+            
+            // Even with errors, check if any files were downloaded
             if let Ok(entries) = std::fs::read_dir(&temp_dir) {
                 for entry in entries.flatten() {
                     let path = entry.path();
@@ -83,7 +104,9 @@ pub async fn get_video_transcript(app: AppHandle, url: String) -> Result<String,
             println!("[TRANSCRIPT] Found {} subtitle files", subtitle_files.len());
             
             if subtitle_files.is_empty() {
-                add_log_internal("info", "No subtitle files found", None, Some(&url)).ok();
+                if specific_error.is_none() {
+                    add_log_internal("info", "No subtitle files found", None, Some(&url)).ok();
+                }
             } else {
                 add_log_internal("info", &format!("Found {} subtitle files", subtitle_files.len()), None, Some(&url)).ok();
             }
@@ -202,7 +225,16 @@ pub async fn get_video_transcript(app: AppHandle, url: String) -> Result<String,
         }
     }
     
-    let error_msg = "No transcript available. This video has no subtitles, auto-generated captions, or meaningful description to summarize.";
+    // Return specific error message if we detected one
+    let error_msg = if rate_limited {
+        "YouTube rate limited. Please wait a few minutes before trying again."
+    } else if let Some(ref err) = specific_error {
+        // Use the specific error we detected
+        return Err(err.clone());
+    } else {
+        "No transcript available. This video has no subtitles, auto-generated captions, or meaningful description to summarize."
+    };
+    
     add_log_internal("error", error_msg, None, Some(&url)).ok();
     
     Err(error_msg.to_string())
