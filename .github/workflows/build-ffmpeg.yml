@@ -188,7 +188,7 @@ jobs:
             ffmpeg-macos-arm64.tar.gz.sha256
 
   build-macos-intel:
-    runs-on: macos-13  # Intel runner (macos-15 is also Apple Silicon)
+    runs-on: macos-15-intel  # Intel runner (macos-15 is also Apple Silicon)
     
     env:
       BUILD_DIR: ${{ github.workspace }}/ffmpeg_build
