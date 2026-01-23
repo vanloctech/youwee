@@ -70,15 +70,20 @@ function getSourceConfig(source?: string): { icon: string; label: string; color:
 }
 
 export function HistoryItem({ entry }: HistoryItemProps) {
-  const { openFileLocation, deleteEntry, redownload } = useHistory();
+  const { openFileLocation, deleteEntry, redownload, getRedownloadTask } = useHistory();
   const ai = useAI();
   const [isDeleting, setIsDeleting] = useState(false);
-  const [isRedownloading, setIsRedownloading] = useState(false);
   const [redownloadError, setRedownloadError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const [copiedSummary, setCopiedSummary] = useState(false);
   const [localSummary, setLocalSummary] = useState<string | undefined>(entry.summary);
   const [showFullSummary, setShowFullSummary] = useState(false);
+
+  // Get redownload task from context (persists across page changes)
+  const redownloadTask = getRedownloadTask(entry.id);
+  const isRedownloading = redownloadTask?.status === 'downloading';
+  const redownloadProgress = redownloadTask?.progress || 0;
+  const redownloadSpeed = redownloadTask?.speed || '';
 
   const sourceConfig = getSourceConfig(entry.source);
   
@@ -123,15 +128,12 @@ export function HistoryItem({ entry }: HistoryItemProps) {
   }, [deleteEntry, entry.id, entry.title]);
 
   const handleRedownload = useCallback(async () => {
-    setIsRedownloading(true);
     setRedownloadError(null);
     try {
       await redownload(entry);
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Failed to redownload';
       setRedownloadError(message);
-    } finally {
-      setIsRedownloading(false);
     }
   }, [redownload, entry]);
 
@@ -319,12 +321,37 @@ export function HistoryItem({ entry }: HistoryItemProps) {
           </div>
 
           {/* Error message */}
-          {redownloadError && (
-            <p className="text-xs text-destructive mt-2">{redownloadError}</p>
+          {(redownloadError || redownloadTask?.error) && (
+            <p className="text-xs text-destructive mt-2">{redownloadError || redownloadTask?.error}</p>
+          )}
+
+          {/* Re-download progress bar */}
+          {isRedownloading && (
+            <div className="mt-2 space-y-1">
+              <div className="flex items-center justify-between text-xs">
+                <span className="text-muted-foreground flex items-center gap-1.5">
+                  <Loader2 className="w-3 h-3 animate-spin" />
+                  Downloading...
+                </span>
+                <span className="text-muted-foreground">
+                  {redownloadProgress.toFixed(0)}%
+                  {redownloadSpeed && ` · ${redownloadSpeed}`}
+                </span>
+              </div>
+              <div className="h-1.5 bg-muted rounded-full overflow-hidden">
+                <div 
+                  className="h-full bg-primary rounded-full transition-all duration-300"
+                  style={{ width: `${redownloadProgress}%` }}
+                />
+              </div>
+            </div>
           )}
 
           {/* Actions */}
-          <div className="flex items-center gap-1 mt-2 opacity-0 group-hover:opacity-100 transition-opacity">
+          <div className={cn(
+            "flex items-center gap-1 mt-2 transition-opacity",
+            isRedownloading ? "opacity-100" : "opacity-0 group-hover:opacity-100"
+          )}>
             {entry.file_exists ? (
               <button
                 onClick={handleOpenFolder}

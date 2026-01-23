@@ -1,6 +1,18 @@
 import { createContext, useContext, useState, useCallback, useEffect, type ReactNode } from 'react';
 import { invoke } from '@tauri-apps/api/core';
-import type { HistoryEntry, HistoryFilter } from '@/lib/types';
+import { listen } from '@tauri-apps/api/event';
+import type { HistoryEntry, HistoryFilter, DownloadProgress } from '@/lib/types';
+
+// Re-download task state
+interface RedownloadTask {
+  entryId: string;
+  downloadId: string;
+  status: 'downloading' | 'completed' | 'error';
+  progress: number;
+  speed: string;
+  eta: string;
+  error?: string;
+}
 
 interface HistoryContextType {
   entries: HistoryEntry[];
@@ -9,6 +21,7 @@ interface HistoryContextType {
   loading: boolean;
   totalCount: number;
   maxEntries: number;
+  redownloadTasks: Map<string, RedownloadTask>;
   setFilter: (filter: HistoryFilter) => void;
   setSearch: (search: string) => void;
   setMaxEntries: (max: number) => void;
@@ -18,6 +31,7 @@ interface HistoryContextType {
   openFileLocation: (filepath: string) => Promise<void>;
   checkFileExists: (filepath: string) => Promise<boolean>;
   redownload: (entry: HistoryEntry) => Promise<void>;
+  getRedownloadTask: (entryId: string) => RedownloadTask | undefined;
 }
 
 const HistoryContext = createContext<HistoryContextType | null>(null);
@@ -34,6 +48,45 @@ export function HistoryProvider({ children }: { children: ReactNode }) {
     const saved = localStorage.getItem(MAX_HISTORY_KEY);
     return saved ? parseInt(saved, 10) : 500;
   });
+  const [redownloadTasks, setRedownloadTasks] = useState<Map<string, RedownloadTask>>(new Map());
+
+  // Listen for download progress events for re-downloads
+  useEffect(() => {
+    const unlisten = listen<DownloadProgress>('download-progress', (event) => {
+      const progress = event.payload;
+      
+      // Check if this is a redownload task
+      setRedownloadTasks(prev => {
+        const newMap = new Map(prev);
+        // Find task by downloadId
+        for (const [entryId, task] of newMap.entries()) {
+          if (task.downloadId === progress.id) {
+            if (progress.status === 'finished') {
+              newMap.set(entryId, {
+                ...task,
+                status: 'completed',
+                progress: 100,
+              });
+            } else {
+              newMap.set(entryId, {
+                ...task,
+                status: 'downloading',
+                progress: progress.percent,
+                speed: progress.speed,
+                eta: progress.eta,
+              });
+            }
+            break;
+          }
+        }
+        return newMap;
+      });
+    });
+
+    return () => {
+      unlisten.then(fn => fn());
+    };
+  }, []);
 
   const setMaxEntries = useCallback((max: number) => {
     setMaxEntriesState(max);
@@ -106,25 +159,86 @@ export function HistoryProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const redownload = useCallback(async (entry: HistoryEntry) => {
-    // Check if file already exists
-    const exists = await checkFileExists(entry.filepath);
-    if (exists) {
-      throw new Error('File already exists');
+    // For summary-only entries (no filepath), we can download fresh
+    // For entries with filepath, check if file already exists
+    if (entry.filepath) {
+      const exists = await checkFileExists(entry.filepath);
+      if (exists) {
+        throw new Error('File already exists');
+      }
     }
 
-    // Get output path from filepath
-    const outputPath = entry.filepath.substring(0, entry.filepath.lastIndexOf('/'));
+    // Get output path from filepath, or from user settings if filepath is empty
+    let outputPath = '';
+    if (entry.filepath) {
+      outputPath = entry.filepath.substring(0, entry.filepath.lastIndexOf('/'));
+    }
     
-    // Determine source for logging
+    // Get settings from localStorage
     const logStderr = localStorage.getItem('youwee_log_stderr') !== 'false';
+    let useBunRuntime = false;
+    let useActualPlayerJs = false;
+    let savedOutputPath = '';
+    try {
+      const savedSettings = localStorage.getItem('youwee-settings');
+      if (savedSettings) {
+        const parsed = JSON.parse(savedSettings);
+        useBunRuntime = parsed.useBunRuntime || false;
+        useActualPlayerJs = parsed.useActualPlayerJs || false;
+        savedOutputPath = parsed.outputPath || '';
+      }
+    } catch (e) {
+      console.error('Failed to parse settings:', e);
+    }
+    
+    // Use saved output path if entry has no filepath
+    if (!outputPath && savedOutputPath) {
+      outputPath = savedOutputPath;
+    }
+    
+    if (!outputPath) {
+      throw new Error('No output path available. Please set a download folder in Settings.');
+    }
+    
+    // Convert quality display format to download format (e.g., "480p" -> "480", "1080p" -> "1080")
+    // Default to 'best' if no quality specified (e.g., summary-only entries)
+    let quality = entry.quality || 'best';
+    if (quality.endsWith('p')) {
+      quality = quality.slice(0, -1); // Remove 'p' suffix
+    }
+    // Handle special cases
+    if (quality === '4K') quality = '4k';
+    if (quality === '8K') quality = '8k';
+    if (quality === '2K') quality = '2k';
+    if (quality === 'Best') quality = 'best';
+    if (quality === 'Audio') quality = 'audio';
+    
+    // Default format to 'mp4' if not specified
+    const format = entry.format || 'mp4';
+
+    const downloadId = `redownload-${Date.now()}`;
+    
+    // Add task to tracking
+    setRedownloadTasks(prev => {
+      const newMap = new Map(prev);
+      newMap.set(entry.id, {
+        entryId: entry.id,
+        downloadId,
+        status: 'downloading',
+        progress: 0,
+        speed: '',
+        eta: '',
+      });
+      return newMap;
+    });
 
     try {
       await invoke('download_video', {
-        id: `redownload-${Date.now()}`,
+        id: downloadId,
         url: entry.url,
         outputPath,
-        quality: entry.quality || 'best',
-        format: entry.format || 'mp4',
+        quality,
+        format,
         downloadPlaylist: false,
         videoCodec: 'h264',
         audioBitrate: '192',
@@ -134,12 +248,44 @@ export function HistoryProvider({ children }: { children: ReactNode }) {
         subtitleEmbed: false,
         subtitleFormat: 'srt',
         logStderr,
+        useBunRuntime,
+        useActualPlayerJs,
       });
+      
+      // Mark as completed
+      setRedownloadTasks(prev => {
+        const newMap = new Map(prev);
+        const task = newMap.get(entry.id);
+        if (task) {
+          newMap.set(entry.id, { ...task, status: 'completed', progress: 100 });
+        }
+        return newMap;
+      });
+      
+      // Refresh history to update file_exists status
+      setTimeout(() => refreshHistory(), 1000);
     } catch (error) {
       console.error('Failed to redownload:', error);
+      // Mark as error
+      setRedownloadTasks(prev => {
+        const newMap = new Map(prev);
+        const task = newMap.get(entry.id);
+        if (task) {
+          newMap.set(entry.id, { 
+            ...task, 
+            status: 'error', 
+            error: error instanceof Error ? error.message : 'Download failed' 
+          });
+        }
+        return newMap;
+      });
       throw error;
     }
-  }, [checkFileExists]);
+  }, [checkFileExists, refreshHistory]);
+
+  const getRedownloadTask = useCallback((entryId: string) => {
+    return redownloadTasks.get(entryId);
+  }, [redownloadTasks]);
 
   // Fetch history on mount and when filter/search changes
   useEffect(() => {
@@ -165,6 +311,7 @@ export function HistoryProvider({ children }: { children: ReactNode }) {
         loading,
         totalCount,
         maxEntries,
+        redownloadTasks,
         setFilter,
         setSearch,
         setMaxEntries,
@@ -174,6 +321,7 @@ export function HistoryProvider({ children }: { children: ReactNode }) {
         openFileLocation,
         checkFileExists,
         redownload,
+        getRedownloadTask,
       }}
     >
       {children}
