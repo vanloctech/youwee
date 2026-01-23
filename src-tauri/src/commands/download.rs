@@ -17,6 +17,7 @@ use tokio::process::Command;
 use crate::types::DownloadProgress;
 use crate::database::add_log_internal;
 use crate::database::add_history_internal;
+use crate::database::update_history_download;
 use crate::utils::{build_format_string, parse_progress, format_size, sanitize_output_path};
 use crate::services::{get_ffmpeg_path, get_bun_path};
 
@@ -57,6 +58,7 @@ pub async fn download_video(
     log_stderr: Option<bool>,
     use_bun_runtime: Option<bool>,
     use_actual_player_js: Option<bool>,
+    history_id: Option<String>,
 ) -> Result<(), String> {
     CANCEL_FLAG.store(false, Ordering::SeqCst);
     
@@ -352,22 +354,34 @@ pub async fn download_video(
                             );
                             add_log_internal("success", &success_msg, Some(&details), Some(&url)).ok();
                             
-                            // Save to history
+                            // Save to history (update existing or create new)
                             if let Some(ref filepath) = final_filepath {
-                                let source = detect_source(&url);
-                                let thumbnail = generate_thumbnail_url(&url);
-                                
-                                add_history_internal(
-                                    url.clone(),
-                                    display_title.clone().unwrap_or_else(|| "Unknown".to_string()),
-                                    thumbnail,
-                                    filepath.clone(),
-                                    reported_filesize,
-                                    None,
-                                    quality_display.clone(),
-                                    Some(format.clone()),
-                                    source,
-                                ).ok();
+                                if let Some(ref hist_id) = history_id {
+                                    // Update existing history entry (re-download)
+                                    update_history_download(
+                                        hist_id.clone(),
+                                        filepath.clone(),
+                                        reported_filesize,
+                                        quality_display.clone(),
+                                        Some(format.clone()),
+                                    ).ok();
+                                } else {
+                                    // Create new history entry
+                                    let source = detect_source(&url);
+                                    let thumbnail = generate_thumbnail_url(&url);
+                                    
+                                    add_history_internal(
+                                        url.clone(),
+                                        display_title.clone().unwrap_or_else(|| "Unknown".to_string()),
+                                        thumbnail,
+                                        filepath.clone(),
+                                        reported_filesize,
+                                        None,
+                                        quality_display.clone(),
+                                        Some(format.clone()),
+                                        source,
+                                    ).ok();
+                                }
                             }
                             
                             let progress = DownloadProgress {

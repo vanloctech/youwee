@@ -250,6 +250,7 @@ export function HistoryProvider({ children }: { children: ReactNode }) {
         logStderr,
         useBunRuntime,
         useActualPlayerJs,
+        historyId: entry.id,
       });
       
       // Mark as completed

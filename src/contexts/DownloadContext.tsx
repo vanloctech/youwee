@@ -491,6 +491,8 @@ export function DownloadProvider({ children }: { children: ReactNode }) {
           // YouTube specific settings
           useBunRuntime: settings.useBunRuntime,
           useActualPlayerJs: settings.useActualPlayerJs,
+          // No history_id for new downloads
+          historyId: null,
         });
         
         setItems(items => items.map(i => 

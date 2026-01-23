@@ -48,6 +48,24 @@ pub fn update_history_summary(id: String, summary: String) -> Result<(), String>
     Ok(())
 }
 
+/// Update a history entry with download info (for re-downloads)
+pub fn update_history_download(
+    id: String,
+    filepath: String,
+    filesize: Option<u64>,
+    quality: Option<String>,
+    format: Option<String>,
+) -> Result<(), String> {
+    let conn = get_db()?;
+    let now = Utc::now().timestamp();
+    conn.execute(
+        "UPDATE history SET filepath = ?1, filesize = ?2, quality = ?3, format = ?4, downloaded_at = ?5 WHERE id = ?6",
+        params![filepath, filesize, quality, format, now, id],
+    )
+    .map_err(|e| format!("Failed to update history: {}", e))?;
+    Ok(())
+}
+
 /// Add a history entry with summary (for videos summarized without downloading)
 pub fn add_history_with_summary(
     url: String,
