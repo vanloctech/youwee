@@ -112,62 +112,61 @@ export function DownloadPage({ onNavigateToSettings }: DownloadPageProps) {
         </div>
       </div>
 
-      {/* Floating Action Bar */}
-      <footer className={cn(
-        "flex-shrink-0 transition-all duration-300",
-        hasItems ? "translate-y-0 opacity-100" : "translate-y-full opacity-0 pointer-events-none"
-      )}>
-        {/* Subtle top divider */}
-        <div className="mx-4 sm:mx-6 h-px bg-gradient-to-r from-transparent via-border/40 to-transparent" />
-        
-        <div className="px-4 sm:px-6 py-3 sm:py-4">
-          <div className="flex items-center gap-3">
-            {!isDownloading ? (
-              <button 
-                className={cn(
-                  "flex-1 h-11 px-6 rounded-xl font-medium text-sm sm:text-base",
-                  "btn-gradient flex items-center justify-center gap-2",
-                  "disabled:opacity-50 disabled:cursor-not-allowed",
-                  "shadow-lg shadow-primary/20",
-                  pendingCount > 0 && "animate-pulse-subtle"
-                )} 
-                onClick={startDownload}
-                disabled={pendingCount === 0}
-                title="Start downloading all pending videos"
+      {/* Floating Action Bar - Only render when has items */}
+      {hasItems && (
+        <footer className="flex-shrink-0">
+          {/* Subtle top divider */}
+          <div className="mx-4 sm:mx-6 h-px bg-gradient-to-r from-transparent via-border/40 to-transparent" />
+          
+          <div className="px-4 sm:px-6 py-3 sm:py-4">
+            <div className="flex items-center gap-3">
+              {!isDownloading ? (
+                <button 
+                  className={cn(
+                    "flex-1 h-11 px-6 rounded-xl font-medium text-sm sm:text-base",
+                    "btn-gradient flex items-center justify-center gap-2",
+                    "disabled:opacity-50 disabled:cursor-not-allowed",
+                    "shadow-lg shadow-primary/20",
+                    pendingCount > 0 && "animate-pulse-subtle"
+                  )} 
+                  onClick={startDownload}
+                  disabled={pendingCount === 0}
+                  title="Start downloading all pending videos"
+                >
+                  <Play className="w-5 h-5" />
+                  <span>Start Download</span>
+                  {pendingCount > 0 && (
+                    <span className="ml-1 px-2 py-0.5 rounded-full bg-white/20 text-xs">
+                      {pendingCount}
+                    </span>
+                  )}
+                </button>
+              ) : (
+                <Button 
+                  className="flex-1 h-11 text-sm sm:text-base rounded-xl" 
+                  variant="destructive"
+                  onClick={stopDownload}
+                  title="Stop current download"
+                >
+                  <Square className="w-5 h-5 mr-2" />
+                  Stop Download
+                </Button>
+              )}
+              
+              <Button
+                variant="outline"
+                size="icon"
+                onClick={clearAll}
+                disabled={isDownloading || items.length === 0}
+                className="h-11 w-11 rounded-xl flex-shrink-0 bg-transparent border-border/50 hover:bg-white/10"
+                title="Clear all items from queue"
               >
-                <Play className="w-5 h-5" />
-                <span>Start Download</span>
-                {pendingCount > 0 && (
-                  <span className="ml-1 px-2 py-0.5 rounded-full bg-white/20 text-xs">
-                    {pendingCount}
-                  </span>
-                )}
-              </button>
-            ) : (
-              <Button 
-                className="flex-1 h-11 text-sm sm:text-base rounded-xl" 
-                variant="destructive"
-                onClick={stopDownload}
-                title="Stop current download"
-              >
-                <Square className="w-5 h-5 mr-2" />
-                Stop Download
+                <Trash2 className="w-5 h-5" />
               </Button>
-            )}
-            
-            <Button
-              variant="outline"
-              size="icon"
-              onClick={clearAll}
-              disabled={isDownloading || items.length === 0}
-              className="h-11 w-11 rounded-xl flex-shrink-0 bg-transparent border-border/50 hover:bg-white/10"
-              title="Clear all items from queue"
-            >
-              <Trash2 className="w-5 h-5" />
-            </Button>
+            </div>
           </div>
-        </div>
-      </footer>
+        </footer>
+      )}
     </div>
   );
 }

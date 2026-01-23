@@ -1,7 +1,7 @@
 use tauri::{AppHandle, Manager};
 use std::fs;
 use std::path::PathBuf;
-use crate::services::{AIConfig, generate_summary, test_connection};
+use crate::services::{AIConfig, SummaryStyle, generate_summary, generate_summary_custom, test_connection};
 use crate::database::update_history_summary;
 
 /// Get the AI config file path
@@ -52,6 +52,7 @@ pub async fn generate_video_summary(
     app: AppHandle,
     transcript: String,
     history_id: Option<String>,
+    title: Option<String>,
 ) -> Result<String, String> {
     let config = get_ai_config(app.clone()).await?;
     
@@ -59,7 +60,7 @@ pub async fn generate_video_summary(
         return Err("AI features are disabled. Enable them in Settings.".to_string());
     }
     
-    let result = generate_summary(&config, &transcript)
+    let result = generate_summary(&config, &transcript, title.as_deref())
         .await
         .map_err(|e| e.to_string())?;
     
@@ -69,6 +70,43 @@ pub async fn generate_video_summary(
     }
     
     Ok(result.summary)
+}
+
+/// Generate summary with custom style and language options
+#[tauri::command]
+pub async fn generate_summary_with_options(
+    app: AppHandle,
+    transcript: String,
+    style: String,
+    language: String,
+    title: Option<String>,
+) -> Result<SummaryResult, String> {
+    let config = get_ai_config(app.clone()).await?;
+    
+    if !config.enabled {
+        return Err("AI features are disabled. Enable them in Settings.".to_string());
+    }
+    
+    // Parse style string to enum
+    let summary_style = match style.to_lowercase().as_str() {
+        "short" => SummaryStyle::Short,
+        "concise" => SummaryStyle::Concise,
+        "detailed" => SummaryStyle::Detailed,
+        _ => SummaryStyle::Concise,
+    };
+    
+    let result = generate_summary_custom(&config, &transcript, &summary_style, &language, title.as_deref())
+        .await
+        .map_err(|e| e.to_string())?;
+    
+    Ok(SummaryResult {
+        summary: result.summary,
+    })
+}
+
+#[derive(Clone, serde::Serialize, serde::Deserialize)]
+pub struct SummaryResult {
+    pub summary: String,
 }
 
 /// Get available AI models for a provider

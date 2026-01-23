@@ -102,7 +102,7 @@ impl From<AIError> for String {
 }
 
 /// Build prompt based on style and language
-fn build_prompt(transcript: &str, style: &SummaryStyle, language: &str) -> String {
+fn build_prompt(transcript: &str, style: &SummaryStyle, language: &str, title: Option<&str>) -> String {
     let style_instruction = match style {
         SummaryStyle::Short => "Provide a concise summary in 2-3 sentences capturing the main idea.",
         SummaryStyle::Concise => r#"Summarize this video in a clear, structured format:
@@ -146,14 +146,20 @@ Be thorough and capture all important information."#,
         transcript.to_string()
     };
     
+    // Include title if provided for better context
+    let title_section = match title {
+        Some(t) if !t.is_empty() => format!("Video Title: \"{}\"\n\n", t),
+        _ => String::new(),
+    };
+    
     format!(
         "You are a helpful assistant that summarizes video content.\n\n\
         {}\n\
         {}\n\n\
-        Here is the video transcript:\n\n\
+        {}Here is the video transcript:\n\n\
         {}\n\n\
         Summary:",
-        style_instruction, language_instruction, truncated
+        style_instruction, language_instruction, title_section, truncated
     )
 }
 
@@ -164,9 +170,10 @@ pub async fn generate_with_gemini(
     transcript: &str,
     style: &SummaryStyle,
     language: &str,
+    title: Option<&str>,
 ) -> Result<SummaryResult, AIError> {
     let client = Client::new();
-    let prompt = build_prompt(transcript, style, language);
+    let prompt = build_prompt(transcript, style, language, title);
     
     // Gemini API endpoint - use v1beta for latest models
     let url = format!(
@@ -254,9 +261,10 @@ pub async fn generate_with_openai(
     transcript: &str,
     style: &SummaryStyle,
     language: &str,
+    title: Option<&str>,
 ) -> Result<SummaryResult, AIError> {
     let client = Client::new();
-    let prompt = build_prompt(transcript, style, language);
+    let prompt = build_prompt(transcript, style, language, title);
     
     let body = serde_json::json!({
         "model": model,
@@ -310,9 +318,10 @@ pub async fn generate_with_ollama(
     transcript: &str,
     style: &SummaryStyle,
     language: &str,
+    title: Option<&str>,
 ) -> Result<SummaryResult, AIError> {
     let client = Client::new();
-    let prompt = build_prompt(transcript, style, language);
+    let prompt = build_prompt(transcript, style, language, title);
     
     let url = format!("{}/api/generate", ollama_url.trim_end_matches('/'));
     
@@ -364,9 +373,10 @@ pub async fn generate_with_proxy(
     transcript: &str,
     style: &SummaryStyle,
     language: &str,
+    title: Option<&str>,
 ) -> Result<SummaryResult, AIError> {
     let client = Client::new();
-    let prompt = build_prompt(transcript, style, language);
+    let prompt = build_prompt(transcript, style, language, title);
     
     // Build endpoint URL - support both with and without /v1/chat/completions suffix
     let base_url = proxy_url.trim_end_matches('/');
@@ -438,6 +448,7 @@ pub async fn generate_with_proxy(
 pub async fn generate_summary(
     config: &AIConfig,
     transcript: &str,
+    title: Option<&str>,
 ) -> Result<SummaryResult, AIError> {
     if transcript.trim().is_empty() {
         return Err(AIError::NoTranscript);
@@ -446,20 +457,53 @@ pub async fn generate_summary(
     match config.provider {
         AIProvider::Gemini => {
             let api_key = config.api_key.as_ref().ok_or(AIError::NoApiKey)?;
-            generate_with_gemini(api_key, &config.model, transcript, &config.summary_style, &config.summary_language).await
+            generate_with_gemini(api_key, &config.model, transcript, &config.summary_style, &config.summary_language, title).await
         }
         AIProvider::OpenAI => {
             let api_key = config.api_key.as_ref().ok_or(AIError::NoApiKey)?;
-            generate_with_openai(api_key, &config.model, transcript, &config.summary_style, &config.summary_language).await
+            generate_with_openai(api_key, &config.model, transcript, &config.summary_style, &config.summary_language, title).await
         }
         AIProvider::Ollama => {
             let ollama_url = config.ollama_url.as_ref().map(|s| s.as_str()).unwrap_or("http://localhost:11434");
-            generate_with_ollama(ollama_url, &config.model, transcript, &config.summary_style, &config.summary_language).await
+            generate_with_ollama(ollama_url, &config.model, transcript, &config.summary_style, &config.summary_language, title).await
         }
         AIProvider::Proxy => {
             let api_key = config.api_key.as_ref().ok_or(AIError::NoApiKey)?;
             let proxy_url = config.proxy_url.as_ref().map(|s| s.as_str()).unwrap_or("https://api.openai.com");
-            generate_with_proxy(proxy_url, api_key, &config.model, transcript, &config.summary_style, &config.summary_language).await
+            generate_with_proxy(proxy_url, api_key, &config.model, transcript, &config.summary_style, &config.summary_language, title).await
+        }
+    }
+}
+
+/// Generate summary with custom style and language (overriding config)
+pub async fn generate_summary_custom(
+    config: &AIConfig,
+    transcript: &str,
+    style: &SummaryStyle,
+    language: &str,
+    title: Option<&str>,
+) -> Result<SummaryResult, AIError> {
+    if transcript.trim().is_empty() {
+        return Err(AIError::NoTranscript);
+    }
+    
+    match config.provider {
+        AIProvider::Gemini => {
+            let api_key = config.api_key.as_ref().ok_or(AIError::NoApiKey)?;
+            generate_with_gemini(api_key, &config.model, transcript, style, language, title).await
+        }
+        AIProvider::OpenAI => {
+            let api_key = config.api_key.as_ref().ok_or(AIError::NoApiKey)?;
+            generate_with_openai(api_key, &config.model, transcript, style, language, title).await
+        }
+        AIProvider::Ollama => {
+            let ollama_url = config.ollama_url.as_ref().map(|s| s.as_str()).unwrap_or("http://localhost:11434");
+            generate_with_ollama(ollama_url, &config.model, transcript, style, language, title).await
+        }
+        AIProvider::Proxy => {
+            let api_key = config.api_key.as_ref().ok_or(AIError::NoApiKey)?;
+            let proxy_url = config.proxy_url.as_ref().map(|s| s.as_str()).unwrap_or("https://api.openai.com");
+            generate_with_proxy(proxy_url, api_key, &config.model, transcript, style, language, title).await
         }
     }
 }
@@ -467,6 +511,6 @@ pub async fn generate_summary(
 /// Test AI connection with a simple prompt
 pub async fn test_connection(config: &AIConfig) -> Result<String, AIError> {
     let test_transcript = "This is a test video about programming tutorials.";
-    let result = generate_summary(config, test_transcript).await?;
+    let result = generate_summary(config, test_transcript, None).await?;
     Ok(format!("Connection successful! Using {} with model {}", result.provider, result.model))
 }

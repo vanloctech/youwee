@@ -140,13 +140,14 @@ export function AIProvider({ children }: { children: ReactNode }) {
     }
   }, [config]);
 
-  const generateSummary = useCallback(async (transcript: string, historyId?: string): Promise<string> => {
+  const generateSummary = useCallback(async (transcript: string, historyId?: string, title?: string): Promise<string> => {
     setIsGenerating(true);
     
     try {
       const summary = await invoke<string>('generate_video_summary', {
         transcript,
         historyId: historyId || null,
+        title: title || null,
       });
       return summary;
     } finally {
@@ -229,6 +230,7 @@ export function AIProvider({ children }: { children: ReactNode }) {
         const summary = await invoke<string>('generate_video_summary', {
           transcript,
           historyId,
+          title: null, // History items don't have title readily available
         });
         
         if (import.meta.env.DEV) {
@@ -313,6 +315,7 @@ export function AIProvider({ children }: { children: ReactNode }) {
         const summary = await invoke<string>('generate_video_summary', {
           transcript,
           historyId: null,
+          title: itemInfo.title,
         });
         
         // Save to history with summary

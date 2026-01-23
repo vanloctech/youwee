@@ -34,6 +34,9 @@ import {
   GripVertical,
   Plus,
   X,
+  Heart,
+  FileText,
+  Bug,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -848,19 +851,22 @@ export function SettingsPage() {
               </div>
             </div>
 
-            <div className="space-y-3 pl-12">
+            <div className="space-y-4 pl-12">
               {/* App Info Card */}
-              <div className="p-4 rounded-xl bg-muted/30">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className="w-12 h-12 rounded-xl overflow-hidden shadow-lg ring-2 ring-primary/20">
+              <div className="p-5 rounded-2xl bg-gradient-to-br from-muted/50 to-muted/30 border border-border/50">
+                <div className="flex items-start justify-between gap-4">
+                  <div className="flex items-center gap-4">
+                    <div className="w-16 h-16 rounded-2xl overflow-hidden shadow-xl ring-2 ring-primary/20 flex-shrink-0">
                       <img src="/logo-64.png" alt="Youwee" className="w-full h-full object-cover" />
                     </div>
                     <div>
                       <div className="flex items-center gap-2">
-                        <span className="font-semibold">Youwee</span>
+                        <span className="text-lg font-bold">Youwee</span>
                         <Badge variant="secondary" className="font-mono text-xs">v{appVersion}</Badge>
                       </div>
+                      <p className="text-sm text-muted-foreground mt-1">
+                        Modern video downloader with AI summaries
+                      </p>
                       <p className="text-xs text-muted-foreground mt-0.5">
                         {isAppChecking ? (
                           <span className="flex items-center gap-1">
@@ -878,16 +884,14 @@ export function SettingsPage() {
                           </span>
                         ) : isAppError ? (
                           <span className="text-destructive">{updater.error || 'Check failed'}</span>
-                        ) : (
-                          'Modern video downloader'
-                        )}
+                        ) : null}
                       </p>
                     </div>
                   </div>
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-1.5">
                     {isAppUpdateAvailable && (
-                      <Button size="sm" onClick={updater.downloadAndInstall}>
-                        <Download className="w-4 h-4 mr-1.5" />
+                      <Button size="sm" onClick={updater.downloadAndInstall} className="gap-1.5">
+                        <Download className="w-4 h-4" />
                         Update
                       </Button>
                     )}
@@ -897,19 +901,52 @@ export function SettingsPage() {
                       onClick={updater.checkForUpdate}
                       disabled={isAppChecking}
                       title="Check for updates"
+                      className="h-9 w-9"
                     >
                       <RefreshCw className={cn("w-4 h-4", isAppChecking && "animate-spin")} />
                     </Button>
-                    <a 
-                      href="https://github.com/vanloctech/youwee" 
-                      target="_blank"
-                      rel="noopener noreferrer"
-                    >
-                      <Button variant="ghost" size="icon" title="View on GitHub">
-                        <Github className="w-4 h-4" />
-                      </Button>
-                    </a>
                   </div>
+                </div>
+
+                {/* Quick Links */}
+                <div className="flex flex-wrap items-center gap-2 mt-4 pt-4 border-t border-border/50">
+                  <a 
+                    href="https://github.com/vanloctech/youwee" 
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-background/50 hover:bg-background text-xs font-medium transition-colors"
+                  >
+                    <Github className="w-3.5 h-3.5" />
+                    GitHub
+                  </a>
+                  <a 
+                    href="https://github.com/vanloctech/youwee/blob/main/LICENSE" 
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-background/50 hover:bg-background text-xs font-medium transition-colors"
+                  >
+                    <FileText className="w-3.5 h-3.5" />
+                    License
+                  </a>
+                  <a 
+                    href="https://github.com/vanloctech/youwee/issues" 
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-background/50 hover:bg-background text-xs font-medium transition-colors"
+                  >
+                    <Bug className="w-3.5 h-3.5" />
+                    Report Issue
+                  </a>
+                </div>
+
+                {/* Made with love */}
+                <div className="flex items-center justify-center gap-1.5 mt-4 pt-4 border-t border-border/50">
+                  <span className="text-xs text-muted-foreground">Made with</span>
+                  <Heart className="w-3.5 h-3.5 text-red-500 fill-red-500" />
+                  <span className="text-xs text-muted-foreground">by</span>
+                  <span className="text-xs font-medium bg-gradient-to-r from-red-500 via-yellow-500 to-red-500 bg-clip-text text-transparent">
+                    Vietnam
+                  </span>
                 </div>
               </div>
 

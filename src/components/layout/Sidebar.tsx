@@ -4,6 +4,7 @@ import { cn } from '@/lib/utils';
 import { 
   Youtube,
   Globe,
+  Sparkles,
   FolderDown,
   ScrollText,
   Settings, 
@@ -14,7 +15,7 @@ import {
 } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
-export type Page = 'youtube' | 'universal' | 'library' | 'logs' | 'settings';
+export type Page = 'youtube' | 'universal' | 'summary' | 'library' | 'logs' | 'settings';
 
 interface SidebarProps {
   currentPage: Page;
@@ -37,6 +38,11 @@ const navItems: NavItem[] = [
     id: 'universal',
     label: 'Universal',
     icon: <Globe className="w-5 h-5" />,
+  },
+  {
+    id: 'summary',
+    label: 'AI Summary',
+    icon: <Sparkles className="w-5 h-5" />,
   },
   {
     id: 'library',
