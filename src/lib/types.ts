@@ -74,6 +74,7 @@ export interface DownloadSettings {
   subtitleFormat: SubtitleFormat; // srt, vtt, ass
   // YouTube specific settings
   useBunRuntime: boolean; // Use Bun runtime for YouTube downloads (fixes 360p issue)
+  useActualPlayerJs: boolean; // Use actual player.js version for YouTube (fixes some download issues)
 }
 
 export interface DownloadProgress {

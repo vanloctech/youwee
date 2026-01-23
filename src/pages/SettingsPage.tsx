@@ -62,7 +62,7 @@ const themeGradients: Record<ThemeName, string> = {
 
 export function SettingsPage() {
   const { theme, setTheme, mode, setMode } = useTheme();
-  const { settings, updateAutoCheckUpdate, updateUseBunRuntime } = useDownload();
+  const { settings, updateAutoCheckUpdate, updateUseBunRuntime, updateUseActualPlayerJs } = useDownload();
   const { maxEntries, setMaxEntries, totalCount } = useHistory();
   const updater = useUpdater();
   const ai = useAI();
@@ -422,6 +422,42 @@ export function SettingsPage() {
                   <ExternalLink className="w-3 h-3" />
                 </a>
               </div>
+            </div>
+
+            {/* YouTube Troubleshooting */}
+            <div className="p-4 rounded-xl bg-muted/30">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-red-500 to-orange-600 flex items-center justify-center shadow-lg shadow-red-500/20">
+                  <AlertCircle className="w-5 h-5 text-white" />
+                </div>
+                <div>
+                  <span className="font-medium">YouTube Troubleshooting</span>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    Options to fix download issues
+                  </p>
+                </div>
+              </div>
+              <div className="mt-3 pt-3 border-t border-border/50">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-xs font-medium">Use Actual Player.js</p>
+                    <p className="text-xs text-muted-foreground">Fixes "unable to download" errors on some videos</p>
+                  </div>
+                  <Switch
+                    checked={settings.useActualPlayerJs}
+                    onCheckedChange={updateUseActualPlayerJs}
+                  />
+                </div>
+              </div>
+              <a 
+                href="https://github.com/yt-dlp/yt-dlp/issues/14680" 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground mt-3 pt-3 border-t border-border/50"
+              >
+                Learn more about this issue
+                <ExternalLink className="w-3 h-3" />
+              </a>
             </div>
           </section>
 

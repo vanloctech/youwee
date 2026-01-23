@@ -56,6 +56,7 @@ pub async fn download_video(
     subtitle_format: String,
     log_stderr: Option<bool>,
     use_bun_runtime: Option<bool>,
+    use_actual_player_js: Option<bool>,
 ) -> Result<(), String> {
     CANCEL_FLAG.store(false, Ordering::SeqCst);
     
@@ -84,6 +85,13 @@ pub async fn download_video(
             args.push("--extractor-args".to_string());
             args.push(format!("youtube:ejs_runtimes=bun;ejs_bun_path={}", bun_path.to_string_lossy()));
         }
+    }
+    
+    // Add actual player.js version if enabled (fixes some YouTube download issues)
+    // See: https://github.com/yt-dlp/yt-dlp/issues/14680
+    if use_actual_player_js.unwrap_or(false) && (url.contains("youtube.com") || url.contains("youtu.be")) {
+        args.push("--extractor-args".to_string());
+        args.push("youtube:player_js_version=actual".to_string());
     }
     
     // Add FFmpeg location if available

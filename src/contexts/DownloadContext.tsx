@@ -51,6 +51,7 @@ function saveSettings(settings: DownloadSettings) {
       subtitleEmbed: settings.subtitleEmbed,
       subtitleFormat: settings.subtitleFormat,
       useBunRuntime: settings.useBunRuntime,
+      useActualPlayerJs: settings.useActualPlayerJs,
     }));
   } catch (e) {
     console.error('Failed to save settings:', e);
@@ -94,6 +95,7 @@ interface DownloadContextType {
   updateSubtitleFormat: (format: SubtitleFormat) => void;
   // YouTube specific settings
   updateUseBunRuntime: (enabled: boolean) => void;
+  updateUseActualPlayerJs: (enabled: boolean) => void;
 }
 
 const DownloadContext = createContext<DownloadContextType | null>(null);
@@ -123,6 +125,7 @@ export function DownloadProvider({ children }: { children: ReactNode }) {
       subtitleFormat: saved.subtitleFormat || 'srt',
       // YouTube specific settings
       useBunRuntime: saved.useBunRuntime || false,
+      useActualPlayerJs: saved.useActualPlayerJs || false,
     };
   });
   
@@ -487,6 +490,7 @@ export function DownloadProvider({ children }: { children: ReactNode }) {
           logStderr,
           // YouTube specific settings
           useBunRuntime: settings.useBunRuntime,
+          useActualPlayerJs: settings.useActualPlayerJs,
         });
         
         setItems(items => items.map(i => 
@@ -653,6 +657,14 @@ export function DownloadProvider({ children }: { children: ReactNode }) {
     });
   }, []);
 
+  const updateUseActualPlayerJs = useCallback((useActualPlayerJs: boolean) => {
+    setSettings(s => {
+      const newSettings = { ...s, useActualPlayerJs };
+      saveSettings(newSettings);
+      return newSettings;
+    });
+  }, []);
+
   const value: DownloadContextType = {
     items,
     isDownloading,
@@ -682,6 +694,7 @@ export function DownloadProvider({ children }: { children: ReactNode }) {
     updateSubtitleEmbed,
     updateSubtitleFormat,
     updateUseBunRuntime,
+    updateUseActualPlayerJs,
   };
 
   return (
