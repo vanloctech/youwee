@@ -47,6 +47,11 @@
 
 > See all releases on the [Releases page](https://github.com/vanloctech/youwee/releases)
 
+> ⚠️ **Note**: The app is not signed with an Apple Developer certificate yet. If macOS blocks the app, run:
+> ```bash
+> xattr -cr /Applications/Youwee.app
+> ```
+
 ### Build from Source
 
 #### Prerequisites
