@@ -1,7 +1,8 @@
 use crate::types::HistoryEntry;
 use crate::database::{
     add_history_internal, get_history_from_db, delete_history_from_db,
-    clear_history_from_db, get_history_count_from_db, update_history_summary
+    clear_history_from_db, get_history_count_from_db, update_history_summary,
+    add_history_with_summary
 };
 
 #[tauri::command]
@@ -22,6 +23,19 @@ pub fn add_history(
 #[tauri::command]
 pub fn update_summary(id: String, summary: String) -> Result<(), String> {
     update_history_summary(id, summary)
+}
+
+/// Add a summary-only history entry (for videos summarized without downloading)
+#[tauri::command]
+pub fn add_summary_only_history(
+    url: String,
+    title: String,
+    thumbnail: Option<String>,
+    duration: Option<u64>,
+    source: Option<String>,
+    summary: String,
+) -> Result<String, String> {
+    add_history_with_summary(url, title, thumbnail, duration, source, summary)
 }
 
 #[tauri::command]

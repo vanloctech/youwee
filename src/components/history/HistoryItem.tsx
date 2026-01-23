@@ -141,7 +141,12 @@ export function HistoryItem({ entry }: HistoryItemProps) {
   }, [entry.url]);
 
   const handleGenerateSummary = useCallback(() => {
-    if (!ai.config.enabled) return;
+    // Check if AI is enabled - if not, start task anyway to show error
+    if (!ai.config.enabled) {
+      // Manually set error state by creating a fake task
+      ai.startSummaryTask(entry.id, entry.url);
+      return;
+    }
     // Start background task - this will continue even if component unmounts
     ai.startSummaryTask(entry.id, entry.url);
   }, [ai, entry.url, entry.id]);
@@ -224,9 +229,8 @@ export function HistoryItem({ entry }: HistoryItemProps) {
             </div>
 
             {/* AI Summary */}
-            {ai.config.enabled && (
-              <div className="mt-2">
-                  {localSummary ? (
+            <div className="mt-2">
+                {localSummary ? (
                     <div className="p-2 rounded-lg bg-purple-500/5 border border-purple-500/10">
                       <div className="flex items-start gap-2">
                         <Sparkles className="w-3.5 h-3.5 text-purple-500 flex-shrink-0 mt-0.5" />
@@ -249,21 +253,21 @@ export function HistoryItem({ entry }: HistoryItemProps) {
                               )}
                             </button>
                           )}
+                        </div>
+                        <button
+                          onClick={handleGenerateSummary}
+                          disabled={isGeneratingSummary}
+                          className="p-1 rounded text-muted-foreground hover:text-purple-500 transition-colors flex-shrink-0"
+                          title="Regenerate summary"
+                        >
+                          {isGeneratingSummary ? (
+                            <Loader2 className="w-3 h-3 animate-spin" />
+                          ) : (
+                            <RefreshCw className="w-3 h-3" />
+                          )}
+                        </button>
                       </div>
-                      <button
-                        onClick={handleGenerateSummary}
-                        disabled={isGeneratingSummary}
-                        className="p-1 rounded text-muted-foreground hover:text-purple-500 transition-colors"
-                        title="Regenerate summary"
-                      >
-                        {isGeneratingSummary ? (
-                          <Loader2 className="w-3 h-3 animate-spin" />
-                        ) : (
-                          <RefreshCw className="w-3 h-3" />
-                        )}
-                      </button>
                     </div>
-                  </div>
                 ) : (
                   <button
                     onClick={handleGenerateSummary}
@@ -289,8 +293,7 @@ export function HistoryItem({ entry }: HistoryItemProps) {
                 {summaryError && (
                   <p className="text-xs text-destructive mt-1">{summaryError}</p>
                 )}
-              </div>
-            )}
+            </div>
           </div>
 
           {/* Error message */}

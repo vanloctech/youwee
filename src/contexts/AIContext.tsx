@@ -10,6 +10,15 @@ export interface SummaryTask {
   error?: string;
 }
 
+// Queue item info for saving to history
+export interface QueueItemInfo {
+  url: string;
+  title: string;
+  thumbnail?: string;
+  duration?: number;
+  source?: string;
+}
+
 interface AIContextValue {
   config: AIConfig;
   isLoading: boolean;
@@ -31,6 +40,7 @@ interface AIContextValue {
   
   // Background task actions
   startSummaryTask: (historyId: string, url: string) => void;
+  startQueueSummaryTask: (taskId: string, itemInfo: QueueItemInfo) => void;
   getSummaryTask: (historyId: string) => SummaryTask | undefined;
   clearSummaryTask: (historyId: string) => void;
 }
@@ -42,7 +52,7 @@ const defaultConfig: AIConfig = {
   model: 'gemini-2.0-flash',
   ollama_url: 'http://localhost:11434',
   proxy_url: 'https://api.openai.com',
-  summary_style: 'short',
+  summary_style: 'detailed',
   summary_language: 'auto',
   timeout_seconds: 120,
   transcript_languages: ['en'],
@@ -162,6 +172,20 @@ export function AIProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const startSummaryTask = useCallback((historyId: string, url: string) => {
+    // Check if AI is enabled
+    if (!config.enabled) {
+      setSummaryTasks(prev => {
+        const newMap = new Map(prev);
+        newMap.set(historyId, { 
+          historyId, 
+          status: 'error', 
+          error: 'AI Features is disabled. Go to Settings → AI Features to enable.' 
+        });
+        return newMap;
+      });
+      return;
+    }
+    
     // Don't start if already running
     if (activeTasksRef.current.has(historyId)) {
       console.log(`[AI] Task already running for historyId=${historyId}`);
@@ -221,7 +245,7 @@ export function AIProvider({ children }: { children: ReactNode }) {
         activeTasksRef.current.delete(historyId);
       }
     })();
-  }, [updateTask, config.transcript_languages]);
+  }, [updateTask, config.transcript_languages, config.enabled]);
 
   const getSummaryTask = useCallback((historyId: string): SummaryTask | undefined => {
     return summaryTasks.get(historyId);
@@ -235,6 +259,87 @@ export function AIProvider({ children }: { children: ReactNode }) {
     });
     activeTasksRef.current.delete(historyId);
   }, []);
+
+  // Start summary task for queue items (saves to history when done)
+  const startQueueSummaryTask = useCallback((taskId: string, itemInfo: QueueItemInfo) => {
+    // Check if AI is enabled
+    if (!config.enabled) {
+      setSummaryTasks(prev => {
+        const newMap = new Map(prev);
+        newMap.set(taskId, { 
+          historyId: taskId, 
+          status: 'error', 
+          error: 'AI Features is disabled. Go to Settings → AI Features to enable.' 
+        });
+        return newMap;
+      });
+      return;
+    }
+    
+    // Don't start if already running
+    if (activeTasksRef.current.has(taskId)) {
+      console.log(`[AI] Task already running for taskId=${taskId}`);
+      return;
+    }
+    
+    activeTasksRef.current.add(taskId);
+    
+    if (import.meta.env.DEV) {
+      console.log(`[AI] Starting queue summary task:`, { taskId, itemInfo });
+    }
+    
+    // Initialize task
+    setSummaryTasks(prev => {
+      const newMap = new Map(prev);
+      newMap.set(taskId, { historyId: taskId, status: 'fetching' });
+      return newMap;
+    });
+    
+    const languages = config.transcript_languages || ['en'];
+    
+    // Run in background
+    (async () => {
+      try {
+        // Fetch transcript
+        const transcript = await invoke<string>('get_video_transcript', { 
+          url: itemInfo.url, 
+          languages 
+        });
+        
+        // Update to generating status
+        updateTask(taskId, { status: 'generating' });
+        
+        // Generate summary (without historyId - we'll save manually)
+        const summary = await invoke<string>('generate_video_summary', {
+          transcript,
+          historyId: null,
+        });
+        
+        // Save to history with summary
+        await invoke<string>('add_summary_only_history', {
+          url: itemInfo.url,
+          title: itemInfo.title,
+          thumbnail: itemInfo.thumbnail || null,
+          duration: itemInfo.duration ? Math.floor(itemInfo.duration) : null,
+          source: itemInfo.source || 'youtube',
+          summary,
+        });
+        
+        if (import.meta.env.DEV) {
+          console.log(`[AI] Queue summary completed and saved to history:`, taskId);
+        }
+        
+        // Complete
+        updateTask(taskId, { status: 'completed', summary });
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        console.error(`[AI] Queue task failed for taskId=${taskId}:`, message);
+        updateTask(taskId, { status: 'error', error: message });
+      } finally {
+        activeTasksRef.current.delete(taskId);
+      }
+    })();
+  }, [updateTask, config.transcript_languages]);
 
   return (
     <AIContext.Provider
@@ -253,6 +358,7 @@ export function AIProvider({ children }: { children: ReactNode }) {
         fetchTranscript,
         loadModels,
         startSummaryTask,
+        startQueueSummaryTask,
         getSummaryTask,
         clearSummaryTask,
       }}

@@ -72,6 +72,7 @@ pub fn run() {
             commands::open_file_location,
             commands::check_file_exists,
             commands::update_summary,
+            commands::add_summary_only_history,
             // AI commands
             commands::save_ai_config,
             commands::get_ai_config,

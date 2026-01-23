@@ -48,6 +48,31 @@ pub fn update_history_summary(id: String, summary: String) -> Result<(), String>
     Ok(())
 }
 
+/// Add a history entry with summary (for videos summarized without downloading)
+pub fn add_history_with_summary(
+    url: String,
+    title: String,
+    thumbnail: Option<String>,
+    duration: Option<u64>,
+    source: Option<String>,
+    summary: String,
+) -> Result<String, String> {
+    let conn = get_db()?;
+    let id = uuid::Uuid::new_v4().to_string();
+    let now = Utc::now().timestamp();
+
+    // Use empty filepath to indicate it's summary-only (not downloaded)
+    let filepath = "";
+
+    conn.execute(
+        "INSERT OR REPLACE INTO history (id, url, title, thumbnail, filepath, filesize, duration, quality, format, source, downloaded_at, summary)
+         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12)",
+        params![id, url, title, thumbnail, filepath, Option::<u64>::None, duration, Option::<String>::None, Option::<String>::None, source, now, summary],
+    ).map_err(|e| format!("Failed to add history: {}", e))?;
+
+    Ok(id)
+}
+
 /// Get history entries
 pub fn get_history_from_db(
     limit: Option<i64>,

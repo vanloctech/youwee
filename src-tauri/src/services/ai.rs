@@ -27,7 +27,7 @@ pub enum SummaryStyle {
 
 impl Default for SummaryStyle {
     fn default() -> Self {
-        SummaryStyle::Short
+        SummaryStyle::Detailed
     }
 }
 
@@ -43,6 +43,8 @@ pub struct AIConfig {
     pub summary_style: SummaryStyle,
     pub summary_language: String, // "auto", "en", "vi", "ja", etc.
     pub timeout_seconds: Option<u64>, // Timeout for AI generation (default 120s)
+    #[serde(default)]
+    pub transcript_languages: Option<Vec<String>>, // Languages to try for transcript extraction
 }
 
 impl Default for AIConfig {
@@ -57,6 +59,7 @@ impl Default for AIConfig {
             summary_style: SummaryStyle::Short,
             summary_language: "auto".to_string(),
             timeout_seconds: Some(120),
+            transcript_languages: Some(vec!["en".to_string()]),
         }
     }
 }
@@ -123,9 +126,11 @@ fn build_prompt(transcript: &str, style: &SummaryStyle, language: &str) -> Strin
     };
     
     // Truncate transcript if too long (keep ~8000 chars for context window)
-    let max_len = 8000;
-    let truncated = if transcript.len() > max_len {
-        format!("{}... [truncated]", &transcript[..max_len])
+    // Use char indices to avoid cutting in the middle of multi-byte UTF-8 characters
+    let max_chars = 8000;
+    let truncated = if transcript.chars().count() > max_chars {
+        let truncated_str: String = transcript.chars().take(max_chars).collect();
+        format!("{}... [truncated]", truncated_str)
     } else {
         transcript.to_string()
     };

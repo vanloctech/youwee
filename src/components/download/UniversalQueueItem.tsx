@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { 
   CheckCircle2, 
   XCircle, 
@@ -8,8 +9,14 @@ import {
   Play,
   HardDrive,
   MonitorPlay,
+  Sparkles,
+  ChevronDown,
+  ChevronUp,
+  RefreshCw,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useAI } from '@/contexts/AIContext';
+import { SimpleMarkdown } from '@/components/ui/simple-markdown';
 import type { DownloadItem, ItemUniversalSettings } from '@/lib/types';
 import { SourceBadge } from './SourceBadge';
 
@@ -52,6 +59,18 @@ export function UniversalQueueItem({
   disabled, 
   onRemove 
 }: UniversalQueueItemProps) {
+  const ai = useAI();
+  const [showFullSummary, setShowFullSummary] = useState(false);
+
+  // Use background task for summary
+  const taskId = `queue-${item.id}`;
+  const task = ai.getSummaryTask(taskId);
+  
+  const summary = task?.status === 'completed' ? task.summary : null;
+  const summaryError = task?.status === 'error' ? task.error : null;
+  const isGenerating = task?.status === 'fetching' || task?.status === 'generating';
+  const generatingStatus = task?.status === 'fetching' ? 'fetching' : task?.status === 'generating' ? 'generating' : null;
+
   const isActive = item.status === 'downloading' || item.status === 'fetching';
   const isCompleted = item.status === 'completed';
   const isError = item.status === 'error';
@@ -59,6 +78,22 @@ export function UniversalQueueItem({
   
   // Get saved settings for pending items
   const itemSettings = item.settings as ItemUniversalSettings | undefined;
+
+  const handleGenerateSummary = () => {
+    if (isGenerating) return;
+    
+    if (task?.status === 'error') {
+      ai.clearSummaryTask(taskId);
+    }
+    
+    ai.startQueueSummaryTask(taskId, {
+      url: item.url,
+      title: item.title,
+      thumbnail: item.thumbnail,
+      duration: item.duration ? parseFloat(item.duration) : undefined,
+      source: item.extractor || 'other',
+    });
+  };
 
   return (
     <div
@@ -237,7 +272,75 @@ export function UniversalQueueItem({
               {item.error}
             </span>
           )}
+          
+          {/* AI Summarize Button - Always show when not downloading/generating */}
+          {!isActive && !summary && !isGenerating && !summaryError && (
+            <button
+              onClick={handleGenerateSummary}
+              className="inline-flex items-center gap-1 text-[11px] px-2 py-0.5 rounded-full bg-purple-500/10 text-purple-600 dark:text-purple-400 hover:bg-purple-500/20 transition-colors font-medium"
+            >
+              <Sparkles className="w-3 h-3" />
+              Summarize
+            </button>
+          )}
+          
+          {/* Generating Status */}
+          {isGenerating && (
+            <span className="inline-flex items-center gap-1 text-[11px] px-2 py-0.5 rounded-full bg-purple-500/10 text-purple-600 dark:text-purple-400 font-medium">
+              <Loader2 className="w-3 h-3 animate-spin" />
+              {generatingStatus === 'fetching' ? 'Fetching transcript...' : 'Generating...'}
+            </span>
+          )}
         </div>
+        
+        {/* AI Summary Section */}
+        {(summary || summaryError) && (
+          <div className="mt-2">
+            {summary ? (
+              <div className="p-2 rounded-lg bg-purple-500/5 border border-purple-500/10">
+                <div className="flex items-start gap-2">
+                  <Sparkles className="w-3.5 h-3.5 text-purple-500 flex-shrink-0 mt-0.5" />
+                  <div className="flex-1 min-w-0">
+                    <div 
+                      className="text-xs text-muted-foreground overflow-hidden"
+                      style={!showFullSummary ? { maxHeight: '3em' } : undefined}
+                    >
+                      <SimpleMarkdown content={summary} />
+                    </div>
+                    {summary.length > 100 && (
+                      <button
+                        onClick={() => setShowFullSummary(!showFullSummary)}
+                        className="text-[11px] text-purple-500 hover:text-purple-400 mt-1 flex items-center gap-0.5"
+                      >
+                        {showFullSummary ? (
+                          <>Show less <ChevronUp className="w-3 h-3" /></>
+                        ) : (
+                          <>Show more <ChevronDown className="w-3 h-3" /></>
+                        )}
+                      </button>
+                    )}
+                  </div>
+                  <button
+                    onClick={handleGenerateSummary}
+                    disabled={isGenerating}
+                    className="p-1 rounded text-muted-foreground hover:text-purple-500 transition-colors"
+                    title="Regenerate summary"
+                  >
+                    {isGenerating ? (
+                      <Loader2 className="w-3 h-3 animate-spin" />
+                    ) : (
+                      <RefreshCw className="w-3 h-3" />
+                    )}
+                  </button>
+                </div>
+              </div>
+            ) : summaryError ? (
+              <div className="p-2 rounded-lg bg-destructive/5 border border-destructive/10">
+                <p className="text-xs text-destructive">{summaryError}</p>
+              </div>
+            ) : null}
+          </div>
+        )}
       </div>
 
       {/* Remove Button */}
