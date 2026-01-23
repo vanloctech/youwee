@@ -79,7 +79,7 @@ export function DownloadPage({ onNavigateToSettings }: DownloadPageProps) {
             settings={settings}
             disabled={isDownloading}
             totalFileSize={totalFileSize > 0 ? totalFileSize : undefined}
-            ffmpegInstalled={ffmpegStatus?.installed ?? true}
+            ffmpegInstalled={ffmpegStatus?.installed ?? false}
             onQualityChange={updateQuality}
             onFormatChange={updateFormat}
             onVideoCodecChange={updateVideoCodec}
