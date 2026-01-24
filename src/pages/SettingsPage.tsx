@@ -1185,8 +1185,8 @@ export function SettingsPage() {
               <div className="p-5 rounded-2xl bg-gradient-to-br from-muted/50 to-muted/30 border border-border/50">
                 <div className="flex items-start justify-between gap-4">
                   <div className="flex items-center gap-4">
-                    <div className="w-16 h-16 rounded-2xl overflow-hidden shadow-xl ring-2 ring-primary/20 flex-shrink-0">
-                      <img src="/logo-64.png" alt="Youwee" className="w-full h-full object-cover" />
+                    <div className="w-16 h-16 rounded-2xl overflow-hidden flex-shrink-0">
+                      <img src="/logo-128.png" alt="Youwee" className="w-full h-full object-cover" />
                     </div>
                     <div>
                       <div className="flex items-center gap-2">

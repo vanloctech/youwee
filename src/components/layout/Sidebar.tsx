@@ -97,11 +97,10 @@ export function Sidebar({ currentPage, onPageChange }: SidebarProps) {
           <div className="flex items-center gap-2.5 overflow-hidden">
             <div className={cn(
               "flex-shrink-0 rounded-xl overflow-hidden transition-all duration-300",
-              "ring-2 ring-primary/20 shadow-lg shadow-primary/10",
               isCollapsed ? "w-9 h-9" : "w-10 h-10"
             )}>
               <img 
-                src="/logo-64.png" 
+                src="/logo-128.png" 
                 alt="Youwee" 
                 className="w-full h-full object-cover"
               />
