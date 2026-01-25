@@ -90,6 +90,47 @@ pub fn init_database(app: &AppHandle) -> Result<(), String> {
     )
     .ok();
 
+    // Create processing_jobs table
+    conn.execute(
+        "CREATE TABLE IF NOT EXISTS processing_jobs (
+            id TEXT PRIMARY KEY,
+            input_path TEXT NOT NULL,
+            output_path TEXT,
+            task_type TEXT NOT NULL,
+            user_prompt TEXT,
+            ffmpeg_command TEXT NOT NULL,
+            status TEXT NOT NULL DEFAULT 'pending',
+            progress REAL DEFAULT 0,
+            error_message TEXT,
+            created_at TEXT NOT NULL,
+            completed_at TEXT
+        )",
+        [],
+    )
+    .map_err(|e| format!("Failed to create processing_jobs table: {}", e))?;
+
+    // Create processing_presets table
+    conn.execute(
+        "CREATE TABLE IF NOT EXISTS processing_presets (
+            id TEXT PRIMARY KEY,
+            name TEXT NOT NULL,
+            description TEXT,
+            task_type TEXT NOT NULL,
+            prompt_template TEXT NOT NULL,
+            icon TEXT,
+            created_at TEXT NOT NULL
+        )",
+        [],
+    )
+    .map_err(|e| format!("Failed to create processing_presets table: {}", e))?;
+
+    // Create processing indexes
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_processing_jobs_created ON processing_jobs(created_at DESC)",
+        [],
+    )
+    .ok();
+
     DB_CONNECTION
         .set(Mutex::new(conn))
         .map_err(|_| "Database already initialized".to_string())?;

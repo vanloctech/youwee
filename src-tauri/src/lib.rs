@@ -23,6 +23,7 @@ pub fn run() {
         .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_updater::Builder::new().build())
         .plugin(tauri_plugin_process::init())
+        .plugin(tauri_plugin_opener::init())
         .setup(|app| {
             // Initialize the database
             if let Err(e) = database::init_database(&app.handle()) {
@@ -85,6 +86,22 @@ pub fn run() {
             commands::generate_summary_with_options,
             commands::get_ai_models,
             commands::get_summary_languages,
+            // Processing commands
+            commands::get_video_metadata,
+            commands::generate_processing_command,
+            commands::generate_quick_action_command,
+            commands::execute_ffmpeg_command,
+            commands::cancel_ffmpeg,
+            commands::get_processing_history,
+            commands::save_processing_job,
+            commands::update_processing_job,
+            commands::delete_processing_job,
+            commands::get_processing_presets,
+            commands::save_processing_preset,
+            commands::delete_processing_preset,
+            commands::generate_video_preview,
+            commands::check_preview_exists,
+            commands::cleanup_previews,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

@@ -9,7 +9,7 @@ import { UpdaterProvider, useUpdater } from '@/contexts/UpdaterContext';
 import { AIProvider } from '@/contexts/AIContext';
 import { MainLayout } from '@/components/layout';
 import type { Page } from '@/components/layout';
-import { DownloadPage, UniversalPage, SummaryPage, HistoryPage, LogsPage, SettingsPage } from '@/pages';
+import { DownloadPage, UniversalPage, SummaryPage, ProcessingPage, HistoryPage, LogsPage, SettingsPage } from '@/pages';
 import { UpdateDialog } from '@/components/UpdateDialog';
 import { FFmpegDialog } from '@/components/FFmpegDialog';
 
@@ -47,6 +47,7 @@ function AppContent() {
         {currentPage === 'youtube' && <DownloadPage onNavigateToSettings={() => setCurrentPage('settings')} />}
         {currentPage === 'universal' && <UniversalPage />}
         {currentPage === 'summary' && <SummaryPage />}
+        {currentPage === 'processing' && <ProcessingPage />}
         {currentPage === 'library' && <HistoryPage />}
         {currentPage === 'logs' && <LogsPage />}
         {currentPage === 'settings' && <SettingsPage />}

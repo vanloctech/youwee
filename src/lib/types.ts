@@ -263,3 +263,116 @@ export interface LanguageOption {
   value: string;
   label: string;
 }
+
+// ============================================
+// Video Processing Types
+// ============================================
+
+export type ProcessingStatus = 'idle' | 'generating' | 'ready' | 'processing' | 'completed' | 'error';
+
+export type ProcessingTaskType = 
+  | 'cut' | 'extract_audio' | 'resize' | 'convert' 
+  | 'burn_subtitles' | 'thumbnail' | 'gif' | 'speed' 
+  | 'volume' | 'remove_audio' | 'merge' | 'compress'
+  | 'rotate' | 'flip' | 'crop' | 'watermark' | 'custom';
+
+export interface VideoMetadata {
+  path: string;
+  filename: string;
+  duration: number; // seconds
+  width: number;
+  height: number;
+  fps: number;
+  video_codec: string;
+  audio_codec: string;
+  bitrate: number; // kbps
+  file_size: number; // bytes
+  format: string;
+  has_audio: boolean;
+}
+
+export interface TimelineSelection {
+  start: number; // seconds
+  end: number; // seconds
+}
+
+export interface FFmpegCommandResult {
+  command: string;
+  explanation: string;
+  estimated_size_mb: number;
+  estimated_time_seconds: number;
+  output_path: string;
+  warnings: string[];
+}
+
+export interface ProcessingJob {
+  id: string;
+  input_path: string;
+  output_path?: string;
+  task_type: ProcessingTaskType;
+  user_prompt?: string;
+  ffmpeg_command: string;
+  status: ProcessingStatus;
+  progress: number;
+  error_message?: string;
+  input_metadata?: VideoMetadata;
+  output_metadata?: VideoMetadata;
+  created_at: string;
+  completed_at?: string;
+  ai_provider?: string;
+  ai_model?: string;
+}
+
+export interface ProcessingProgress {
+  job_id: string;
+  percent: number;
+  frame: number;
+  total_frames: number;
+  fps: number;
+  speed: string;
+  time: string;
+  size: string;
+}
+
+export interface ProcessingPreset {
+  id: string;
+  name: string;
+  description?: string;
+  task_type: ProcessingTaskType;
+  prompt_template: string;
+  icon?: string;
+  created_at: string;
+}
+
+export interface ChatMessage {
+  id: string;
+  role: 'user' | 'assistant' | 'system' | 'complete';
+  content: string;
+  timestamp: string;
+  command?: FFmpegCommandResult;
+  outputPath?: string; // For 'complete' role
+}
+
+// Quick action definitions
+export interface QuickAction {
+  id: ProcessingTaskType;
+  icon: string;
+  label: string;
+  description: string;
+  needsInput?: 'format' | 'resolution' | 'speed' | 'file' | 'timestamp' | 'range';
+}
+
+export const QUICK_ACTIONS: QuickAction[] = [
+  { id: 'cut', icon: '✂️', label: 'Cut/Trim', description: 'Cut video using timeline selection' },
+  { id: 'extract_audio', icon: '🎵', label: 'Extract Audio', description: 'Extract audio track', needsInput: 'format' },
+  { id: 'resize', icon: '📐', label: 'Resize', description: 'Change video resolution', needsInput: 'resolution' },
+  { id: 'convert', icon: '🔄', label: 'Convert', description: 'Convert to different format', needsInput: 'format' },
+  { id: 'burn_subtitles', icon: '📝', label: 'Burn Subtitles', description: 'Burn subtitles into video', needsInput: 'file' },
+  { id: 'thumbnail', icon: '🖼️', label: 'Thumbnail', description: 'Extract frame as image', needsInput: 'timestamp' },
+  { id: 'gif', icon: '🎞️', label: 'Create GIF', description: 'Create GIF from selection', needsInput: 'range' },
+  { id: 'speed', icon: '⚡', label: 'Speed', description: 'Change playback speed', needsInput: 'speed' },
+  { id: 'compress', icon: '📦', label: 'Compress', description: 'Reduce file size' },
+  { id: 'remove_audio', icon: '🔇', label: 'Remove Audio', description: 'Remove audio track' },
+  { id: 'rotate', icon: '🔃', label: 'Rotate', description: 'Rotate video 90°/180°/270°' },
+  { id: 'merge', icon: '🔀', label: 'Merge', description: 'Merge multiple videos', needsInput: 'file' },
+];

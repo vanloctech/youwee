@@ -12,10 +12,11 @@ import {
   ChevronRight,
   Sun,
   Moon,
+  Wand2,
 } from 'lucide-react';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
-export type Page = 'youtube' | 'universal' | 'summary' | 'library' | 'logs' | 'settings';
+export type Page = 'youtube' | 'universal' | 'summary' | 'processing' | 'library' | 'logs' | 'settings';
 
 interface SidebarProps {
   currentPage: Page;
@@ -43,6 +44,11 @@ const navItems: NavItem[] = [
     id: 'summary',
     label: 'AI Summary',
     icon: <Sparkles className="w-5 h-5" />,
+  },
+  {
+    id: 'processing',
+    label: 'Processing',
+    icon: <Wand2 className="w-5 h-5" />,
   },
   {
     id: 'library',
