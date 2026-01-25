@@ -144,6 +144,20 @@ pub fn parse_ffmpeg_version(output: &str) -> String {
     "unknown".to_string()
 }
 
+/// Extract date string (YYYY-MM-DD) from version string
+/// Examples:
+/// - "git-2026-01-25-1e1dde8" -> "2026-01-25"
+/// - "2026-01-25" -> "2026-01-25"
+fn extract_date_from_version(version: &str) -> Option<String> {
+    // Look for YYYY-MM-DD pattern
+    let re = regex::Regex::new(r"(\d{4})-(\d{2})-(\d{2})").ok()?;
+    if let Some(caps) = re.captures(version) {
+        Some(format!("{}-{}-{}", &caps[1], &caps[2], &caps[3]))
+    } else {
+        None
+    }
+}
+
 /// FFmpeg download info with checksum support
 pub struct FfmpegDownloadInfo {
     pub url: &'static str,
@@ -309,15 +323,27 @@ pub async fn check_ffmpeg_update_internal(app: &AppHandle) -> Result<FfmpegUpdat
     let html_url = json["html_url"].as_str()
         .map(|s| s.to_string());
     
-    // Extract version from tag (remove 'v' prefix if present)
-    let latest_version = tag_name.trim_start_matches('v').to_string();
+    // Extract version from tag (remove 'v' or 'ffmpeg-' prefix if present)
+    let latest_version = tag_name
+        .trim_start_matches('v')
+        .trim_start_matches("ffmpeg-")
+        .to_string();
     
-    // Compare versions
+    // Compare versions by extracting date parts
+    // Current version format: "git-2026-01-25-1e1dde8" -> extract "2026-01-25"
+    // Latest version format: "2026.01.25" or "ffmpeg-2026.01.25" -> extract "2026.01.25"
     let has_update = if let Some(ref current) = current_version {
-        // Simple comparison: check if versions are different
-        // Current version format: "git-2026-01-22-4561fc5" or similar
-        // Latest version format: could be date-based or semantic
-        !current.contains(&latest_version) && latest_version != *current
+        // Extract date from current version (format: git-YYYY-MM-DD-hash)
+        let current_date = extract_date_from_version(current);
+        // Normalize latest version (replace . with -)
+        let latest_normalized = latest_version.replace('.', "-");
+        let latest_date = extract_date_from_version(&latest_normalized);
+        
+        // Compare dates - if latest is newer, there's an update
+        match (current_date, latest_date) {
+            (Some(curr), Some(lat)) => lat > curr,
+            _ => false, // Can't compare, assume no update
+        }
     } else {
         false
     };
