@@ -7,7 +7,7 @@ use crate::services::{
     get_ytdlp_version_internal, get_ytdlp_download_info, verify_sha256,
     check_ffmpeg_internal, get_ffmpeg_download_info, parse_ffmpeg_version,
     get_ffmpeg_path, check_ffmpeg_update_internal, FfmpegUpdateInfo,
-    check_bun_internal, get_bun_download_url,
+    check_bun_internal, get_bun_download_url, check_bun_update_internal, BunUpdateInfo,
 };
 use crate::utils::{extract_tar_gz, extract_tar_xz, extract_zip, extract_bun_from_zip};
 
@@ -282,6 +282,11 @@ pub async fn get_ffmpeg_path_for_ytdlp(app: AppHandle) -> Result<Option<String>,
 #[tauri::command]
 pub async fn check_bun(app: AppHandle) -> Result<BunStatus, String> {
     check_bun_internal(&app).await
+}
+
+#[tauri::command]
+pub async fn check_bun_update(app: AppHandle) -> Result<BunUpdateInfo, String> {
+    check_bun_update_internal(&app).await
 }
 
 #[tauri::command]

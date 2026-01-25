@@ -59,6 +59,7 @@ pub fn run() {
             commands::get_ffmpeg_path_for_ytdlp,
             // Bun commands
             commands::check_bun,
+            commands::check_bun_update,
             commands::download_bun,
             // Browser detection
             commands::detect_installed_browsers,

@@ -158,7 +158,10 @@ export function SettingsPage() {
     bunDownloading,
     bunError,
     bunSuccess,
+    bunUpdateInfo,
+    bunCheckingUpdate,
     checkBun,
+    checkBunUpdate,
     downloadBun,
   } = useDependencies();
 
@@ -450,19 +453,37 @@ export function SettingsPage() {
                         ) : (
                           <Badge variant="outline" className="text-xs">Optional</Badge>
                         )}
+                        {bunUpdateInfo?.has_update && (
+                          <Badge variant="default" className="text-xs bg-primary">
+                            Update available
+                          </Badge>
+                        )}
                       </div>
                       <p className="text-xs text-muted-foreground mt-0.5">
                         {bunDownloading ? (
                           <span className="flex items-center gap-1 text-primary">
                             <Loader2 className="w-3 h-3 animate-spin" />
-                            Installing...
+                            {bunUpdateInfo?.has_update ? 'Updating...' : 'Installing...'}
+                          </span>
+                        ) : bunCheckingUpdate ? (
+                          <span className="flex items-center gap-1 text-muted-foreground">
+                            <Loader2 className="w-3 h-3 animate-spin" />
+                            Checking for updates...
                           </span>
                         ) : bunSuccess ? (
-                          <span className="text-emerald-500">Installed!</span>
+                          <span className="text-emerald-500">
+                            {bunUpdateInfo?.has_update ? 'Updated!' : 'Installed!'}
+                          </span>
                         ) : bunError ? (
                           <span className="text-destructive">{bunError}</span>
+                        ) : bunUpdateInfo?.has_update ? (
+                          <span className="text-primary">
+                            New version: {bunUpdateInfo.latest_version}
+                          </span>
                         ) : !bunStatus?.installed ? (
                           <span className="text-amber-500">Enable in download settings if only 360p available</span>
+                        ) : bunStatus?.is_system ? (
+                          'System Bun - update via package manager'
                         ) : (
                           'JavaScript runtime for YouTube'
                         )}
@@ -470,6 +491,11 @@ export function SettingsPage() {
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
+                    {bunUpdateInfo?.has_update && !bunStatus?.is_system && (
+                      <Button size="sm" onClick={downloadBun} disabled={bunDownloading}>
+                        {bunDownloading ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Update'}
+                      </Button>
+                    )}
                     {!bunStatus?.installed && !bunLoading && (
                       <Button size="sm" onClick={downloadBun} disabled={bunDownloading}>
                         {bunDownloading ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Install'}
@@ -478,10 +504,11 @@ export function SettingsPage() {
                     <Button
                       variant="ghost"
                       size="icon"
-                      onClick={checkBun}
-                      disabled={bunLoading || bunDownloading}
+                      onClick={checkBunUpdate}
+                      disabled={bunLoading || bunDownloading || bunCheckingUpdate || !bunStatus?.installed}
+                      title="Check for updates"
                     >
-                      <RefreshCw className={cn("w-4 h-4", bunLoading && "animate-spin")} />
+                      <RefreshCw className={cn("w-4 h-4", (bunLoading || bunCheckingUpdate) && "animate-spin")} />
                     </Button>
                   </div>
                 </div>

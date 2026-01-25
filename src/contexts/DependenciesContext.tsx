@@ -30,6 +30,13 @@ export interface FfmpegUpdateInfo {
   release_url: string | null;
 }
 
+export interface BunUpdateInfo {
+  has_update: boolean;
+  current_version: string | null;
+  latest_version: string | null;
+  release_url: string | null;
+}
+
 interface DependenciesContextType {
   // yt-dlp state
   ytdlpInfo: YtdlpVersionInfo | null;
@@ -65,9 +72,12 @@ interface DependenciesContextType {
   bunDownloading: boolean;
   bunError: string | null;
   bunSuccess: boolean;
+  bunUpdateInfo: BunUpdateInfo | null;
+  bunCheckingUpdate: boolean;
   
   // Bun actions
   checkBun: () => Promise<void>;
+  checkBunUpdate: () => Promise<void>;
   downloadBun: () => Promise<void>;
 }
 
@@ -98,6 +108,8 @@ export function DependenciesProvider({ children }: { children: ReactNode }) {
   const [bunDownloading, setBunDownloading] = useState(false);
   const [bunError, setBunError] = useState<string | null>(null);
   const [bunSuccess, setBunSuccess] = useState(false);
+  const [bunUpdateInfo, setBunUpdateInfo] = useState<BunUpdateInfo | null>(null);
+  const [bunCheckingUpdate, setBunCheckingUpdate] = useState(false);
 
   // Load yt-dlp version (only once on first mount)
   const refreshYtdlpVersion = useCallback(async () => {
@@ -181,6 +193,20 @@ export function DependenciesProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
+  // Check Bun update
+  const checkBunUpdate = useCallback(async () => {
+    setBunCheckingUpdate(true);
+    setBunError(null);
+    try {
+      const updateInfo = await invoke<BunUpdateInfo>('check_bun_update');
+      setBunUpdateInfo(updateInfo);
+    } catch (err) {
+      setBunError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setBunCheckingUpdate(false);
+    }
+  }, []);
+
   // Download Bun
   const downloadBun = useCallback(async () => {
     setBunDownloading(true);
@@ -195,6 +221,7 @@ export function DependenciesProvider({ children }: { children: ReactNode }) {
         is_system: false,
       });
       setBunSuccess(true);
+      setBunUpdateInfo(null); // Clear update info after successful download
       // Hide success message after 3 seconds
       setTimeout(() => setBunSuccess(false), 3000);
       // Refresh to get full status
@@ -280,7 +307,10 @@ export function DependenciesProvider({ children }: { children: ReactNode }) {
         bunDownloading,
         bunError,
         bunSuccess,
+        bunUpdateInfo,
+        bunCheckingUpdate,
         checkBun,
+        checkBunUpdate,
         downloadBun,
       }}
     >
