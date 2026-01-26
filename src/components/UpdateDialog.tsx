@@ -1,4 +1,4 @@
-import { Download, RefreshCw, X, Sparkles, RotateCcw } from 'lucide-react';
+import { Download, RefreshCw, RotateCcw, Sparkles, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { SimpleMarkdown } from '@/components/ui/simple-markdown';
@@ -30,16 +30,15 @@ export function UpdateDialog({
     return null;
   }
 
-  const progressPercent = progress && progress.total > 0 
-    ? Math.round((progress.downloaded / progress.total) * 100)
-    : 0;
+  const progressPercent =
+    progress && progress.total > 0 ? Math.round((progress.downloaded / progress.total) * 100) : 0;
 
   const formatBytes = (bytes: number) => {
     if (bytes === 0) return '0 B';
     const k = 1024;
     const sizes = ['B', 'KB', 'MB', 'GB'];
     const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
+    return `${parseFloat((bytes / k ** i).toFixed(1))} ${sizes[i]}`;
   };
 
   return (
@@ -64,6 +63,7 @@ export function UpdateDialog({
           </div>
           {(status === 'available' || status === 'error') && (
             <button
+              type="button"
               onClick={onDismiss}
               className="absolute top-4 right-4 p-1 rounded-md hover:bg-black/10 transition-colors"
             >
@@ -81,8 +81,8 @@ export function UpdateDialog({
               </p>
               {updateInfo?.body && (
                 <div className="p-3 bg-muted/50 rounded-lg max-h-48 overflow-y-auto">
-                  <SimpleMarkdown 
-                    content={updateInfo.body} 
+                  <SimpleMarkdown
+                    content={updateInfo.body}
                     className="text-xs text-muted-foreground"
                   />
                 </div>

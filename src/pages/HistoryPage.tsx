@@ -1,8 +1,8 @@
-import { useHistory } from '@/contexts/HistoryContext';
-import { HistoryToolbar, HistoryItem } from '@/components/history';
-import { ThemePicker } from '@/components/settings/ThemePicker';
-import { cn } from '@/lib/utils';
 import { FolderDown } from 'lucide-react';
+import { HistoryItem, HistoryToolbar } from '@/components/history';
+import { ThemePicker } from '@/components/settings/ThemePicker';
+import { useHistory } from '@/contexts/HistoryContext';
+import { cn } from '@/lib/utils';
 
 export function HistoryPage() {
   const { entries, loading, totalCount } = useHistory();
@@ -47,15 +47,15 @@ export function HistoryPage() {
                 <div
                   className={cn(
                     'w-16 h-16 rounded-2xl flex items-center justify-center mb-4',
-                    'bg-primary/10 text-primary'
+                    'bg-primary/10 text-primary',
                   )}
                 >
                   <FolderDown className="w-8 h-8" />
                 </div>
                 <h3 className="text-lg font-semibold mb-2">No downloads yet</h3>
                 <p className="text-sm text-muted-foreground max-w-md">
-                  Your download history will appear here. Start downloading videos from
-                  YouTube or other platforms to see them in your library.
+                  Your download history will appear here. Start downloading videos from YouTube or
+                  other platforms to see them in your library.
                 </p>
               </div>
             ) : (

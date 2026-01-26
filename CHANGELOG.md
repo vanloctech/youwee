@@ -7,6 +7,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+
+## [0.5.0] - 2026-01-27
+
+### Added
+- AI Video Processing page - Edit videos using natural language prompts
+- Post-processing settings - Embed metadata and thumbnails into downloaded files
+- Embed Metadata settings - Add title, artist, description to files (enabled by default)
+- Embed Thumbnail settings - Add cover art/thumbnail to files (enabled by default, requires FFmpeg)
+
+### Fixed
+- AI error message "AI Features is disabled" no longer shows when download fails (Windows)
+- Summarize button now hidden when AI features disabled
+- Summarize button hidden on failed download items to prevent confusion
+- yt-dlp version now correctly shows updated version after update
+- FFmpeg update checker - check for new versions from GitHub releases
+- Bun runtime update checker - check for new versions from GitHub releases
+
+
 ## [0.4.1] - 2026-01-24
 
 ### Added

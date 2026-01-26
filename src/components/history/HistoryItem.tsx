@@ -1,26 +1,26 @@
-import { useState, useCallback, useEffect } from 'react';
-import { useHistory } from '@/contexts/HistoryContext';
-import { useAI } from '@/contexts/AIContext';
-import { cn } from '@/lib/utils';
-import { SimpleMarkdown } from '@/components/ui/simple-markdown';
-import type { HistoryEntry } from '@/lib/types';
-import { 
-  FolderOpen, 
-  Download, 
-  Trash2, 
+import {
   AlertCircle,
-  Clock,
-  HardDrive,
-  FileVideo,
-  Loader2,
-  ExternalLink,
-  Copy,
   Check,
-  Sparkles,
-  RefreshCw,
   ChevronDown,
   ChevronUp,
+  Clock,
+  Copy,
+  Download,
+  ExternalLink,
+  FileVideo,
+  FolderOpen,
+  HardDrive,
+  Loader2,
+  RefreshCw,
+  Sparkles,
+  Trash2,
 } from 'lucide-react';
+import { useCallback, useEffect, useState } from 'react';
+import { SimpleMarkdown } from '@/components/ui/simple-markdown';
+import { useAI } from '@/contexts/AIContext';
+import { useHistory } from '@/contexts/HistoryContext';
+import type { HistoryEntry } from '@/lib/types';
+import { cn } from '@/lib/utils';
 
 interface HistoryItemProps {
   entry: HistoryEntry;
@@ -54,17 +54,17 @@ function formatRelativeTime(dateStr: string): string {
 // Get source config
 function getSourceConfig(source?: string): { icon: string; label: string; color: string } {
   switch (source?.toLowerCase()) {
-    case 'youtube': 
+    case 'youtube':
       return { icon: 'fa-youtube-play', label: 'YouTube', color: 'text-red-500 bg-red-500/10' };
-    case 'tiktok': 
+    case 'tiktok':
       return { icon: 'fa-music', label: 'TikTok', color: 'text-pink-500 bg-pink-500/10' };
-    case 'facebook': 
+    case 'facebook':
       return { icon: 'fa-facebook', label: 'Facebook', color: 'text-blue-600 bg-blue-600/10' };
-    case 'instagram': 
+    case 'instagram':
       return { icon: 'fa-instagram', label: 'Instagram', color: 'text-pink-600 bg-pink-600/10' };
-    case 'twitter': 
+    case 'twitter':
       return { icon: 'fa-twitter', label: 'Twitter', color: 'text-sky-500 bg-sky-500/10' };
-    default: 
+    default:
       return { icon: 'fa-globe', label: 'Other', color: 'text-gray-500 bg-gray-500/10' };
   }
 }
@@ -86,18 +86,20 @@ export function HistoryItem({ entry }: HistoryItemProps) {
   const redownloadSpeed = redownloadTask?.speed || '';
 
   const sourceConfig = getSourceConfig(entry.source);
-  
+
   // Reset local summary when entry changes (important for component reuse)
   useEffect(() => {
     setLocalSummary(entry.summary);
     setShowFullSummary(false);
-  }, [entry.id, entry.summary]);
-  
+  }, [entry.summary]);
+
   // Get background task status from context
   const task = ai.getSummaryTask(entry.id);
+  const aiEnabled = ai.config.enabled;
   const isGeneratingSummary = task?.status === 'fetching' || task?.status === 'generating';
-  const summaryError = task?.status === 'error' ? task.error : null;
-  
+  // Don't show AI errors if AI is disabled (user didn't explicitly use AI)
+  const summaryError = aiEnabled && task?.status === 'error' ? task.error : null;
+
   // Update local summary when task completes
   useEffect(() => {
     if (task?.status === 'completed' && task.summary) {
@@ -152,10 +154,8 @@ export function HistoryItem({ entry }: HistoryItemProps) {
   }, [localSummary]);
 
   const handleGenerateSummary = useCallback(() => {
-    // Check if AI is enabled - if not, start task anyway to show error
+    // Don't do anything if AI is disabled
     if (!ai.config.enabled) {
-      // Manually set error state by creating a fake task
-      ai.startSummaryTask(entry.id, entry.url);
       return;
     }
     // Start background task - this will continue even if component unmounts
@@ -168,7 +168,7 @@ export function HistoryItem({ entry }: HistoryItemProps) {
         'group relative rounded-xl border p-4 transition-all duration-200',
         'bg-card/50 hover:bg-card/80',
         'border-white/[0.08] dark:border-white/[0.05]',
-        !entry.file_exists && 'opacity-70'
+        !entry.file_exists && 'opacity-70',
       )}
     >
       <div className="flex gap-4">
@@ -186,12 +186,14 @@ export function HistoryItem({ entry }: HistoryItemProps) {
               <FileVideo className="w-10 h-10 text-muted-foreground/30" />
             </div>
           )}
-          
+
           {/* Source badge */}
-          <div className={cn(
-            'absolute top-1.5 left-1.5 flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium',
-            sourceConfig.color
-          )}>
+          <div
+            className={cn(
+              'absolute top-1.5 left-1.5 flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium',
+              sourceConfig.color,
+            )}
+          >
             <i className={`fa ${sourceConfig.icon} text-[9px]`} />
             <span className="hidden sm:inline">{sourceConfig.label}</span>
           </div>
@@ -218,7 +220,10 @@ export function HistoryItem({ entry }: HistoryItemProps) {
         <div className="flex-1 min-w-0 flex flex-col justify-between">
           {/* Title */}
           <div>
-            <h3 className="font-medium text-sm line-clamp-2 leading-snug mb-1.5" title={entry.title}>
+            <h3
+              className="font-medium text-sm line-clamp-2 leading-snug mb-1.5"
+              title={entry.title}
+            >
               {entry.title}
             </h3>
 
@@ -241,88 +246,98 @@ export function HistoryItem({ entry }: HistoryItemProps) {
 
             {/* AI Summary */}
             <div className="mt-2">
-                {localSummary ? (
-                    <div className="p-2 rounded-lg bg-purple-500/5 border border-purple-500/10">
-                      <div className="flex items-start gap-2">
-                        <Sparkles className="w-3.5 h-3.5 text-purple-500 flex-shrink-0 mt-0.5" />
-                        <div className="flex-1 min-w-0">
-                          <div 
-                            className="text-xs text-muted-foreground overflow-hidden"
-                            style={!showFullSummary ? { maxHeight: '7.5em' } : undefined}
-                          >
-                            <SimpleMarkdown content={localSummary} />
-                          </div>
-                          {localSummary.length > 200 && (
-                            <button
-                              onClick={() => setShowFullSummary(!showFullSummary)}
-                              className="text-xs text-purple-500 hover:text-purple-400 mt-1 flex items-center gap-0.5"
-                            >
-                              {showFullSummary ? (
-                                <>Show less <ChevronUp className="w-3 h-3" /></>
-                              ) : (
-                                <>Show more <ChevronDown className="w-3 h-3" /></>
-                              )}
-                            </button>
-                          )}
-                        </div>
-                        <div className="flex flex-col gap-1 flex-shrink-0">
-                          <button
-                            onClick={handleCopySummary}
-                            className="p-1 rounded text-muted-foreground hover:text-purple-500 transition-colors"
-                            title="Copy summary"
-                          >
-                            {copiedSummary ? (
-                              <Check className="w-3 h-3 text-green-500" />
-                            ) : (
-                              <Copy className="w-3 h-3" />
-                            )}
-                          </button>
-                          <button
-                            onClick={handleGenerateSummary}
-                            disabled={isGeneratingSummary}
-                            className="p-1 rounded text-muted-foreground hover:text-purple-500 transition-colors"
-                            title="Regenerate summary"
-                          >
-                            {isGeneratingSummary ? (
-                              <Loader2 className="w-3 h-3 animate-spin" />
-                            ) : (
-                              <RefreshCw className="w-3 h-3" />
-                            )}
-                          </button>
-                        </div>
+              {localSummary ? (
+                <div className="p-2 rounded-lg bg-purple-500/5 border border-purple-500/10">
+                  <div className="flex items-start gap-2">
+                    <Sparkles className="w-3.5 h-3.5 text-purple-500 flex-shrink-0 mt-0.5" />
+                    <div className="flex-1 min-w-0">
+                      <div
+                        className="text-xs text-muted-foreground overflow-hidden"
+                        style={!showFullSummary ? { maxHeight: '7.5em' } : undefined}
+                      >
+                        <SimpleMarkdown content={localSummary} />
                       </div>
+                      {localSummary.length > 200 && (
+                        <button
+                          type="button"
+                          onClick={() => setShowFullSummary(!showFullSummary)}
+                          className="text-xs text-purple-500 hover:text-purple-400 mt-1 flex items-center gap-0.5"
+                        >
+                          {showFullSummary ? (
+                            <>
+                              Show less <ChevronUp className="w-3 h-3" />
+                            </>
+                          ) : (
+                            <>
+                              Show more <ChevronDown className="w-3 h-3" />
+                            </>
+                          )}
+                        </button>
+                      )}
                     </div>
-                ) : (
-                  <button
-                    onClick={handleGenerateSummary}
-                    disabled={isGeneratingSummary}
-                    className={cn(
-                      "flex items-center gap-1.5 text-xs text-purple-500 hover:text-purple-400 transition-colors",
-                      isGeneratingSummary && "opacity-50"
-                    )}
-                  >
-                    {isGeneratingSummary ? (
-                      <>
-                        <Loader2 className="w-3 h-3 animate-spin" />
-                        {task?.status === 'fetching' ? 'Fetching transcript...' : 'Generating summary...'}
-                      </>
-                    ) : (
-                      <>
-                        <Sparkles className="w-3 h-3" />
-                        Generate AI summary
-                      </>
-                    )}
-                  </button>
-                )}
-                {summaryError && (
-                  <p className="text-xs text-destructive mt-1">{summaryError}</p>
-                )}
+                    <div className="flex flex-col gap-1 flex-shrink-0">
+                      <button
+                        type="button"
+                        onClick={handleCopySummary}
+                        className="p-1 rounded text-muted-foreground hover:text-purple-500 transition-colors"
+                        title="Copy summary"
+                      >
+                        {copiedSummary ? (
+                          <Check className="w-3 h-3 text-green-500" />
+                        ) : (
+                          <Copy className="w-3 h-3" />
+                        )}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={handleGenerateSummary}
+                        disabled={isGeneratingSummary}
+                        className="p-1 rounded text-muted-foreground hover:text-purple-500 transition-colors"
+                        title="Regenerate summary"
+                      >
+                        {isGeneratingSummary ? (
+                          <Loader2 className="w-3 h-3 animate-spin" />
+                        ) : (
+                          <RefreshCw className="w-3 h-3" />
+                        )}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ) : aiEnabled ? (
+                <button
+                  type="button"
+                  onClick={handleGenerateSummary}
+                  disabled={isGeneratingSummary}
+                  className={cn(
+                    'flex items-center gap-1.5 text-xs text-purple-500 hover:text-purple-400 transition-colors',
+                    isGeneratingSummary && 'opacity-50',
+                  )}
+                >
+                  {isGeneratingSummary ? (
+                    <>
+                      <Loader2 className="w-3 h-3 animate-spin" />
+                      {task?.status === 'fetching'
+                        ? 'Fetching transcript...'
+                        : 'Generating summary...'}
+                    </>
+                  ) : (
+                    <>
+                      <Sparkles className="w-3 h-3" />
+                      Generate AI summary
+                    </>
+                  )}
+                </button>
+              ) : null}
+              {summaryError && <p className="text-xs text-destructive mt-1">{summaryError}</p>}
             </div>
           </div>
 
           {/* Error message */}
           {(redownloadError || redownloadTask?.error) && (
-            <p className="text-xs text-destructive mt-2">{redownloadError || redownloadTask?.error}</p>
+            <p className="text-xs text-destructive mt-2">
+              {redownloadError || redownloadTask?.error}
+            </p>
           )}
 
           {/* Re-download progress bar */}
@@ -334,12 +349,11 @@ export function HistoryItem({ entry }: HistoryItemProps) {
                   Downloading...
                 </span>
                 <span className="text-muted-foreground">
-                  {redownloadProgress.toFixed(0)}%
-                  {redownloadSpeed && ` · ${redownloadSpeed}`}
+                  {redownloadProgress.toFixed(0)}%{redownloadSpeed && ` · ${redownloadSpeed}`}
                 </span>
               </div>
               <div className="h-1.5 bg-muted rounded-full overflow-hidden">
-                <div 
+                <div
                   className="h-full bg-primary rounded-full transition-all duration-300"
                   style={{ width: `${redownloadProgress}%` }}
                 />
@@ -348,16 +362,19 @@ export function HistoryItem({ entry }: HistoryItemProps) {
           )}
 
           {/* Actions */}
-          <div className={cn(
-            "flex items-center gap-1 mt-2 transition-opacity",
-            isRedownloading ? "opacity-100" : "opacity-0 group-hover:opacity-100"
-          )}>
+          <div
+            className={cn(
+              'flex items-center gap-1 mt-2 transition-opacity',
+              isRedownloading ? 'opacity-100' : 'opacity-0 group-hover:opacity-100',
+            )}
+          >
             {entry.file_exists ? (
               <button
+                type="button"
                 onClick={handleOpenFolder}
                 className={cn(
                   'flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium',
-                  'bg-primary/10 hover:bg-primary/20 text-primary transition-colors'
+                  'bg-primary/10 hover:bg-primary/20 text-primary transition-colors',
                 )}
               >
                 <FolderOpen className="w-3.5 h-3.5" />
@@ -365,12 +382,13 @@ export function HistoryItem({ entry }: HistoryItemProps) {
               </button>
             ) : (
               <button
+                type="button"
                 onClick={handleRedownload}
                 disabled={isRedownloading}
                 className={cn(
                   'flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium',
                   'bg-primary/10 hover:bg-primary/20 text-primary transition-colors',
-                  isRedownloading && 'opacity-50'
+                  isRedownloading && 'opacity-50',
                 )}
               >
                 {isRedownloading ? (
@@ -388,7 +406,7 @@ export function HistoryItem({ entry }: HistoryItemProps) {
               rel="noopener noreferrer"
               className={cn(
                 'flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium',
-                'bg-muted/50 hover:bg-muted text-muted-foreground hover:text-foreground transition-colors'
+                'bg-muted/50 hover:bg-muted text-muted-foreground hover:text-foreground transition-colors',
               )}
             >
               <ExternalLink className="w-3.5 h-3.5" />
@@ -396,10 +414,11 @@ export function HistoryItem({ entry }: HistoryItemProps) {
             </a>
 
             <button
+              type="button"
               onClick={handleCopyUrl}
               className={cn(
                 'flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium',
-                'bg-muted/50 hover:bg-muted text-muted-foreground hover:text-foreground transition-colors'
+                'bg-muted/50 hover:bg-muted text-muted-foreground hover:text-foreground transition-colors',
               )}
             >
               {copied ? (
@@ -414,14 +433,15 @@ export function HistoryItem({ entry }: HistoryItemProps) {
                 </>
               )}
             </button>
-            
+
             <button
+              type="button"
               onClick={handleDelete}
               disabled={isDeleting}
               className={cn(
                 'flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium',
                 'bg-red-500/10 hover:bg-red-500/20 text-red-400 hover:text-red-300 transition-colors',
-                isDeleting && 'opacity-50'
+                isDeleting && 'opacity-50',
               )}
             >
               <Trash2 className="w-3.5 h-3.5" />

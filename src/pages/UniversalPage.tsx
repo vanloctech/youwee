@@ -1,7 +1,11 @@
 import { Play, Square, Trash2 } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { UniversalUrlInput, UniversalSettingsPanel, UniversalQueueList } from '@/components/download';
+import {
+  UniversalQueueList,
+  UniversalSettingsPanel,
+  UniversalUrlInput,
+} from '@/components/download';
 import { ThemePicker } from '@/components/settings/ThemePicker';
+import { Button } from '@/components/ui/button';
 import { useUniversal } from '@/contexts/UniversalContext';
 import { cn } from '@/lib/utils';
 
@@ -25,7 +29,7 @@ export function UniversalPage() {
     updateConcurrentDownloads,
   } = useUniversal();
 
-  const pendingCount = items.filter(i => i.status !== 'completed').length;
+  const pendingCount = items.filter((i) => i.status !== 'completed').length;
   const hasItems = items.length > 0;
 
   // Calculate total file size from fetched video info (in bytes)
@@ -88,18 +92,19 @@ export function UniversalPage() {
         <footer className="flex-shrink-0">
           {/* Subtle top divider */}
           <div className="mx-4 sm:mx-6 h-px bg-gradient-to-r from-transparent via-border/40 to-transparent" />
-          
+
           <div className="px-4 sm:px-6 py-3 sm:py-4">
             <div className="flex items-center gap-3">
               {!isDownloading ? (
-                <button 
+                <button
+                  type="button"
                   className={cn(
-                    "flex-1 h-11 px-6 rounded-xl font-medium text-sm sm:text-base",
-                    "btn-gradient flex items-center justify-center gap-2",
-                    "disabled:opacity-50 disabled:cursor-not-allowed",
-                    "shadow-lg shadow-primary/20",
-                    pendingCount > 0 && "animate-pulse-subtle"
-                  )} 
+                    'flex-1 h-11 px-6 rounded-xl font-medium text-sm sm:text-base',
+                    'btn-gradient flex items-center justify-center gap-2',
+                    'disabled:opacity-50 disabled:cursor-not-allowed',
+                    'shadow-lg shadow-primary/20',
+                    pendingCount > 0 && 'animate-pulse-subtle',
+                  )}
                   onClick={startDownload}
                   disabled={pendingCount === 0}
                   title="Start downloading all pending videos"
@@ -113,8 +118,8 @@ export function UniversalPage() {
                   )}
                 </button>
               ) : (
-                <Button 
-                  className="flex-1 h-11 text-sm sm:text-base rounded-xl" 
+                <Button
+                  className="flex-1 h-11 text-sm sm:text-base rounded-xl"
                   variant="destructive"
                   onClick={stopDownload}
                   title="Stop current download"
@@ -123,7 +128,7 @@ export function UniversalPage() {
                   Stop Download
                 </Button>
               )}
-              
+
               <Button
                 variant="outline"
                 size="icon"

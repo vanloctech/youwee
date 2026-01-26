@@ -1,13 +1,23 @@
-import { useState, useCallback, useRef } from 'react';
 import { invoke } from '@tauri-apps/api/core';
+import {
+  AlertCircle,
+  Check,
+  ChevronDown,
+  ChevronUp,
+  Copy,
+  Link,
+  Loader2,
+  Plus,
+  Save,
+  Settings2,
+  Sparkles,
+  Square,
+  X,
+} from 'lucide-react';
+import { useCallback, useRef, useState } from 'react';
 import { ThemePicker } from '@/components/settings/ThemePicker';
-import { SimpleMarkdown } from '@/components/ui/simple-markdown';
-import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { useAI } from '@/contexts/AIContext';
-import { useDownload } from '@/contexts/DownloadContext';
-import { cn } from '@/lib/utils';
-import { LANGUAGE_OPTIONS, type SummaryStyle } from '@/lib/types';
+import { Input } from '@/components/ui/input';
 import {
   Select,
   SelectContent,
@@ -15,21 +25,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import {
-  Sparkles,
-  Loader2,
-  Copy,
-  Check,
-  Save,
-  AlertCircle,
-  Link,
-  ChevronDown,
-  ChevronUp,
-  X,
-  Plus,
-  Settings2,
-  Square,
-} from 'lucide-react';
+import { SimpleMarkdown } from '@/components/ui/simple-markdown';
+import { useAI } from '@/contexts/AIContext';
+import { useDownload } from '@/contexts/DownloadContext';
+import { LANGUAGE_OPTIONS, type SummaryStyle } from '@/lib/types';
+import { cn } from '@/lib/utils';
 
 interface VideoInfo {
   url: string;
@@ -43,20 +43,24 @@ interface SummaryResult {
   videoInfo: VideoInfo;
 }
 
+function isYouTubeUrl(url: string) {
+  return /^(https?:\/\/)?(www\.)?(youtube\.com|youtu\.be)\/.+/.test(url);
+}
+
 export function SummaryPage() {
   const ai = useAI();
   const { cookieSettings } = useDownload();
-  
+
   // URL input
   const [url, setUrl] = useState('');
-  
+
   // Local settings (initialized from global settings)
   const [summaryStyle, setSummaryStyle] = useState<SummaryStyle>(ai.config.summary_style);
   const [summaryLanguage, setSummaryLanguage] = useState(ai.config.summary_language);
   const [transcriptLanguages, setTranscriptLanguages] = useState<string[]>(
-    ai.config.transcript_languages || ['en']
+    ai.config.transcript_languages || ['en'],
   );
-  
+
   // State
   const [isLoading, setIsLoading] = useState(false);
   const [loadingStatus, setLoadingStatus] = useState('');
@@ -66,13 +70,9 @@ export function SummaryPage() {
   const [saved, setSaved] = useState(false);
   const [showFullSummary, setShowFullSummary] = useState(true);
   const [showSettings, setShowSettings] = useState(false);
-  
+
   // Cancellation ref
   const isCancelledRef = useRef(false);
-
-  const isYouTubeUrl = (url: string) => {
-    return /^(https?:\/\/)?(www\.)?(youtube\.com|youtu\.be)\/.+/.test(url);
-  };
 
   const handleSummarize = useCallback(async () => {
     if (!url.trim()) {
@@ -110,7 +110,7 @@ export function SummaryPage() {
           thumbnail?: string;
           duration?: number;
         };
-      }>('get_video_info', { 
+      }>('get_video_info', {
         url: url.trim(),
         cookieMode: cookieSettings.mode,
         cookieBrowser: cookieSettings.browser || null,
@@ -196,7 +196,7 @@ export function SummaryPage() {
     if (!result) return;
 
     const { videoInfo, summary } = result;
-    
+
     // Debug log
     console.log('Saving to library:', { videoInfo, summary: summary.substring(0, 50) });
 
@@ -222,30 +222,37 @@ export function SummaryPage() {
     }
   }, [result]);
 
-  const handleAddLanguage = useCallback((code: string) => {
-    if (!transcriptLanguages.includes(code)) {
-      setTranscriptLanguages([...transcriptLanguages, code]);
-    }
-  }, [transcriptLanguages]);
-
-  const handleRemoveLanguage = useCallback((code: string) => {
-    if (transcriptLanguages.length > 1) {
-      setTranscriptLanguages(transcriptLanguages.filter(l => l !== code));
-    }
-  }, [transcriptLanguages]);
-
-  const handleMoveLanguage = useCallback((index: number, direction: 'up' | 'down') => {
-    const newIndex = direction === 'up' ? index - 1 : index + 1;
-    if (newIndex < 0 || newIndex >= transcriptLanguages.length) return;
-    
-    const newLangs = [...transcriptLanguages];
-    [newLangs[index], newLangs[newIndex]] = [newLangs[newIndex], newLangs[index]];
-    setTranscriptLanguages(newLangs);
-  }, [transcriptLanguages]);
-
-  const availableLanguages = LANGUAGE_OPTIONS.filter(
-    l => !transcriptLanguages.includes(l.code)
+  const handleAddLanguage = useCallback(
+    (code: string) => {
+      if (!transcriptLanguages.includes(code)) {
+        setTranscriptLanguages([...transcriptLanguages, code]);
+      }
+    },
+    [transcriptLanguages],
   );
+
+  const handleRemoveLanguage = useCallback(
+    (code: string) => {
+      if (transcriptLanguages.length > 1) {
+        setTranscriptLanguages(transcriptLanguages.filter((l) => l !== code));
+      }
+    },
+    [transcriptLanguages],
+  );
+
+  const handleMoveLanguage = useCallback(
+    (index: number, direction: 'up' | 'down') => {
+      const newIndex = direction === 'up' ? index - 1 : index + 1;
+      if (newIndex < 0 || newIndex >= transcriptLanguages.length) return;
+
+      const newLangs = [...transcriptLanguages];
+      [newLangs[index], newLangs[newIndex]] = [newLangs[newIndex], newLangs[index]];
+      setTranscriptLanguages(newLangs);
+    },
+    [transcriptLanguages],
+  );
+
+  const availableLanguages = LANGUAGE_OPTIONS.filter((l) => !transcriptLanguages.includes(l.code));
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter') {
@@ -281,19 +288,20 @@ export function SummaryPage() {
               onKeyDown={handleKeyDown}
               disabled={isLoading}
               className={cn(
-                "pl-10 pr-4 h-11 text-sm",
-                "bg-background/50 border-border/50",
-                "focus:bg-background transition-colors",
-                "placeholder:text-muted-foreground/50"
+                'pl-10 pr-4 h-11 text-sm',
+                'bg-background/50 border-border/50',
+                'focus:bg-background transition-colors',
+                'placeholder:text-muted-foreground/50',
               )}
             />
           </div>
           {isLoading ? (
             <button
+              type="button"
               className={cn(
-                "h-11 px-5 rounded-md font-medium text-sm flex items-center gap-2",
-                "bg-destructive text-destructive-foreground hover:bg-destructive/90",
-                "transition-colors"
+                'h-11 px-5 rounded-md font-medium text-sm flex items-center gap-2',
+                'bg-destructive text-destructive-foreground hover:bg-destructive/90',
+                'transition-colors',
               )}
               onClick={handleStop}
             >
@@ -302,10 +310,11 @@ export function SummaryPage() {
             </button>
           ) : (
             <button
+              type="button"
               className={cn(
-                "h-11 px-5 rounded-md font-medium text-sm flex items-center gap-2",
-                "btn-gradient",
-                "disabled:opacity-50 disabled:cursor-not-allowed"
+                'h-11 px-5 rounded-md font-medium text-sm flex items-center gap-2',
+                'btn-gradient',
+                'disabled:opacity-50 disabled:cursor-not-allowed',
               )}
               onClick={handleSummarize}
               disabled={!url.trim()}
@@ -327,25 +336,26 @@ export function SummaryPage() {
         {/* Settings Toggle */}
         <div className="flex items-center gap-3">
           <button
+            type="button"
             onClick={() => setShowSettings(!showSettings)}
             className={cn(
-              "flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium transition-all",
-              showSettings 
-                ? "bg-primary/10 text-primary" 
-                : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
+              'flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium transition-all',
+              showSettings
+                ? 'bg-primary/10 text-primary'
+                : 'text-muted-foreground hover:text-foreground hover:bg-muted/50',
             )}
           >
             <Settings2 className="w-3.5 h-3.5" />
             Options
             {showSettings ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
           </button>
-          
+
           {!showSettings && (
             <span className="text-xs text-muted-foreground">
-              {summaryStyle.charAt(0).toUpperCase() + summaryStyle.slice(1)} • {
-                summaryLanguage === 'auto' ? 'Auto language' : 
-                LANGUAGE_OPTIONS.find(l => l.code === summaryLanguage)?.name || summaryLanguage
-              }
+              {summaryStyle.charAt(0).toUpperCase() + summaryStyle.slice(1)} •{' '}
+              {summaryLanguage === 'auto'
+                ? 'Auto language'
+                : LANGUAGE_OPTIONS.find((l) => l.code === summaryLanguage)?.name || summaryLanguage}
             </span>
           )}
         </div>
@@ -356,8 +366,11 @@ export function SummaryPage() {
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
               {/* Summary Style */}
               <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground">Summary Style</label>
-                <Select value={summaryStyle} onValueChange={(v) => setSummaryStyle(v as SummaryStyle)}>
+                <span className="text-xs font-medium text-muted-foreground">Summary Style</span>
+                <Select
+                  value={summaryStyle}
+                  onValueChange={(v) => setSummaryStyle(v as SummaryStyle)}
+                >
                   <SelectTrigger className="h-9 bg-background/50">
                     <SelectValue />
                   </SelectTrigger>
@@ -371,7 +384,7 @@ export function SummaryPage() {
 
               {/* Summary Language */}
               <div className="space-y-1.5">
-                <label className="text-xs font-medium text-muted-foreground">Output Language</label>
+                <span className="text-xs font-medium text-muted-foreground">Output Language</span>
                 <Select value={summaryLanguage} onValueChange={setSummaryLanguage}>
                   <SelectTrigger className="h-9 bg-background/50">
                     <SelectValue />
@@ -390,12 +403,12 @@ export function SummaryPage() {
 
             {/* Transcript Languages */}
             <div className="space-y-2">
-              <label className="text-xs font-medium text-muted-foreground">
+              <span className="text-xs font-medium text-muted-foreground">
                 Transcript Languages (priority order)
-              </label>
+              </span>
               <div className="flex flex-wrap gap-2">
                 {transcriptLanguages.map((code, index) => {
-                  const lang = LANGUAGE_OPTIONS.find(l => l.code === code);
+                  const lang = LANGUAGE_OPTIONS.find((l) => l.code === code);
                   return (
                     <div
                       key={code}
@@ -406,6 +419,7 @@ export function SummaryPage() {
                       <div className="flex items-center gap-0.5 ml-1 border-l border-border/50 pl-1.5">
                         {index > 0 && (
                           <button
+                            type="button"
                             onClick={() => handleMoveLanguage(index, 'up')}
                             className="p-0.5 hover:text-primary rounded transition-colors"
                             title="Move up"
@@ -415,6 +429,7 @@ export function SummaryPage() {
                         )}
                         {index < transcriptLanguages.length - 1 && (
                           <button
+                            type="button"
                             onClick={() => handleMoveLanguage(index, 'down')}
                             className="p-0.5 hover:text-primary rounded transition-colors"
                             title="Move down"
@@ -424,6 +439,7 @@ export function SummaryPage() {
                         )}
                         {transcriptLanguages.length > 1 && (
                           <button
+                            type="button"
                             onClick={() => handleRemoveLanguage(code)}
                             className="p-0.5 hover:text-destructive rounded transition-colors ml-0.5"
                             title="Remove"
@@ -533,11 +549,11 @@ export function SummaryPage() {
                   </Button>
                 </div>
               </div>
-              
-              <div 
+
+              <div
                 className={cn(
-                  "flex-1 text-sm text-muted-foreground overflow-auto",
-                  !showFullSummary && "max-h-32"
+                  'flex-1 text-sm text-muted-foreground overflow-auto',
+                  !showFullSummary && 'max-h-32',
                 )}
               >
                 <SimpleMarkdown content={result.summary} />
@@ -545,13 +561,18 @@ export function SummaryPage() {
 
               {result.summary.length > 500 && (
                 <button
+                  type="button"
                   onClick={() => setShowFullSummary(!showFullSummary)}
                   className="text-xs text-primary hover:text-primary/80 mt-2 flex items-center gap-0.5"
                 >
                   {showFullSummary ? (
-                    <>Show less <ChevronUp className="w-3 h-3" /></>
+                    <>
+                      Show less <ChevronUp className="w-3 h-3" />
+                    </>
                   ) : (
-                    <>Show more <ChevronDown className="w-3 h-3" /></>
+                    <>
+                      Show more <ChevronDown className="w-3 h-3" />
+                    </>
                   )}
                 </button>
               )}
@@ -567,8 +588,8 @@ export function SummaryPage() {
             </div>
             <h3 className="text-lg font-medium mb-2">AI Video Summary</h3>
             <p className="text-sm text-muted-foreground max-w-md">
-              Enter a YouTube URL to generate an AI-powered summary of the video content.
-              No download required.
+              Enter a YouTube URL to generate an AI-powered summary of the video content. No
+              download required.
             </p>
           </div>
         )}

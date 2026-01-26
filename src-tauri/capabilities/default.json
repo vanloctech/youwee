@@ -2,9 +2,7 @@
   "$schema": "../gen/schemas/desktop-schema.json",
   "identifier": "default",
   "description": "enables the default permissions",
-  "windows": [
-    "main"
-  ],
+  "windows": ["main"],
   "permissions": [
     "core:default",
     "shell:allow-open",
@@ -27,6 +25,7 @@
     "fs:allow-app-read-recursive",
     "fs:allow-app-write-recursive",
     "updater:default",
-    "process:allow-restart"
+    "process:allow-restart",
+    "opener:allow-reveal-item-in-dir"
   ]
 }

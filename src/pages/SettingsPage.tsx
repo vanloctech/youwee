@@ -1,51 +1,39 @@
-import { useState, useEffect } from 'react';
 import { getVersion } from '@tauri-apps/api/app';
 import { invoke } from '@tauri-apps/api/core';
 import { open } from '@tauri-apps/plugin-dialog';
-import { useTheme } from '@/contexts/ThemeContext';
-import { useDependencies } from '@/contexts/DependenciesContext';
-import { useDownload } from '@/contexts/DownloadContext';
-import { useUpdater } from '@/contexts/UpdaterContext';
-import { useHistory } from '@/contexts/HistoryContext';
-import { useAI } from '@/contexts/AIContext';
-import { themes } from '@/lib/themes';
-import type { ThemeName } from '@/lib/themes';
-import type { AIProvider, SummaryStyle, BrowserType, CookieMode, BrowserProfile } from '@/lib/types';
-import { LANGUAGE_OPTIONS, DEFAULT_TRANSCRIPT_LANGUAGES, BROWSER_OPTIONS } from '@/lib/types';
-import { cn } from '@/lib/utils';
-import { 
-  Check, 
-  Sun, 
-  Moon, 
-  Github, 
-  ExternalLink,
-  Terminal,
-  RefreshCw,
-  Download,
+import {
+  AlertCircle,
+  Bug,
+  Check,
   CheckCircle2,
-  Loader2,
-  Film,
-  Palette,
-  Package,
-  Info,
   Database,
-  Sparkles,
+  Download,
+  ExternalLink,
   Eye,
   EyeOff,
-  AlertCircle,
-  GripVertical,
-  Plus,
-  X,
-  Heart,
   FileText,
-  Bug,
-  KeyRound,
-  Globe,
+  Film,
   FolderOpen,
+  Github,
+  Globe,
+  GripVertical,
+  Heart,
+  Info,
+  KeyRound,
+  Loader2,
+  Moon,
+  Package,
+  Palette,
+  Plus,
+  RefreshCw,
+  Sparkles,
+  Sun,
+  Terminal,
+  X,
 } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { useEffect, useState } from 'react';
 import { Badge } from '@/components/ui/badge';
-import { Switch } from '@/components/ui/switch';
+import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
   Select,
@@ -54,6 +42,24 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { Switch } from '@/components/ui/switch';
+import { useAI } from '@/contexts/AIContext';
+import { useDependencies } from '@/contexts/DependenciesContext';
+import { useDownload } from '@/contexts/DownloadContext';
+import { useHistory } from '@/contexts/HistoryContext';
+import { useTheme } from '@/contexts/ThemeContext';
+import { useUpdater } from '@/contexts/UpdaterContext';
+import type { ThemeName } from '@/lib/themes';
+import { themes } from '@/lib/themes';
+import type {
+  AIProvider,
+  BrowserProfile,
+  BrowserType,
+  CookieMode,
+  SummaryStyle,
+} from '@/lib/types';
+import { BROWSER_OPTIONS, DEFAULT_TRANSCRIPT_LANGUAGES, LANGUAGE_OPTIONS } from '@/lib/types';
+import { cn } from '@/lib/utils';
 
 // Gradient backgrounds for theme preview
 const themeGradients: Record<ThemeName, string> = {
@@ -67,13 +73,24 @@ const themeGradients: Record<ThemeName, string> = {
 
 export function SettingsPage() {
   const { theme, setTheme, mode, setMode } = useTheme();
-  const { settings, cookieSettings, updateAutoCheckUpdate, updateUseBunRuntime, updateUseActualPlayerJs, updateCookieSettings } = useDownload();
+  const {
+    settings,
+    cookieSettings,
+    updateAutoCheckUpdate,
+    updateUseBunRuntime,
+    updateUseActualPlayerJs,
+    updateCookieSettings,
+    updateEmbedMetadata,
+    updateEmbedThumbnail,
+  } = useDownload();
   const { maxEntries, setMaxEntries, totalCount } = useHistory();
   const updater = useUpdater();
   const ai = useAI();
   const [appVersion, setAppVersion] = useState('');
   const [showApiKey, setShowApiKey] = useState(false);
-  const [detectedBrowsers, setDetectedBrowsers] = useState<{ name: string; browser_type: string }[]>([]);
+  const [detectedBrowsers, setDetectedBrowsers] = useState<
+    { name: string; browser_type: string }[]
+  >([]);
   const [isDetectingBrowsers, setIsDetectingBrowsers] = useState(false);
   const [browserProfiles, setBrowserProfiles] = useState<BrowserProfile[]>([]);
   const [isLoadingProfiles, setIsLoadingProfiles] = useState(false);
@@ -89,7 +106,9 @@ export function SettingsPage() {
     const detectBrowsers = async () => {
       setIsDetectingBrowsers(true);
       try {
-        const browsers = await invoke<{ name: string; browser_type: string }[]>('detect_installed_browsers');
+        const browsers = await invoke<{ name: string; browser_type: string }[]>(
+          'detect_installed_browsers',
+        );
         setDetectedBrowsers(browsers);
         // Auto-select first detected browser if no browser is set
         if (browsers.length > 0 && !cookieSettings.browser) {
@@ -102,7 +121,7 @@ export function SettingsPage() {
       }
     };
     detectBrowsers();
-  }, []);
+  }, [cookieSettings.browser, updateCookieSettings]);
 
   // Load browser profiles when browser changes
   useEffect(() => {
@@ -111,14 +130,16 @@ export function SettingsPage() {
         setBrowserProfiles([]);
         return;
       }
-      
+
       setIsLoadingProfiles(true);
       try {
-        const profiles = await invoke<BrowserProfile[]>('get_browser_profiles', { browser: cookieSettings.browser });
+        const profiles = await invoke<BrowserProfile[]>('get_browser_profiles', {
+          browser: cookieSettings.browser,
+        });
         setBrowserProfiles(profiles);
         // Auto-select first profile if current profile is not in list
         const currentProfile = cookieSettings.browserProfile || '';
-        const profileExists = profiles.some(p => p.folder_name === currentProfile);
+        const profileExists = profiles.some((p) => p.folder_name === currentProfile);
         if (profiles.length > 0 && !profileExists) {
           updateCookieSettings({ browserProfile: profiles[0].folder_name });
           setUseCustomProfile(false);
@@ -131,8 +152,8 @@ export function SettingsPage() {
       }
     };
     loadProfiles();
-  }, [cookieSettings.browser]);
-  
+  }, [cookieSettings.browser, cookieSettings.browserProfile, updateCookieSettings]);
+
   const {
     ytdlpInfo,
     latestVersion,
@@ -148,14 +169,18 @@ export function SettingsPage() {
     ffmpegDownloading,
     ffmpegError,
     ffmpegSuccess,
-    checkFfmpeg,
+    ffmpegUpdateInfo,
+    ffmpegCheckingUpdate,
+    checkFfmpegUpdate,
     downloadFfmpeg,
     bunStatus,
     bunLoading,
     bunDownloading,
     bunError,
     bunSuccess,
-    checkBun,
+    bunUpdateInfo,
+    bunCheckingUpdate,
+    checkBunUpdate,
     downloadBun,
   } = useDependencies();
 
@@ -175,7 +200,6 @@ export function SettingsPage() {
       {/* Content */}
       <div className="flex-1 overflow-auto">
         <div className="max-w-2xl mx-auto p-6 space-y-8">
-          
           {/* Appearance Section */}
           <section className="space-y-4">
             <div className="flex items-center gap-3">
@@ -197,24 +221,26 @@ export function SettingsPage() {
                 </div>
                 <div className="flex items-center gap-1 p-1 rounded-xl bg-muted/50">
                   <button
+                    type="button"
                     onClick={() => setMode('light')}
                     className={cn(
                       'flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all',
                       mode === 'light'
                         ? 'bg-background text-foreground shadow-md'
-                        : 'text-muted-foreground hover:text-foreground'
+                        : 'text-muted-foreground hover:text-foreground',
                     )}
                   >
                     <Sun className="w-4 h-4" />
                     Light
                   </button>
                   <button
+                    type="button"
                     onClick={() => setMode('dark')}
                     className={cn(
                       'flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all',
                       mode === 'dark'
                         ? 'bg-background text-foreground shadow-md'
-                        : 'text-muted-foreground hover:text-foreground'
+                        : 'text-muted-foreground hover:text-foreground',
                     )}
                   >
                     <Moon className="w-4 h-4" />
@@ -229,6 +255,7 @@ export function SettingsPage() {
                 <div className="grid grid-cols-3 gap-2">
                   {themes.map((t) => (
                     <button
+                      type="button"
                       key={t.name}
                       onClick={() => setTheme(t.name)}
                       className={cn(
@@ -236,18 +263,16 @@ export function SettingsPage() {
                         'border-2',
                         theme === t.name
                           ? 'border-primary bg-primary/5'
-                          : 'border-transparent bg-muted/30 hover:bg-muted/50'
+                          : 'border-transparent bg-muted/30 hover:bg-muted/50',
                       )}
                     >
                       <div
                         className={cn(
                           'w-8 h-8 rounded-lg shadow-md flex items-center justify-center transition-transform group-hover:scale-110',
-                          themeGradients[t.name]
+                          themeGradients[t.name],
                         )}
                       >
-                        {theme === t.name && (
-                          <Check className="w-4 h-4 text-white drop-shadow" />
-                        )}
+                        {theme === t.name && <Check className="w-4 h-4 text-white drop-shadow" />}
                       </div>
                       <span className="text-sm font-medium">{t.label}</span>
                     </button>
@@ -286,9 +311,13 @@ export function SettingsPage() {
                         {isLoading ? (
                           <Loader2 className="w-3 h-3 animate-spin text-muted-foreground" />
                         ) : ytdlpInfo ? (
-                          <Badge variant="secondary" className="font-mono text-xs">{ytdlpInfo.version}</Badge>
+                          <Badge variant="secondary" className="font-mono text-xs">
+                            {ytdlpInfo.version}
+                          </Badge>
                         ) : (
-                          <Badge variant="destructive" className="text-xs">Not found</Badge>
+                          <Badge variant="destructive" className="text-xs">
+                            Not found
+                          </Badge>
                         )}
                       </div>
                       <p className="text-xs text-muted-foreground mt-0.5">
@@ -323,13 +352,13 @@ export function SettingsPage() {
                       onClick={checkForUpdate}
                       disabled={isChecking || isUpdating}
                     >
-                      <RefreshCw className={cn("w-4 h-4", isChecking && "animate-spin")} />
+                      <RefreshCw className={cn('w-4 h-4', isChecking && 'animate-spin')} />
                     </Button>
                   </div>
                 </div>
-                <a 
-                  href="https://github.com/yt-dlp/yt-dlp" 
-                  target="_blank" 
+                <a
+                  href="https://github.com/yt-dlp/yt-dlp"
+                  target="_blank"
                   rel="noopener noreferrer"
                   className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground mt-3 pt-3 border-t border-border/50"
                 >
@@ -356,21 +385,38 @@ export function SettingsPage() {
                             {ffmpegStatus.version || 'Installed'}
                           </Badge>
                         ) : (
-                          <Badge variant="destructive" className="text-xs">Not found</Badge>
+                          <Badge variant="destructive" className="text-xs">
+                            Not found
+                          </Badge>
                         )}
                       </div>
                       <p className="text-xs text-muted-foreground mt-0.5">
                         {ffmpegDownloading ? (
                           <span className="flex items-center gap-1 text-primary">
                             <Loader2 className="w-3 h-3 animate-spin" />
-                            Installing...
+                            {ffmpegUpdateInfo?.has_update ? 'Updating...' : 'Installing...'}
+                          </span>
+                        ) : ffmpegCheckingUpdate ? (
+                          <span className="flex items-center gap-1 text-muted-foreground">
+                            <Loader2 className="w-3 h-3 animate-spin" />
+                            Checking for updates...
                           </span>
                         ) : ffmpegSuccess ? (
-                          <span className="text-emerald-500">Installed!</span>
+                          <span className="text-emerald-500">
+                            {ffmpegUpdateInfo?.has_update ? 'Updated!' : 'Installed!'}
+                          </span>
                         ) : ffmpegError ? (
                           <span className="text-destructive">{ffmpegError}</span>
+                        ) : ffmpegUpdateInfo?.has_update ? (
+                          <span className="text-primary">
+                            {ffmpegUpdateInfo.latest_version} available
+                          </span>
+                        ) : ffmpegUpdateInfo && !ffmpegUpdateInfo.has_update ? (
+                          <span className="text-emerald-500">Up to date</span>
                         ) : !ffmpegStatus?.installed ? (
                           <span className="text-amber-500">Required for 2K/4K/8K videos</span>
+                        ) : ffmpegStatus?.is_system ? (
+                          'System FFmpeg - update via package manager'
                         ) : (
                           'Audio/video processing'
                         )}
@@ -378,24 +424,49 @@ export function SettingsPage() {
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
+                    {ffmpegUpdateInfo?.has_update && !ffmpegStatus?.is_system && (
+                      <Button size="sm" onClick={downloadFfmpeg} disabled={ffmpegDownloading}>
+                        {ffmpegDownloading ? (
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                        ) : (
+                          'Update'
+                        )}
+                      </Button>
+                    )}
                     {!ffmpegStatus?.installed && !ffmpegLoading && (
                       <Button size="sm" onClick={downloadFfmpeg} disabled={ffmpegDownloading}>
-                        {ffmpegDownloading ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Install'}
+                        {ffmpegDownloading ? (
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                        ) : (
+                          'Install'
+                        )}
                       </Button>
                     )}
                     <Button
                       variant="ghost"
                       size="icon"
-                      onClick={checkFfmpeg}
-                      disabled={ffmpegLoading || ffmpegDownloading}
+                      onClick={checkFfmpegUpdate}
+                      disabled={
+                        ffmpegLoading ||
+                        ffmpegDownloading ||
+                        ffmpegCheckingUpdate ||
+                        !ffmpegStatus?.installed ||
+                        ffmpegStatus?.is_system
+                      }
+                      title="Check for updates"
                     >
-                      <RefreshCw className={cn("w-4 h-4", ffmpegLoading && "animate-spin")} />
+                      <RefreshCw
+                        className={cn(
+                          'w-4 h-4',
+                          (ffmpegLoading || ffmpegCheckingUpdate) && 'animate-spin',
+                        )}
+                      />
                     </Button>
                   </div>
                 </div>
-                <a 
-                  href="https://ffmpeg.org" 
-                  target="_blank" 
+                <a
+                  href="https://ffmpeg.org"
+                  target="_blank"
                   rel="noopener noreferrer"
                   className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground mt-3 pt-3 border-t border-border/50"
                 >
@@ -421,21 +492,40 @@ export function SettingsPage() {
                             {bunStatus.version || 'Installed'}
                           </Badge>
                         ) : (
-                          <Badge variant="outline" className="text-xs">Optional</Badge>
+                          <Badge variant="outline" className="text-xs">
+                            Optional
+                          </Badge>
                         )}
                       </div>
                       <p className="text-xs text-muted-foreground mt-0.5">
                         {bunDownloading ? (
                           <span className="flex items-center gap-1 text-primary">
                             <Loader2 className="w-3 h-3 animate-spin" />
-                            Installing...
+                            {bunUpdateInfo?.has_update ? 'Updating...' : 'Installing...'}
+                          </span>
+                        ) : bunCheckingUpdate ? (
+                          <span className="flex items-center gap-1 text-muted-foreground">
+                            <Loader2 className="w-3 h-3 animate-spin" />
+                            Checking for updates...
                           </span>
                         ) : bunSuccess ? (
-                          <span className="text-emerald-500">Installed!</span>
+                          <span className="text-emerald-500">
+                            {bunUpdateInfo?.has_update ? 'Updated!' : 'Installed!'}
+                          </span>
                         ) : bunError ? (
                           <span className="text-destructive">{bunError}</span>
+                        ) : bunUpdateInfo?.has_update ? (
+                          <span className="text-primary">
+                            {bunUpdateInfo.latest_version} available
+                          </span>
+                        ) : bunUpdateInfo && !bunUpdateInfo.has_update ? (
+                          <span className="text-emerald-500">Up to date</span>
                         ) : !bunStatus?.installed ? (
-                          <span className="text-amber-500">Enable in download settings if only 360p available</span>
+                          <span className="text-amber-500">
+                            Enable in download settings if only 360p available
+                          </span>
+                        ) : bunStatus?.is_system ? (
+                          'System Bun - update via package manager'
                         ) : (
                           'JavaScript runtime for YouTube'
                         )}
@@ -443,6 +533,11 @@ export function SettingsPage() {
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
+                    {bunUpdateInfo?.has_update && !bunStatus?.is_system && (
+                      <Button size="sm" onClick={downloadBun} disabled={bunDownloading}>
+                        {bunDownloading ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Update'}
+                      </Button>
+                    )}
                     {!bunStatus?.installed && !bunLoading && (
                       <Button size="sm" onClick={downloadBun} disabled={bunDownloading}>
                         {bunDownloading ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Install'}
@@ -451,10 +546,22 @@ export function SettingsPage() {
                     <Button
                       variant="ghost"
                       size="icon"
-                      onClick={checkBun}
-                      disabled={bunLoading || bunDownloading}
+                      onClick={checkBunUpdate}
+                      disabled={
+                        bunLoading ||
+                        bunDownloading ||
+                        bunCheckingUpdate ||
+                        !bunStatus?.installed ||
+                        bunStatus?.is_system
+                      }
+                      title="Check for updates"
                     >
-                      <RefreshCw className={cn("w-4 h-4", bunLoading && "animate-spin")} />
+                      <RefreshCw
+                        className={cn(
+                          'w-4 h-4',
+                          (bunLoading || bunCheckingUpdate) && 'animate-spin',
+                        )}
+                      />
                     </Button>
                   </div>
                 </div>
@@ -462,7 +569,9 @@ export function SettingsPage() {
                   <div className="flex items-center justify-between">
                     <div>
                       <p className="text-xs font-medium">Use Bun for YouTube</p>
-                      <p className="text-xs text-muted-foreground">Fixes 360p-only issue on some systems</p>
+                      <p className="text-xs text-muted-foreground">
+                        Fixes 360p-only issue on some systems
+                      </p>
                     </div>
                     <Switch
                       checked={settings.useBunRuntime}
@@ -471,9 +580,9 @@ export function SettingsPage() {
                     />
                   </div>
                 </div>
-                <a 
-                  href="https://bun.sh" 
-                  target="_blank" 
+                <a
+                  href="https://bun.sh"
+                  target="_blank"
                   rel="noopener noreferrer"
                   className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground mt-3 pt-3 border-t border-border/50"
                 >
@@ -500,7 +609,9 @@ export function SettingsPage() {
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-xs font-medium">Use Actual Player.js</p>
-                    <p className="text-xs text-muted-foreground">Fixes "unable to download" errors on some videos</p>
+                    <p className="text-xs text-muted-foreground">
+                      Fixes "unable to download" errors on some videos
+                    </p>
                   </div>
                   <Switch
                     checked={settings.useActualPlayerJs}
@@ -508,9 +619,9 @@ export function SettingsPage() {
                   />
                 </div>
               </div>
-              <a 
-                href="https://github.com/yt-dlp/yt-dlp/issues/14680" 
-                target="_blank" 
+              <a
+                href="https://github.com/yt-dlp/yt-dlp/issues/14680"
+                target="_blank"
                 rel="noopener noreferrer"
                 className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground mt-3 pt-3 border-t border-border/50"
               >
@@ -532,13 +643,15 @@ export function SettingsPage() {
                   </p>
                 </div>
               </div>
-              
+
               {/* Cookie Mode Selection */}
               <div className="mt-3 pt-3 border-t border-border/50">
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-xs font-medium">Cookie Source</p>
-                    <p className="text-xs text-muted-foreground">Import cookies for authenticated downloads</p>
+                    <p className="text-xs text-muted-foreground">
+                      Import cookies for authenticated downloads
+                    </p>
                   </div>
                   <Select
                     value={cookieSettings.mode}
@@ -555,7 +668,7 @@ export function SettingsPage() {
                   </Select>
                 </div>
               </div>
-              
+
               {/* Browser Selection (when mode is 'browser') */}
               {cookieSettings.mode === 'browser' && (
                 <div className="mt-3 pt-3 border-t border-border/50 space-y-3">
@@ -563,7 +676,9 @@ export function SettingsPage() {
                     <div>
                       <p className="text-xs font-medium">Browser</p>
                       <p className="text-xs text-muted-foreground">
-                        {isDetectingBrowsers ? 'Detecting...' : `${detectedBrowsers.length} browser(s) detected`}
+                        {isDetectingBrowsers
+                          ? 'Detecting...'
+                          : `${detectedBrowsers.length} browser(s) detected`}
                       </p>
                     </div>
                     <Select
@@ -584,24 +699,27 @@ export function SettingsPage() {
                           </SelectItem>
                         ))}
                         {/* Show all options if not detected */}
-                        {detectedBrowsers.length === 0 && BROWSER_OPTIONS.map((opt) => (
-                          <SelectItem key={opt.value} value={opt.value}>
-                            {opt.label}
-                          </SelectItem>
-                        ))}
+                        {detectedBrowsers.length === 0 &&
+                          BROWSER_OPTIONS.map((opt) => (
+                            <SelectItem key={opt.value} value={opt.value}>
+                              {opt.label}
+                            </SelectItem>
+                          ))}
                       </SelectContent>
                     </Select>
                   </div>
-                  
+
                   {/* Browser Profile - hidden for Safari */}
                   {cookieSettings.browser !== 'safari' && (
                     <div className="flex items-center justify-between">
                       <div>
                         <p className="text-xs font-medium">Profile</p>
                         <p className="text-xs text-muted-foreground">
-                          {isLoadingProfiles ? 'Loading...' : 
-                           browserProfiles.length > 0 ? `${browserProfiles.length} profile(s) found` : 
-                           'No profiles detected'}
+                          {isLoadingProfiles
+                            ? 'Loading...'
+                            : browserProfiles.length > 0
+                              ? `${browserProfiles.length} profile(s) found`
+                              : 'No profiles detected'}
                         </p>
                       </div>
                       {!useCustomProfile && browserProfiles.length > 0 ? (
@@ -624,8 +742,8 @@ export function SettingsPage() {
                             <SelectContent>
                               {browserProfiles.map((profile) => (
                                 <SelectItem key={profile.folder_name} value={profile.folder_name}>
-                                  {profile.folder_name === profile.display_name 
-                                    ? profile.folder_name 
+                                  {profile.folder_name === profile.display_name
+                                    ? profile.folder_name
                                     : `${profile.folder_name} (${profile.display_name})`}
                                 </SelectItem>
                               ))}
@@ -640,7 +758,9 @@ export function SettingsPage() {
                           <Input
                             type="text"
                             value={cookieSettings.browserProfile || ''}
-                            onChange={(e) => updateCookieSettings({ browserProfile: e.target.value })}
+                            onChange={(e) =>
+                              updateCookieSettings({ browserProfile: e.target.value })
+                            }
                             placeholder="Profile name"
                             className="w-[160px] h-8 text-xs"
                           />
@@ -652,7 +772,9 @@ export function SettingsPage() {
                               onClick={() => {
                                 setUseCustomProfile(false);
                                 if (browserProfiles.length > 0) {
-                                  updateCookieSettings({ browserProfile: browserProfiles[0].folder_name });
+                                  updateCookieSettings({
+                                    browserProfile: browserProfiles[0].folder_name,
+                                  });
                                 }
                               }}
                             >
@@ -663,7 +785,7 @@ export function SettingsPage() {
                       )}
                     </div>
                   )}
-                  
+
                   {/* macOS Permission Warning */}
                   {navigator.platform.includes('Mac') && (
                     <div className="flex items-start gap-2 p-2 rounded-lg bg-amber-500/10 border border-amber-500/20">
@@ -671,8 +793,8 @@ export function SettingsPage() {
                       <div className="flex-1 text-xs">
                         <p className="font-medium text-amber-500">Full Disk Access Required</p>
                         <p className="text-muted-foreground mt-0.5">
-                          macOS requires Full Disk Access permission to read browser cookies.
-                          For debug mode, grant access to <strong>Terminal</strong> or your IDE.
+                          macOS requires Full Disk Access permission to read browser cookies. For
+                          debug mode, grant access to <strong>Terminal</strong> or your IDE.
                         </p>
                         <div className="flex items-center gap-2 mt-2">
                           <Button
@@ -690,7 +812,7 @@ export function SettingsPage() {
                             <ExternalLink className="w-3 h-3" />
                             Open Settings
                           </Button>
-                          <a 
+                          <a
                             href="https://support.apple.com/en-vn/guide/mac-help/mchld5a35146/mac"
                             target="_blank"
                             rel="noopener noreferrer"
@@ -704,7 +826,7 @@ export function SettingsPage() {
                   )}
                 </div>
               )}
-              
+
               {/* File Selection (when mode is 'file') */}
               {cookieSettings.mode === 'file' && (
                 <div className="mt-3 pt-3 border-t border-border/50 space-y-3">
@@ -740,7 +862,7 @@ export function SettingsPage() {
                   </div>
                   <p className="text-xs text-muted-foreground">
                     Use Netscape cookie format. Export from browser extensions like{' '}
-                    <a 
+                    <a
                       href="https://chromewebstore.google.com/detail/get-cookiestxt-locally/cclelndahbckbenkjhflpdbgdldlbecc"
                       target="_blank"
                       rel="noopener noreferrer"
@@ -765,7 +887,9 @@ export function SettingsPage() {
               </div>
               <div className="flex-1">
                 <h2 className="text-base font-semibold">AI Features</h2>
-                <p className="text-xs text-muted-foreground">Smart video summarization</p>
+                <p className="text-xs text-muted-foreground">
+                  Smart video summarization, post-processing automation
+                </p>
               </div>
               <Switch
                 checked={ai.config.enabled}
@@ -783,10 +907,19 @@ export function SettingsPage() {
                   </div>
                   <Select
                     value={ai.config.provider}
-                    onValueChange={(v) => ai.updateConfig({ 
-                      provider: v as AIProvider,
-                      model: v === 'gemini' ? 'gemini-2.0-flash' : v === 'openai' ? 'gpt-4o-mini' : v === 'proxy' ? 'gpt-4o-mini' : 'llama3.2'
-                    })}
+                    onValueChange={(v) =>
+                      ai.updateConfig({
+                        provider: v as AIProvider,
+                        model:
+                          v === 'gemini'
+                            ? 'gemini-2.0-flash'
+                            : v === 'openai'
+                              ? 'gpt-4o-mini'
+                              : v === 'proxy'
+                                ? 'gpt-4o-mini'
+                                : 'llama3.2',
+                      })
+                    }
                   >
                     <SelectTrigger className="w-[160px] h-9">
                       <SelectValue />
@@ -818,7 +951,11 @@ export function SettingsPage() {
                           onClick={() => setShowApiKey(!showApiKey)}
                           className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-muted-foreground hover:text-foreground"
                         >
-                          {showApiKey ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                          {showApiKey ? (
+                            <EyeOff className="w-4 h-4" />
+                          ) : (
+                            <Eye className="w-4 h-4" />
+                          )}
                         </button>
                       </div>
                       <Button
@@ -833,8 +970,12 @@ export function SettingsPage() {
                     {ai.config.provider !== 'proxy' && (
                       <p className="text-xs text-muted-foreground">
                         Get your API key from{' '}
-                        <a 
-                          href={ai.config.provider === 'gemini' ? 'https://aistudio.google.com/apikey' : 'https://platform.openai.com/api-keys'}
+                        <a
+                          href={
+                            ai.config.provider === 'gemini'
+                              ? 'https://aistudio.google.com/apikey'
+                              : 'https://platform.openai.com/api-keys'
+                          }
                           target="_blank"
                           rel="noopener noreferrer"
                           className="text-primary hover:underline"
@@ -844,11 +985,19 @@ export function SettingsPage() {
                       </p>
                     )}
                     {ai.testResult && (
-                      <div className={cn(
-                        "flex items-center gap-2 text-xs p-2 rounded-lg",
-                        ai.testResult.success ? "bg-emerald-500/10 text-emerald-500" : "bg-destructive/10 text-destructive"
-                      )}>
-                        {ai.testResult.success ? <CheckCircle2 className="w-3.5 h-3.5" /> : <AlertCircle className="w-3.5 h-3.5" />}
+                      <div
+                        className={cn(
+                          'flex items-center gap-2 text-xs p-2 rounded-lg',
+                          ai.testResult.success
+                            ? 'bg-emerald-500/10 text-emerald-500'
+                            : 'bg-destructive/10 text-destructive',
+                        )}
+                      >
+                        {ai.testResult.success ? (
+                          <CheckCircle2 className="w-3.5 h-3.5" />
+                        ) : (
+                          <AlertCircle className="w-3.5 h-3.5" />
+                        )}
                         {ai.testResult.message}
                       </div>
                     )}
@@ -895,7 +1044,7 @@ export function SettingsPage() {
                     </div>
                     <p className="text-xs text-muted-foreground">
                       Run Ollama locally for free AI summarization.{' '}
-                      <a 
+                      <a
                         href="https://ollama.com"
                         target="_blank"
                         rel="noopener noreferrer"
@@ -905,11 +1054,19 @@ export function SettingsPage() {
                       </a>
                     </p>
                     {ai.testResult && (
-                      <div className={cn(
-                        "flex items-center gap-2 text-xs p-2 rounded-lg",
-                        ai.testResult.success ? "bg-emerald-500/10 text-emerald-500" : "bg-destructive/10 text-destructive"
-                      )}>
-                        {ai.testResult.success ? <CheckCircle2 className="w-3.5 h-3.5" /> : <AlertCircle className="w-3.5 h-3.5" />}
+                      <div
+                        className={cn(
+                          'flex items-center gap-2 text-xs p-2 rounded-lg',
+                          ai.testResult.success
+                            ? 'bg-emerald-500/10 text-emerald-500'
+                            : 'bg-destructive/10 text-destructive',
+                        )}
+                      >
+                        {ai.testResult.success ? (
+                          <CheckCircle2 className="w-3.5 h-3.5" />
+                        ) : (
+                          <AlertCircle className="w-3.5 h-3.5" />
+                        )}
                         {ai.testResult.message}
                       </div>
                     )}
@@ -921,7 +1078,9 @@ export function SettingsPage() {
                   <div className="flex items-center justify-between">
                     <div>
                       <p className="text-sm font-medium">Model</p>
-                      <p className="text-xs text-muted-foreground">Select or type custom model name</p>
+                      <p className="text-xs text-muted-foreground">
+                        Select or type custom model name
+                      </p>
                     </div>
                   </div>
                   <div className="flex gap-2">
@@ -933,7 +1092,9 @@ export function SettingsPage() {
                       className="h-9 flex-1"
                     />
                     <Select
-                      value={ai.models.some(m => m.value === ai.config.model) ? ai.config.model : ''}
+                      value={
+                        ai.models.some((m) => m.value === ai.config.model) ? ai.config.model : ''
+                      }
                       onValueChange={(v) => ai.updateConfig({ model: v })}
                     >
                       <SelectTrigger className="w-[180px] h-9">
@@ -954,7 +1115,9 @@ export function SettingsPage() {
                 <div className="flex items-center justify-between py-2">
                   <div>
                     <p className="text-sm font-medium">Summary Style</p>
-                    <p className="text-xs text-muted-foreground">How detailed the summary should be</p>
+                    <p className="text-xs text-muted-foreground">
+                      How detailed the summary should be
+                    </p>
                   </div>
                   <Select
                     value={ai.config.summary_style}
@@ -975,7 +1138,9 @@ export function SettingsPage() {
                 <div className="flex items-center justify-between py-2">
                   <div>
                     <p className="text-sm font-medium">Summary Language</p>
-                    <p className="text-xs text-muted-foreground">Language for generated summaries</p>
+                    <p className="text-xs text-muted-foreground">
+                      Language for generated summaries
+                    </p>
                   </div>
                   <Select
                     value={ai.config.summary_language}
@@ -999,11 +1164,13 @@ export function SettingsPage() {
                 <div className="flex items-center justify-between py-2">
                   <div>
                     <p className="text-sm font-medium">Generation Timeout</p>
-                    <p className="text-xs text-muted-foreground">Max time for AI response (local models may need more)</p>
+                    <p className="text-xs text-muted-foreground">
+                      Max time for AI response (local models may need more)
+                    </p>
                   </div>
                   <Select
                     value={String(ai.config.timeout_seconds || 120)}
-                    onValueChange={(v) => ai.updateConfig({ timeout_seconds: parseInt(v) })}
+                    onValueChange={(v) => ai.updateConfig({ timeout_seconds: parseInt(v, 10) })}
                   >
                     <SelectTrigger className="w-[120px] h-9">
                       <SelectValue />
@@ -1022,20 +1189,23 @@ export function SettingsPage() {
                 <div className="space-y-3 py-2">
                   <div>
                     <p className="text-sm font-medium">Transcript Languages</p>
-                    <p className="text-xs text-muted-foreground">Languages to try when fetching subtitles (first match wins)</p>
+                    <p className="text-xs text-muted-foreground">
+                      Languages to try when fetching subtitles (first match wins)
+                    </p>
                   </div>
-                  
+
                   {/* Selected languages */}
                   <div className="space-y-1.5">
                     {(() => {
-                      const currentLangs = ai.config.transcript_languages && ai.config.transcript_languages.length > 0 
-                        ? ai.config.transcript_languages 
-                        : DEFAULT_TRANSCRIPT_LANGUAGES;
-                      
+                      const currentLangs =
+                        ai.config.transcript_languages && ai.config.transcript_languages.length > 0
+                          ? ai.config.transcript_languages
+                          : DEFAULT_TRANSCRIPT_LANGUAGES;
+
                       return currentLangs.map((code, index) => {
-                        const lang = LANGUAGE_OPTIONS.find(l => l.code === code);
+                        const lang = LANGUAGE_OPTIONS.find((l) => l.code === code);
                         return (
-                          <div 
+                          <div
                             key={code}
                             className="flex items-center gap-2 p-2 rounded-lg bg-muted/50 group"
                           >
@@ -1048,33 +1218,71 @@ export function SettingsPage() {
                             {/* Move up/down buttons */}
                             <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
                               <button
+                                type="button"
                                 className="p-1 hover:bg-muted rounded disabled:opacity-30"
                                 disabled={index === 0}
                                 onClick={() => {
                                   const langs = [...currentLangs];
-                                  [langs[index - 1], langs[index]] = [langs[index], langs[index - 1]];
+                                  [langs[index - 1], langs[index]] = [
+                                    langs[index],
+                                    langs[index - 1],
+                                  ];
                                   ai.updateConfig({ transcript_languages: langs });
                                 }}
                               >
-                                <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" /></svg>
+                                <svg
+                                  className="w-3 h-3"
+                                  fill="none"
+                                  viewBox="0 0 24 24"
+                                  stroke="currentColor"
+                                >
+                                  <title>Move up</title>
+                                  <path
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    strokeWidth={2}
+                                    d="M5 15l7-7 7 7"
+                                  />
+                                </svg>
                               </button>
                               <button
+                                type="button"
                                 className="p-1 hover:bg-muted rounded disabled:opacity-30"
                                 disabled={index === currentLangs.length - 1}
                                 onClick={() => {
                                   const langs = [...currentLangs];
-                                  [langs[index], langs[index + 1]] = [langs[index + 1], langs[index]];
+                                  [langs[index], langs[index + 1]] = [
+                                    langs[index + 1],
+                                    langs[index],
+                                  ];
                                   ai.updateConfig({ transcript_languages: langs });
                                 }}
                               >
-                                <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
+                                <svg
+                                  className="w-3 h-3"
+                                  fill="none"
+                                  viewBox="0 0 24 24"
+                                  stroke="currentColor"
+                                >
+                                  <title>Move down</title>
+                                  <path
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    strokeWidth={2}
+                                    d="M19 9l-7 7-7-7"
+                                  />
+                                </svg>
                               </button>
                             </div>
                             <button
+                              type="button"
                               className="p-1 hover:bg-destructive/20 hover:text-destructive rounded opacity-0 group-hover:opacity-100 transition-opacity"
                               onClick={() => {
-                                const langs = currentLangs.filter(l => l !== code);
-                                ai.updateConfig({ transcript_languages: langs.length > 0 ? langs : DEFAULT_TRANSCRIPT_LANGUAGES });
+                                const langs = currentLangs.filter((l) => l !== code);
+                                ai.updateConfig({
+                                  transcript_languages:
+                                    langs.length > 0 ? langs : DEFAULT_TRANSCRIPT_LANGUAGES,
+                                });
                               }}
                             >
                               <X className="w-3.5 h-3.5" />
@@ -1084,14 +1292,17 @@ export function SettingsPage() {
                       });
                     })()}
                   </div>
-                  
+
                   {/* Add language dropdown */}
                   {(() => {
-                    const currentLangs = ai.config.transcript_languages || DEFAULT_TRANSCRIPT_LANGUAGES;
-                    const availableLangs = LANGUAGE_OPTIONS.filter(l => !currentLangs.includes(l.code));
-                    
+                    const currentLangs =
+                      ai.config.transcript_languages || DEFAULT_TRANSCRIPT_LANGUAGES;
+                    const availableLangs = LANGUAGE_OPTIONS.filter(
+                      (l) => !currentLangs.includes(l.code),
+                    );
+
                     if (availableLangs.length === 0) return null;
-                    
+
                     return (
                       <Select
                         value=""
@@ -1120,6 +1331,48 @@ export function SettingsPage() {
                 </div>
               </div>
             )}
+          </section>
+
+          {/* Divider */}
+          <div className="h-px bg-gradient-to-r from-transparent via-border to-transparent" />
+
+          {/* Post-processing Section */}
+          <section className="space-y-4">
+            <div className="flex items-center gap-3">
+              <div className="p-2 rounded-xl bg-gradient-to-br from-emerald-500 to-green-600 shadow-lg shadow-emerald-500/20">
+                <Film className="w-5 h-5 text-white" />
+              </div>
+              <div>
+                <h2 className="text-base font-semibold">Post-processing</h2>
+                <p className="text-xs text-muted-foreground">
+                  Embed metadata and thumbnails into downloaded files
+                </p>
+              </div>
+            </div>
+
+            <div className="space-y-3 pl-12">
+              {/* Embed Metadata */}
+              <div className="flex items-center justify-between py-3">
+                <div>
+                  <p className="text-sm font-medium">Embed Metadata</p>
+                  <p className="text-xs text-muted-foreground">
+                    Add title, artist, description to files
+                  </p>
+                </div>
+                <Switch checked={settings.embedMetadata} onCheckedChange={updateEmbedMetadata} />
+              </div>
+
+              {/* Embed Thumbnail */}
+              <div className="flex items-center justify-between py-3">
+                <div>
+                  <p className="text-sm font-medium">Embed Thumbnail</p>
+                  <p className="text-xs text-muted-foreground">
+                    Add cover art/thumbnail (requires FFmpeg)
+                  </p>
+                </div>
+                <Switch checked={settings.embedThumbnail} onCheckedChange={updateEmbedThumbnail} />
+              </div>
+            </div>
           </section>
 
           {/* Divider */}
@@ -1186,12 +1439,18 @@ export function SettingsPage() {
                 <div className="flex items-start justify-between gap-4">
                   <div className="flex items-center gap-4">
                     <div className="w-16 h-16 rounded-2xl overflow-hidden flex-shrink-0">
-                      <img src="/logo-128.png" alt="Youwee" className="w-full h-full object-cover" />
+                      <img
+                        src="/logo-128.png"
+                        alt="Youwee"
+                        className="w-full h-full object-cover"
+                      />
                     </div>
                     <div>
                       <div className="flex items-center gap-2">
                         <span className="text-lg font-bold">Youwee</span>
-                        <Badge variant="secondary" className="font-mono text-xs">v{appVersion}</Badge>
+                        <Badge variant="secondary" className="font-mono text-xs">
+                          v{appVersion}
+                        </Badge>
                       </div>
                       <p className="text-sm text-muted-foreground mt-1">
                         Modern video downloader with AI summaries
@@ -1212,7 +1471,9 @@ export function SettingsPage() {
                             Up to date
                           </span>
                         ) : isAppError ? (
-                          <span className="text-destructive">{updater.error || 'Check failed'}</span>
+                          <span className="text-destructive">
+                            {updater.error || 'Check failed'}
+                          </span>
                         ) : null}
                       </p>
                     </div>
@@ -1232,15 +1493,15 @@ export function SettingsPage() {
                       title="Check for updates"
                       className="h-9 w-9"
                     >
-                      <RefreshCw className={cn("w-4 h-4", isAppChecking && "animate-spin")} />
+                      <RefreshCw className={cn('w-4 h-4', isAppChecking && 'animate-spin')} />
                     </Button>
                   </div>
                 </div>
 
                 {/* Quick Links */}
                 <div className="flex flex-wrap items-center gap-2 mt-4 pt-4 border-t border-border/50">
-                  <a 
-                    href="https://github.com/vanloctech/youwee" 
+                  <a
+                    href="https://github.com/vanloctech/youwee"
                     target="_blank"
                     rel="noopener noreferrer"
                     className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-background/50 hover:bg-background text-xs font-medium transition-colors"
@@ -1248,8 +1509,8 @@ export function SettingsPage() {
                     <Github className="w-3.5 h-3.5" />
                     GitHub
                   </a>
-                  <a 
-                    href="https://github.com/vanloctech/youwee/blob/main/LICENSE" 
+                  <a
+                    href="https://github.com/vanloctech/youwee/blob/main/LICENSE"
                     target="_blank"
                     rel="noopener noreferrer"
                     className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-background/50 hover:bg-background text-xs font-medium transition-colors"
@@ -1257,8 +1518,8 @@ export function SettingsPage() {
                     <FileText className="w-3.5 h-3.5" />
                     License
                   </a>
-                  <a 
-                    href="https://github.com/vanloctech/youwee/issues" 
+                  <a
+                    href="https://github.com/vanloctech/youwee/issues"
                     target="_blank"
                     rel="noopener noreferrer"
                     className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-background/50 hover:bg-background text-xs font-medium transition-colors"

@@ -1,2 +1,2 @@
-export { HistoryToolbar } from './HistoryToolbar';
 export { HistoryItem } from './HistoryItem';
+export { HistoryToolbar } from './HistoryToolbar';

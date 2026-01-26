@@ -1,9 +1,9 @@
-import { cn } from '@/lib/utils';
+import { RefreshCw, Search, Trash2 } from 'lucide-react';
+import { useCallback, useState } from 'react';
+import { Input } from '@/components/ui/input';
 import { useHistory } from '@/contexts/HistoryContext';
 import type { HistoryFilter } from '@/lib/types';
-import { Search, Trash2, RefreshCw } from 'lucide-react';
-import { Input } from '@/components/ui/input';
-import { useState, useCallback } from 'react';
+import { cn } from '@/lib/utils';
 
 const filterOptions: { value: HistoryFilter; label: string }[] = [
   { value: 'all', label: 'All' },
@@ -53,7 +53,7 @@ export function HistoryToolbar() {
             'pl-10 pr-4 h-11 text-sm',
             'bg-background/50 border-border/50',
             'focus:bg-background transition-colors',
-            'placeholder:text-muted-foreground/50'
+            'placeholder:text-muted-foreground/50',
           )}
         />
       </div>
@@ -64,13 +64,14 @@ export function HistoryToolbar() {
         <div className="inline-flex items-center rounded-lg bg-muted/50 p-1">
           {filterOptions.map((option) => (
             <button
+              type="button"
               key={option.value}
               onClick={() => setFilter(option.value)}
               className={cn(
                 'px-3 py-1.5 text-xs font-medium rounded-md transition-all',
                 filter === option.value
                   ? 'bg-background shadow-sm text-foreground'
-                  : 'text-muted-foreground hover:text-foreground'
+                  : 'text-muted-foreground hover:text-foreground',
               )}
             >
               {option.label}
@@ -81,13 +82,14 @@ export function HistoryToolbar() {
         {/* Actions */}
         <div className="flex items-center gap-2">
           <button
+            type="button"
             onClick={() => refreshHistory()}
             disabled={loading}
             className={cn(
               'flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium',
               'bg-muted/50 hover:bg-muted transition-colors',
               'text-muted-foreground hover:text-foreground',
-              loading && 'opacity-50'
+              loading && 'opacity-50',
             )}
           >
             <RefreshCw className={cn('w-4 h-4', loading && 'animate-spin')} />
@@ -95,13 +97,14 @@ export function HistoryToolbar() {
           </button>
 
           <button
+            type="button"
             onClick={handleClear}
             disabled={clearing || totalCount === 0}
             className={cn(
               'flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium',
               'bg-red-500/10 hover:bg-red-500/20 transition-colors',
               'text-red-400 hover:text-red-300',
-              (clearing || totalCount === 0) && 'opacity-50 cursor-not-allowed'
+              (clearing || totalCount === 0) && 'opacity-50 cursor-not-allowed',
             )}
           >
             <Trash2 className="w-4 h-4" />

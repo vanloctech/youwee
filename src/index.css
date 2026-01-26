@@ -79,7 +79,8 @@
   --gradient-via: 280 70% 55%;
   --gradient-to: 320 65% 50%;
 }
-.dark[data-theme="midnight"], [data-theme="midnight"].dark {
+.dark[data-theme="midnight"],
+[data-theme="midnight"].dark {
   --primary: 270 80% 65%;
   --primary-foreground: 0 0% 100%;
   --accent: 280 50% 20%;
@@ -101,7 +102,8 @@
   --gradient-via: 190 85% 50%;
   --gradient-to: 220 80% 55%;
 }
-.dark[data-theme="aurora"], [data-theme="aurora"].dark {
+.dark[data-theme="aurora"],
+[data-theme="aurora"].dark {
   --primary: 175 85% 50%;
   --primary-foreground: 180 100% 10%;
   --accent: 180 40% 18%;
@@ -123,7 +125,8 @@
   --gradient-via: 35 95% 55%;
   --gradient-to: 45 90% 50%;
 }
-.dark[data-theme="sunset"], [data-theme="sunset"].dark {
+.dark[data-theme="sunset"],
+[data-theme="sunset"].dark {
   --primary: 30 95% 55%;
   --primary-foreground: 30 100% 10%;
   --accent: 25 50% 18%;
@@ -145,7 +148,8 @@
   --gradient-via: 215 85% 55%;
   --gradient-to: 230 80% 60%;
 }
-.dark[data-theme="ocean"], [data-theme="ocean"].dark {
+.dark[data-theme="ocean"],
+[data-theme="ocean"].dark {
   --primary: 215 95% 60%;
   --primary-foreground: 215 100% 10%;
   --accent: 215 50% 18%;
@@ -167,7 +171,8 @@
   --gradient-via: 160 65% 45%;
   --gradient-to: 175 60% 42%;
 }
-.dark[data-theme="forest"], [data-theme="forest"].dark {
+.dark[data-theme="forest"],
+[data-theme="forest"].dark {
   --primary: 152 80% 48%;
   --primary-foreground: 150 100% 10%;
   --accent: 150 40% 16%;
@@ -189,7 +194,8 @@
   --gradient-via: 350 80% 65%;
   --gradient-to: 10 85% 60%;
 }
-.dark[data-theme="candy"], [data-theme="candy"].dark {
+.dark[data-theme="candy"],
+[data-theme="candy"].dark {
   --primary: 340 90% 60%;
   --primary-foreground: 0 0% 100%;
   --accent: 340 50% 18%;
@@ -207,7 +213,8 @@
   body {
     @apply bg-background text-foreground;
     margin: 0;
-    font-family: 'Nunito', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    font-family:
+      "Nunito", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
   }
@@ -247,10 +254,10 @@
 }
 
 .gradient-bg::before {
-  content: '';
+  content: "";
   position: absolute;
   inset: 0;
-  background: 
+  background:
     radial-gradient(ellipse 80% 50% at 20% -20%, hsl(var(--gradient-from) / 0.15), transparent 50%),
     radial-gradient(ellipse 60% 40% at 80% 0%, hsl(var(--gradient-via) / 0.12), transparent 50%),
     radial-gradient(ellipse 50% 30% at 50% 100%, hsl(var(--gradient-to) / 0.1), transparent 50%);
@@ -259,7 +266,7 @@
 }
 
 .dark .gradient-bg::before {
-  background: 
+  background:
     radial-gradient(ellipse 80% 50% at 20% -20%, hsl(var(--gradient-from) / 0.25), transparent 50%),
     radial-gradient(ellipse 60% 40% at 80% 0%, hsl(var(--gradient-via) / 0.2), transparent 50%),
     radial-gradient(ellipse 50% 30% at 50% 100%, hsl(var(--gradient-to) / 0.15), transparent 50%);
@@ -267,7 +274,7 @@
 
 /* Animated mesh gradient for special elements */
 .gradient-mesh {
-  background: 
+  background:
     linear-gradient(135deg, hsl(var(--gradient-from) / 0.3) 0%, transparent 50%),
     linear-gradient(225deg, hsl(var(--gradient-via) / 0.2) 0%, transparent 50%),
     linear-gradient(315deg, hsl(var(--gradient-to) / 0.3) 0%, transparent 50%);
@@ -281,7 +288,7 @@
 }
 
 .gradient-border::before {
-  content: '';
+  content: "";
   position: absolute;
   inset: 0;
   padding: 1px;
@@ -292,7 +299,9 @@
     hsl(var(--gradient-via) / 0.3),
     hsl(var(--gradient-to) / 0.5)
   );
-  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask:
+    linear-gradient(#fff 0 0) content-box,
+    linear-gradient(#fff 0 0);
   -webkit-mask-composite: xor;
   mask-composite: exclude;
   pointer-events: none;
@@ -347,7 +356,7 @@
 }
 
 .btn-gradient::before {
-  content: '';
+  content: "";
   position: absolute;
   inset: 0;
   background: linear-gradient(
@@ -366,7 +375,7 @@
 
 .btn-gradient:hover {
   transform: translateY(-1px);
-  box-shadow: 
+  box-shadow:
     0 4px 20px hsl(var(--gradient-from) / 0.3),
     0 2px 10px hsl(var(--gradient-to) / 0.2);
 }
@@ -412,7 +421,7 @@
 
 .card-hover:hover {
   @apply shadow-lg border-primary/20;
-  box-shadow: 
+  box-shadow:
     0 4px 20px hsl(var(--gradient-from) / 0.1),
     0 2px 8px hsl(var(--gradient-to) / 0.05);
   transform: translateY(-1px);
@@ -430,7 +439,7 @@
 }
 
 .btn-glow::before {
-  content: '';
+  content: "";
   @apply absolute inset-0 opacity-0 transition-opacity duration-300;
   background: linear-gradient(
     135deg,
@@ -527,7 +536,8 @@
 
 /* Floating orbs animation for backgrounds */
 @keyframes float-orb {
-  0%, 100% {
+  0%,
+  100% {
     transform: translate(0, 0) scale(1);
     opacity: 0.5;
   }
@@ -578,13 +588,14 @@
 
 /* Subtle pulse animation for download button */
 @keyframes pulse-subtle {
-  0%, 100% {
-    box-shadow: 
+  0%,
+  100% {
+    box-shadow:
       0 4px 15px hsl(var(--gradient-from) / 0.2),
       0 2px 8px hsl(var(--gradient-to) / 0.15);
   }
   50% {
-    box-shadow: 
+    box-shadow:
       0 6px 25px hsl(var(--gradient-from) / 0.35),
       0 4px 12px hsl(var(--gradient-to) / 0.25);
   }

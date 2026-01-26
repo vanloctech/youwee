@@ -1,17 +1,26 @@
-import { useState, useEffect } from 'react';
-import { ThemeProvider } from '@/contexts/ThemeContext';
+import { useEffect, useState } from 'react';
+import { FFmpegDialog } from '@/components/FFmpegDialog';
+import type { Page } from '@/components/layout';
+import { MainLayout } from '@/components/layout';
+import { UpdateDialog } from '@/components/UpdateDialog';
+import { AIProvider } from '@/contexts/AIContext';
 import { DependenciesProvider, useDependencies } from '@/contexts/DependenciesContext';
 import { DownloadProvider, useDownload } from '@/contexts/DownloadContext';
-import { UniversalProvider } from '@/contexts/UniversalContext';
-import { LogProvider } from '@/contexts/LogContext';
 import { HistoryProvider } from '@/contexts/HistoryContext';
+import { LogProvider } from '@/contexts/LogContext';
+import { ProcessingProvider } from '@/contexts/ProcessingContext';
+import { ThemeProvider } from '@/contexts/ThemeContext';
+import { UniversalProvider } from '@/contexts/UniversalContext';
 import { UpdaterProvider, useUpdater } from '@/contexts/UpdaterContext';
-import { AIProvider } from '@/contexts/AIContext';
-import { MainLayout } from '@/components/layout';
-import type { Page } from '@/components/layout';
-import { DownloadPage, UniversalPage, SummaryPage, HistoryPage, LogsPage, SettingsPage } from '@/pages';
-import { UpdateDialog } from '@/components/UpdateDialog';
-import { FFmpegDialog } from '@/components/FFmpegDialog';
+import {
+  DownloadPage,
+  HistoryPage,
+  LogsPage,
+  ProcessingPage,
+  SettingsPage,
+  SummaryPage,
+  UniversalPage,
+} from '@/pages';
 
 function AppContent() {
   const [currentPage, setCurrentPage] = useState<Page>('youtube');
@@ -44,14 +53,17 @@ function AppContent() {
   return (
     <>
       <MainLayout currentPage={currentPage} onPageChange={setCurrentPage}>
-        {currentPage === 'youtube' && <DownloadPage onNavigateToSettings={() => setCurrentPage('settings')} />}
+        {currentPage === 'youtube' && (
+          <DownloadPage onNavigateToSettings={() => setCurrentPage('settings')} />
+        )}
         {currentPage === 'universal' && <UniversalPage />}
         {currentPage === 'summary' && <SummaryPage />}
+        {currentPage === 'processing' && <ProcessingPage />}
         {currentPage === 'library' && <HistoryPage />}
         {currentPage === 'logs' && <LogsPage />}
         {currentPage === 'settings' && <SettingsPage />}
       </MainLayout>
-      
+
       <UpdateDialog
         status={updater.status}
         updateInfo={updater.updateInfo}
@@ -63,9 +75,7 @@ function AppContent() {
         onRetry={updater.checkForUpdate}
       />
 
-      {showFfmpegDialog && (
-        <FFmpegDialog onDismiss={() => setShowFfmpegDialog(false)} />
-      )}
+      {showFfmpegDialog && <FFmpegDialog onDismiss={() => setShowFfmpegDialog(false)} />}
     </>
   );
 }
@@ -73,15 +83,11 @@ function AppContent() {
 // Wrapper to get settings and pass to UpdaterProvider
 function UpdaterWrapper({ children }: { children: React.ReactNode }) {
   const { settings } = useDownload();
-  
-  return (
-    <UpdaterProvider autoCheck={settings.autoCheckUpdate}>
-      {children}
-    </UpdaterProvider>
-  );
+
+  return <UpdaterProvider autoCheck={settings.autoCheckUpdate}>{children}</UpdaterProvider>;
 }
 
-function App() {
+export function App() {
   return (
     <ThemeProvider>
       <DependenciesProvider>
@@ -90,9 +96,11 @@ function App() {
             <LogProvider>
               <HistoryProvider>
                 <AIProvider>
-                  <UpdaterWrapper>
-                    <AppContent />
-                  </UpdaterWrapper>
+                  <ProcessingProvider>
+                    <UpdaterWrapper>
+                      <AppContent />
+                    </UpdaterWrapper>
+                  </ProcessingProvider>
                 </AIProvider>
               </HistoryProvider>
             </LogProvider>
@@ -102,5 +110,3 @@ function App() {
     </ThemeProvider>
   );
 }
-
-export default App;

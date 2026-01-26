@@ -161,3 +161,86 @@ pub fn get_bun_download_url() -> &'static str {
     #[cfg(not(any(target_os = "macos", target_os = "windows", target_os = "linux")))]
     { "" }
 }
+
+/// Bun update info
+#[derive(Debug, Clone, serde::Serialize)]
+pub struct BunUpdateInfo {
+    pub has_update: bool,
+    pub current_version: Option<String>,
+    pub latest_version: Option<String>,
+    pub release_url: Option<String>,
+}
+
+/// Check if Bun update is available
+pub async fn check_bun_update_internal(app: &AppHandle) -> Result<BunUpdateInfo, String> {
+    // Get current installed version
+    let current_status = check_bun_internal(app).await?;
+    
+    if !current_status.installed {
+        return Ok(BunUpdateInfo {
+            has_update: false,
+            current_version: None,
+            latest_version: None,
+            release_url: None,
+        });
+    }
+    
+    let current_version = current_status.version.clone();
+    
+    // Only check updates for bundled Bun (not system)
+    if current_status.is_system {
+        return Ok(BunUpdateInfo {
+            has_update: false,
+            current_version,
+            latest_version: None,
+            release_url: Some("System Bun - update via package manager".to_string()),
+        });
+    }
+    
+    // Fetch latest release from GitHub API
+    let client = reqwest::Client::builder()
+        .user_agent("Youwee/0.4.1")
+        .timeout(std::time::Duration::from_secs(30))
+        .build()
+        .map_err(|e| format!("Failed to create HTTP client: {}", e))?;
+    
+    let response = client
+        .get("https://api.github.com/repos/oven-sh/bun/releases/latest")
+        .send()
+        .await
+        .map_err(|e| format!("Failed to fetch release info: {}", e))?;
+    
+    if !response.status().is_success() {
+        return Err(format!("Failed to fetch release info: HTTP {}", response.status()));
+    }
+    
+    let json: serde_json::Value = response.json().await
+        .map_err(|e| format!("Failed to parse release info: {}", e))?;
+    
+    let tag_name = json["tag_name"].as_str()
+        .ok_or("No tag_name in release")?;
+    
+    let html_url = json["html_url"].as_str()
+        .map(|s| s.to_string());
+    
+    // Extract version from tag (remove 'bun-v' or 'v' prefix if present)
+    let latest_version = tag_name
+        .trim_start_matches("bun-v")
+        .trim_start_matches('v')
+        .to_string();
+    
+    // Compare versions
+    let has_update = if let Some(ref current) = current_version {
+        // Bun version is like "1.0.0" - direct comparison
+        latest_version != *current && !current.contains(&latest_version)
+    } else {
+        false
+    };
+    
+    Ok(BunUpdateInfo {
+        has_update,
+        current_version,
+        latest_version: Some(latest_version),
+        release_url: html_url,
+    })
+}

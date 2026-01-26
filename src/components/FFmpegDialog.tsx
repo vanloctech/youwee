@@ -1,4 +1,4 @@
-import { Download, X, Film, Loader2, CheckCircle2, AlertTriangle } from 'lucide-react';
+import { AlertTriangle, CheckCircle2, Download, Film, Loader2, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useDependencies } from '@/contexts/DependenciesContext';
 
@@ -7,13 +7,8 @@ interface FFmpegDialogProps {
 }
 
 export function FFmpegDialog({ onDismiss }: FFmpegDialogProps) {
-  const {
-    ffmpegStatus,
-    ffmpegDownloading,
-    ffmpegError,
-    ffmpegSuccess,
-    downloadFfmpeg,
-  } = useDependencies();
+  const { ffmpegStatus, ffmpegDownloading, ffmpegError, ffmpegSuccess, downloadFfmpeg } =
+    useDependencies();
 
   // Don't show if FFmpeg is already installed
   if (ffmpegStatus?.installed || ffmpegSuccess) {
@@ -30,16 +25,13 @@ export function FFmpegDialog({ onDismiss }: FFmpegDialogProps) {
               <Film className="w-5 h-5 text-amber-500" />
             </div>
             <div>
-              <h2 className="text-lg font-semibold text-foreground">
-                FFmpeg Required
-              </h2>
-              <p className="text-sm text-muted-foreground">
-                For high-quality video downloads
-              </p>
+              <h2 className="text-lg font-semibold text-foreground">FFmpeg Required</h2>
+              <p className="text-sm text-muted-foreground">For high-quality video downloads</p>
             </div>
           </div>
           {!ffmpegDownloading && (
             <button
+              type="button"
               onClick={onDismiss}
               className="absolute top-4 right-4 p-1 rounded-md hover:bg-black/10 transition-colors"
             >
@@ -64,17 +56,13 @@ export function FFmpegDialog({ onDismiss }: FFmpegDialogProps) {
               <div className="inline-flex items-center justify-center w-12 h-12 bg-green-500/20 rounded-full">
                 <CheckCircle2 className="w-6 h-6 text-green-500" />
               </div>
-              <p className="text-sm text-muted-foreground">
-                FFmpeg installed successfully!
-              </p>
+              <p className="text-sm text-muted-foreground">FFmpeg installed successfully!</p>
             </div>
           ) : ffmpegError ? (
             <div className="space-y-3">
               <div className="flex items-start gap-3 p-3 bg-destructive/10 rounded-lg">
                 <AlertTriangle className="w-5 h-5 text-destructive flex-shrink-0 mt-0.5" />
-                <p className="text-sm text-destructive">
-                  {ffmpegError}
-                </p>
+                <p className="text-sm text-destructive">{ffmpegError}</p>
               </div>
               <p className="text-sm text-muted-foreground">
                 You can try again or install FFmpeg manually later from Settings.
@@ -83,16 +71,14 @@ export function FFmpegDialog({ onDismiss }: FFmpegDialogProps) {
           ) : (
             <div className="space-y-4">
               <p className="text-sm text-muted-foreground">
-                FFmpeg is required for downloading high-resolution videos (2K, 4K) 
-                where YouTube provides separate video and audio streams that need 
-                to be merged.
+                FFmpeg is required for downloading high-resolution videos (2K, 4K) where YouTube
+                provides separate video and audio streams that need to be merged.
               </p>
               <div className="p-3 bg-muted/50 rounded-lg">
                 <p className="text-xs text-muted-foreground">
                   <strong className="text-foreground">What happens without FFmpeg:</strong>
                   <br />
-                  Downloads above 1080p may fail or produce video-only files 
-                  without audio.
+                  Downloads above 1080p may fail or produce video-only files without audio.
                 </p>
               </div>
             </div>

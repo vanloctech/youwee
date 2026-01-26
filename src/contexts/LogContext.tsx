@@ -1,5 +1,5 @@
-import { createContext, useContext, useState, useCallback, useEffect, type ReactNode } from 'react';
 import { invoke } from '@tauri-apps/api/core';
+import { createContext, type ReactNode, useCallback, useContext, useEffect, useState } from 'react';
 import type { LogEntry, LogFilter } from '@/lib/types';
 
 interface LogContextType {

@@ -1,8 +1,8 @@
-import { useLogs } from '@/contexts/LogContext';
+import { ScrollText, Terminal } from 'lucide-react';
 import { LogEntry, LogToolbar } from '@/components/logs';
 import { ThemePicker } from '@/components/settings/ThemePicker';
+import { useLogs } from '@/contexts/LogContext';
 import { cn } from '@/lib/utils';
-import { ScrollText, Terminal } from 'lucide-react';
 
 export function LogsPage() {
   const { logs, loading } = useLogs();
@@ -40,15 +40,15 @@ export function LogsPage() {
                 <div
                   className={cn(
                     'w-16 h-16 rounded-2xl flex items-center justify-center mb-4',
-                    'bg-primary/10 text-primary'
+                    'bg-primary/10 text-primary',
                   )}
                 >
                   <ScrollText className="w-8 h-8" />
                 </div>
                 <h3 className="text-lg font-semibold mb-2">No logs yet</h3>
                 <p className="text-sm text-muted-foreground max-w-md">
-                  Logs will appear here when you start downloading videos. You'll see the
-                  yt-dlp commands executed, success/error messages, and debug output.
+                  Logs will appear here when you start downloading videos. You'll see the yt-dlp
+                  commands executed, success/error messages, and debug output.
                 </p>
                 <div className="mt-6 p-4 rounded-xl bg-background/50 border border-white/[0.08]">
                   <div className="flex items-center gap-2 text-xs text-muted-foreground">

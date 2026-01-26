@@ -1,21 +1,29 @@
+import {
+  ChevronLeft,
+  ChevronRight,
+  FolderDown,
+  Globe,
+  Moon,
+  ScrollText,
+  Settings,
+  Sparkles,
+  Sun,
+  Wand2,
+  Youtube,
+} from 'lucide-react';
 import { useState } from 'react';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { useTheme } from '@/contexts/ThemeContext';
 import { cn } from '@/lib/utils';
-import { 
-  Youtube,
-  Globe,
-  Sparkles,
-  FolderDown,
-  ScrollText,
-  Settings, 
-  ChevronLeft, 
-  ChevronRight,
-  Sun,
-  Moon,
-} from 'lucide-react';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
-export type Page = 'youtube' | 'universal' | 'summary' | 'library' | 'logs' | 'settings';
+export type Page =
+  | 'youtube'
+  | 'universal'
+  | 'summary'
+  | 'processing'
+  | 'library'
+  | 'logs'
+  | 'settings';
 
 interface SidebarProps {
   currentPage: Page;
@@ -43,6 +51,11 @@ const navItems: NavItem[] = [
     id: 'summary',
     label: 'AI Summary',
     icon: <Sparkles className="w-5 h-5" />,
+  },
+  {
+    id: 'processing',
+    label: 'Processing',
+    icon: <Wand2 className="w-5 h-5" />,
   },
   {
     id: 'library',
@@ -74,11 +87,11 @@ export function Sidebar({ currentPage, onPageChange }: SidebarProps) {
           'border border-white/[0.08] dark:border-white/[0.05]',
           'shadow-[0_8px_40px_rgba(0,0,0,0.06)] dark:shadow-[0_8px_40px_rgba(0,0,0,0.25)]',
           'relative overflow-hidden',
-          isCollapsed ? 'w-[60px]' : 'w-[180px]'
+          isCollapsed ? 'w-[60px]' : 'w-[180px]',
         )}
       >
         {/* Subtle gradient overlay */}
-        <div 
+        <div
           className="absolute inset-0 rounded-2xl pointer-events-none opacity-50"
           style={{
             background: `
@@ -88,27 +101,25 @@ export function Sidebar({ currentPage, onPageChange }: SidebarProps) {
                 transparent 70%,
                 hsl(var(--gradient-to) / 0.03) 100%
               )
-            `
+            `,
           }}
         />
 
         {/* Logo */}
         <div className="relative flex items-center justify-center h-16 px-2">
           <div className="flex items-center gap-2.5 overflow-hidden">
-            <div className={cn(
-              "flex-shrink-0 rounded-xl overflow-hidden transition-all duration-300",
-              isCollapsed ? "w-9 h-9" : "w-10 h-10"
-            )}>
-              <img 
-                src="/logo-128.png" 
-                alt="Youwee" 
-                className="w-full h-full object-cover"
-              />
+            <div
+              className={cn(
+                'flex-shrink-0 rounded-xl overflow-hidden transition-all duration-300',
+                isCollapsed ? 'w-9 h-9' : 'w-10 h-10',
+              )}
+            >
+              <img src="/logo-128.png" alt="Youwee" className="w-full h-full object-cover" />
             </div>
             <span
               className={cn(
                 'font-bold text-lg whitespace-nowrap transition-all duration-300 gradient-text',
-                isCollapsed ? 'opacity-0 w-0 ml-0' : 'opacity-100'
+                isCollapsed ? 'opacity-0 w-0 ml-0' : 'opacity-100',
               )}
             >
               Youwee
@@ -125,34 +136,34 @@ export function Sidebar({ currentPage, onPageChange }: SidebarProps) {
             <Tooltip key={item.id}>
               <TooltipTrigger asChild>
                 <button
+                  type="button"
                   onClick={() => onPageChange(item.id)}
                   className={cn(
                     'group w-full flex items-center gap-3 px-3 py-2.5 rounded-xl',
                     'transition-all duration-200 ease-out',
                     'hover:bg-white/[0.08] dark:hover:bg-white/[0.05]',
-                    currentPage === item.id && [
-                      'bg-primary/10',
-                      'text-primary',
-                    ],
-                    currentPage !== item.id && 'text-muted-foreground hover:text-foreground'
+                    currentPage === item.id && ['bg-primary/10', 'text-primary'],
+                    currentPage !== item.id && 'text-muted-foreground hover:text-foreground',
                   )}
                 >
-                  <span className={cn(
-                    "flex-shrink-0 transition-all duration-200",
-                    "group-hover:scale-110",
-                    currentPage === item.id && "drop-shadow-[0_0_8px_hsl(var(--primary)/0.4)]"
-                  )}>
+                  <span
+                    className={cn(
+                      'flex-shrink-0 transition-all duration-200',
+                      'group-hover:scale-110',
+                      currentPage === item.id && 'drop-shadow-[0_0_8px_hsl(var(--primary)/0.4)]',
+                    )}
+                  >
                     {item.icon}
                   </span>
                   <span
                     className={cn(
                       'text-sm font-medium whitespace-nowrap transition-all duration-300',
-                      isCollapsed ? 'opacity-0 w-0' : 'opacity-100'
+                      isCollapsed ? 'opacity-0 w-0' : 'opacity-100',
                     )}
                   >
                     {item.label}
                   </span>
-                  
+
                   {/* Active indicator */}
                   {currentPage === item.id && (
                     <div className="absolute left-0 w-1 h-5 rounded-r-full bg-primary shadow-[0_0_10px_hsl(var(--primary)/0.5)]" />
@@ -172,17 +183,18 @@ export function Sidebar({ currentPage, onPageChange }: SidebarProps) {
         <div className="relative p-2 space-y-1">
           {/* Divider */}
           <div className="mx-1 mb-2 h-px bg-gradient-to-r from-transparent via-white/10 to-transparent" />
-          
+
           {/* Theme Toggle */}
           <Tooltip>
             <TooltipTrigger asChild>
               <button
+                type="button"
                 onClick={toggleMode}
                 className={cn(
                   'group w-full flex items-center gap-3 px-3 py-2.5 rounded-xl',
                   'transition-all duration-200 ease-out',
                   'text-muted-foreground hover:text-foreground',
-                  'hover:bg-white/[0.08] dark:hover:bg-white/[0.05]'
+                  'hover:bg-white/[0.08] dark:hover:bg-white/[0.05]',
                 )}
               >
                 <span className="flex-shrink-0 transition-transform duration-200 group-hover:scale-110">
@@ -195,7 +207,7 @@ export function Sidebar({ currentPage, onPageChange }: SidebarProps) {
                 <span
                   className={cn(
                     'text-sm font-medium whitespace-nowrap transition-all duration-300',
-                    isCollapsed ? 'opacity-0 w-0' : 'opacity-100'
+                    isCollapsed ? 'opacity-0 w-0' : 'opacity-100',
                   )}
                 >
                   {mode === 'dark' ? 'Light' : 'Dark'}
@@ -213,12 +225,13 @@ export function Sidebar({ currentPage, onPageChange }: SidebarProps) {
           <Tooltip>
             <TooltipTrigger asChild>
               <button
+                type="button"
                 onClick={() => setIsCollapsed(!isCollapsed)}
                 className={cn(
                   'group w-full flex items-center gap-3 px-3 py-2.5 rounded-xl',
                   'transition-all duration-200 ease-out',
                   'text-muted-foreground hover:text-foreground',
-                  'hover:bg-white/[0.08] dark:hover:bg-white/[0.05]'
+                  'hover:bg-white/[0.08] dark:hover:bg-white/[0.05]',
                 )}
               >
                 <span className="flex-shrink-0 transition-transform duration-200 group-hover:scale-110">
@@ -231,7 +244,7 @@ export function Sidebar({ currentPage, onPageChange }: SidebarProps) {
                 <span
                   className={cn(
                     'text-sm font-medium whitespace-nowrap transition-all duration-300',
-                    isCollapsed ? 'opacity-0 w-0' : 'opacity-100'
+                    isCollapsed ? 'opacity-0 w-0' : 'opacity-100',
                   )}
                 >
                   Collapse

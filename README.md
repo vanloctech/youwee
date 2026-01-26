@@ -9,6 +9,8 @@
   [![Tauri](https://img.shields.io/badge/Tauri-2.0-FFC131?logo=tauri&logoColor=white)](https://tauri.app/)
   [![React](https://img.shields.io/badge/React-19-61DAFB?logo=react&logoColor=white)](https://react.dev/)
   [![TypeScript](https://img.shields.io/badge/TypeScript-5.0-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
+  [![FFmpeg](https://img.shields.io/badge/FFmpeg-007808?logo=ffmpeg&logoColor=white)](https://ffmpeg.org/)
+  [![Reddit](https://img.shields.io/badge/Reddit-r%2Fyouwee-FF4500?logo=reddit&logoColor=white)](https://www.reddit.com/r/youwee)
 </div>
 
 ---
@@ -17,15 +19,29 @@
 
 - **Video Downloads** — YouTube, TikTok, Facebook, Instagram, and 1800+ sites
 - **AI Video Summary** — Summarize videos with Gemini, OpenAI, or Ollama
+- **AI Video Processing** — Edit videos using natural language (cut, convert, resize, extract audio)
 - **Batch & Playlist** — Download multiple videos or entire playlists
 - **Audio Extraction** — Extract audio in MP3, M4A, or Opus formats
 - **Subtitle Support** — Download or embed subtitles
+- **Post-Processing** — Auto-embed metadata and thumbnails into files
 - **Download Library** — Track and manage all your downloads
 - **6 Beautiful Themes** — Midnight, Aurora, Sunset, Ocean, Forest, Candy
 - **Fast & Lightweight** — Built with Tauri for minimal resource usage
 
 ## Screenshots
 ![Youwee](docs/screenshots/youwee-1.png)
+
+<details>
+<summary><strong>More Screenshots</strong></summary>
+
+![Youwee - Library](docs/screenshots/youwee-2.png)
+![Youwee - AI Summary](docs/screenshots/youwee-3.png)
+![Youwee - Processing](docs/screenshots/youwee-4.png)
+![Youwee - Settings](docs/screenshots/youwee-5.png)
+![Youwee - Themes](docs/screenshots/youwee-6.png)
+![Youwee - About](docs/screenshots/youwee-7.png)
+
+</details>
 
 
 ## Installation

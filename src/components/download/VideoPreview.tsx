@@ -1,18 +1,10 @@
-import { useState, useEffect } from 'react';
 import { invoke } from '@tauri-apps/api/core';
-import { 
-  Loader2, 
-  Eye, 
-  Calendar,
-  User,
-  ListVideo,
-  AlertCircle,
-  X,
-} from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { AlertCircle, Calendar, Eye, ListVideo, Loader2, User, X } from 'lucide-react';
+import { useEffect, useState } from 'react';
 import { Badge } from '@/components/ui/badge';
-import { cn } from '@/lib/utils';
+import { Button } from '@/components/ui/button';
 import type { CookieSettings } from '@/lib/types';
+import { cn } from '@/lib/utils';
 
 // Cookie settings storage key (same as in DownloadContext)
 const COOKIE_STORAGE_KEY = 'youwee-cookie-settings';
@@ -77,7 +69,7 @@ function formatDuration(seconds: number | null): string {
   const hrs = Math.floor(seconds / 3600);
   const mins = Math.floor((seconds % 3600) / 60);
   const secs = Math.floor(seconds % 60);
-  
+
   if (hrs > 0) {
     return `${hrs}:${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
   }
@@ -131,10 +123,10 @@ export function VideoPreview({ url, onClose, onFormatSelect, className }: VideoP
     const fetchInfo = async () => {
       setLoading(true);
       setError(null);
-      
+
       try {
         const cookieSettings = loadCookieSettings();
-        const result = await invoke<VideoInfoResponse>('get_video_info', { 
+        const result = await invoke<VideoInfoResponse>('get_video_info', {
           url,
           cookieMode: cookieSettings.mode,
           cookieBrowser: cookieSettings.browser || null,
@@ -164,7 +156,7 @@ export function VideoPreview({ url, onClose, onFormatSelect, className }: VideoP
 
   if (loading) {
     return (
-      <div className={cn("rounded-xl border bg-card/50 backdrop-blur-sm p-6", className)}>
+      <div className={cn('rounded-xl border bg-card/50 backdrop-blur-sm p-6', className)}>
         <div className="flex items-center justify-center gap-3 text-muted-foreground">
           <Loader2 className="w-5 h-5 animate-spin" />
           <span className="text-sm">Fetching video info...</span>
@@ -175,7 +167,9 @@ export function VideoPreview({ url, onClose, onFormatSelect, className }: VideoP
 
   if (error) {
     return (
-      <div className={cn("rounded-xl border bg-destructive/5 border-destructive/20 p-4", className)}>
+      <div
+        className={cn('rounded-xl border bg-destructive/5 border-destructive/20 p-4', className)}
+      >
         <div className="flex items-start gap-3 text-destructive">
           <AlertCircle className="w-5 h-5 flex-shrink-0 mt-0.5" />
           <div className="flex-1 min-w-0">
@@ -197,25 +191,21 @@ export function VideoPreview({ url, onClose, onFormatSelect, className }: VideoP
   const { info, formats } = data;
 
   // Group formats by type
-  const videoFormats = formats.filter(f => 
-    f.vcodec && f.vcodec !== 'none' && f.height
-  ).sort((a, b) => (b.height || 0) - (a.height || 0));
+  const videoFormats = formats
+    .filter((f) => f.vcodec && f.vcodec !== 'none' && f.height)
+    .sort((a, b) => (b.height || 0) - (a.height || 0));
 
-  const audioFormats = formats.filter(f => 
-    f.acodec && f.acodec !== 'none' && (!f.vcodec || f.vcodec === 'none')
-  ).sort((a, b) => (b.tbr || 0) - (a.tbr || 0));
+  const audioFormats = formats
+    .filter((f) => f.acodec && f.acodec !== 'none' && (!f.vcodec || f.vcodec === 'none'))
+    .sort((a, b) => (b.tbr || 0) - (a.tbr || 0));
 
   return (
-    <div className={cn("rounded-xl border bg-card/50 backdrop-blur-sm overflow-hidden", className)}>
+    <div className={cn('rounded-xl border bg-card/50 backdrop-blur-sm overflow-hidden', className)}>
       <div className="flex gap-4 p-4">
         {/* Thumbnail */}
         {info.thumbnail && (
           <div className="relative flex-shrink-0 w-40 h-24 rounded-lg overflow-hidden bg-muted">
-            <img 
-              src={info.thumbnail} 
-              alt={info.title}
-              className="w-full h-full object-cover"
-            />
+            <img src={info.thumbnail} alt={info.title} className="w-full h-full object-cover" />
             {info.duration && (
               <div className="absolute bottom-1 right-1 px-1.5 py-0.5 rounded bg-black/80 text-white text-xs font-medium">
                 {formatDuration(info.duration)}
@@ -227,11 +217,14 @@ export function VideoPreview({ url, onClose, onFormatSelect, className }: VideoP
         {/* Info */}
         <div className="flex-1 min-w-0 space-y-2">
           <div className="flex items-start justify-between gap-2">
-            <h3 className="text-sm font-medium leading-tight line-clamp-2">
-              {info.title}
-            </h3>
+            <h3 className="text-sm font-medium leading-tight line-clamp-2">{info.title}</h3>
             {onClose && (
-              <Button variant="ghost" size="icon" className="h-7 w-7 flex-shrink-0" onClick={onClose}>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-7 w-7 flex-shrink-0"
+                onClick={onClose}
+              >
                 <X className="w-4 h-4" />
               </Button>
             )}
@@ -266,9 +259,7 @@ export function VideoPreview({ url, onClose, onFormatSelect, className }: VideoP
               </Badge>
             )}
             {videoFormats.length > 0 && (
-              <Badge variant="secondary">
-                Up to {videoFormats[0].height}p
-              </Badge>
+              <Badge variant="secondary">Up to {videoFormats[0].height}p</Badge>
             )}
           </div>
         </div>
@@ -278,11 +269,12 @@ export function VideoPreview({ url, onClose, onFormatSelect, className }: VideoP
       {(videoFormats.length > 0 || audioFormats.length > 0) && (
         <div className="border-t px-4 py-3 space-y-3 bg-muted/30">
           <p className="text-xs font-medium text-muted-foreground">Available Formats</p>
-          
+
           {/* Top video formats */}
           <div className="flex flex-wrap gap-2">
             {videoFormats.slice(0, 6).map((f) => (
               <button
+                type="button"
                 key={f.format_id}
                 onClick={() => onFormatSelect?.(f.format_id)}
                 className="px-2.5 py-1.5 rounded-lg border bg-background/50 hover:bg-accent text-xs transition-colors"
@@ -298,6 +290,7 @@ export function VideoPreview({ url, onClose, onFormatSelect, className }: VideoP
             ))}
             {audioFormats.slice(0, 2).map((f) => (
               <button
+                type="button"
                 key={f.format_id}
                 onClick={() => onFormatSelect?.(f.format_id)}
                 className="px-2.5 py-1.5 rounded-lg border bg-background/50 hover:bg-accent text-xs transition-colors"
@@ -305,9 +298,7 @@ export function VideoPreview({ url, onClose, onFormatSelect, className }: VideoP
                 <span className="font-medium">Audio</span>
                 <span className="text-muted-foreground ml-1">{f.ext}</span>
                 {f.tbr && (
-                  <span className="text-muted-foreground ml-1">
-                    ({Math.round(f.tbr)}kbps)
-                  </span>
+                  <span className="text-muted-foreground ml-1">({Math.round(f.tbr)}kbps)</span>
                 )}
               </button>
             ))}

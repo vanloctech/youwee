@@ -1,5 +1,10 @@
-import { createContext, useContext, useEffect, type ReactNode } from 'react';
-import { useAppUpdater, type UpdateInfo, type UpdateProgress, type UpdateStatus } from '@/hooks/useAppUpdater';
+import { createContext, type ReactNode, useContext, useEffect } from 'react';
+import {
+  type UpdateInfo,
+  type UpdateProgress,
+  type UpdateStatus,
+  useAppUpdater,
+} from '@/hooks/useAppUpdater';
 
 interface UpdaterContextType {
   status: UpdateStatus;
@@ -25,7 +30,7 @@ export function UpdaterProvider({ children, autoCheck }: UpdaterProviderProps) {
   // Auto check for updates on mount if enabled
   useEffect(() => {
     if (!autoCheck) return;
-    
+
     const timer = setTimeout(() => {
       updater.checkForUpdate();
     }, 2000); // Wait 2s after app start
@@ -33,11 +38,7 @@ export function UpdaterProvider({ children, autoCheck }: UpdaterProviderProps) {
     return () => clearTimeout(timer);
   }, [autoCheck, updater.checkForUpdate]);
 
-  return (
-    <UpdaterContext.Provider value={updater}>
-      {children}
-    </UpdaterContext.Provider>
-  );
+  return <UpdaterContext.Provider value={updater}>{children}</UpdaterContext.Provider>;
 }
 
 export function useUpdater() {

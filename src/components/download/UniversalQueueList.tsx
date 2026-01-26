@@ -1,9 +1,9 @@
-import { Inbox, CheckCircle2, ExternalLink } from 'lucide-react';
-import { ScrollArea } from '@/components/ui/scroll-area';
+import { CheckCircle2, ExternalLink, Inbox } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { UniversalQueueItem } from './UniversalQueueItem';
+import { ScrollArea } from '@/components/ui/scroll-area';
 import type { DownloadItem } from '@/lib/types';
 import { cn } from '@/lib/utils';
+import { UniversalQueueItem } from './UniversalQueueItem';
 
 // Popular supported sites with Font Awesome v4 icons
 const POPULAR_SITES = [
@@ -26,13 +26,13 @@ interface UniversalQueueListProps {
   onClearCompleted: () => void;
 }
 
-export function UniversalQueueList({ 
-  items, 
-  isDownloading, 
+export function UniversalQueueList({
+  items,
+  isDownloading,
   onRemove,
   onClearCompleted,
 }: UniversalQueueListProps) {
-  const completedCount = items.filter(i => i.status === 'completed').length;
+  const completedCount = items.filter((i) => i.status === 'completed').length;
   const hasCompleted = completedCount > 0;
 
   if (items.length === 0) {
@@ -45,18 +45,18 @@ export function UniversalQueueList({
         <p className="text-xs text-muted-foreground mb-4 max-w-[280px]">
           Supports <span className="font-semibold text-primary">1,800+</span> websites via yt-dlp
         </p>
-        
+
         {/* Popular sites grid */}
         <div className="flex flex-wrap justify-center gap-2 mb-4 max-w-[340px]">
           {POPULAR_SITES.map((site) => (
-            <span 
+            <span
               key={site.name}
               className={cn(
-                "inline-flex items-center gap-1.5 px-2 py-1 rounded-full bg-muted/50 text-[11px]",
-                site.color
+                'inline-flex items-center gap-1.5 px-2 py-1 rounded-full bg-muted/50 text-[11px]',
+                site.color,
               )}
             >
-              <i className={cn("fa", site.faIcon, "text-[10px]")} aria-hidden="true" />
+              <i className={cn('fa', site.faIcon, 'text-[10px]')} aria-hidden="true" />
               <span>{site.name}</span>
             </span>
           ))}
@@ -65,9 +65,9 @@ export function UniversalQueueList({
             <span>1,790 more</span>
           </span>
         </div>
-        
+
         {/* Link to full list */}
-        <a 
+        <a
           href="https://github.com/yt-dlp/yt-dlp/blob/master/supportedsites.md"
           target="_blank"
           rel="noopener noreferrer"

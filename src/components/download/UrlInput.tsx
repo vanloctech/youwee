@@ -1,18 +1,10 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
-import { 
-  Plus, 
-  FileText, 
-  ClipboardPaste,
-  Loader2,
-  Link,
-  List,
-  Link2,
-} from 'lucide-react';
+import { ClipboardPaste, FileText, Link, Link2, List, Loader2, Plus } from 'lucide-react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { VideoPreview } from './VideoPreview';
 import { cn } from '@/lib/utils';
+import { VideoPreview } from './VideoPreview';
 
 interface UrlInputProps {
   disabled?: boolean;
@@ -43,17 +35,23 @@ function isPlaylistOnlyUrl(url: string): boolean {
 }
 
 function countUrls(text: string): number {
-  return text.trim().split('\n').filter(l => {
-    const trimmed = l.trim();
-    return trimmed && !trimmed.startsWith('#') && 
-           (trimmed.includes('youtube.com') || trimmed.includes('youtu.be'));
-  }).length;
+  return text
+    .trim()
+    .split('\n')
+    .filter((l) => {
+      const trimmed = l.trim();
+      return (
+        trimmed &&
+        !trimmed.startsWith('#') &&
+        (trimmed.includes('youtube.com') || trimmed.includes('youtu.be'))
+      );
+    }).length;
 }
 
-export function UrlInput({ 
-  disabled, 
+export function UrlInput({
+  disabled,
   isExpandingPlaylist,
-  onAddUrls, 
+  onAddUrls,
   onImportFile,
   onImportClipboard,
 }: UrlInputProps) {
@@ -84,8 +82,11 @@ export function UrlInput({
       clearTimeout(debounceRef.current);
     }
 
-    const lines = value.trim().split('\n').filter(l => l.trim() && !l.trim().startsWith('#'));
-    
+    const lines = value
+      .trim()
+      .split('\n')
+      .filter((l) => l.trim() && !l.trim().startsWith('#'));
+
     if (lines.length === 1) {
       const url = extractFirstUrl(value);
       if (url && url !== previewUrl && !isPlaylistOnlyUrl(url)) {
@@ -107,7 +108,7 @@ export function UrlInput({
         clearTimeout(debounceRef.current);
       }
     };
-  }, [value]);
+  }, [value, previewUrl]);
 
   const handleAdd = useCallback(async () => {
     setIsAdding(true);
@@ -141,7 +142,7 @@ export function UrlInput({
         try {
           const text = await navigator.clipboard.readText();
           if (text) {
-            setValue(prev => prev ? `${prev}\n${text}` : text);
+            setValue((prev) => (prev ? `${prev}\n${text}` : text));
           }
         } catch {
           // Clipboard access denied
@@ -179,16 +180,16 @@ export function UrlInput({
     // Handle text/URL drops
     const text = e.dataTransfer.getData('text/plain');
     if (text) {
-      setValue(prev => prev ? `${prev}\n${text}` : text);
+      setValue((prev) => (prev ? `${prev}\n${text}` : text));
       return;
     }
 
     // Handle file drops
     const files = Array.from(e.dataTransfer.files);
-    const txtFile = files.find(f => f.name.endsWith('.txt'));
+    const txtFile = files.find((f) => f.name.endsWith('.txt'));
     if (txtFile) {
       const content = await txtFile.text();
-      setValue(prev => prev ? `${prev}\n${content}` : content);
+      setValue((prev) => (prev ? `${prev}\n${content}` : content));
     }
   };
 
@@ -210,26 +211,28 @@ export function UrlInput({
   };
 
   return (
-    <div 
+    <section
       className={cn(
-        "space-y-3 transition-all duration-200",
-        isDragOver && "ring-2 ring-primary ring-offset-2 ring-offset-background rounded-xl"
+        'space-y-3 transition-all duration-200',
+        isDragOver && 'ring-2 ring-primary ring-offset-2 ring-offset-background rounded-xl',
       )}
       onDragOver={handleDragOver}
       onDragLeave={handleDragLeave}
       onDrop={handleDrop}
+      aria-label="URL drop zone"
     >
       {/* Mode Toggle - Segmented Control */}
       <div className="flex items-center gap-2">
         <div className="inline-flex items-center rounded-lg bg-muted/50 p-1">
           <button
+            type="button"
             onClick={() => setMode(false)}
             disabled={disabled}
             className={cn(
-              "flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all",
-              !isExpanded 
-                ? "bg-background shadow-sm text-foreground" 
-                : "text-muted-foreground hover:text-foreground"
+              'flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all',
+              !isExpanded
+                ? 'bg-background shadow-sm text-foreground'
+                : 'text-muted-foreground hover:text-foreground',
             )}
             title="Single URL mode"
           >
@@ -237,13 +240,14 @@ export function UrlInput({
             <span>Single</span>
           </button>
           <button
+            type="button"
             onClick={() => setMode(true)}
             disabled={disabled}
             className={cn(
-              "flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all",
-              isExpanded 
-                ? "bg-background shadow-sm text-foreground" 
-                : "text-muted-foreground hover:text-foreground"
+              'flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all',
+              isExpanded
+                ? 'bg-background shadow-sm text-foreground'
+                : 'text-muted-foreground hover:text-foreground',
             )}
             title="Multiple URLs mode - add many URLs at once"
           >
@@ -251,7 +255,7 @@ export function UrlInput({
             <span>Multiple</span>
           </button>
         </div>
-        
+
         <span className="text-xs text-muted-foreground hidden sm:inline">
           {isExpanded ? 'Add multiple URLs (one per line)' : 'Paste a single YouTube URL'}
         </span>
@@ -272,10 +276,10 @@ export function UrlInput({
                 onKeyDown={handleKeyDown}
                 disabled={disabled}
                 className={cn(
-                  "pl-10 pr-20 h-11 text-sm",
-                  "bg-background/50 border-border/50",
-                  "focus:bg-background transition-colors",
-                  "placeholder:text-muted-foreground/50"
+                  'pl-10 pr-20 h-11 text-sm',
+                  'bg-background/50 border-border/50',
+                  'focus:bg-background transition-colors',
+                  'placeholder:text-muted-foreground/50',
                 )}
               />
               {urlCount > 0 && (
@@ -285,6 +289,7 @@ export function UrlInput({
               )}
             </div>
             <button
+              type="button"
               className="h-11 px-4 rounded-md font-medium text-sm btn-gradient flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
               onClick={handleAdd}
               disabled={disabled || !value.trim() || isAdding || isExpandingPlaylist}
@@ -309,10 +314,10 @@ export function UrlInput({
               onKeyDown={handleKeyDown}
               disabled={disabled}
               className={cn(
-                "min-h-[100px] resize-none font-mono text-sm",
-                "bg-background/50 border-border/50",
-                "focus:bg-background transition-colors",
-                "placeholder:text-muted-foreground/50"
+                'min-h-[100px] resize-none font-mono text-sm',
+                'bg-background/50 border-border/50',
+                'focus:bg-background transition-colors',
+                'placeholder:text-muted-foreground/50',
               )}
             />
             {urlCount > 0 && (
@@ -328,8 +333,8 @@ export function UrlInput({
 
       {/* Video Preview */}
       {showPreview && previewUrl && (
-        <VideoPreview 
-          url={previewUrl} 
+        <VideoPreview
+          url={previewUrl}
           onClose={() => {
             setShowPreview(false);
             setPreviewUrl(null);
@@ -341,6 +346,7 @@ export function UrlInput({
       <div className="flex items-center gap-2 flex-wrap">
         {isExpanded && (
           <button
+            type="button"
             className="h-9 px-4 rounded-md font-medium text-sm btn-gradient flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
             onClick={handleAdd}
             disabled={disabled || !value.trim() || isAdding || isExpandingPlaylist}
@@ -351,10 +357,12 @@ export function UrlInput({
             ) : (
               <Plus className="w-4 h-4" />
             )}
-            {isExpandingPlaylist ? 'Loading playlist...' : `Add to Queue ${urlCount > 0 ? `(${urlCount})` : ''}`}
+            {isExpandingPlaylist
+              ? 'Loading playlist...'
+              : `Add to Queue ${urlCount > 0 ? `(${urlCount})` : ''}`}
           </button>
         )}
-        
+
         <div className="flex items-center gap-1.5">
           <Button
             variant="ghost"
@@ -371,7 +379,7 @@ export function UrlInput({
             )}
             <span className="hidden xs:inline">Paste</span>
           </Button>
-          
+
           <Button
             variant="ghost"
             size="sm"
@@ -402,6 +410,6 @@ export function UrlInput({
           </div>
         </div>
       )}
-    </div>
+    </section>
   );
 }

@@ -56,8 +56,8 @@ jobs:
           touch src-tauri/bin/yt-dlp-x86_64-unknown-linux-gnu
           chmod +x src-tauri/bin/yt-dlp-x86_64-unknown-linux-gnu
 
-      - name: Check frontend
-        run: bun run lint || true
+      - name: Check frontend (Biome)
+        run: bun run lint
 
       - name: Check TypeScript
         run: bun run build

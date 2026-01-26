@@ -1,9 +1,46 @@
+use std::path::PathBuf;
 use std::process::Stdio;
 use tauri::{AppHandle, Manager};
 use tauri_plugin_shell::ShellExt;
 use tauri_plugin_shell::process::CommandEvent;
 use tokio::process::Command;
 use crate::types::YtdlpVersionInfo;
+
+/// Get the path to yt-dlp binary, prioritizing user-updated version in app_data_dir
+/// Returns: (path, is_bundled)
+/// - First checks app_data_dir/bin/yt-dlp (where updates are saved)
+/// - Then falls back to bundled sidecar
+/// - Finally falls back to system yt-dlp
+pub async fn get_ytdlp_path(app: &AppHandle) -> Option<(PathBuf, bool)> {
+    // 1. Check app_data_dir/bin first (user-updated version)
+    if let Ok(app_data_dir) = app.path().app_data_dir() {
+        #[cfg(windows)]
+        let binary_name = "yt-dlp.exe";
+        #[cfg(not(windows))]
+        let binary_name = "yt-dlp";
+        
+        let user_binary = app_data_dir.join("bin").join(binary_name);
+        if user_binary.exists() {
+            return Some((user_binary, false));
+        }
+    }
+    
+    // 2. Check bundled sidecar in resource_dir
+    if let Ok(resource_dir) = app.path().resource_dir() {
+        #[cfg(windows)]
+        let binary_name = "yt-dlp.exe";
+        #[cfg(not(windows))]
+        let binary_name = "yt-dlp";
+        
+        let bundled_binary = resource_dir.join("bin").join(binary_name);
+        if bundled_binary.exists() {
+            return Some((bundled_binary, true));
+        }
+    }
+    
+    // 3. Fallback to system yt-dlp
+    None
+}
 
 /// Result of yt-dlp command with both stdout and stderr
 pub struct YtdlpOutput {
@@ -14,6 +51,24 @@ pub struct YtdlpOutput {
 
 /// Helper to run yt-dlp command and get output with stderr
 pub async fn run_ytdlp_with_stderr(app: &AppHandle, args: &[&str]) -> Result<YtdlpOutput, String> {
+    // Try to get yt-dlp path (prioritizes user-updated version)
+    if let Some((binary_path, _)) = get_ytdlp_path(app).await {
+        let output = Command::new(&binary_path)
+            .args(args)
+            .stdout(Stdio::piped())
+            .stderr(Stdio::piped())
+            .output()
+            .await
+            .map_err(|e| format!("Failed to run yt-dlp: {}", e))?;
+        
+        return Ok(YtdlpOutput {
+            stdout: String::from_utf8_lossy(&output.stdout).to_string(),
+            stderr: String::from_utf8_lossy(&output.stderr).to_string(),
+            success: output.status.success(),
+        });
+    }
+    
+    // Fallback to sidecar
     let sidecar_result = app.shell().sidecar("yt-dlp");
     
     match sidecar_result {
@@ -122,6 +177,28 @@ pub fn parse_ytdlp_error(stderr: &str) -> Option<String> {
 
 /// Helper to run yt-dlp command and get JSON output
 pub async fn run_ytdlp_json(app: &AppHandle, args: &[&str]) -> Result<String, String> {
+    // Try to get yt-dlp path (prioritizes user-updated version)
+    if let Some((binary_path, _)) = get_ytdlp_path(app).await {
+        let output = Command::new(&binary_path)
+            .args(args)
+            .stdout(Stdio::piped())
+            .stderr(Stdio::piped())
+            .output()
+            .await
+            .map_err(|e| format!("Failed to run yt-dlp: {}", e))?;
+        
+        if !output.status.success() {
+            let stderr = String::from_utf8_lossy(&output.stderr);
+            if let Some(parsed_error) = parse_ytdlp_error(&stderr) {
+                return Err(parsed_error);
+            }
+            return Err("yt-dlp command failed".to_string());
+        }
+        
+        return Ok(String::from_utf8_lossy(&output.stdout).to_string());
+    }
+    
+    // Fallback to sidecar
     let sidecar_result = app.shell().sidecar("yt-dlp");
     
     match sidecar_result {
@@ -186,6 +263,29 @@ pub async fn run_ytdlp_json(app: &AppHandle, args: &[&str]) -> Result<String, St
 
 /// Get yt-dlp version
 pub async fn get_ytdlp_version_internal(app: &AppHandle) -> Result<YtdlpVersionInfo, String> {
+    // Try to get yt-dlp path (prioritizes user-updated version)
+    if let Some((binary_path, is_bundled)) = get_ytdlp_path(app).await {
+        let output = Command::new(&binary_path)
+            .args(["--version"])
+            .stdout(Stdio::piped())
+            .stderr(Stdio::piped())
+            .output()
+            .await
+            .map_err(|e| format!("Failed to run yt-dlp: {}", e))?;
+        
+        let version = String::from_utf8_lossy(&output.stdout).trim().to_string();
+        let bin_path = binary_path.to_string_lossy().to_string();
+        
+        return Ok(YtdlpVersionInfo {
+            version,
+            latest_version: None,
+            update_available: false,
+            is_bundled,
+            binary_path: bin_path,
+        });
+    }
+    
+    // Fallback to sidecar
     let sidecar_result = app.shell().sidecar("yt-dlp");
     
     let (version, is_bundled, binary_path) = match sidecar_result {

@@ -1,12 +1,12 @@
-import { cn } from '@/lib/utils';
-import { useLogs } from '@/contexts/LogContext';
-import type { LogFilter } from '@/lib/types';
-import { Search, Trash2, Download, RefreshCw, FileText, CheckCircle, XCircle } from 'lucide-react';
-import { Switch } from '@/components/ui/switch';
-import { Input } from '@/components/ui/input';
-import { useCallback, useState } from 'react';
 import { save } from '@tauri-apps/plugin-dialog';
 import { writeTextFile } from '@tauri-apps/plugin-fs';
+import { CheckCircle, Download, FileText, RefreshCw, Search, Trash2, XCircle } from 'lucide-react';
+import { useCallback, useState } from 'react';
+import { Input } from '@/components/ui/input';
+import { Switch } from '@/components/ui/switch';
+import { useLogs } from '@/contexts/LogContext';
+import type { LogFilter } from '@/lib/types';
+import { cn } from '@/lib/utils';
 
 const filterOptions: { value: LogFilter; label: string }[] = [
   { value: 'all', label: 'All' },
@@ -70,7 +70,7 @@ export function LogToolbar() {
 
       const json = await exportLogs();
       await writeTextFile(filePath, json);
-      
+
       setNotification({
         type: 'success',
         message: 'Logs exported successfully',
@@ -100,7 +100,7 @@ export function LogToolbar() {
             'flex items-center gap-2 px-4 py-3 rounded-xl text-sm',
             notification.type === 'success'
               ? 'bg-green-500/10 text-green-400 border border-green-500/20'
-              : 'bg-red-500/10 text-red-400 border border-red-500/20'
+              : 'bg-red-500/10 text-red-400 border border-red-500/20',
           )}
         >
           {notification.type === 'success' ? (
@@ -117,6 +117,7 @@ export function LogToolbar() {
             )}
           </div>
           <button
+            type="button"
             onClick={() => setNotification(null)}
             className="text-xs opacity-60 hover:opacity-100"
           >
@@ -137,7 +138,7 @@ export function LogToolbar() {
             'pl-10 pr-4 h-11 text-sm',
             'bg-background/50 border-border/50',
             'focus:bg-background transition-colors',
-            'placeholder:text-muted-foreground/50'
+            'placeholder:text-muted-foreground/50',
           )}
         />
       </div>
@@ -148,13 +149,14 @@ export function LogToolbar() {
         <div className="inline-flex items-center rounded-lg bg-muted/50 p-1">
           {filterOptions.map((option) => (
             <button
+              type="button"
               key={option.value}
               onClick={() => setFilter(option.value)}
               className={cn(
                 'px-3 py-1.5 text-xs font-medium rounded-md transition-all',
                 filter === option.value
                   ? 'bg-background shadow-sm text-foreground'
-                  : 'text-muted-foreground hover:text-foreground'
+                  : 'text-muted-foreground hover:text-foreground',
               )}
             >
               {option.label}
@@ -176,13 +178,14 @@ export function LogToolbar() {
           </div>
 
           <button
+            type="button"
             onClick={() => refreshLogs()}
             disabled={loading}
             className={cn(
               'flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium',
               'bg-muted/50 hover:bg-muted transition-colors',
               'text-muted-foreground hover:text-foreground',
-              loading && 'opacity-50'
+              loading && 'opacity-50',
             )}
           >
             <RefreshCw className={cn('w-4 h-4', loading && 'animate-spin')} />
@@ -190,13 +193,14 @@ export function LogToolbar() {
           </button>
 
           <button
+            type="button"
             onClick={handleExport}
             disabled={exporting}
             className={cn(
               'flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium',
               'bg-muted/50 hover:bg-muted transition-colors',
               'text-muted-foreground hover:text-foreground',
-              exporting && 'opacity-50'
+              exporting && 'opacity-50',
             )}
           >
             <Download className="w-4 h-4" />
@@ -204,13 +208,14 @@ export function LogToolbar() {
           </button>
 
           <button
+            type="button"
             onClick={handleClear}
             disabled={clearing}
             className={cn(
               'flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium',
               'bg-red-500/10 hover:bg-red-500/20 transition-colors',
               'text-red-400 hover:text-red-300',
-              clearing && 'opacity-50'
+              clearing && 'opacity-50',
             )}
           >
             <Trash2 className="w-4 h-4" />

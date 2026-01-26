@@ -1,17 +1,10 @@
-import { useState, useRef, useCallback } from 'react';
-import { 
-  Plus, 
-  FileText, 
-  ClipboardPaste,
-  Loader2,
-  Globe,
-  List,
-} from 'lucide-react';
+import { ClipboardPaste, FileText, Globe, List, Loader2, Plus } from 'lucide-react';
+import { useCallback, useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { cn } from '@/lib/utils';
 import { isValidUrl } from '@/lib/sources';
+import { cn } from '@/lib/utils';
 
 interface UniversalUrlInputProps {
   disabled?: boolean;
@@ -21,15 +14,18 @@ interface UniversalUrlInputProps {
 }
 
 function countUrls(text: string): number {
-  return text.trim().split('\n').filter(l => {
-    const trimmed = l.trim();
-    return trimmed && !trimmed.startsWith('#') && isValidUrl(trimmed);
-  }).length;
+  return text
+    .trim()
+    .split('\n')
+    .filter((l) => {
+      const trimmed = l.trim();
+      return trimmed && !trimmed.startsWith('#') && isValidUrl(trimmed);
+    }).length;
 }
 
-export function UniversalUrlInput({ 
-  disabled, 
-  onAddUrls, 
+export function UniversalUrlInput({
+  disabled,
+  onAddUrls,
   onImportFile,
   onImportClipboard,
 }: UniversalUrlInputProps) {
@@ -79,7 +75,7 @@ export function UniversalUrlInput({
         try {
           const text = await navigator.clipboard.readText();
           if (text) {
-            setValue(prev => prev ? `${prev}\n${text}` : text);
+            setValue((prev) => (prev ? `${prev}\n${text}` : text));
           }
         } catch {
           // Clipboard access denied
@@ -116,15 +112,15 @@ export function UniversalUrlInput({
 
     const text = e.dataTransfer.getData('text/plain');
     if (text) {
-      setValue(prev => prev ? `${prev}\n${text}` : text);
+      setValue((prev) => (prev ? `${prev}\n${text}` : text));
       return;
     }
 
     const files = Array.from(e.dataTransfer.files);
-    const txtFile = files.find(f => f.name.endsWith('.txt'));
+    const txtFile = files.find((f) => f.name.endsWith('.txt'));
     if (txtFile) {
       const content = await txtFile.text();
-      setValue(prev => prev ? `${prev}\n${content}` : content);
+      setValue((prev) => (prev ? `${prev}\n${content}` : content));
     }
   };
 
@@ -144,26 +140,28 @@ export function UniversalUrlInput({
   };
 
   return (
-    <div 
+    <section
       className={cn(
-        "space-y-3 transition-all duration-200",
-        isDragOver && "ring-2 ring-primary ring-offset-2 ring-offset-background rounded-xl"
+        'space-y-3 transition-all duration-200',
+        isDragOver && 'ring-2 ring-primary ring-offset-2 ring-offset-background rounded-xl',
       )}
       onDragOver={handleDragOver}
       onDragLeave={handleDragLeave}
       onDrop={handleDrop}
+      aria-label="URL drop zone"
     >
       {/* Mode Toggle */}
       <div className="flex items-center gap-2">
         <div className="inline-flex items-center rounded-lg bg-muted/50 p-1">
           <button
+            type="button"
             onClick={() => setMode(false)}
             disabled={disabled}
             className={cn(
-              "flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all",
-              !isExpanded 
-                ? "bg-background shadow-sm text-foreground" 
-                : "text-muted-foreground hover:text-foreground"
+              'flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all',
+              !isExpanded
+                ? 'bg-background shadow-sm text-foreground'
+                : 'text-muted-foreground hover:text-foreground',
             )}
             title="Single URL mode"
           >
@@ -171,13 +169,14 @@ export function UniversalUrlInput({
             <span>Single</span>
           </button>
           <button
+            type="button"
             onClick={() => setMode(true)}
             disabled={disabled}
             className={cn(
-              "flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all",
-              isExpanded 
-                ? "bg-background shadow-sm text-foreground" 
-                : "text-muted-foreground hover:text-foreground"
+              'flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all',
+              isExpanded
+                ? 'bg-background shadow-sm text-foreground'
+                : 'text-muted-foreground hover:text-foreground',
             )}
             title="Multiple URLs mode"
           >
@@ -185,7 +184,7 @@ export function UniversalUrlInput({
             <span>Multiple</span>
           </button>
         </div>
-        
+
         <span className="text-xs text-muted-foreground hidden sm:inline">
           {isExpanded ? 'Add multiple URLs (one per line)' : 'Paste any video URL'}
         </span>
@@ -205,10 +204,10 @@ export function UniversalUrlInput({
                 onKeyDown={handleKeyDown}
                 disabled={disabled}
                 className={cn(
-                  "pl-10 pr-20 h-11 text-sm",
-                  "bg-background/50 border-border/50",
-                  "focus:bg-background transition-colors",
-                  "placeholder:text-muted-foreground/50"
+                  'pl-10 pr-20 h-11 text-sm',
+                  'bg-background/50 border-border/50',
+                  'focus:bg-background transition-colors',
+                  'placeholder:text-muted-foreground/50',
                 )}
               />
               {urlCount > 0 && (
@@ -218,6 +217,7 @@ export function UniversalUrlInput({
               )}
             </div>
             <button
+              type="button"
               className="h-11 px-4 rounded-md font-medium text-sm btn-gradient flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
               onClick={handleAdd}
               disabled={disabled || !value.trim() || isAdding}
@@ -241,10 +241,10 @@ export function UniversalUrlInput({
               onKeyDown={handleKeyDown}
               disabled={disabled}
               className={cn(
-                "min-h-[100px] resize-none font-mono text-sm",
-                "bg-background/50 border-border/50",
-                "focus:bg-background transition-colors",
-                "placeholder:text-muted-foreground/50"
+                'min-h-[100px] resize-none font-mono text-sm',
+                'bg-background/50 border-border/50',
+                'focus:bg-background transition-colors',
+                'placeholder:text-muted-foreground/50',
               )}
             />
             {urlCount > 0 && (
@@ -262,20 +262,17 @@ export function UniversalUrlInput({
       <div className="flex items-center gap-2 flex-wrap">
         {isExpanded && (
           <button
+            type="button"
             className="h-9 px-4 rounded-md font-medium text-sm btn-gradient flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
             onClick={handleAdd}
             disabled={disabled || !value.trim() || isAdding}
             title="Add all URLs to queue"
           >
-            {isAdding ? (
-              <Loader2 className="w-4 h-4 animate-spin" />
-            ) : (
-              <Plus className="w-4 h-4" />
-            )}
+            {isAdding ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
             Add to Queue {urlCount > 0 ? `(${urlCount})` : ''}
           </button>
         )}
-        
+
         <div className="flex items-center gap-1.5">
           <Button
             variant="ghost"
@@ -292,7 +289,7 @@ export function UniversalUrlInput({
             )}
             <span className="hidden xs:inline">Paste</span>
           </Button>
-          
+
           <Button
             variant="ghost"
             size="sm"
@@ -323,6 +320,6 @@ export function UniversalUrlInput({
           </div>
         </div>
       )}
-    </div>
+    </section>
   );
 }

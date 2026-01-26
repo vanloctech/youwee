@@ -19,12 +19,12 @@ export function SimpleMarkdown({ content, className }: SimpleMarkdownProps) {
     if (listItems.length > 0) {
       elements.push(
         <ul key={`list-${listKey++}`} className="list-disc list-inside space-y-1 my-2">
-          {listItems.map((item, i) => (
-            <li key={i} className="text-inherit">
+          {listItems.map((item) => (
+            <li key={`${listKey}-${item}`} className="text-inherit">
               {parseInline(item)}
             </li>
           ))}
-        </ul>
+        </ul>,
       );
       listItems = [];
     }
@@ -46,7 +46,7 @@ export function SimpleMarkdown({ content, className }: SimpleMarkdownProps) {
       elements.push(
         <h4 key={i} className="font-semibold text-foreground mt-3 mb-1">
           {parseInline(trimmed.slice(4))}
-        </h4>
+        </h4>,
       );
       continue;
     }
@@ -55,7 +55,7 @@ export function SimpleMarkdown({ content, className }: SimpleMarkdownProps) {
       elements.push(
         <h3 key={i} className="font-semibold text-foreground mt-3 mb-1">
           {parseInline(trimmed.slice(3))}
-        </h3>
+        </h3>,
       );
       continue;
     }
@@ -64,7 +64,7 @@ export function SimpleMarkdown({ content, className }: SimpleMarkdownProps) {
       elements.push(
         <h2 key={i} className="font-bold text-foreground mt-3 mb-1">
           {parseInline(trimmed.slice(2))}
-        </h2>
+        </h2>,
       );
       continue;
     }
@@ -87,17 +87,13 @@ export function SimpleMarkdown({ content, className }: SimpleMarkdownProps) {
     elements.push(
       <p key={i} className="my-1">
         {parseInline(trimmed)}
-      </p>
+      </p>,
     );
   }
 
   flushList();
 
-  return (
-    <div className={cn('text-inherit leading-relaxed', className)}>
-      {elements}
-    </div>
-  );
+  return <div className={cn('text-inherit leading-relaxed', className)}>{elements}</div>;
 }
 
 /**
@@ -112,7 +108,11 @@ function parseInline(text: string): React.ReactNode {
     // Bold: **text**
     const boldMatch = remaining.match(/^\*\*(.+?)\*\*/);
     if (boldMatch) {
-      parts.push(<strong key={key++} className="font-semibold">{parseInline(boldMatch[1])}</strong>);
+      parts.push(
+        <strong key={key++} className="font-semibold">
+          {parseInline(boldMatch[1])}
+        </strong>,
+      );
       remaining = remaining.slice(boldMatch[0].length);
       continue;
     }
@@ -120,7 +120,11 @@ function parseInline(text: string): React.ReactNode {
     // Italic: *text* (but not **)
     const italicMatch = remaining.match(/^\*([^*]+?)\*/);
     if (italicMatch) {
-      parts.push(<em key={key++} className="italic">{parseInline(italicMatch[1])}</em>);
+      parts.push(
+        <em key={key++} className="italic">
+          {parseInline(italicMatch[1])}
+        </em>,
+      );
       remaining = remaining.slice(italicMatch[0].length);
       continue;
     }
@@ -131,7 +135,7 @@ function parseInline(text: string): React.ReactNode {
       parts.push(
         <code key={key++} className="px-1 py-0.5 bg-muted rounded text-[0.9em] font-mono">
           {codeMatch[1]}
-        </code>
+        </code>,
       );
       remaining = remaining.slice(codeMatch[0].length);
       continue;
@@ -149,14 +153,14 @@ function parseInline(text: string): React.ReactNode {
           className="text-primary hover:underline"
         >
           {linkMatch[1]}
-        </a>
+        </a>,
       );
       remaining = remaining.slice(linkMatch[0].length);
       continue;
     }
 
     // Regular text - take until next special char
-    const nextSpecial = remaining.search(/[\*`\[]/);
+    const nextSpecial = remaining.search(/[*`[]/);
     if (nextSpecial === -1) {
       parts.push(remaining);
       break;
@@ -170,5 +174,5 @@ function parseInline(text: string): React.ReactNode {
     }
   }
 
-  return parts.length === 1 ? parts[0] : <>{parts}</>;
+  return parts.length === 1 ? parts[0] : parts;
 }

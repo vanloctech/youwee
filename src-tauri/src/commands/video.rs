@@ -143,6 +143,7 @@ pub async fn get_video_transcript(
             Ok(Err(e)) => {
                 #[cfg(debug_assertions)]
                 println!("[TRANSCRIPT] Subtitle fetch failed for {}: {}", lang, e);
+                let _ = e; // Suppress unused variable warning in release build
             }
             Err(_) => {
                 #[cfg(debug_assertions)]

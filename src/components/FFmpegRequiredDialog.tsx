@@ -1,4 +1,4 @@
-import { Download, Settings, AlertTriangle, Loader2, CheckCircle2, X } from 'lucide-react';
+import { AlertTriangle, CheckCircle2, Download, Loader2, Settings, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useDependencies } from '@/contexts/DependenciesContext';
 
@@ -9,13 +9,13 @@ interface FFmpegRequiredDialogProps {
   onGoToSettings?: () => void;
 }
 
-export function FFmpegRequiredDialog({ quality, onDismiss, onContinue, onGoToSettings }: FFmpegRequiredDialogProps) {
-  const {
-    ffmpegDownloading,
-    ffmpegError,
-    ffmpegSuccess,
-    downloadFfmpeg,
-  } = useDependencies();
+export function FFmpegRequiredDialog({
+  quality,
+  onDismiss,
+  onContinue,
+  onGoToSettings,
+}: FFmpegRequiredDialogProps) {
+  const { ffmpegDownloading, ffmpegError, ffmpegSuccess, downloadFfmpeg } = useDependencies();
 
   const handleGoToSettings = () => {
     onDismiss();
@@ -45,16 +45,13 @@ export function FFmpegRequiredDialog({ quality, onDismiss, onContinue, onGoToSet
               <AlertTriangle className="w-5 h-5 text-amber-500" />
             </div>
             <div>
-              <h2 className="text-lg font-semibold text-foreground">
-                FFmpeg Required
-              </h2>
-              <p className="text-sm text-muted-foreground">
-                For {qualityLabel} video downloads
-              </p>
+              <h2 className="text-lg font-semibold text-foreground">FFmpeg Required</h2>
+              <p className="text-sm text-muted-foreground">For {qualityLabel} video downloads</p>
             </div>
           </div>
           {!ffmpegDownloading && (
             <button
+              type="button"
               onClick={onDismiss}
               className="absolute top-4 right-4 p-1 rounded-md hover:bg-black/10 transition-colors"
             >
@@ -87,9 +84,7 @@ export function FFmpegRequiredDialog({ quality, onDismiss, onContinue, onGoToSet
             <div className="space-y-3">
               <div className="flex items-start gap-3 p-3 bg-destructive/10 rounded-lg">
                 <AlertTriangle className="w-5 h-5 text-destructive flex-shrink-0 mt-0.5" />
-                <p className="text-sm text-destructive">
-                  {ffmpegError}
-                </p>
+                <p className="text-sm text-destructive">{ffmpegError}</p>
               </div>
               <p className="text-sm text-muted-foreground">
                 You can try again or install FFmpeg manually from Settings.
@@ -98,8 +93,8 @@ export function FFmpegRequiredDialog({ quality, onDismiss, onContinue, onGoToSet
           ) : (
             <div className="space-y-4">
               <p className="text-sm text-muted-foreground">
-                High-resolution videos ({qualityLabel}) require FFmpeg to merge 
-                separate video and audio streams from YouTube.
+                High-resolution videos ({qualityLabel}) require FFmpeg to merge separate video and
+                audio streams from YouTube.
               </p>
               <div className="p-3 bg-muted/50 rounded-lg">
                 <p className="text-xs text-muted-foreground">
@@ -147,21 +142,16 @@ export function FFmpegRequiredDialog({ quality, onDismiss, onContinue, onGoToSet
                 <Download className="w-4 h-4 mr-2" />
                 Install FFmpeg
               </Button>
-              
+
               {/* Secondary actions */}
               <div className="flex gap-2">
-                <Button 
-                  variant="outline" 
-                  size="sm" 
-                  className="flex-1"
-                  onClick={handleGoToSettings}
-                >
+                <Button variant="outline" size="sm" className="flex-1" onClick={handleGoToSettings}>
                   <Settings className="w-4 h-4 mr-1" />
                   Go to Settings
                 </Button>
-                <Button 
-                  variant="ghost" 
-                  size="sm" 
+                <Button
+                  variant="ghost"
+                  size="sm"
                   className="flex-1 text-muted-foreground"
                   onClick={onContinue}
                 >

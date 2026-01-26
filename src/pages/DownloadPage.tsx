@@ -1,9 +1,9 @@
 import { Play, Square, Trash2 } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { UrlInput, SettingsPanel, QueueList } from '@/components/download';
+import { QueueList, SettingsPanel, UrlInput } from '@/components/download';
 import { ThemePicker } from '@/components/settings/ThemePicker';
-import { useDownload } from '@/contexts/DownloadContext';
+import { Button } from '@/components/ui/button';
 import { useDependencies } from '@/contexts/DependenciesContext';
+import { useDownload } from '@/contexts/DownloadContext';
 import { cn } from '@/lib/utils';
 
 interface DownloadPageProps {
@@ -41,7 +41,7 @@ export function DownloadPage({ onNavigateToSettings }: DownloadPageProps) {
 
   const { ffmpegStatus } = useDependencies();
 
-  const pendingCount = items.filter(i => i.status !== 'completed').length;
+  const pendingCount = items.filter((i) => i.status !== 'completed').length;
   const hasItems = items.length > 0;
 
   // Calculate total file size from fetched video info (in bytes)
@@ -117,18 +117,19 @@ export function DownloadPage({ onNavigateToSettings }: DownloadPageProps) {
         <footer className="flex-shrink-0">
           {/* Subtle top divider */}
           <div className="mx-4 sm:mx-6 h-px bg-gradient-to-r from-transparent via-border/40 to-transparent" />
-          
+
           <div className="px-4 sm:px-6 py-3 sm:py-4">
             <div className="flex items-center gap-3">
               {!isDownloading ? (
-                <button 
+                <button
+                  type="button"
                   className={cn(
-                    "flex-1 h-11 px-6 rounded-xl font-medium text-sm sm:text-base",
-                    "btn-gradient flex items-center justify-center gap-2",
-                    "disabled:opacity-50 disabled:cursor-not-allowed",
-                    "shadow-lg shadow-primary/20",
-                    pendingCount > 0 && "animate-pulse-subtle"
-                  )} 
+                    'flex-1 h-11 px-6 rounded-xl font-medium text-sm sm:text-base',
+                    'btn-gradient flex items-center justify-center gap-2',
+                    'disabled:opacity-50 disabled:cursor-not-allowed',
+                    'shadow-lg shadow-primary/20',
+                    pendingCount > 0 && 'animate-pulse-subtle',
+                  )}
                   onClick={startDownload}
                   disabled={pendingCount === 0}
                   title="Start downloading all pending videos"
@@ -142,8 +143,8 @@ export function DownloadPage({ onNavigateToSettings }: DownloadPageProps) {
                   )}
                 </button>
               ) : (
-                <Button 
-                  className="flex-1 h-11 text-sm sm:text-base rounded-xl" 
+                <Button
+                  className="flex-1 h-11 text-sm sm:text-base rounded-xl"
                   variant="destructive"
                   onClick={stopDownload}
                   title="Stop current download"
@@ -152,7 +153,7 @@ export function DownloadPage({ onNavigateToSettings }: DownloadPageProps) {
                   Stop Download
                 </Button>
               )}
-              
+
               <Button
                 variant="outline"
                 size="icon"

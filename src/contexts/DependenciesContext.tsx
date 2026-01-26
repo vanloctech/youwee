@@ -1,5 +1,5 @@
-import { createContext, useContext, useState, useCallback, useEffect, type ReactNode } from 'react';
 import { invoke } from '@tauri-apps/api/core';
+import { createContext, type ReactNode, useCallback, useContext, useEffect, useState } from 'react';
 
 export interface YtdlpVersionInfo {
   version: string;
@@ -23,6 +23,20 @@ export interface BunStatus {
   is_system: boolean;
 }
 
+export interface FfmpegUpdateInfo {
+  has_update: boolean;
+  current_version: string | null;
+  latest_version: string | null;
+  release_url: string | null;
+}
+
+export interface BunUpdateInfo {
+  has_update: boolean;
+  current_version: string | null;
+  latest_version: string | null;
+  release_url: string | null;
+}
+
 interface DependenciesContextType {
   // yt-dlp state
   ytdlpInfo: YtdlpVersionInfo | null;
@@ -32,32 +46,38 @@ interface DependenciesContextType {
   isUpdating: boolean;
   error: string | null;
   updateSuccess: boolean;
-  
+
   // FFmpeg state
   ffmpegStatus: FfmpegStatus | null;
   ffmpegLoading: boolean;
   ffmpegDownloading: boolean;
   ffmpegError: string | null;
   ffmpegSuccess: boolean;
-  
+  ffmpegUpdateInfo: FfmpegUpdateInfo | null;
+  ffmpegCheckingUpdate: boolean;
+
   // Actions
   refreshYtdlpVersion: () => Promise<void>;
   checkForUpdate: () => Promise<void>;
   updateYtdlp: () => Promise<void>;
-  
+
   // FFmpeg actions
   checkFfmpeg: () => Promise<void>;
+  checkFfmpegUpdate: () => Promise<void>;
   downloadFfmpeg: () => Promise<void>;
-  
+
   // Bun state
   bunStatus: BunStatus | null;
   bunLoading: boolean;
   bunDownloading: boolean;
   bunError: string | null;
   bunSuccess: boolean;
-  
+  bunUpdateInfo: BunUpdateInfo | null;
+  bunCheckingUpdate: boolean;
+
   // Bun actions
   checkBun: () => Promise<void>;
+  checkBunUpdate: () => Promise<void>;
   downloadBun: () => Promise<void>;
 }
 
@@ -72,20 +92,24 @@ export function DependenciesProvider({ children }: { children: ReactNode }) {
   const [error, setError] = useState<string | null>(null);
   const [updateSuccess, setUpdateSuccess] = useState(false);
   const [initialized, setInitialized] = useState(false);
-  
+
   // FFmpeg state
   const [ffmpegStatus, setFfmpegStatus] = useState<FfmpegStatus | null>(null);
   const [ffmpegLoading, setFfmpegLoading] = useState(false);
   const [ffmpegDownloading, setFfmpegDownloading] = useState(false);
   const [ffmpegError, setFfmpegError] = useState<string | null>(null);
   const [ffmpegSuccess, setFfmpegSuccess] = useState(false);
-  
+  const [ffmpegUpdateInfo, setFfmpegUpdateInfo] = useState<FfmpegUpdateInfo | null>(null);
+  const [ffmpegCheckingUpdate, setFfmpegCheckingUpdate] = useState(false);
+
   // Bun state
   const [bunStatus, setBunStatus] = useState<BunStatus | null>(null);
   const [bunLoading, setBunLoading] = useState(false);
   const [bunDownloading, setBunDownloading] = useState(false);
   const [bunError, setBunError] = useState<string | null>(null);
   const [bunSuccess, setBunSuccess] = useState(false);
+  const [bunUpdateInfo, setBunUpdateInfo] = useState<BunUpdateInfo | null>(null);
+  const [bunCheckingUpdate, setBunCheckingUpdate] = useState(false);
 
   // Load yt-dlp version (only once on first mount)
   const refreshYtdlpVersion = useCallback(async () => {
@@ -115,6 +139,20 @@ export function DependenciesProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
+  // Check FFmpeg update
+  const checkFfmpegUpdate = useCallback(async () => {
+    setFfmpegCheckingUpdate(true);
+    setFfmpegError(null);
+    try {
+      const updateInfo = await invoke<FfmpegUpdateInfo>('check_ffmpeg_update');
+      setFfmpegUpdateInfo(updateInfo);
+    } catch (err) {
+      setFfmpegError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setFfmpegCheckingUpdate(false);
+    }
+  }, []);
+
   // Download FFmpeg
   const downloadFfmpeg = useCallback(async () => {
     setFfmpegDownloading(true);
@@ -129,6 +167,13 @@ export function DependenciesProvider({ children }: { children: ReactNode }) {
         is_system: false,
       });
       setFfmpegSuccess(true);
+      // Set update info to show "Up to date" instead of null
+      setFfmpegUpdateInfo({
+        has_update: false,
+        current_version: version,
+        latest_version: version,
+        release_url: null,
+      });
       // Hide success message after 3 seconds
       setTimeout(() => setFfmpegSuccess(false), 3000);
       // Refresh to get full status
@@ -154,6 +199,20 @@ export function DependenciesProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
+  // Check Bun update
+  const checkBunUpdate = useCallback(async () => {
+    setBunCheckingUpdate(true);
+    setBunError(null);
+    try {
+      const updateInfo = await invoke<BunUpdateInfo>('check_bun_update');
+      setBunUpdateInfo(updateInfo);
+    } catch (err) {
+      setBunError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setBunCheckingUpdate(false);
+    }
+  }, []);
+
   // Download Bun
   const downloadBun = useCallback(async () => {
     setBunDownloading(true);
@@ -168,6 +227,13 @@ export function DependenciesProvider({ children }: { children: ReactNode }) {
         is_system: false,
       });
       setBunSuccess(true);
+      // Set update info to show "Up to date" instead of null
+      setBunUpdateInfo({
+        has_update: false,
+        current_version: version,
+        latest_version: version,
+        release_url: null,
+      });
       // Hide success message after 3 seconds
       setTimeout(() => setBunSuccess(false), 3000);
       // Refresh to get full status
@@ -211,8 +277,9 @@ export function DependenciesProvider({ children }: { children: ReactNode }) {
     setUpdateSuccess(false);
     try {
       const newVersion = await invoke<string>('update_ytdlp');
-      setYtdlpInfo(prev => prev ? { ...prev, version: newVersion } : null);
-      setLatestVersion(null);
+      setYtdlpInfo((prev) => (prev ? { ...prev, version: newVersion } : null));
+      // Keep latestVersion same as newVersion to show "Up to date"
+      setLatestVersion(newVersion);
       setUpdateSuccess(true);
       // Hide success message after 3 seconds
       setTimeout(() => setUpdateSuccess(false), 3000);
@@ -242,7 +309,10 @@ export function DependenciesProvider({ children }: { children: ReactNode }) {
         ffmpegDownloading,
         ffmpegError,
         ffmpegSuccess,
+        ffmpegUpdateInfo,
+        ffmpegCheckingUpdate,
         checkFfmpeg,
+        checkFfmpegUpdate,
         downloadFfmpeg,
         // Bun
         bunStatus,
@@ -250,7 +320,10 @@ export function DependenciesProvider({ children }: { children: ReactNode }) {
         bunDownloading,
         bunError,
         bunSuccess,
+        bunUpdateInfo,
+        bunCheckingUpdate,
         checkBun,
+        checkBunUpdate,
         downloadBun,
       }}
     >

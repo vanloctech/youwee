@@ -1,7 +1,7 @@
-import { cn } from '@/lib/utils';
+import { AlertTriangle, Check, CheckCircle, Copy, Info, Terminal, XCircle } from 'lucide-react';
+import { useCallback, useState } from 'react';
 import type { LogEntry as LogEntryType } from '@/lib/types';
-import { Copy, Check, Terminal, CheckCircle, XCircle, AlertTriangle, Info } from 'lucide-react';
-import { useState, useCallback } from 'react';
+import { cn } from '@/lib/utils';
 
 interface LogEntryProps {
   log: LogEntryType;
@@ -80,7 +80,7 @@ export function LogEntry({ log }: LogEntryProps) {
       className={cn(
         'group relative rounded-xl border p-4 transition-all duration-200',
         'bg-card/50 hover:bg-card/80',
-        'border-white/[0.08] dark:border-white/[0.05]'
+        'border-white/[0.08] dark:border-white/[0.05]',
       )}
     >
       {/* Header */}
@@ -89,23 +89,22 @@ export function LogEntry({ log }: LogEntryProps) {
           <div
             className={cn(
               'flex items-center gap-1.5 px-2 py-1 rounded-md text-xs font-semibold border',
-              config.className
+              config.className,
             )}
           >
             <Icon className="w-3.5 h-3.5" />
             <span>{config.label}</span>
           </div>
-          <span className="text-xs text-muted-foreground">
-            {formatTimestamp(log.timestamp)}
-          </span>
+          <span className="text-xs text-muted-foreground">{formatTimestamp(log.timestamp)}</span>
         </div>
-        
+
         <button
+          type="button"
           onClick={handleCopy}
           className={cn(
             'flex items-center gap-1 px-2 py-1 rounded-md text-xs',
             'opacity-0 group-hover:opacity-100 transition-opacity',
-            'hover:bg-white/10 text-muted-foreground hover:text-foreground'
+            'hover:bg-white/10 text-muted-foreground hover:text-foreground',
           )}
         >
           {copied ? (
@@ -129,15 +128,13 @@ export function LogEntry({ log }: LogEntryProps) {
             'text-sm font-mono break-all',
             log.log_type === 'command' && 'text-blue-400',
             log.log_type === 'error' && 'text-red-400',
-            log.log_type === 'stderr' && 'text-yellow-400'
+            log.log_type === 'stderr' && 'text-yellow-400',
           )}
         >
           {log.message}
         </p>
 
-        {log.details && (
-          <p className="text-xs text-muted-foreground">{log.details}</p>
-        )}
+        {log.details && <p className="text-xs text-muted-foreground">{log.details}</p>}
 
         {log.url && (
           <p className="text-xs text-muted-foreground truncate">

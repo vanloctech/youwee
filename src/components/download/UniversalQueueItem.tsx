@@ -1,23 +1,23 @@
-import { useState } from 'react';
-import { 
-  CheckCircle2, 
-  XCircle, 
-  Loader2, 
-  Clock,
-  X,
-  Globe,
-  Play,
-  HardDrive,
-  MonitorPlay,
-  Sparkles,
+import {
+  CheckCircle2,
   ChevronDown,
   ChevronUp,
+  Clock,
+  Globe,
+  HardDrive,
+  Loader2,
+  MonitorPlay,
+  Play,
   RefreshCw,
+  Sparkles,
+  X,
+  XCircle,
 } from 'lucide-react';
-import { cn } from '@/lib/utils';
-import { useAI } from '@/contexts/AIContext';
+import { useState } from 'react';
 import { SimpleMarkdown } from '@/components/ui/simple-markdown';
+import { useAI } from '@/contexts/AIContext';
 import type { DownloadItem, ItemUniversalSettings } from '@/lib/types';
+import { cn } from '@/lib/utils';
 import { SourceBadge } from './SourceBadge';
 
 // Helper to format file size
@@ -35,7 +35,7 @@ function formatFileSize(bytes: number): string {
 // Helper to format quality display
 function formatQuality(quality: string): string {
   const qualityMap: Record<string, string> = {
-    'best': 'Best',
+    best: 'Best',
     '8k': '8K',
     '4k': '4K',
     '2k': '2K',
@@ -43,7 +43,7 @@ function formatQuality(quality: string): string {
     '720': '720p',
     '480': '480p',
     '360': '360p',
-    'audio': 'Audio',
+    audio: 'Audio',
   };
   return qualityMap[quality] || quality;
 }
@@ -54,38 +54,39 @@ interface UniversalQueueItemProps {
   onRemove: (id: string) => void;
 }
 
-export function UniversalQueueItem({ 
-  item, 
-  disabled, 
-  onRemove 
-}: UniversalQueueItemProps) {
+export function UniversalQueueItem({ item, disabled, onRemove }: UniversalQueueItemProps) {
   const ai = useAI();
   const [showFullSummary, setShowFullSummary] = useState(false);
 
   // Use background task for summary
   const taskId = `queue-${item.id}`;
   const task = ai.getSummaryTask(taskId);
-  
+
+  // Only show AI features if enabled
+  const aiEnabled = ai.config.enabled;
+
   const summary = task?.status === 'completed' ? task.summary : null;
-  const summaryError = task?.status === 'error' ? task.error : null;
+  // Don't show AI errors if AI is disabled (user didn't explicitly use AI)
+  const summaryError = aiEnabled && task?.status === 'error' ? task.error : null;
   const isGenerating = task?.status === 'fetching' || task?.status === 'generating';
-  const generatingStatus = task?.status === 'fetching' ? 'fetching' : task?.status === 'generating' ? 'generating' : null;
+  const generatingStatus =
+    task?.status === 'fetching' ? 'fetching' : task?.status === 'generating' ? 'generating' : null;
 
   const isActive = item.status === 'downloading' || item.status === 'fetching';
   const isCompleted = item.status === 'completed';
   const isError = item.status === 'error';
   const isPending = item.status === 'pending';
-  
+
   // Get saved settings for pending items
   const itemSettings = item.settings as ItemUniversalSettings | undefined;
 
   const handleGenerateSummary = () => {
     if (isGenerating) return;
-    
+
     if (task?.status === 'error') {
       ai.clearSummaryTask(taskId);
     }
-    
+
     ai.startQueueSummaryTask(taskId, {
       url: item.url,
       title: item.title,
@@ -98,22 +99,22 @@ export function UniversalQueueItem({
   return (
     <div
       className={cn(
-        "group relative flex gap-3 p-2 rounded-xl transition-all duration-200",
-        "bg-card/50 hover:bg-card/80",
-        isActive && "bg-primary/5",
-        isCompleted && "bg-emerald-500/5",
-        isError && "bg-red-500/5"
+        'group relative flex gap-3 p-2 rounded-xl transition-all duration-200',
+        'bg-card/50 hover:bg-card/80',
+        isActive && 'bg-primary/5',
+        isCompleted && 'bg-emerald-500/5',
+        isError && 'bg-red-500/5',
       )}
     >
       {/* Thumbnail Placeholder */}
       <div className="relative flex-shrink-0 w-28 h-[72px] sm:w-36 sm:h-20 rounded-lg overflow-hidden bg-muted">
         {item.thumbnail ? (
-          <img 
-            src={item.thumbnail} 
+          <img
+            src={item.thumbnail}
             alt=""
             className={cn(
-              "w-full h-full object-cover transition-all duration-300",
-              isCompleted && "opacity-60"
+              'w-full h-full object-cover transition-all duration-300',
+              isCompleted && 'opacity-60',
             )}
             loading="lazy"
           />
@@ -122,25 +123,27 @@ export function UniversalQueueItem({
             <Globe className="w-8 h-8 text-muted-foreground/30" />
           </div>
         )}
-        
+
         {/* Progress Overlay - Only when downloading */}
         {isActive && (
           <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent">
             {/* Progress Bar at bottom */}
             <div className="absolute bottom-0 left-0 right-0 p-2">
               <div className="h-1.5 rounded-full overflow-hidden bg-white/20 mb-1 backdrop-blur-sm">
-                <div 
+                <div
                   className="h-full rounded-full transition-all duration-300 relative overflow-hidden"
-                  style={{ 
+                  style={{
                     width: `${item.progress}%`,
-                    background: 'linear-gradient(90deg, hsl(var(--primary)) 0%, hsl(var(--primary)/0.8) 50%, hsl(var(--primary)) 100%)',
+                    background:
+                      'linear-gradient(90deg, hsl(var(--primary)) 0%, hsl(var(--primary)/0.8) 50%, hsl(var(--primary)) 100%)',
                   }}
                 >
                   {/* Shimmer effect */}
-                  <div 
+                  <div
                     className="absolute inset-0 w-full h-full animate-shimmer"
                     style={{
-                      background: 'linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.4) 50%, transparent 100%)',
+                      background:
+                        'linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.4) 50%, transparent 100%)',
                       backgroundSize: '200% 100%',
                     }}
                   />
@@ -188,33 +191,35 @@ export function UniversalQueueItem({
           </div>
         )}
       </div>
-      
+
       {/* Content */}
       <div className="flex-1 min-w-0 flex flex-col justify-center py-0.5">
         {/* Title */}
-        <p 
+        <p
           className={cn(
-            "text-sm font-medium leading-snug line-clamp-2 transition-colors",
-            isCompleted && "text-muted-foreground"
+            'text-sm font-medium leading-snug line-clamp-2 transition-colors',
+            isCompleted && 'text-muted-foreground',
           )}
           title={item.title}
         >
           {item.title}
         </p>
-        
+
         {/* Status Row */}
         <div className="flex items-center gap-2 mt-1.5 flex-wrap">
           {/* Source Badge */}
           <SourceBadge extractor={item.extractor} />
 
           {/* Status Badge */}
-          <span className={cn(
-            "inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full font-medium",
-            isPending && "bg-muted text-muted-foreground",
-            isActive && "bg-primary/10 text-primary",
-            isCompleted && "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400",
-            isError && "bg-red-500/10 text-red-600 dark:text-red-400"
-          )}>
+          <span
+            className={cn(
+              'inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full font-medium',
+              isPending && 'bg-muted text-muted-foreground',
+              isActive && 'bg-primary/10 text-primary',
+              isCompleted && 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400',
+              isError && 'bg-red-500/10 text-red-600 dark:text-red-400',
+            )}
+          >
             {isPending && <Clock className="w-3 h-3" />}
             {isActive && <Loader2 className="w-3 h-3 animate-spin" />}
             {isCompleted && <CheckCircle2 className="w-3 h-3" />}
@@ -226,7 +231,7 @@ export function UniversalQueueItem({
               {isError && 'Failed'}
             </span>
           </span>
-          
+
           {/* Settings badges for pending/downloading items */}
           {(isPending || isActive) && itemSettings && (
             <>
@@ -239,7 +244,7 @@ export function UniversalQueueItem({
               </span>
             </>
           )}
-          
+
           {/* Completed Info: Resolution, Size, Format */}
           {isCompleted && (
             <>
@@ -262,20 +267,18 @@ export function UniversalQueueItem({
               )}
             </>
           )}
-          
+
           {/* Error Message */}
           {isError && item.error && (
-            <span 
-              className="text-xs text-red-500/80 line-clamp-2" 
-              title={item.error}
-            >
+            <span className="text-xs text-red-500/80 line-clamp-2" title={item.error}>
               {item.error}
             </span>
           )}
-          
-          {/* AI Summarize Button - Always show when not downloading/generating */}
-          {!isActive && !summary && !isGenerating && !summaryError && (
+
+          {/* AI Summarize Button - Only show when AI enabled and not in error/active state */}
+          {aiEnabled && !isActive && !isError && !summary && !isGenerating && !summaryError && (
             <button
+              type="button"
               onClick={handleGenerateSummary}
               className="inline-flex items-center gap-1 text-[11px] px-2 py-0.5 rounded-full bg-purple-500/10 text-purple-600 dark:text-purple-400 hover:bg-purple-500/20 transition-colors font-medium"
             >
@@ -283,7 +286,7 @@ export function UniversalQueueItem({
               Summarize
             </button>
           )}
-          
+
           {/* Generating Status */}
           {isGenerating && (
             <span className="inline-flex items-center gap-1 text-[11px] px-2 py-0.5 rounded-full bg-purple-500/10 text-purple-600 dark:text-purple-400 font-medium">
@@ -292,7 +295,7 @@ export function UniversalQueueItem({
             </span>
           )}
         </div>
-        
+
         {/* AI Summary Section */}
         {(summary || summaryError) && (
           <div className="mt-2">
@@ -301,7 +304,7 @@ export function UniversalQueueItem({
                 <div className="flex items-start gap-2">
                   <Sparkles className="w-3.5 h-3.5 text-purple-500 flex-shrink-0 mt-0.5" />
                   <div className="flex-1 min-w-0">
-                    <div 
+                    <div
                       className="text-xs text-muted-foreground overflow-hidden"
                       style={!showFullSummary ? { maxHeight: '3em' } : undefined}
                     >
@@ -309,18 +312,24 @@ export function UniversalQueueItem({
                     </div>
                     {summary.length > 100 && (
                       <button
+                        type="button"
                         onClick={() => setShowFullSummary(!showFullSummary)}
                         className="text-[11px] text-purple-500 hover:text-purple-400 mt-1 flex items-center gap-0.5"
                       >
                         {showFullSummary ? (
-                          <>Show less <ChevronUp className="w-3 h-3" /></>
+                          <>
+                            Show less <ChevronUp className="w-3 h-3" />
+                          </>
                         ) : (
-                          <>Show more <ChevronDown className="w-3 h-3" /></>
+                          <>
+                            Show more <ChevronDown className="w-3 h-3" />
+                          </>
                         )}
                       </button>
                     )}
                   </div>
                   <button
+                    type="button"
                     onClick={handleGenerateSummary}
                     disabled={isGenerating}
                     className="p-1 rounded text-muted-foreground hover:text-purple-500 transition-colors"
@@ -345,14 +354,15 @@ export function UniversalQueueItem({
 
       {/* Remove Button */}
       <button
+        type="button"
         onClick={() => onRemove(item.id)}
         disabled={disabled}
         title="Remove from queue"
         className={cn(
-          "absolute top-2 right-2 p-1.5 rounded-full transition-all",
-          "bg-black/50 hover:bg-black/70 text-white/70 hover:text-white",
-          "opacity-0 group-hover:opacity-100",
-          "disabled:opacity-50 disabled:cursor-not-allowed"
+          'absolute top-2 right-2 p-1.5 rounded-full transition-all',
+          'bg-black/50 hover:bg-black/70 text-white/70 hover:text-white',
+          'opacity-0 group-hover:opacity-100',
+          'disabled:opacity-50 disabled:cursor-not-allowed',
         )}
       >
         <X className="w-3.5 h-3.5" />

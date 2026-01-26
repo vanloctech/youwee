@@ -1,22 +1,30 @@
-import { createContext, useContext, useState, useEffect, useRef, useCallback, type ReactNode } from 'react';
 import { invoke } from '@tauri-apps/api/core';
 import { listen } from '@tauri-apps/api/event';
-import { open } from '@tauri-apps/plugin-dialog';
 import { downloadDir } from '@tauri-apps/api/path';
+import { open } from '@tauri-apps/plugin-dialog';
 import { readTextFile } from '@tauri-apps/plugin-fs';
-import type { 
-  DownloadItem, 
-  DownloadSettings, 
-  DownloadProgress, 
-  Quality, 
-  Format,
-  VideoCodec,
+import {
+  createContext,
+  type ReactNode,
+  useCallback,
+  useContext,
+  useEffect,
+  useRef,
+  useState,
+} from 'react';
+import type {
   AudioBitrate,
-  SubtitleMode,
-  SubtitleFormat,
-  PlaylistVideoEntry,
-  ItemDownloadSettings,
   CookieSettings,
+  DownloadItem,
+  DownloadProgress,
+  DownloadSettings,
+  Format,
+  ItemDownloadSettings,
+  PlaylistVideoEntry,
+  Quality,
+  SubtitleFormat,
+  SubtitleMode,
+  VideoCodec,
 } from '@/lib/types';
 
 const STORAGE_KEY = 'youwee-settings';
@@ -60,23 +68,28 @@ function saveCookieSettings(settings: CookieSettings) {
 // Save settings to localStorage
 function saveSettings(settings: DownloadSettings) {
   try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify({
-      outputPath: settings.outputPath,
-      quality: settings.quality,
-      format: settings.format,
-      downloadPlaylist: settings.downloadPlaylist,
-      videoCodec: settings.videoCodec,
-      audioBitrate: settings.audioBitrate,
-      concurrentDownloads: settings.concurrentDownloads,
-      playlistLimit: settings.playlistLimit,
-      autoCheckUpdate: settings.autoCheckUpdate,
-      subtitleMode: settings.subtitleMode,
-      subtitleLangs: settings.subtitleLangs,
-      subtitleEmbed: settings.subtitleEmbed,
-      subtitleFormat: settings.subtitleFormat,
-      useBunRuntime: settings.useBunRuntime,
-      useActualPlayerJs: settings.useActualPlayerJs,
-    }));
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({
+        outputPath: settings.outputPath,
+        quality: settings.quality,
+        format: settings.format,
+        downloadPlaylist: settings.downloadPlaylist,
+        videoCodec: settings.videoCodec,
+        audioBitrate: settings.audioBitrate,
+        concurrentDownloads: settings.concurrentDownloads,
+        playlistLimit: settings.playlistLimit,
+        autoCheckUpdate: settings.autoCheckUpdate,
+        subtitleMode: settings.subtitleMode,
+        subtitleLangs: settings.subtitleLangs,
+        subtitleEmbed: settings.subtitleEmbed,
+        subtitleFormat: settings.subtitleFormat,
+        useBunRuntime: settings.useBunRuntime,
+        useActualPlayerJs: settings.useActualPlayerJs,
+        embedMetadata: settings.embedMetadata,
+        embedThumbnail: settings.embedThumbnail,
+      }),
+    );
   } catch (e) {
     console.error('Failed to save settings:', e);
   }
@@ -123,6 +136,9 @@ interface DownloadContextType {
   updateUseActualPlayerJs: (enabled: boolean) => void;
   // Cookie settings
   updateCookieSettings: (updates: Partial<CookieSettings>) => void;
+  // Post-processing settings
+  updateEmbedMetadata: (enabled: boolean) => void;
+  updateEmbedThumbnail: (enabled: boolean) => void;
 }
 
 const DownloadContext = createContext<DownloadContextType | null>(null);
@@ -131,7 +147,7 @@ export function DownloadProvider({ children }: { children: ReactNode }) {
   const [items, setItems] = useState<DownloadItem[]>([]);
   const [isDownloading, setIsDownloading] = useState(false);
   const [isExpandingPlaylist, setIsExpandingPlaylist] = useState(false);
-  
+
   // Load saved settings on init
   const [settings, setSettings] = useState<DownloadSettings>(() => {
     const saved = loadSavedSettings();
@@ -153,17 +169,20 @@ export function DownloadProvider({ children }: { children: ReactNode }) {
       // YouTube specific settings
       useBunRuntime: saved.useBunRuntime || false,
       useActualPlayerJs: saved.useActualPlayerJs || false,
+      // Post-processing settings
+      embedMetadata: saved.embedMetadata !== false, // Default to true
+      embedThumbnail: saved.embedThumbnail !== false, // Default to true
     };
   });
-  
+
   // Load cookie settings on init
   const [cookieSettings, setCookieSettings] = useState<CookieSettings>(() => loadCookieSettings());
-  
+
   const [currentPlaylistInfo, setCurrentPlaylistInfo] = useState<PlaylistInfo | null>(null);
-  
+
   const isDownloadingRef = useRef(false);
   const itemsRef = useRef<DownloadItem[]>([]);
-  
+
   // Keep itemsRef in sync with items state
   useEffect(() => {
     itemsRef.current = items;
@@ -174,10 +193,10 @@ export function DownloadProvider({ children }: { children: ReactNode }) {
     const getDefaultPath = async () => {
       // Only fetch default if no saved path
       if (settings.outputPath) return;
-      
+
       try {
         const path = await downloadDir();
-        setSettings(s => {
+        setSettings((s) => {
           const newSettings = { ...s, outputPath: path };
           saveSettings(newSettings);
           return newSettings;
@@ -187,13 +206,13 @@ export function DownloadProvider({ children }: { children: ReactNode }) {
       }
     };
     getDefaultPath();
-  }, []);
+  }, [settings.outputPath]);
 
   // Listen for progress updates from Rust backend - runs once at app start
   useEffect(() => {
     const unlisten = listen<DownloadProgress>('download-progress', (event) => {
       const progress = event.payload;
-      
+
       if (progress.playlist_index && progress.playlist_count) {
         setCurrentPlaylistInfo({
           index: progress.playlist_index,
@@ -201,40 +220,48 @@ export function DownloadProvider({ children }: { children: ReactNode }) {
           title: progress.title || '',
         });
       }
-      
-      setItems(currentItems => currentItems.map(item => 
-        item.id === progress.id 
-          ? { 
-              ...item, 
-              progress: progress.percent,
-              speed: progress.speed,
-              eta: progress.eta,
-              title: progress.title || item.title,
-              status: progress.status === 'finished' ? 'completed' : 
-                      progress.status === 'error' ? 'error' : 'downloading',
-              playlistIndex: progress.playlist_index,
-              playlistTotal: progress.playlist_count,
-              // Store completed info when finished
-              ...(progress.status === 'finished' ? {
-                completedFilesize: progress.filesize,
-                completedResolution: progress.resolution,
-                completedFormat: progress.format_ext,
-              } : {}),
-            }
-          : item
-      ));
+
+      setItems((currentItems) =>
+        currentItems.map((item) =>
+          item.id === progress.id
+            ? {
+                ...item,
+                progress: progress.percent,
+                speed: progress.speed,
+                eta: progress.eta,
+                title: progress.title || item.title,
+                status:
+                  progress.status === 'finished'
+                    ? 'completed'
+                    : progress.status === 'error'
+                      ? 'error'
+                      : 'downloading',
+                playlistIndex: progress.playlist_index,
+                playlistTotal: progress.playlist_count,
+                // Store completed info when finished
+                ...(progress.status === 'finished'
+                  ? {
+                      completedFilesize: progress.filesize,
+                      completedResolution: progress.resolution,
+                      completedFormat: progress.format_ext,
+                    }
+                  : {}),
+              }
+            : item,
+        ),
+      );
     });
 
     return () => {
-      unlisten.then(fn => fn());
+      unlisten.then((fn) => fn());
     };
   }, []);
 
   const parseUrls = useCallback((text: string): string[] => {
     return text
       .split('\n')
-      .map(line => line.trim())
-      .filter(line => {
+      .map((line) => line.trim())
+      .filter((line) => {
         // Skip empty lines and comments
         if (!line || line.startsWith('#')) return false;
         // Check for valid YouTube URLs
@@ -247,63 +274,24 @@ export function DownloadProvider({ children }: { children: ReactNode }) {
     return url.includes('list=');
   }, []);
 
-  // Add individual URLs (not playlist expansion)
-  const addUrlsDirectly = useCallback((urls: string[], playlistId?: string) => {
-    if (urls.length === 0) return 0;
-
-    const currentItems = itemsRef.current;
-    
-    // Snapshot current settings for these items
-    const settingsSnapshot: ItemDownloadSettings = {
-      quality: settings.quality,
-      format: settings.format,
-      outputPath: settings.outputPath,
-      videoCodec: settings.videoCodec,
-      audioBitrate: settings.audioBitrate,
-      subtitleMode: settings.subtitleMode,
-      subtitleLangs: [...settings.subtitleLangs],
-      subtitleEmbed: settings.subtitleEmbed,
-      subtitleFormat: settings.subtitleFormat,
-    };
-    
-    const newItems: DownloadItem[] = urls
-      .filter(url => !currentItems.some(item => item.url === url))
-      .map((url, index) => ({
-        id: crypto.randomUUID(),
-        url,
-        title: url,
-        status: 'pending' as const,
-        progress: 0,
-        speed: '',
-        eta: '',
-        isPlaylist: false,
-        // Store playlist context for display
-        playlistIndex: playlistId ? index + 1 : undefined,
-        playlistTotal: playlistId ? urls.length : undefined,
-        // Store settings snapshot
-        settings: settingsSnapshot,
-      }));
-    
-    if (newItems.length > 0) {
-      setItems(prev => [...prev, ...newItems]);
+  // Format duration from seconds to "mm:ss" or "hh:mm:ss"
+  const formatDuration = useCallback((seconds: number): string => {
+    const h = Math.floor(seconds / 3600);
+    const m = Math.floor((seconds % 3600) / 60);
+    const s = Math.floor(seconds % 60);
+    if (h > 0) {
+      return `${h}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
     }
-    
-    return newItems.length;
-  }, [settings]);
+    return `${m}:${s.toString().padStart(2, '0')}`;
+  }, []);
 
-  // Expand playlist URL to individual videos
-  const expandPlaylistUrl = useCallback(async (url: string): Promise<string[]> => {
-    try {
-      const limit = settings.playlistLimit > 0 ? settings.playlistLimit : undefined;
-      const entries = await invoke<PlaylistVideoEntry[]>('get_playlist_entries', { 
-        url, 
-        limit,
-        cookieMode: cookieSettings.mode,
-        cookieBrowser: cookieSettings.browser || null,
-        cookieBrowserProfile: cookieSettings.browserProfile || null,
-        cookieFilePath: cookieSettings.filePath || null,
-      });
-      
+  // Add individual URLs (not playlist expansion)
+  const addUrlsDirectly = useCallback(
+    (urls: string[], playlistId?: string) => {
+      if (urls.length === 0) return 0;
+
+      const currentItems = itemsRef.current;
+
       // Snapshot current settings for these items
       const settingsSnapshot: ItemDownloadSettings = {
         quality: settings.quality,
@@ -316,87 +304,135 @@ export function DownloadProvider({ children }: { children: ReactNode }) {
         subtitleEmbed: settings.subtitleEmbed,
         subtitleFormat: settings.subtitleFormat,
       };
-      
-      // Add items with titles and thumbnails from playlist data
-      const currentItems = itemsRef.current;
-      const newItems: DownloadItem[] = entries
-        .filter(entry => !currentItems.some(item => item.url === entry.url))
-        .map((entry, index) => ({
+
+      const newItems: DownloadItem[] = urls
+        .filter((url) => !currentItems.some((item) => item.url === url))
+        .map((url, index) => ({
           id: crypto.randomUUID(),
-          url: entry.url,
-          title: entry.title,
+          url,
+          title: url,
           status: 'pending' as const,
           progress: 0,
           speed: '',
           eta: '',
           isPlaylist: false,
-          thumbnail: entry.thumbnail,
-          duration: entry.duration ? formatDuration(entry.duration) : undefined,
-          channel: entry.channel,
-          playlistIndex: index + 1,
-          playlistTotal: entries.length,
+          // Store playlist context for display
+          playlistIndex: playlistId ? index + 1 : undefined,
+          playlistTotal: playlistId ? urls.length : undefined,
           // Store settings snapshot
           settings: settingsSnapshot,
         }));
-      
+
       if (newItems.length > 0) {
-        setItems(prev => [...prev, ...newItems]);
+        setItems((prev) => [...prev, ...newItems]);
       }
-      
-      return entries.map(e => e.url);
-    } catch (error) {
-      console.error('Failed to expand playlist:', error);
-      throw error;
-    }
-  }, [settings, cookieSettings]);
 
-  // Format duration from seconds to "mm:ss" or "hh:mm:ss"
-  const formatDuration = (seconds: number): string => {
-    const h = Math.floor(seconds / 3600);
-    const m = Math.floor((seconds % 3600) / 60);
-    const s = Math.floor(seconds % 60);
-    if (h > 0) {
-      return `${h}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
-    }
-    return `${m}:${s.toString().padStart(2, '0')}`;
-  };
+      return newItems.length;
+    },
+    [settings],
+  );
 
-  const addFromText = useCallback(async (text: string): Promise<number> => {
-    const urls = parseUrls(text);
-    if (urls.length === 0) return 0;
-
-    let totalAdded = 0;
-
-    // Separate playlist URLs and regular video URLs
-    const playlistUrls = urls.filter(url => isPlaylistUrl(url) && settings.downloadPlaylist);
-    const regularUrls = urls.filter(url => !isPlaylistUrl(url) || !settings.downloadPlaylist);
-
-    // Add regular videos directly
-    if (regularUrls.length > 0) {
-      totalAdded += addUrlsDirectly(regularUrls);
-    }
-
-    // Expand playlists if playlist mode is ON
-    if (playlistUrls.length > 0) {
-      setIsExpandingPlaylist(true);
+  // Expand playlist URL to individual videos
+  const expandPlaylistUrl = useCallback(
+    async (url: string): Promise<string[]> => {
       try {
-        for (const playlistUrl of playlistUrls) {
-          try {
-            const expandedUrls = await expandPlaylistUrl(playlistUrl);
-            totalAdded += expandedUrls.length;
-          } catch (error) {
-            // If expansion fails, add as single item
-            console.error('Failed to expand playlist, adding as single item:', error);
-            totalAdded += addUrlsDirectly([playlistUrl]);
-          }
-        }
-      } finally {
-        setIsExpandingPlaylist(false);
-      }
-    }
+        const limit = settings.playlistLimit > 0 ? settings.playlistLimit : undefined;
+        const entries = await invoke<PlaylistVideoEntry[]>('get_playlist_entries', {
+          url,
+          limit,
+          cookieMode: cookieSettings.mode,
+          cookieBrowser: cookieSettings.browser || null,
+          cookieBrowserProfile: cookieSettings.browserProfile || null,
+          cookieFilePath: cookieSettings.filePath || null,
+        });
 
-    return totalAdded;
-  }, [parseUrls, isPlaylistUrl, settings.downloadPlaylist, addUrlsDirectly, expandPlaylistUrl]);
+        // Snapshot current settings for these items
+        const settingsSnapshot: ItemDownloadSettings = {
+          quality: settings.quality,
+          format: settings.format,
+          outputPath: settings.outputPath,
+          videoCodec: settings.videoCodec,
+          audioBitrate: settings.audioBitrate,
+          subtitleMode: settings.subtitleMode,
+          subtitleLangs: [...settings.subtitleLangs],
+          subtitleEmbed: settings.subtitleEmbed,
+          subtitleFormat: settings.subtitleFormat,
+        };
+
+        // Add items with titles and thumbnails from playlist data
+        const currentItems = itemsRef.current;
+        const newItems: DownloadItem[] = entries
+          .filter((entry) => !currentItems.some((item) => item.url === entry.url))
+          .map((entry, index) => ({
+            id: crypto.randomUUID(),
+            url: entry.url,
+            title: entry.title,
+            status: 'pending' as const,
+            progress: 0,
+            speed: '',
+            eta: '',
+            isPlaylist: false,
+            thumbnail: entry.thumbnail,
+            duration: entry.duration ? formatDuration(entry.duration) : undefined,
+            channel: entry.channel,
+            playlistIndex: index + 1,
+            playlistTotal: entries.length,
+            // Store settings snapshot
+            settings: settingsSnapshot,
+          }));
+
+        if (newItems.length > 0) {
+          setItems((prev) => [...prev, ...newItems]);
+        }
+
+        return entries.map((e) => e.url);
+      } catch (error) {
+        console.error('Failed to expand playlist:', error);
+        throw error;
+      }
+    },
+    [settings, cookieSettings, formatDuration],
+  );
+
+  const addFromText = useCallback(
+    async (text: string): Promise<number> => {
+      const urls = parseUrls(text);
+      if (urls.length === 0) return 0;
+
+      let totalAdded = 0;
+
+      // Separate playlist URLs and regular video URLs
+      const playlistUrls = urls.filter((url) => isPlaylistUrl(url) && settings.downloadPlaylist);
+      const regularUrls = urls.filter((url) => !isPlaylistUrl(url) || !settings.downloadPlaylist);
+
+      // Add regular videos directly
+      if (regularUrls.length > 0) {
+        totalAdded += addUrlsDirectly(regularUrls);
+      }
+
+      // Expand playlists if playlist mode is ON
+      if (playlistUrls.length > 0) {
+        setIsExpandingPlaylist(true);
+        try {
+          for (const playlistUrl of playlistUrls) {
+            try {
+              const expandedUrls = await expandPlaylistUrl(playlistUrl);
+              totalAdded += expandedUrls.length;
+            } catch (error) {
+              // If expansion fails, add as single item
+              console.error('Failed to expand playlist, adding as single item:', error);
+              totalAdded += addUrlsDirectly([playlistUrl]);
+            }
+          }
+        } finally {
+          setIsExpandingPlaylist(false);
+        }
+      }
+
+      return totalAdded;
+    },
+    [parseUrls, isPlaylistUrl, settings.downloadPlaylist, addUrlsDirectly, expandPlaylistUrl],
+  );
 
   const importFromFile = useCallback(async (): Promise<number> => {
     try {
@@ -405,9 +441,9 @@ export function DownloadProvider({ children }: { children: ReactNode }) {
         filters: [{ name: 'Text files', extensions: ['txt'] }],
         title: 'Import URLs from file',
       });
-      
+
       if (!file) return 0;
-      
+
       const content = await readTextFile(file as string);
       return addFromText(content);
     } catch (error) {
@@ -434,9 +470,9 @@ export function DownloadProvider({ children }: { children: ReactNode }) {
         title: 'Select Download Folder',
         defaultPath: settings.outputPath || undefined,
       });
-      
+
       if (folder) {
-        setSettings(s => {
+        setSettings((s) => {
           const newSettings = { ...s, outputPath: folder as string };
           saveSettings(newSettings);
           return newSettings;
@@ -448,7 +484,7 @@ export function DownloadProvider({ children }: { children: ReactNode }) {
   }, [settings.outputPath]);
 
   const removeItem = useCallback((id: string) => {
-    setItems(items => items.filter(item => item.id !== id));
+    setItems((items) => items.filter((item) => item.id !== id));
   }, []);
 
   const clearAll = useCallback(() => {
@@ -457,54 +493,56 @@ export function DownloadProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const clearCompleted = useCallback(() => {
-    setItems(items => items.filter(item => item.status !== 'completed'));
+    setItems((items) => items.filter((item) => item.status !== 'completed'));
   }, []);
 
   const startDownload = useCallback(async () => {
     const currentItems = itemsRef.current;
     // Only download items that are pending or had errors (not completed ones)
     const itemsToDownload = currentItems.filter(
-      item => item.status === 'pending' || item.status === 'error'
+      (item) => item.status === 'pending' || item.status === 'error',
     );
-    
+
     if (itemsToDownload.length === 0) return;
-    
+
     setIsDownloading(true);
     isDownloadingRef.current = true;
     setCurrentPlaylistInfo(null);
-    
+
     // Reset only pending/error items, keep completed items and playlist info as-is
-    setItems(items => items.map(item => {
-      if (item.status === 'pending' || item.status === 'error') {
-        return {
-          ...item,
-          status: 'pending' as const,
-          progress: 0,
-          speed: '',
-          eta: '',
-          error: undefined,
-          // Keep playlistIndex and playlistTotal for display
-        };
-      }
-      return item;
-    }));
+    setItems((items) =>
+      items.map((item) => {
+        if (item.status === 'pending' || item.status === 'error') {
+          return {
+            ...item,
+            status: 'pending' as const,
+            progress: 0,
+            speed: '',
+            eta: '',
+            error: undefined,
+            // Keep playlistIndex and playlistTotal for display
+          };
+        }
+        return item;
+      }),
+    );
 
     const concurrentLimit = settings.concurrentDownloads || 1;
-    
+
     // Download single item
     const downloadItem = async (item: DownloadItem) => {
       if (!isDownloadingRef.current) return;
-      
-      setItems(items => items.map(i => 
-        i.id === item.id ? { ...i, status: 'downloading' } : i
-      ));
+
+      setItems((items) =>
+        items.map((i) => (i.id === item.id ? { ...i, status: 'downloading' } : i)),
+      );
 
       try {
         // Use item's saved settings (snapshot from when it was added)
         // Fallback to current global settings if not available
         const itemSettings = item.settings as ItemDownloadSettings | undefined;
         const logStderr = localStorage.getItem('youwee_log_stderr') !== 'false';
-        
+
         await invoke('download_video', {
           id: item.id,
           url: item.url,
@@ -530,17 +568,22 @@ export function DownloadProvider({ children }: { children: ReactNode }) {
           cookieBrowser: cookieSettings.browser || null,
           cookieBrowserProfile: cookieSettings.browserProfile || null,
           cookieFilePath: cookieSettings.filePath || null,
+          // Post-processing settings
+          embedMetadata: settings.embedMetadata,
+          embedThumbnail: settings.embedThumbnail,
           // No history_id for new downloads
           historyId: null,
         });
-        
-        setItems(items => items.map(i => 
-          i.id === item.id ? { ...i, status: 'completed', progress: 100 } : i
-        ));
+
+        setItems((items) =>
+          items.map((i) => (i.id === item.id ? { ...i, status: 'completed', progress: 100 } : i)),
+        );
       } catch (error) {
-        setItems(items => items.map(i => 
-          i.id === item.id ? { ...i, status: 'error', error: String(error) } : i
-        ));
+        setItems((items) =>
+          items.map((i) =>
+            i.id === item.id ? { ...i, status: 'error', error: String(error) } : i,
+          ),
+        );
       }
     };
 
@@ -548,7 +591,7 @@ export function DownloadProvider({ children }: { children: ReactNode }) {
       // Process items with concurrency limit
       const queue = [...itemsToDownload];
       const activeDownloads: Promise<void>[] = [];
-      
+
       const processNext = async (): Promise<void> => {
         while (isDownloadingRef.current && queue.length > 0) {
           const item = queue.shift();
@@ -556,15 +599,15 @@ export function DownloadProvider({ children }: { children: ReactNode }) {
           await downloadItem(item);
         }
       };
-      
+
       // Calculate worker count BEFORE starting (queue.length changes during shift)
       const workerCount = Math.min(concurrentLimit, itemsToDownload.length);
-      
+
       // Start concurrent workers
       for (let i = 0; i < workerCount; i++) {
         activeDownloads.push(processNext());
       }
-      
+
       await Promise.all(activeDownloads);
     } finally {
       setIsDownloading(false);
@@ -585,7 +628,7 @@ export function DownloadProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const updateSettings = useCallback((updates: Partial<DownloadSettings>) => {
-    setSettings(s => {
+    setSettings((s) => {
       const newSettings = { ...s, ...updates };
       saveSettings(newSettings);
       return newSettings;
@@ -593,7 +636,7 @@ export function DownloadProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const updateQuality = useCallback((quality: Quality) => {
-    setSettings(s => {
+    setSettings((s) => {
       const newSettings = { ...s, quality };
       saveSettings(newSettings);
       return newSettings;
@@ -601,7 +644,7 @@ export function DownloadProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const updateFormat = useCallback((format: Format) => {
-    setSettings(s => {
+    setSettings((s) => {
       const newSettings = { ...s, format };
       saveSettings(newSettings);
       return newSettings;
@@ -609,7 +652,7 @@ export function DownloadProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const updateVideoCodec = useCallback((videoCodec: VideoCodec) => {
-    setSettings(s => {
+    setSettings((s) => {
       const newSettings = { ...s, videoCodec };
       saveSettings(newSettings);
       return newSettings;
@@ -617,7 +660,7 @@ export function DownloadProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const updateAudioBitrate = useCallback((audioBitrate: AudioBitrate) => {
-    setSettings(s => {
+    setSettings((s) => {
       const newSettings = { ...s, audioBitrate };
       saveSettings(newSettings);
       return newSettings;
@@ -626,7 +669,7 @@ export function DownloadProvider({ children }: { children: ReactNode }) {
 
   const updateConcurrentDownloads = useCallback((concurrentDownloads: number) => {
     const value = Math.max(1, Math.min(5, concurrentDownloads));
-    setSettings(s => {
+    setSettings((s) => {
       const newSettings = { ...s, concurrentDownloads: value };
       saveSettings(newSettings);
       return newSettings;
@@ -635,7 +678,7 @@ export function DownloadProvider({ children }: { children: ReactNode }) {
 
   const updatePlaylistLimit = useCallback((playlistLimit: number) => {
     const value = Math.max(0, Math.min(100, playlistLimit)); // 0 = unlimited
-    setSettings(s => {
+    setSettings((s) => {
       const newSettings = { ...s, playlistLimit: value };
       saveSettings(newSettings);
       return newSettings;
@@ -643,7 +686,7 @@ export function DownloadProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const updateAutoCheckUpdate = useCallback((enabled: boolean) => {
-    setSettings(s => {
+    setSettings((s) => {
       const newSettings = { ...s, autoCheckUpdate: enabled };
       saveSettings(newSettings);
       return newSettings;
@@ -651,7 +694,7 @@ export function DownloadProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const togglePlaylist = useCallback(() => {
-    setSettings(s => {
+    setSettings((s) => {
       const newSettings = { ...s, downloadPlaylist: !s.downloadPlaylist };
       saveSettings(newSettings);
       return newSettings;
@@ -659,7 +702,7 @@ export function DownloadProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const updateSubtitleMode = useCallback((subtitleMode: SubtitleMode) => {
-    setSettings(s => {
+    setSettings((s) => {
       const newSettings = { ...s, subtitleMode };
       saveSettings(newSettings);
       return newSettings;
@@ -667,7 +710,7 @@ export function DownloadProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const updateSubtitleLangs = useCallback((subtitleLangs: string[]) => {
-    setSettings(s => {
+    setSettings((s) => {
       const newSettings = { ...s, subtitleLangs };
       saveSettings(newSettings);
       return newSettings;
@@ -675,7 +718,7 @@ export function DownloadProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const updateSubtitleEmbed = useCallback((subtitleEmbed: boolean) => {
-    setSettings(s => {
+    setSettings((s) => {
       const newSettings = { ...s, subtitleEmbed };
       saveSettings(newSettings);
       return newSettings;
@@ -683,7 +726,7 @@ export function DownloadProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const updateSubtitleFormat = useCallback((subtitleFormat: SubtitleFormat) => {
-    setSettings(s => {
+    setSettings((s) => {
       const newSettings = { ...s, subtitleFormat };
       saveSettings(newSettings);
       return newSettings;
@@ -691,7 +734,7 @@ export function DownloadProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const updateUseBunRuntime = useCallback((useBunRuntime: boolean) => {
-    setSettings(s => {
+    setSettings((s) => {
       const newSettings = { ...s, useBunRuntime };
       saveSettings(newSettings);
       return newSettings;
@@ -699,7 +742,7 @@ export function DownloadProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const updateUseActualPlayerJs = useCallback((useActualPlayerJs: boolean) => {
-    setSettings(s => {
+    setSettings((s) => {
       const newSettings = { ...s, useActualPlayerJs };
       saveSettings(newSettings);
       return newSettings;
@@ -707,9 +750,25 @@ export function DownloadProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const updateCookieSettings = useCallback((updates: Partial<CookieSettings>) => {
-    setCookieSettings(s => {
+    setCookieSettings((s) => {
       const newSettings = { ...s, ...updates };
       saveCookieSettings(newSettings);
+      return newSettings;
+    });
+  }, []);
+
+  const updateEmbedMetadata = useCallback((embedMetadata: boolean) => {
+    setSettings((s) => {
+      const newSettings = { ...s, embedMetadata };
+      saveSettings(newSettings);
+      return newSettings;
+    });
+  }, []);
+
+  const updateEmbedThumbnail = useCallback((embedThumbnail: boolean) => {
+    setSettings((s) => {
+      const newSettings = { ...s, embedThumbnail };
+      saveSettings(newSettings);
       return newSettings;
     });
   }, []);
@@ -746,13 +805,11 @@ export function DownloadProvider({ children }: { children: ReactNode }) {
     updateUseBunRuntime,
     updateUseActualPlayerJs,
     updateCookieSettings,
+    updateEmbedMetadata,
+    updateEmbedThumbnail,
   };
 
-  return (
-    <DownloadContext.Provider value={value}>
-      {children}
-    </DownloadContext.Provider>
-  );
+  return <DownloadContext.Provider value={value}>{children}</DownloadContext.Provider>;
 }
 
 export function useDownload() {

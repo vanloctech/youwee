@@ -1,13 +1,8 @@
-import { 
-  FolderOpen,
-  FileVideo,
-  Music,
-  Settings2,
-  HardDrive,
-} from 'lucide-react';
+import { FileVideo, FolderOpen, HardDrive, Music, Settings2 } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
-import { Badge } from '@/components/ui/badge';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import {
   Select,
   SelectContent,
@@ -15,13 +10,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from '@/components/ui/popover';
-import type { Quality, Format, AudioBitrate } from '@/lib/types';
 import type { UniversalSettings } from '@/contexts/UniversalContext';
+import type { AudioBitrate, Format, Quality } from '@/lib/types';
 
 function formatFileSize(bytes: number): string {
   if (bytes >= 1024 * 1024 * 1024) {
@@ -76,12 +66,11 @@ export function UniversalSettingsPanel({
   onConcurrentChange,
   onSelectFolder,
 }: UniversalSettingsPanelProps) {
-  const isAudioOnly = settings.quality === 'audio' || ['mp3', 'm4a', 'opus'].includes(settings.format);
+  const isAudioOnly =
+    settings.quality === 'audio' || ['mp3', 'm4a', 'opus'].includes(settings.format);
   const formatOptions = isAudioOnly ? audioFormatOptions : videoFormatOptions;
 
-  const fileSizeDisplay = totalFileSize && totalFileSize > 0 
-    ? formatFileSize(totalFileSize) 
-    : '';
+  const fileSizeDisplay = totalFileSize && totalFileSize > 0 ? formatFileSize(totalFileSize) : '';
 
   const handleQualityChange = (quality: Quality) => {
     onQualityChange(quality);
@@ -93,25 +82,25 @@ export function UniversalSettingsPanel({
     }
   };
 
-  const outputFolderName = settings.outputPath 
+  const outputFolderName = settings.outputPath
     ? settings.outputPath.split('/').pop() || settings.outputPath
     : 'Downloads';
 
   return (
     <div className="flex flex-wrap items-center gap-2">
       {/* Quality Select */}
-      <Select
-        value={settings.quality}
-        onValueChange={handleQualityChange}
-        disabled={disabled}
-      >
-        <SelectTrigger 
+      <Select value={settings.quality} onValueChange={handleQualityChange} disabled={disabled}>
+        <SelectTrigger
           className="w-[90px] sm:w-[100px] h-9 text-xs bg-card/50 border-border/50"
           title="Video quality"
         >
           <div className="flex items-center gap-1.5">
-            {isAudioOnly ? <Music className="w-3.5 h-3.5" /> : <FileVideo className="w-3.5 h-3.5" />}
-            <span>{qualityOptions.find(q => q.value === settings.quality)?.shortLabel}</span>
+            {isAudioOnly ? (
+              <Music className="w-3.5 h-3.5" />
+            ) : (
+              <FileVideo className="w-3.5 h-3.5" />
+            )}
+            <span>{qualityOptions.find((q) => q.value === settings.quality)?.shortLabel}</span>
           </div>
         </SelectTrigger>
         <SelectContent className="min-w-[220px]">
@@ -124,12 +113,8 @@ export function UniversalSettingsPanel({
       </Select>
 
       {/* Format Select */}
-      <Select
-        value={settings.format}
-        onValueChange={onFormatChange}
-        disabled={disabled}
-      >
-        <SelectTrigger 
+      <Select value={settings.format} onValueChange={onFormatChange} disabled={disabled}>
+        <SelectTrigger
           className="w-[75px] sm:w-[80px] h-9 text-xs bg-card/50 border-border/50"
           title="Output format"
         >
@@ -147,10 +132,10 @@ export function UniversalSettingsPanel({
       {/* Advanced Settings Popover */}
       <Popover>
         <PopoverTrigger asChild>
-          <Button 
-            variant="ghost" 
-            size="sm" 
-            className="h-9 px-2.5 gap-1.5" 
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-9 px-2.5 gap-1.5"
             disabled={disabled}
             title="Advanced settings"
           >
@@ -158,12 +143,7 @@ export function UniversalSettingsPanel({
             <span className="hidden sm:inline text-xs">More</span>
           </Button>
         </PopoverTrigger>
-        <PopoverContent 
-          className="w-72 p-0" 
-          align="end"
-          side="bottom"
-          sideOffset={8}
-        >
+        <PopoverContent className="w-72 p-0" align="end" side="bottom" sideOffset={8}>
           {/* Header */}
           <div className="flex items-center justify-between px-4 py-3 border-b bg-muted/30">
             <h4 className="text-sm font-medium">Advanced Settings</h4>
@@ -174,7 +154,7 @@ export function UniversalSettingsPanel({
               </Badge>
             )}
           </div>
-          
+
           {/* Content */}
           <div className="p-4 space-y-4">
             {/* Row 1: Audio Bitrate & Concurrent */}
@@ -191,8 +171,12 @@ export function UniversalSettingsPanel({
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="auto" className="text-xs">Best (~160k)</SelectItem>
-                    <SelectItem value="128" className="text-xs">Standard (128k)</SelectItem>
+                    <SelectItem value="auto" className="text-xs">
+                      Best (~160k)
+                    </SelectItem>
+                    <SelectItem value="128" className="text-xs">
+                      Standard (128k)
+                    </SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -223,6 +207,7 @@ export function UniversalSettingsPanel({
             <div className="space-y-1.5">
               <Label className="text-[11px] text-muted-foreground">Save to</Label>
               <button
+                type="button"
                 onClick={onSelectFolder}
                 disabled={disabled}
                 className="w-full h-8 px-3 rounded-md border bg-background text-xs flex items-center gap-2 text-left hover:bg-muted/50 transition-colors"
@@ -242,6 +227,7 @@ export function UniversalSettingsPanel({
 
       {/* Output Folder Button - Quick Access */}
       <button
+        type="button"
         onClick={onSelectFolder}
         disabled={disabled}
         className="h-9 px-2.5 rounded-md border bg-card/50 border-border/50 text-xs flex items-center gap-1.5 text-muted-foreground hover:text-foreground transition-colors max-w-[140px]"
@@ -253,8 +239,8 @@ export function UniversalSettingsPanel({
 
       {/* File Size Badge */}
       {fileSizeDisplay && (
-        <Badge 
-          variant="outline" 
+        <Badge
+          variant="outline"
           className="h-9 px-2.5 text-xs gap-1.5 hidden sm:flex"
           title="Total file size"
         >

@@ -1,9 +1,9 @@
-import { Trash2, CheckCircle2, Youtube } from 'lucide-react';
+import { CheckCircle2, Trash2, Youtube } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import { Button } from '@/components/ui/button';
-import { QueueItem } from './QueueItem';
+import { ScrollArea } from '@/components/ui/scroll-area';
 import type { DownloadItem } from '@/lib/types';
+import { QueueItem } from './QueueItem';
 
 interface QueueListProps {
   items: DownloadItem[];
@@ -26,8 +26,8 @@ export function QueueList({
   onRemove,
   onClearCompleted,
 }: QueueListProps) {
-  const completedCount = items.filter(i => i.status === 'completed').length;
-  const pendingCount = items.filter(i => i.status === 'pending').length;
+  const completedCount = items.filter((i) => i.status === 'completed').length;
+  const pendingCount = items.filter((i) => i.status === 'pending').length;
   const totalCount = items.length;
 
   return (
@@ -44,19 +44,25 @@ export function QueueList({
                 </Badge>
               )}
               {completedCount > 0 && (
-                <Badge variant="outline" className="text-[10px] px-1.5 py-0 text-emerald-500 border-emerald-500/30">
+                <Badge
+                  variant="outline"
+                  className="text-[10px] px-1.5 py-0 text-emerald-500 border-emerald-500/30"
+                >
                   <CheckCircle2 className="w-3 h-3 mr-1" />
                   {completedCount}
                 </Badge>
               )}
               {currentPlaylistInfo && (
-                <Badge variant="outline" className="text-[10px] px-1.5 py-0 text-primary border-primary/30">
+                <Badge
+                  variant="outline"
+                  className="text-[10px] px-1.5 py-0 text-primary border-primary/30"
+                >
                   {currentPlaylistInfo.index}/{currentPlaylistInfo.total}
                 </Badge>
               )}
             </div>
           </div>
-          
+
           {completedCount > 0 && (
             <Button
               variant="ghost"

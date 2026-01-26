@@ -535,6 +535,269 @@ pub async fn generate_summary_custom(
     }
 }
 
+/// Generate raw AI response without summarization prompt wrapping
+/// Used for FFmpeg command generation and other custom tasks
+pub async fn generate_raw(config: &AIConfig, prompt: &str) -> Result<SummaryResult, AIError> {
+    if prompt.trim().is_empty() {
+        return Err(AIError::NoTranscript);
+    }
+    
+    match config.provider {
+        AIProvider::Gemini => {
+            let api_key = config.api_key.as_ref().ok_or(AIError::NoApiKey)?;
+            generate_raw_with_gemini(api_key, &config.model, prompt).await
+        }
+        AIProvider::OpenAI => {
+            let api_key = config.api_key.as_ref().ok_or(AIError::NoApiKey)?;
+            generate_raw_with_openai(api_key, &config.model, prompt).await
+        }
+        AIProvider::Ollama => {
+            let ollama_url = config.ollama_url.as_ref().map(|s| s.as_str()).unwrap_or("http://localhost:11434");
+            generate_raw_with_ollama(ollama_url, &config.model, prompt).await
+        }
+        AIProvider::Proxy => {
+            let api_key = config.api_key.as_ref().ok_or(AIError::NoApiKey)?;
+            let proxy_url = config.proxy_url.as_ref().map(|s| s.as_str()).unwrap_or("https://api.openai.com");
+            generate_raw_with_proxy(proxy_url, api_key, &config.model, prompt).await
+        }
+    }
+}
+
+/// Raw generation with Gemini (no summarization wrapping)
+async fn generate_raw_with_gemini(
+    api_key: &str,
+    model: &str,
+    prompt: &str,
+) -> Result<SummaryResult, AIError> {
+    let client = Client::new();
+    
+    let url = format!(
+        "https://generativelanguage.googleapis.com/v1beta/models/{}:generateContent",
+        model
+    );
+    
+    let body = serde_json::json!({
+        "contents": [{
+            "parts": [{
+                "text": prompt
+            }]
+        }],
+        "generationConfig": {
+            "temperature": 0.3,
+            "maxOutputTokens": 2048
+        }
+    });
+    
+    #[cfg(debug_assertions)]
+    {
+        println!("[GEMINI RAW] URL: {}", url);
+        println!("[GEMINI RAW] Prompt: {}", &prompt[..prompt.len().min(500)]);
+    }
+    
+    let response = client
+        .post(&url)
+        .header("Content-Type", "application/json")
+        .header("x-goog-api-key", api_key)
+        .json(&body)
+        .send()
+        .await
+        .map_err(|e| AIError::NetworkError(e.to_string()))?;
+    
+    let status = response.status();
+    let response_text = response.text().await.unwrap_or_default();
+    
+    #[cfg(debug_assertions)]
+    {
+        println!("[GEMINI RAW] Response status: {}", status);
+        println!("[GEMINI RAW] Response: {}", &response_text[..response_text.len().min(1000)]);
+    }
+    
+    if !status.is_success() {
+        if let Ok(error_json) = serde_json::from_str::<serde_json::Value>(&response_text) {
+            let error_msg = error_json
+                .get("error")
+                .and_then(|e| e.get("message"))
+                .and_then(|m| m.as_str())
+                .unwrap_or("Unknown error");
+            return Err(AIError::ApiError(format!("Gemini API error: {}", error_msg)));
+        }
+        return Err(AIError::ApiError(format!("Gemini API error: {}", status)));
+    }
+    
+    let json: serde_json::Value = serde_json::from_str(&response_text)
+        .map_err(|e| AIError::ParseError(e.to_string()))?;
+    
+    let text = json
+        .get("candidates")
+        .and_then(|c| c.get(0))
+        .and_then(|c| c.get("content"))
+        .and_then(|c| c.get("parts"))
+        .and_then(|p| p.get(0))
+        .and_then(|p| p.get("text"))
+        .and_then(|t| t.as_str())
+        .ok_or_else(|| AIError::ParseError("No text in response".to_string()))?;
+    
+    Ok(SummaryResult {
+        summary: text.to_string(),
+        model: model.to_string(),
+        provider: "Gemini".to_string(),
+    })
+}
+
+/// Raw generation with OpenAI (no summarization wrapping)
+async fn generate_raw_with_openai(
+    api_key: &str,
+    model: &str,
+    prompt: &str,
+) -> Result<SummaryResult, AIError> {
+    let client = Client::new();
+    
+    let body = serde_json::json!({
+        "model": model,
+        "messages": [{
+            "role": "user",
+            "content": prompt
+        }],
+        "temperature": 0.3,
+        "max_tokens": 2048
+    });
+    
+    let response = client
+        .post("https://api.openai.com/v1/chat/completions")
+        .header("Authorization", format!("Bearer {}", api_key))
+        .header("Content-Type", "application/json")
+        .json(&body)
+        .send()
+        .await
+        .map_err(|e| AIError::NetworkError(e.to_string()))?;
+    
+    let status = response.status();
+    let response_text = response.text().await.unwrap_or_default();
+    
+    if !status.is_success() {
+        return Err(AIError::ApiError(format!("OpenAI API error: {}", response_text)));
+    }
+    
+    let json: serde_json::Value = serde_json::from_str(&response_text)
+        .map_err(|e| AIError::ParseError(e.to_string()))?;
+    
+    let text = json
+        .get("choices")
+        .and_then(|c| c.get(0))
+        .and_then(|c| c.get("message"))
+        .and_then(|m| m.get("content"))
+        .and_then(|t| t.as_str())
+        .ok_or_else(|| AIError::ParseError("No text in response".to_string()))?;
+    
+    Ok(SummaryResult {
+        summary: text.to_string(),
+        model: model.to_string(),
+        provider: "OpenAI".to_string(),
+    })
+}
+
+/// Raw generation with Ollama (no summarization wrapping)
+async fn generate_raw_with_ollama(
+    base_url: &str,
+    model: &str,
+    prompt: &str,
+) -> Result<SummaryResult, AIError> {
+    let client = Client::new();
+    let url = format!("{}/api/generate", base_url.trim_end_matches('/'));
+    
+    let body = serde_json::json!({
+        "model": model,
+        "prompt": prompt,
+        "stream": false,
+        "options": {
+            "temperature": 0.3
+        }
+    });
+    
+    let response = client
+        .post(&url)
+        .header("Content-Type", "application/json")
+        .json(&body)
+        .send()
+        .await
+        .map_err(|e| AIError::NetworkError(e.to_string()))?;
+    
+    let status = response.status();
+    let response_text = response.text().await.unwrap_or_default();
+    
+    if !status.is_success() {
+        return Err(AIError::ApiError(format!("Ollama error: {}", response_text)));
+    }
+    
+    let json: serde_json::Value = serde_json::from_str(&response_text)
+        .map_err(|e| AIError::ParseError(e.to_string()))?;
+    
+    let text = json
+        .get("response")
+        .and_then(|t| t.as_str())
+        .ok_or_else(|| AIError::ParseError("No response in Ollama output".to_string()))?;
+    
+    Ok(SummaryResult {
+        summary: text.to_string(),
+        model: model.to_string(),
+        provider: "Ollama".to_string(),
+    })
+}
+
+/// Raw generation with Proxy (no summarization wrapping)
+async fn generate_raw_with_proxy(
+    proxy_url: &str,
+    api_key: &str,
+    model: &str,
+    prompt: &str,
+) -> Result<SummaryResult, AIError> {
+    let client = Client::new();
+    let url = format!("{}/v1/chat/completions", proxy_url.trim_end_matches('/'));
+    
+    let body = serde_json::json!({
+        "model": model,
+        "messages": [{
+            "role": "user",
+            "content": prompt
+        }],
+        "temperature": 0.3,
+        "max_tokens": 2048
+    });
+    
+    let response = client
+        .post(&url)
+        .header("Authorization", format!("Bearer {}", api_key))
+        .header("Content-Type", "application/json")
+        .json(&body)
+        .send()
+        .await
+        .map_err(|e| AIError::NetworkError(e.to_string()))?;
+    
+    let status = response.status();
+    let response_text = response.text().await.unwrap_or_default();
+    
+    if !status.is_success() {
+        return Err(AIError::ApiError(format!("Proxy API error: {}", response_text)));
+    }
+    
+    let json: serde_json::Value = serde_json::from_str(&response_text)
+        .map_err(|e| AIError::ParseError(e.to_string()))?;
+    
+    let text = json
+        .get("choices")
+        .and_then(|c| c.get(0))
+        .and_then(|c| c.get("message"))
+        .and_then(|m| m.get("content"))
+        .and_then(|t| t.as_str())
+        .ok_or_else(|| AIError::ParseError("No text in response".to_string()))?;
+    
+    Ok(SummaryResult {
+        summary: text.to_string(),
+        model: model.to_string(),
+        provider: "Proxy".to_string(),
+    })
+}
+
 /// Test AI connection with a simple prompt
 pub async fn test_connection(config: &AIConfig) -> Result<String, AIError> {
     let test_transcript = "This is a test video about programming tutorials.";

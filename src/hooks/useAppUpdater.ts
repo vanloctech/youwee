@@ -1,6 +1,6 @@
-import { useState, useCallback } from 'react';
-import { check } from '@tauri-apps/plugin-updater';
 import { relaunch } from '@tauri-apps/plugin-process';
+import { check } from '@tauri-apps/plugin-updater';
+import { useCallback, useState } from 'react';
 
 export interface UpdateInfo {
   version: string;
@@ -14,7 +14,7 @@ export interface UpdateProgress {
   total: number;
 }
 
-export type UpdateStatus = 
+export type UpdateStatus =
   | 'idle'
   | 'checking'
   | 'available'
@@ -35,7 +35,7 @@ export function useAppUpdater() {
 
     try {
       const update = await check();
-      
+
       if (update) {
         setUpdateInfo({
           version: update.version,
@@ -63,7 +63,7 @@ export function useAppUpdater() {
 
     try {
       const update = await check();
-      
+
       if (!update) {
         setStatus('up-to-date');
         return;

@@ -1,15 +1,10 @@
-import { useTheme } from '@/contexts/ThemeContext';
-import { themes } from '@/lib/themes';
-import type { ThemeName } from '@/lib/themes';
-import { cn } from '@/lib/utils';
-import { Check } from 'lucide-react';
+import { Check, Palette } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from '@/components/ui/popover';
-import { Palette } from 'lucide-react';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { useTheme } from '@/contexts/ThemeContext';
+import type { ThemeName } from '@/lib/themes';
+import { themes } from '@/lib/themes';
+import { cn } from '@/lib/utils';
 
 // Gradient backgrounds for theme preview
 const themeGradients: Record<ThemeName, string> = {
@@ -38,19 +33,20 @@ export function ThemePicker() {
           <div className="grid grid-cols-3 gap-2">
             {themes.map((t) => (
               <button
+                type="button"
                 key={t.name}
                 onClick={() => setTheme(t.name)}
                 className={cn(
                   'flex flex-col items-center gap-1.5 p-2 rounded-lg border-2 transition-all',
                   theme === t.name
                     ? 'border-primary bg-accent'
-                    : 'border-transparent hover:bg-accent/50'
+                    : 'border-transparent hover:bg-accent/50',
                 )}
               >
                 <div
                   className={cn(
                     'w-8 h-8 rounded-full flex items-center justify-center shadow-lg',
-                    themeGradients[t.name]
+                    themeGradients[t.name],
                   )}
                 >
                   {theme === t.name ? (
