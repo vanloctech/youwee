@@ -12,7 +12,7 @@ import {
   Terminal,
   Trash2,
 } from 'lucide-react';
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -25,11 +25,28 @@ export interface HistoryDialogProps {
   onOpenChange: (open: boolean) => void;
   history: ProcessingJob[];
   onDelete: (id: string) => void;
+  onClearAll: () => void;
 }
 
-export function HistoryDialog({ open, onOpenChange, history, onDelete }: HistoryDialogProps) {
+export function HistoryDialog({
+  open,
+  onOpenChange,
+  history,
+  onDelete,
+  onClearAll,
+}: HistoryDialogProps) {
   const [selectedJob, setSelectedJob] = useState<ProcessingJob | null>(null);
   const [copied, setCopied] = useState(false);
+
+  // Auto-select first item when dialog opens
+  useEffect(() => {
+    if (open && history.length > 0 && !selectedJob) {
+      setSelectedJob(history[0]);
+    }
+    if (!open) {
+      setSelectedJob(null);
+    }
+  }, [open, history, selectedJob]);
 
   const copyCommand = useCallback(async (command: string) => {
     try {
@@ -73,10 +90,26 @@ export function HistoryDialog({ open, onOpenChange, history, onDelete }: History
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-4xl h-[85vh] p-0 gap-0 flex flex-col overflow-hidden">
         <DialogHeader className="flex-shrink-0 px-6 py-4 border-b">
-          <DialogTitle className="flex items-center gap-2">
-            <History className="w-5 h-5" />
-            Processing History
-          </DialogTitle>
+          <div className="flex items-center justify-between pr-8">
+            <DialogTitle className="flex items-center gap-2">
+              <History className="w-5 h-5" />
+              Processing History
+            </DialogTitle>
+            {history.length > 0 && (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="text-destructive hover:text-destructive hover:bg-destructive/10 focus-visible:ring-destructive gap-1.5"
+                onClick={() => {
+                  onClearAll();
+                  setSelectedJob(null);
+                }}
+              >
+                <Trash2 className="w-4 h-4" />
+                Clear All
+              </Button>
+            )}
+          </div>
         </DialogHeader>
 
         <div className="flex flex-1 min-h-0 overflow-hidden">

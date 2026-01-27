@@ -957,6 +957,17 @@ pub async fn delete_processing_job(_app: AppHandle, id: String) -> Result<(), St
     Ok(())
 }
 
+/// Clear all processing history
+#[tauri::command]
+pub async fn clear_processing_history(_app: AppHandle) -> Result<u64, String> {
+    let conn = get_db()?;
+    
+    let deleted = conn.execute("DELETE FROM processing_jobs", [])
+        .map_err(|e| format!("Failed to clear history: {}", e))?;
+    
+    Ok(deleted as u64)
+}
+
 /// Save a new processing job to history
 #[tauri::command]
 pub async fn save_processing_job(

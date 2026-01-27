@@ -27,6 +27,7 @@ export function ProcessingPage() {
     cancelProcessing,
     loadHistory,
     deleteJob,
+    clearHistory,
   } = useProcessing();
 
   // History dialog
@@ -164,6 +165,7 @@ export function ProcessingPage() {
           onOpenChange={setShowHistory}
           history={history}
           onDelete={deleteJob}
+          onClearAll={clearHistory}
         />
       </div>
     </TooltipProvider>

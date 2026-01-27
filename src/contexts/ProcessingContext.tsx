@@ -87,6 +87,7 @@ interface ProcessingContextValue {
   // History Actions
   loadHistory: () => Promise<void>;
   deleteJob: (id: string) => Promise<void>;
+  clearHistory: () => Promise<void>;
 
   // Preset Actions
   loadPresets: () => Promise<void>;
@@ -560,6 +561,16 @@ export function ProcessingProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
+  // Clear all history
+  const clearHistory = useCallback(async () => {
+    try {
+      await invoke('clear_processing_history');
+      setHistory([]);
+    } catch (error) {
+      console.error('Failed to clear history:', error);
+    }
+  }, []);
+
   // Load presets
   const loadPresets = useCallback(async () => {
     try {
@@ -698,6 +709,7 @@ export function ProcessingProvider({ children }: { children: ReactNode }) {
         openOutputFolder,
         loadHistory,
         deleteJob,
+        clearHistory,
         loadPresets,
         savePreset,
         deletePreset,

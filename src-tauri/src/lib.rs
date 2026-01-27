@@ -98,6 +98,7 @@ pub fn run() {
             commands::save_processing_job,
             commands::update_processing_job,
             commands::delete_processing_job,
+            commands::clear_processing_history,
             commands::get_processing_presets,
             commands::save_processing_preset,
             commands::delete_processing_preset,
