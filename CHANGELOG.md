@@ -8,6 +8,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 
+## [0.5.2] - 2026-01-27
+
+### Fixed
+- About section now shows correct GitHub links (`vanloctech/youwee`)
+- Restored "Made with ❤️ by Vietnam" branding
+- Added License link in About section
+- Restored Auto-check for updates toggle in About section
+
+
 ## [0.5.1] - 2026-01-27
 
 ### Added
