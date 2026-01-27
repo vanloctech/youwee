@@ -627,6 +627,24 @@ async fn handle_tokio_download(
         );
         add_log_internal("success", &success_msg, Some(&details), Some(&url)).ok();
         
+        // Save to history
+        if let Some(ref filepath) = final_filepath {
+            let source = detect_source(&url);
+            let thumbnail = generate_thumbnail_url(&url);
+            
+            add_history_internal(
+                url.clone(),
+                current_title.clone().unwrap_or_else(|| "Unknown".to_string()),
+                thumbnail,
+                filepath.clone(),
+                reported_filesize,
+                None,
+                quality_display.clone(),
+                Some(format.clone()),
+                source,
+            ).ok();
+        }
+        
         let progress = DownloadProgress {
             id: id.clone(),
             percent: 100.0,
