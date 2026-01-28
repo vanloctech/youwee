@@ -4,6 +4,8 @@ import {
   Bug,
   Check,
   CheckCircle2,
+  ChevronDown,
+  ChevronUp,
   Download,
   Eye,
   EyeOff,
@@ -248,7 +250,17 @@ function AISettingsContent({
                       type={showApiKey ? 'text' : 'password'}
                       value={ai.config.api_key || ''}
                       onChange={(e) => ai.updateConfig({ api_key: e.target.value })}
-                      placeholder={t('ai.enterApiKey')}
+                      placeholder={
+                        ai.config.provider === 'gemini'
+                          ? t('ai.enterGeminiApiKey')
+                          : ai.config.provider === 'openai'
+                            ? t('ai.enterOpenAIApiKey')
+                            : ai.config.provider === 'deepseek'
+                              ? t('ai.enterDeepSeekApiKey')
+                              : ai.config.provider === 'qwen'
+                                ? t('ai.enterQwenApiKey')
+                                : t('ai.enterProxyApiKey')
+                      }
                       className="h-9 pr-10"
                     />
                     <button
@@ -268,6 +280,37 @@ function AISettingsContent({
                     {ai.isTesting ? <Loader2 className="w-4 h-4 animate-spin" /> : t('ai.test')}
                   </Button>
                 </div>
+                {ai.config.provider !== 'proxy' && (
+                  <p className="text-xs text-muted-foreground">
+                    {t('ai.getApiKeyFrom')}{' '}
+                    <a
+                      href={
+                        ai.config.provider === 'gemini'
+                          ? 'https://aistudio.google.com/apikey'
+                          : ai.config.provider === 'openai'
+                            ? 'https://platform.openai.com/api-keys'
+                            : ai.config.provider === 'deepseek'
+                              ? 'https://platform.deepseek.com/api_keys'
+                              : ai.config.provider === 'qwen'
+                                ? 'https://dashscope.console.aliyun.com/apiKey'
+                                : '#'
+                      }
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-primary hover:underline"
+                    >
+                      {ai.config.provider === 'gemini'
+                        ? 'Google AI Studio'
+                        : ai.config.provider === 'openai'
+                          ? 'OpenAI Platform'
+                          : ai.config.provider === 'deepseek'
+                            ? 'DeepSeek Platform'
+                            : ai.config.provider === 'qwen'
+                              ? 'Alibaba DashScope'
+                              : 'Provider'}
+                    </a>
+                  </p>
+                )}
                 {ai.testResult && (
                   <div
                     className={cn(
@@ -312,6 +355,22 @@ function AISettingsContent({
               </div>
             )}
 
+            {/* Proxy URL */}
+            {ai.config.provider === 'proxy' && (
+              <div className="space-y-2 py-2">
+                <p className="text-sm font-medium">{t('ai.proxyUrl')}</p>
+                <div className="flex items-center gap-2">
+                  <Input
+                    type="text"
+                    value={ai.config.proxy_url || 'https://api.openai.com'}
+                    onChange={(e) => ai.updateConfig({ proxy_url: e.target.value })}
+                    placeholder="https://api.openai.com"
+                    className="h-9 flex-1"
+                  />
+                </div>
+              </div>
+            )}
+
             {/* Model */}
             <SettingsRow
               id="ai-model"
@@ -325,13 +384,13 @@ function AISettingsContent({
                   value={ai.config.model}
                   onChange={(e) => ai.updateConfig({ model: e.target.value })}
                   placeholder={t('ai.modelPlaceholder')}
-                  className="h-9 w-40"
+                  className="h-9 w-52"
                 />
                 <Select
                   value={ai.models.some((m) => m.value === ai.config.model) ? ai.config.model : ''}
                   onValueChange={(v) => ai.updateConfig({ model: v })}
                 >
-                  <SelectTrigger className="w-[140px] h-9">
+                  <SelectTrigger className="w-[160px] h-9">
                     <SelectValue placeholder={t('ai.quickSelect')} />
                   </SelectTrigger>
                   <SelectContent>
@@ -356,7 +415,7 @@ function AISettingsContent({
                 value={ai.config.summary_style}
                 onValueChange={(v) => ai.updateConfig({ summary_style: v as SummaryStyle })}
               >
-                <SelectTrigger className="w-[180px] h-9">
+                <SelectTrigger className="w-[220px] h-9">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -446,6 +505,35 @@ function AISettingsContent({
                         </div>
                         <span className="flex-1 text-sm">{lang?.name || code}</span>
                         <code className="text-xs text-muted-foreground font-mono">{code}</code>
+                        {/* Move up/down buttons */}
+                        <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <button
+                            type="button"
+                            className="p-1 hover:bg-muted rounded disabled:opacity-30"
+                            disabled={index === 0}
+                            onClick={() => {
+                              const langs = [...currentLangs];
+                              [langs[index - 1], langs[index]] = [langs[index], langs[index - 1]];
+                              ai.updateConfig({ transcript_languages: langs });
+                            }}
+                            title="Move up"
+                          >
+                            <ChevronUp className="w-3 h-3" />
+                          </button>
+                          <button
+                            type="button"
+                            className="p-1 hover:bg-muted rounded disabled:opacity-30"
+                            disabled={index === currentLangs.length - 1}
+                            onClick={() => {
+                              const langs = [...currentLangs];
+                              [langs[index], langs[index + 1]] = [langs[index + 1], langs[index]];
+                              ai.updateConfig({ transcript_languages: langs });
+                            }}
+                            title="Move down"
+                          >
+                            <ChevronDown className="w-3 h-3" />
+                          </button>
+                        </div>
                         <button
                           type="button"
                           className="p-1 hover:bg-destructive/20 hover:text-destructive rounded opacity-0 group-hover:opacity-100 transition-opacity"
