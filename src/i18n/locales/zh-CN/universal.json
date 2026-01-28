@@ -1,0 +1,86 @@
+{
+  "title": "通用下载",
+  "urlInput": {
+    "single": "单个",
+    "multiple": "批量",
+    "singleHint": "粘贴任意视频链接",
+    "multipleHint": "添加多个链接（每行一个）",
+    "placeholder": "粘贴视频链接（TikTok、Instagram、Twitter 等）...",
+    "placeholderMultiple": "在此粘贴视频链接（每行一个）\nhttps://www.tiktok.com/...\nhttps://www.instagram.com/...\nhttps://twitter.com/...",
+    "add": "添加",
+    "addToQueue": "添加到队列",
+    "paste": "粘贴",
+    "import": "导入",
+    "toAdd": "添加",
+    "urlCount": "{{count}} 个链接",
+    "urlCount_plural": "{{count}} 个链接",
+    "dropHint": "拖放链接或 .txt 文件到此处"
+  },
+  "settings": {
+    "video": "视频",
+    "audio": "音频",
+    "quality": "质量",
+    "format": "格式",
+    "audioQuality": "音频质量",
+    "bestAudio": "最佳 (~160k)",
+    "standardAudio": "标准 (128k)",
+    "parallelDownloads": "并行下载",
+    "atATime": "同时 {{count}} 个",
+    "saveTo": "保存到",
+    "selectFolder": "选择文件夹...",
+    "outputFolder": "输出文件夹：{{path}}",
+    "notSelected": "未选择",
+    "totalFileSize": "总文件大小",
+    "videoQuality": "视频质量",
+    "outputFormat": "输出格式",
+    "advanced": "高级设置",
+    "more": "更多"
+  },
+  "quality": {
+    "best": "最佳画质",
+    "bestShort": "最佳",
+    "1080": "全高清 1080p",
+    "1080Short": "1080p",
+    "720": "高清 720p",
+    "720Short": "720p",
+    "480": "标清 480p",
+    "480Short": "480p",
+    "360": "低清 360p",
+    "360Short": "360p",
+    "audio": "仅音频",
+    "audioShort": "音频"
+  },
+  "queue": {
+    "title": "队列",
+    "pending": "{{count}} 个待处理",
+    "clearDone": "清除已完成",
+    "remove": "从队列移除",
+    "videosInQueue": "队列中 {{count}} 个视频",
+    "videosInQueue_plural": "队列中 {{count}} 个视频",
+    "clearCompleted": "清除 {{count}} 个已完成",
+    "empty": {
+      "title": "队列中暂无视频",
+      "description": "通过 yt-dlp 支持 <1>1,800+</1> 个网站",
+      "moreCount": "还有 1,790 个",
+      "viewFullList": "查看完整支持站点列表"
+    },
+    "status": {
+      "pending": "等待中",
+      "fetching": "获取中",
+      "downloading": "下载中",
+      "completed": "已完成",
+      "failed": "失败"
+    },
+    "summarize": "摘要",
+    "fetchingTranscript": "获取字幕中...",
+    "generating": "生成中...",
+    "showMore": "展开",
+    "showLess": "收起",
+    "regenerateSummary": "重新生成摘要"
+  },
+  "actions": {
+    "startDownload": "开始下载",
+    "stopDownload": "停止下载",
+    "clearAll": "清空队列中的所有项目"
+  }
+}

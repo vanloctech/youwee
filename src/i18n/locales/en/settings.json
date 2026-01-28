@@ -11,6 +11,25 @@
   "search": {
     "placeholder": "Search settings..."
   },
+  "general": {
+    "appearance": "Appearance",
+    "appearanceDesc": "Customize the look and feel",
+    "colorMode": "Color Mode",
+    "colorModeDesc": "Switch between light and dark",
+    "light": "Light",
+    "dark": "Dark",
+    "colorTheme": "Color Theme",
+    "postProcessing": "Post-processing",
+    "postProcessingDesc": "Embed metadata and thumbnails into downloaded files",
+    "embedMetadata": "Embed Metadata",
+    "embedMetadataDesc": "Add title, artist, description to files",
+    "embedThumbnail": "Embed Thumbnail",
+    "embedThumbnailDesc": "Add cover art/thumbnail (requires FFmpeg)",
+    "storage": "Storage",
+    "storageDesc": "Manage download history",
+    "maxHistory": "Max history entries",
+    "currentlyStoring": "Currently storing {{count}} downloads"
+  },
   "dependencies": {
     "title": "Dependencies",
     "description": "External tools for downloading",

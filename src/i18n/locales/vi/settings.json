@@ -11,6 +11,25 @@
   "search": {
     "placeholder": "Tìm kiếm cài đặt..."
   },
+  "general": {
+    "appearance": "Giao diện",
+    "appearanceDesc": "Tùy chỉnh giao diện",
+    "colorMode": "Chế độ màu",
+    "colorModeDesc": "Chuyển đổi giữa sáng và tối",
+    "light": "Sáng",
+    "dark": "Tối",
+    "colorTheme": "Màu chủ đề",
+    "postProcessing": "Hậu xử lý",
+    "postProcessingDesc": "Nhúng metadata và thumbnail vào file đã tải",
+    "embedMetadata": "Nhúng Metadata",
+    "embedMetadataDesc": "Thêm tiêu đề, nghệ sĩ, mô tả vào file",
+    "embedThumbnail": "Nhúng Thumbnail",
+    "embedThumbnailDesc": "Thêm ảnh bìa/thumbnail (yêu cầu FFmpeg)",
+    "storage": "Lưu trữ",
+    "storageDesc": "Quản lý lịch sử tải xuống",
+    "maxHistory": "Số lượng lịch sử tối đa",
+    "currentlyStoring": "Đang lưu {{count}} bản tải"
+  },
   "dependencies": {
     "title": "Phụ thuộc",
     "description": "Công cụ bên ngoài để tải xuống",

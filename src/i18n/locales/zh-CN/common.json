@@ -1,0 +1,24 @@
+{
+  "sidebar": {
+    "youtube": "YouTube",
+    "universal": "通用下载",
+    "summary": "AI 摘要",
+    "processing": "视频处理",
+    "library": "媒体库",
+    "logs": "日志",
+    "settings": "设置",
+    "light": "浅色",
+    "dark": "深色",
+    "lightMode": "浅色模式",
+    "darkMode": "深色模式",
+    "collapse": "收起",
+    "expand": "展开"
+  },
+  "language": {
+    "en": "English",
+    "vi": "Tiếng Việt",
+    "zh-CN": "简体中文",
+    "label": "语言",
+    "select": "选择语言"
+  }
+}

@@ -19,6 +19,7 @@ import { SettingsDivider, SettingsRow, SettingsSection } from '../SettingsSectio
 const SUPPORTED_LANGUAGES = [
   { code: 'en', name: 'English' },
   { code: 'vi', name: 'Tiếng Việt' },
+  { code: 'zh-CN', name: '简体中文' },
 ];
 
 // Gradient backgrounds for theme preview
@@ -36,7 +37,8 @@ interface GeneralSectionProps {
 }
 
 export function GeneralSection({ highlightId }: GeneralSectionProps) {
-  const { t, i18n } = useTranslation('common');
+  const { t: tCommon, i18n } = useTranslation('common');
+  const { t } = useTranslation('settings');
   const { theme, setTheme, mode, setMode } = useTheme();
   const { settings, updateEmbedMetadata, updateEmbedThumbnail } = useDownload();
   const { maxEntries, setMaxEntries, totalCount } = useHistory();
@@ -49,16 +51,16 @@ export function GeneralSection({ highlightId }: GeneralSectionProps) {
     <div className="space-y-8">
       {/* Appearance */}
       <SettingsSection
-        title="Appearance"
-        description="Customize the look and feel"
+        title={t('general.appearance')}
+        description={t('general.appearanceDesc')}
         icon={<Palette className="w-5 h-5 text-white" />}
         iconClassName="bg-gradient-to-br from-violet-500 to-purple-600 shadow-violet-500/20"
       >
         {/* Mode Toggle */}
         <SettingsRow
           id="mode"
-          label="Color Mode"
-          description="Switch between light and dark"
+          label={t('general.colorMode')}
+          description={t('general.colorModeDesc')}
           highlight={highlightId === 'mode'}
         >
           <div className="flex items-center gap-1 p-1 rounded-xl bg-muted/50">
@@ -73,7 +75,7 @@ export function GeneralSection({ highlightId }: GeneralSectionProps) {
               )}
             >
               <Sun className="w-4 h-4" />
-              Light
+              {t('general.light')}
             </button>
             <button
               type="button"
@@ -86,7 +88,7 @@ export function GeneralSection({ highlightId }: GeneralSectionProps) {
               )}
             >
               <Moon className="w-4 h-4" />
-              Dark
+              {t('general.dark')}
             </button>
           </div>
         </SettingsRow>
@@ -94,8 +96,8 @@ export function GeneralSection({ highlightId }: GeneralSectionProps) {
         {/* Language */}
         <SettingsRow
           id="language"
-          label={t('language.label')}
-          description={t('language.select')}
+          label={tCommon('language.label')}
+          description={tCommon('language.select')}
           highlight={highlightId === 'language'}
         >
           <div className="flex items-center gap-1 p-1 rounded-xl bg-muted/50">
@@ -125,17 +127,17 @@ export function GeneralSection({ highlightId }: GeneralSectionProps) {
             highlightId === 'theme' && 'bg-primary/10 ring-1 ring-primary/30',
           )}
         >
-          <p className="text-sm font-medium mb-3">Color Theme</p>
+          <p className="text-sm font-medium mb-3">{t('general.colorTheme')}</p>
           <div className="grid grid-cols-3 gap-2">
-            {themes.map((t) => (
+            {themes.map((themeItem) => (
               <button
                 type="button"
-                key={t.name}
-                onClick={() => setTheme(t.name)}
+                key={themeItem.name}
+                onClick={() => setTheme(themeItem.name)}
                 className={cn(
                   'group flex items-center gap-3 p-3 rounded-xl transition-all',
                   'border-2',
-                  theme === t.name
+                  theme === themeItem.name
                     ? 'border-primary bg-primary/5'
                     : 'border-transparent bg-muted/30 hover:bg-muted/50',
                 )}
@@ -143,12 +145,12 @@ export function GeneralSection({ highlightId }: GeneralSectionProps) {
                 <div
                   className={cn(
                     'w-8 h-8 rounded-lg shadow-md flex items-center justify-center transition-transform group-hover:scale-110',
-                    themeGradients[t.name],
+                    themeGradients[themeItem.name],
                   )}
                 >
-                  {theme === t.name && <Check className="w-4 h-4 text-white drop-shadow" />}
+                  {theme === themeItem.name && <Check className="w-4 h-4 text-white drop-shadow" />}
                 </div>
-                <span className="text-sm font-medium">{t.label}</span>
+                <span className="text-sm font-medium">{themeItem.label}</span>
               </button>
             ))}
           </div>
@@ -159,15 +161,15 @@ export function GeneralSection({ highlightId }: GeneralSectionProps) {
 
       {/* Post-processing */}
       <SettingsSection
-        title="Post-processing"
-        description="Embed metadata and thumbnails into downloaded files"
+        title={t('general.postProcessing')}
+        description={t('general.postProcessingDesc')}
         icon={<Film className="w-5 h-5 text-white" />}
         iconClassName="bg-gradient-to-br from-emerald-500 to-green-600 shadow-emerald-500/20"
       >
         <SettingsRow
           id="embed-metadata"
-          label="Embed Metadata"
-          description="Add title, artist, description to files"
+          label={t('general.embedMetadata')}
+          description={t('general.embedMetadataDesc')}
           highlight={highlightId === 'embed-metadata'}
         >
           <Switch checked={settings.embedMetadata} onCheckedChange={updateEmbedMetadata} />
@@ -175,8 +177,8 @@ export function GeneralSection({ highlightId }: GeneralSectionProps) {
 
         <SettingsRow
           id="embed-thumbnail"
-          label="Embed Thumbnail"
-          description="Add cover art/thumbnail (requires FFmpeg)"
+          label={t('general.embedThumbnail')}
+          description={t('general.embedThumbnailDesc')}
           highlight={highlightId === 'embed-thumbnail'}
         >
           <Switch checked={settings.embedThumbnail} onCheckedChange={updateEmbedThumbnail} />
@@ -187,15 +189,15 @@ export function GeneralSection({ highlightId }: GeneralSectionProps) {
 
       {/* Storage */}
       <SettingsSection
-        title="Storage"
-        description="Manage download history"
+        title={t('general.storage')}
+        description={t('general.storageDesc')}
         icon={<Database className="w-5 h-5 text-white" />}
         iconClassName="bg-gradient-to-br from-cyan-500 to-teal-600 shadow-cyan-500/20"
       >
         <SettingsRow
           id="max-history"
-          label="Max history entries"
-          description={`Currently storing ${totalCount} downloads`}
+          label={t('general.maxHistory')}
+          description={t('general.currentlyStoring', { count: totalCount })}
           highlight={highlightId === 'max-history'}
         >
           <Select
