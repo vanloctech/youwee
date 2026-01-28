@@ -17,8 +17,8 @@ import { cn } from '@/lib/utils';
 import { SettingsDivider, SettingsRow, SettingsSection } from '../SettingsSection';
 
 const SUPPORTED_LANGUAGES = [
-  { code: 'en', name: 'English', flag: '🇬🇧' },
-  { code: 'vi', name: 'Tiếng Việt', flag: '🇻🇳' },
+  { code: 'en', name: 'English' },
+  { code: 'vi', name: 'Tiếng Việt' },
 ];
 
 // Gradient backgrounds for theme preview
@@ -111,8 +111,7 @@ export function GeneralSection({ highlightId }: GeneralSectionProps) {
                     : 'text-muted-foreground hover:text-foreground',
                 )}
               >
-                <span>{lang.flag}</span>
-                <span className="hidden sm:inline">{lang.name}</span>
+                {lang.name}
               </button>
             ))}
           </div>
