@@ -3,6 +3,7 @@ use std::path::PathBuf;
 use tauri::{AppHandle, Manager};
 use tokio::process::Command;
 use crate::types::FfmpegStatus;
+use crate::utils::CommandExt;
 
 /// Get the FFmpeg binary path (app data or system)
 pub async fn get_ffmpeg_path(app: &AppHandle) -> Option<PathBuf> {
@@ -22,11 +23,10 @@ pub async fn get_ffmpeg_path(app: &AppHandle) -> Option<PathBuf> {
     // Fallback: check if system ffmpeg is available
     #[cfg(unix)]
     {
-        let output = Command::new("which")
-            .arg("ffmpeg")
-            .output()
-            .await
-            .ok()?;
+        let mut cmd = Command::new("which");
+        cmd.arg("ffmpeg");
+        cmd.hide_window();
+        let output = cmd.output().await.ok()?;
         
         if output.status.success() {
             let path_str = String::from_utf8_lossy(&output.stdout).trim().to_string();
@@ -38,11 +38,10 @@ pub async fn get_ffmpeg_path(app: &AppHandle) -> Option<PathBuf> {
     
     #[cfg(windows)]
     {
-        let output = Command::new("where")
-            .arg("ffmpeg")
-            .output()
-            .await
-            .ok()?;
+        let mut cmd = Command::new("where");
+        cmd.arg("ffmpeg");
+        cmd.hide_window();
+        let output = cmd.output().await.ok()?;
         
         if output.status.success() {
             let path_str = String::from_utf8_lossy(&output.stdout).lines().next()?.to_string();
@@ -66,12 +65,12 @@ pub async fn check_ffmpeg_internal(app: &AppHandle) -> Result<FfmpegStatus, Stri
         let ffmpeg_path = bin_dir.join("ffmpeg");
         
         if ffmpeg_path.exists() {
-            let output = Command::new(&ffmpeg_path)
-                .args(["-version"])
+            let mut cmd = Command::new(&ffmpeg_path);
+            cmd.args(["-version"])
                 .stdout(Stdio::piped())
-                .stderr(Stdio::piped())
-                .output()
-                .await;
+                .stderr(Stdio::piped());
+            cmd.hide_window();
+            let output = cmd.output().await;
             
             if let Ok(output) = output {
                 let stdout = String::from_utf8_lossy(&output.stdout);
@@ -87,12 +86,12 @@ pub async fn check_ffmpeg_internal(app: &AppHandle) -> Result<FfmpegStatus, Stri
     }
     
     // Check system FFmpeg
-    let output = Command::new("ffmpeg")
-        .args(["-version"])
+    let mut cmd = Command::new("ffmpeg");
+    cmd.args(["-version"])
         .stdout(Stdio::piped())
-        .stderr(Stdio::piped())
-        .output()
-        .await;
+        .stderr(Stdio::piped());
+    cmd.hide_window();
+    let output = cmd.output().await;
     
     match output {
         Ok(output) if output.status.success() => {
@@ -100,20 +99,22 @@ pub async fn check_ffmpeg_internal(app: &AppHandle) -> Result<FfmpegStatus, Stri
             let version = parse_ffmpeg_version(&stdout);
             
             #[cfg(unix)]
-            let path = Command::new("which")
-                .arg("ffmpeg")
-                .output()
-                .await
-                .ok()
-                .map(|o| String::from_utf8_lossy(&o.stdout).trim().to_string());
+            let path = {
+                let mut cmd = Command::new("which");
+                cmd.arg("ffmpeg");
+                cmd.hide_window();
+                cmd.output().await.ok()
+                    .map(|o| String::from_utf8_lossy(&o.stdout).trim().to_string())
+            };
             
             #[cfg(windows)]
-            let path = Command::new("where")
-                .arg("ffmpeg")
-                .output()
-                .await
-                .ok()
-                .map(|o| String::from_utf8_lossy(&o.stdout).lines().next().unwrap_or("").to_string());
+            let path = {
+                let mut cmd = Command::new("where");
+                cmd.arg("ffmpeg");
+                cmd.hide_window();
+                cmd.output().await.ok()
+                    .map(|o| String::from_utf8_lossy(&o.stdout).lines().next().unwrap_or("").to_string())
+            };
             
             #[cfg(not(any(unix, windows)))]
             let path: Option<String> = None;

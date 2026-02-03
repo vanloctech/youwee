@@ -265,6 +265,7 @@ pub async fn extract_audio_for_whisper(
     ffmpeg_path: Option<&str>,
 ) -> Result<String, WhisperError> {
     use tokio::process::Command;
+    use crate::utils::CommandExt;
     
     let ffmpeg = ffmpeg_path.unwrap_or("ffmpeg");
     
@@ -272,8 +273,8 @@ pub async fn extract_audio_for_whisper(
     // -vn: no video
     // -ac 1: mono audio (smaller file)
     // -b:a 64k: 64kbps bitrate (good enough for speech)
-    let output = Command::new(ffmpeg)
-        .args([
+    let mut cmd = Command::new(ffmpeg);
+    cmd.args([
             "-i", input_path,
             "-vn",
             "-acodec", "libmp3lame",
@@ -281,9 +282,9 @@ pub async fn extract_audio_for_whisper(
             "-b:a", "64k",
             "-y", // Overwrite output
             output_path,
-        ])
-        .output()
-        .await
+        ]);
+    cmd.hide_window();
+    let output = cmd.output().await
         .map_err(|e| WhisperError::FfmpegError(format!("Failed to run FFmpeg: {}", e)))?;
     
     if !output.status.success() {
@@ -300,8 +301,8 @@ pub async fn extract_audio_for_whisper(
         // Try again with even lower bitrate
         let _ = fs::remove_file(output_path).await;
         
-        let output = Command::new(ffmpeg)
-            .args([
+        let mut cmd2 = Command::new(ffmpeg);
+        cmd2.args([
                 "-i", input_path,
                 "-vn",
                 "-acodec", "libmp3lame",
@@ -309,9 +310,9 @@ pub async fn extract_audio_for_whisper(
                 "-b:a", "32k", // Even lower bitrate
                 "-y",
                 output_path,
-            ])
-            .output()
-            .await
+            ]);
+        cmd2.hide_window();
+        let output = cmd2.output().await
             .map_err(|e| WhisperError::FfmpegError(format!("Failed to run FFmpeg: {}", e)))?;
         
         if !output.status.success() {
@@ -338,18 +339,19 @@ pub async fn get_audio_duration(
     ffprobe_path: Option<&str>,
 ) -> Result<f64, WhisperError> {
     use tokio::process::Command;
+    use crate::utils::CommandExt;
     
     let ffprobe = ffprobe_path.unwrap_or("ffprobe");
     
-    let output = Command::new(ffprobe)
-        .args([
+    let mut cmd = Command::new(ffprobe);
+    cmd.args([
             "-v", "error",
             "-show_entries", "format=duration",
             "-of", "default=noprint_wrappers=1:nokey=1",
             audio_path,
-        ])
-        .output()
-        .await
+        ]);
+    cmd.hide_window();
+    let output = cmd.output().await
         .map_err(|e| WhisperError::FfmpegError(format!("Failed to run ffprobe: {}", e)))?;
     
     if !output.status.success() {

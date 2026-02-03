@@ -16,6 +16,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Default channel is now Stable** - App defaults to Stable channel instead of Bundled for latest features and fixes
 - **Status indicators** - Shows "Using bundled temporarily..." when falling back, "Downloading yt-dlp..." during auto-download
 
+### Fixed
+- **Hidden console windows on Windows** - yt-dlp, FFmpeg, and other background processes no longer spawn visible terminal windows
+
 
 ## [0.6.0] - 2026-02-03
 

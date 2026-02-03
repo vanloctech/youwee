@@ -8,6 +8,7 @@ use tokio::time::timeout;
 use uuid::Uuid;
 use crate::types::{VideoInfo, FormatOption, VideoInfoResponse, PlaylistVideoEntry, SubtitleInfo};
 use crate::services::{parse_ytdlp_error, run_ytdlp_json_with_cookies, run_ytdlp_with_stderr_and_cookies, build_cookie_args};
+use crate::utils::CommandExt;
 use crate::database::add_log_internal;
 
 /// Get video transcript/subtitles for AI summarization
@@ -586,12 +587,12 @@ pub async fn get_playlist_entries(
             output
         }
         Err(_) => {
-            let result = Command::new("yt-dlp")
-                .args(&args)
+            let mut cmd = Command::new("yt-dlp");
+            cmd.args(&args)
                 .stdout(Stdio::piped())
-                .stderr(Stdio::piped())
-                .output()
-                .await
+                .stderr(Stdio::piped());
+            cmd.hide_window();
+            let result = cmd.output().await
                 .map_err(|e| format!("Failed to run yt-dlp: {}", e))?;
             
             String::from_utf8_lossy(&result.stdout).to_string()

@@ -5,6 +5,7 @@ use tauri_plugin_shell::ShellExt;
 use tauri_plugin_shell::process::CommandEvent;
 use tokio::process::Command;
 use crate::types::{YtdlpVersionInfo, YtdlpChannel, YtdlpChannelInfo, YtdlpAllVersions};
+use crate::utils::CommandExt;
 
 const CHANNEL_CONFIG_FILE: &str = "ytdlp-channel.txt";
 
@@ -86,13 +87,13 @@ async fn get_binary_version(binary_path: &PathBuf) -> Option<String> {
         return None;
     }
     
-    let output = Command::new(binary_path)
-        .args(["--version"])
+    let mut cmd = Command::new(binary_path);
+    cmd.args(["--version"])
         .stdout(Stdio::piped())
-        .stderr(Stdio::piped())
-        .output()
-        .await
-        .ok()?;
+        .stderr(Stdio::piped());
+    cmd.hide_window();
+    
+    let output = cmd.output().await.ok()?;
     
     if output.status.success() {
         Some(String::from_utf8_lossy(&output.stdout).trim().to_string())
@@ -254,12 +255,13 @@ pub struct YtdlpOutput {
 pub async fn run_ytdlp_with_stderr(app: &AppHandle, args: &[&str]) -> Result<YtdlpOutput, String> {
     // Try to get yt-dlp path (prioritizes user-updated version)
     if let Some((binary_path, _)) = get_ytdlp_path(app).await {
-        let output = Command::new(&binary_path)
-            .args(args)
+        let mut cmd = Command::new(&binary_path);
+        cmd.args(args)
             .stdout(Stdio::piped())
-            .stderr(Stdio::piped())
-            .output()
-            .await
+            .stderr(Stdio::piped());
+        cmd.hide_window();
+        
+        let output = cmd.output().await
             .map_err(|e| format!("Failed to run yt-dlp: {}", e))?;
         
         return Ok(YtdlpOutput {
@@ -305,12 +307,13 @@ pub async fn run_ytdlp_with_stderr(app: &AppHandle, args: &[&str]) -> Result<Ytd
         }
         Err(_) => {
             // Fallback to system yt-dlp
-            let output = Command::new("yt-dlp")
-                .args(args)
+            let mut cmd = Command::new("yt-dlp");
+            cmd.args(args)
                 .stdout(Stdio::piped())
-                .stderr(Stdio::piped())
-                .output()
-                .await
+                .stderr(Stdio::piped());
+            cmd.hide_window();
+            
+            let output = cmd.output().await
                 .map_err(|e| format!("Failed to run yt-dlp: {}", e))?;
             
             Ok(YtdlpOutput {
@@ -380,12 +383,13 @@ pub fn parse_ytdlp_error(stderr: &str) -> Option<String> {
 pub async fn run_ytdlp_json(app: &AppHandle, args: &[&str]) -> Result<String, String> {
     // Try to get yt-dlp path (prioritizes user-updated version)
     if let Some((binary_path, _)) = get_ytdlp_path(app).await {
-        let output = Command::new(&binary_path)
-            .args(args)
+        let mut cmd = Command::new(&binary_path);
+        cmd.args(args)
             .stdout(Stdio::piped())
-            .stderr(Stdio::piped())
-            .output()
-            .await
+            .stderr(Stdio::piped());
+        cmd.hide_window();
+        
+        let output = cmd.output().await
             .map_err(|e| format!("Failed to run yt-dlp: {}", e))?;
         
         if !output.status.success() {
@@ -440,12 +444,13 @@ pub async fn run_ytdlp_json(app: &AppHandle, args: &[&str]) -> Result<String, St
         }
         Err(_) => {
             // Fallback to system yt-dlp
-            let output = Command::new("yt-dlp")
-                .args(args)
+            let mut cmd = Command::new("yt-dlp");
+            cmd.args(args)
                 .stdout(Stdio::piped())
-                .stderr(Stdio::piped())
-                .output()
-                .await
+                .stderr(Stdio::piped());
+            cmd.hide_window();
+            
+            let output = cmd.output().await
                 .map_err(|e| format!("Failed to run yt-dlp: {}", e))?;
             
             if !output.status.success() {
@@ -466,12 +471,13 @@ pub async fn run_ytdlp_json(app: &AppHandle, args: &[&str]) -> Result<String, St
 pub async fn get_ytdlp_version_internal(app: &AppHandle) -> Result<YtdlpVersionInfo, String> {
     // Try to get yt-dlp path (prioritizes user-updated version)
     if let Some((binary_path, is_bundled)) = get_ytdlp_path(app).await {
-        let output = Command::new(&binary_path)
-            .args(["--version"])
+        let mut cmd = Command::new(&binary_path);
+        cmd.args(["--version"])
             .stdout(Stdio::piped())
-            .stderr(Stdio::piped())
-            .output()
-            .await
+            .stderr(Stdio::piped());
+        cmd.hide_window();
+        
+        let output = cmd.output().await
             .map_err(|e| format!("Failed to run yt-dlp: {}", e))?;
         
         let version = String::from_utf8_lossy(&output.stdout).trim().to_string();
@@ -512,20 +518,21 @@ pub async fn get_ytdlp_version_internal(app: &AppHandle) -> Result<YtdlpVersionI
             (version, true, bin_path)
         }
         Err(_) => {
-            let output = Command::new("yt-dlp")
-                .args(["--version"])
+            let mut cmd = Command::new("yt-dlp");
+            cmd.args(["--version"])
                 .stdout(Stdio::piped())
-                .stderr(Stdio::piped())
-                .output()
-                .await
+                .stderr(Stdio::piped());
+            cmd.hide_window();
+            
+            let output = cmd.output().await
                 .map_err(|e| format!("yt-dlp not found: {}", e))?;
             
             let version = String::from_utf8_lossy(&output.stdout).trim().to_string();
-            let which_output = Command::new("which")
-                .arg("yt-dlp")
-                .output()
-                .await
-                .ok();
+            
+            let mut which_cmd = Command::new("which");
+            which_cmd.arg("yt-dlp");
+            which_cmd.hide_window();
+            let which_output = which_cmd.output().await.ok();
             
             let bin_path = which_output
                 .map(|o| String::from_utf8_lossy(&o.stdout).trim().to_string())

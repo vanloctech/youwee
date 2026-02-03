@@ -18,7 +18,7 @@ use crate::types::DownloadProgress;
 use crate::database::add_log_internal;
 use crate::database::add_history_internal;
 use crate::database::update_history_download;
-use crate::utils::{build_format_string, parse_progress, format_size, sanitize_output_path};
+use crate::utils::{build_format_string, parse_progress, format_size, sanitize_output_path, CommandExt};
 use crate::services::{get_ffmpeg_path, get_deno_path, get_ytdlp_path};
 
 pub static CANCEL_FLAG: AtomicBool = AtomicBool::new(false);
@@ -34,8 +34,16 @@ fn kill_all_download_processes() {
     #[cfg(windows)]
     {
         use std::process::Command as StdCommand;
-        StdCommand::new("taskkill").args(["/F", "/IM", "yt-dlp.exe"]).spawn().ok();
-        StdCommand::new("taskkill").args(["/F", "/IM", "ffmpeg.exe"]).spawn().ok();
+        use crate::utils::CommandExt as _;
+        let mut cmd1 = StdCommand::new("taskkill");
+        cmd1.args(["/F", "/IM", "yt-dlp.exe"]);
+        cmd1.hide_window();
+        cmd1.spawn().ok();
+        
+        let mut cmd2 = StdCommand::new("taskkill");
+        cmd2.args(["/F", "/IM", "ffmpeg.exe"]);
+        cmd2.hide_window();
+        cmd2.spawn().ok();
     }
 }
 
@@ -233,13 +241,15 @@ pub async fn download_video(
             home_dir, home_dir, current_path
         );
         
-        let process = Command::new(&binary_path)
-            .args(&args)
+        let mut cmd = Command::new(&binary_path);
+        cmd.args(&args)
             .env("HOME", &home_dir)
             .env("PATH", &extended_path)
             .stdout(Stdio::piped())
-            .stderr(Stdio::piped())
-            .spawn()
+            .stderr(Stdio::piped());
+        cmd.hide_window();
+        
+        let process = cmd.spawn()
             .map_err(|e| format!("Failed to start yt-dlp: {}", e))?;
         
         return handle_tokio_download(app, id, process, quality, format, url, should_log_stderr).await;
@@ -497,11 +507,13 @@ pub async fn download_video(
         }
         Err(_) => {
             // Fallback to system yt-dlp
-            let process = Command::new("yt-dlp")
-                .args(&args)
+            let mut cmd = Command::new("yt-dlp");
+            cmd.args(&args)
                 .stdout(Stdio::piped())
-                .stderr(Stdio::piped())
-                .spawn()
+                .stderr(Stdio::piped());
+            cmd.hide_window();
+            
+            let process = cmd.spawn()
                 .map_err(|e| format!("Failed to start yt-dlp: {}", e))?;
             
             handle_tokio_download(app, id, process, quality, format, url, should_log_stderr).await

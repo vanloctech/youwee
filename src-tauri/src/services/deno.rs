@@ -3,6 +3,7 @@ use std::path::PathBuf;
 use tauri::{AppHandle, Manager};
 use tokio::process::Command;
 use crate::types::DenoStatus;
+use crate::utils::CommandExt;
 
 /// Get the Deno binary path (app data or system)
 pub async fn get_deno_path(app: &AppHandle) -> Option<PathBuf> {
@@ -29,11 +30,10 @@ pub async fn get_deno_path(app: &AppHandle) -> Option<PathBuf> {
             return Some(deno_home);
         }
         
-        let output = Command::new("which")
-            .arg("deno")
-            .output()
-            .await
-            .ok()?;
+        let mut cmd = Command::new("which");
+        cmd.arg("deno");
+        cmd.hide_window();
+        let output = cmd.output().await.ok()?;
         
         if output.status.success() {
             let path_str = String::from_utf8_lossy(&output.stdout).trim().to_string();
@@ -45,11 +45,10 @@ pub async fn get_deno_path(app: &AppHandle) -> Option<PathBuf> {
     
     #[cfg(windows)]
     {
-        let output = Command::new("where")
-            .arg("deno")
-            .output()
-            .await
-            .ok()?;
+        let mut cmd = Command::new("where");
+        cmd.arg("deno");
+        cmd.hide_window();
+        let output = cmd.output().await.ok()?;
         
         if output.status.success() {
             let path_str = String::from_utf8_lossy(&output.stdout).lines().next()?.to_string();
@@ -73,12 +72,12 @@ pub async fn check_deno_internal(app: &AppHandle) -> Result<DenoStatus, String> 
         let deno_path = bin_dir.join("deno");
         
         if deno_path.exists() {
-            let output = Command::new(&deno_path)
-                .args(["--version"])
+            let mut cmd = Command::new(&deno_path);
+            cmd.args(["--version"])
                 .stdout(Stdio::piped())
-                .stderr(Stdio::piped())
-                .output()
-                .await;
+                .stderr(Stdio::piped());
+            cmd.hide_window();
+            let output = cmd.output().await;
             
             if let Ok(output) = output {
                 if output.status.success() {
@@ -108,12 +107,12 @@ pub async fn check_deno_internal(app: &AppHandle) -> Result<DenoStatus, String> 
         ("deno".to_string(), false)
     };
     
-    let output = Command::new(&deno_cmd)
-        .args(["--version"])
+    let mut cmd = Command::new(&deno_cmd);
+    cmd.args(["--version"])
         .stdout(Stdio::piped())
-        .stderr(Stdio::piped())
-        .output()
-        .await;
+        .stderr(Stdio::piped());
+    cmd.hide_window();
+    let output = cmd.output().await;
     
     match output {
         Ok(output) if output.status.success() => {
@@ -127,20 +126,18 @@ pub async fn check_deno_internal(app: &AppHandle) -> Result<DenoStatus, String> 
             } else {
                 #[cfg(unix)]
                 {
-                    Command::new("which")
-                        .arg("deno")
-                        .output()
-                        .await
-                        .ok()
+                    let mut cmd = Command::new("which");
+                    cmd.arg("deno");
+                    cmd.hide_window();
+                    cmd.output().await.ok()
                         .map(|o| String::from_utf8_lossy(&o.stdout).trim().to_string())
                 }
                 #[cfg(windows)]
                 {
-                    Command::new("where")
-                        .arg("deno")
-                        .output()
-                        .await
-                        .ok()
+                    let mut cmd = Command::new("where");
+                    cmd.arg("deno");
+                    cmd.hide_window();
+                    cmd.output().await.ok()
                         .map(|o| String::from_utf8_lossy(&o.stdout).lines().next().unwrap_or("").to_string())
                 }
                 #[cfg(not(any(unix, windows)))]

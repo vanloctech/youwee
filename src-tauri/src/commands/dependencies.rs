@@ -11,7 +11,7 @@ use crate::services::{
     get_ytdlp_channel, set_ytdlp_channel, get_all_ytdlp_versions,
     get_ytdlp_channel_download_url, get_channel_api_url,
 };
-use crate::utils::{extract_tar_gz, extract_tar_xz, extract_zip};
+use crate::utils::{extract_tar_gz, extract_tar_xz, extract_zip, CommandExt};
 
 #[derive(Deserialize)]
 struct GitHubRelease {
@@ -156,10 +156,10 @@ pub async fn update_ytdlp(app: AppHandle) -> Result<String, String> {
         .map_err(|e| format!("Failed to rename binary: {}", e))?;
     
     // Get version
-    let output = Command::new(&binary_path)
-        .args(["--version"])
-        .output()
-        .await
+    let mut cmd = Command::new(&binary_path);
+    cmd.args(["--version"]);
+    cmd.hide_window();
+    let output = cmd.output().await
         .map_err(|e| format!("Failed to verify update: {}", e))?;
     
     Ok(String::from_utf8_lossy(&output.stdout).trim().to_string())
@@ -354,10 +354,10 @@ pub async fn download_ytdlp_channel(app: AppHandle, channel: String) -> Result<S
         .map_err(|e| format!("Failed to rename binary: {}", e))?;
     
     // Get version
-    let output = Command::new(&binary_path)
-        .args(["--version"])
-        .output()
-        .await
+    let mut cmd = Command::new(&binary_path);
+    cmd.args(["--version"]);
+    cmd.hide_window();
+    let output = cmd.output().await
         .map_err(|e| format!("Failed to verify installation: {}", e))?;
     
     Ok(String::from_utf8_lossy(&output.stdout).trim().to_string())
@@ -463,12 +463,12 @@ pub async fn download_ffmpeg(app: AppHandle) -> Result<String, String> {
             .map_err(|e| format!("Failed to set permissions: {}", e))?;
     }
     
-    let output = Command::new(&ffmpeg_path)
-        .args(["-version"])
+    let mut cmd = Command::new(&ffmpeg_path);
+    cmd.args(["-version"])
         .stdout(Stdio::piped())
-        .stderr(Stdio::piped())
-        .output()
-        .await
+        .stderr(Stdio::piped());
+    cmd.hide_window();
+    let output = cmd.output().await
         .map_err(|e| format!("Failed to verify FFmpeg installation: {}", e))?;
     
     Ok(parse_ffmpeg_version(&String::from_utf8_lossy(&output.stdout)))
@@ -542,12 +542,12 @@ pub async fn download_deno(app: AppHandle) -> Result<String, String> {
             .map_err(|e| format!("Failed to set permissions: {}", e))?;
     }
     
-    let output = Command::new(&deno_path)
-        .args(["--version"])
+    let mut cmd = Command::new(&deno_path);
+    cmd.args(["--version"])
         .stdout(Stdio::piped())
-        .stderr(Stdio::piped())
-        .output()
-        .await
+        .stderr(Stdio::piped());
+    cmd.hide_window();
+    let output = cmd.output().await
         .map_err(|e| format!("Failed to verify Deno installation: {}", e))?;
     
     // Parse version from "deno 2.1.2 (...)" format
@@ -642,13 +642,13 @@ pub async fn detect_installed_browsers() -> Result<Vec<DetectedBrowser>, String>
         ];
         
         for (name, browser_type, commands) in browser_checks {
-            for cmd in commands {
-                let result = Command::new("which")
-                    .arg(cmd)
+            for cmd_name in commands {
+                let mut cmd = Command::new("which");
+                cmd.arg(cmd_name)
                     .stdout(Stdio::null())
-                    .stderr(Stdio::null())
-                    .status()
-                    .await;
+                    .stderr(Stdio::null());
+                cmd.hide_window();
+                let result = cmd.status().await;
                 
                 if let Ok(status) = result {
                     if status.success() {

@@ -11,6 +11,7 @@ use rusqlite::params;
 
 use crate::database::get_db;
 use crate::services::{get_ffmpeg_path, generate_raw, AIConfig};
+use crate::utils::CommandExt;
 
 // Store for active processing jobs
 static ACTIVE_JOBS: LazyLock<Mutex<HashMap<String, tokio::sync::oneshot::Sender<()>>>> = 
@@ -127,16 +128,16 @@ pub async fn get_video_metadata(app: AppHandle, path: String) -> Result<VideoMet
     let ffprobe_path = get_ffprobe_path(&app).await
         .ok_or("FFprobe not found. Please install FFmpeg.")?;
     
-    let output = Command::new(&ffprobe_path)
-        .args([
+    let mut cmd = Command::new(&ffprobe_path);
+    cmd.args([
             "-v", "quiet",
             "-print_format", "json",
             "-show_format",
             "-show_streams",
             &path,
-        ])
-        .output()
-        .await
+        ]);
+    cmd.hide_window();
+    let output = cmd.output().await
         .map_err(|e| format!("Failed to run ffprobe: {}", e))?;
     
     if !output.status.success() {
@@ -734,11 +735,12 @@ pub async fn execute_ffmpeg_command(
     }
     
     println!("[FFMPEG] Spawning FFmpeg process...");
-    let mut child = Command::new(&ffmpeg_path)
-        .args(&args)
+    let mut cmd = Command::new(&ffmpeg_path);
+    cmd.args(&args)
         .stdout(Stdio::piped())
-        .stderr(Stdio::piped())
-        .spawn()
+        .stderr(Stdio::piped());
+    cmd.hide_window();
+    let mut child = cmd.spawn()
         .map_err(|e| {
             println!("[FFMPEG] Failed to spawn: {}", e);
             format!("Failed to start FFmpeg: {}", e)
@@ -1104,11 +1106,10 @@ async fn get_ffprobe_path(app: &AppHandle) -> Option<std::path::PathBuf> {
     // Fallback to system ffprobe
     #[cfg(unix)]
     {
-        let output = Command::new("which")
-            .arg("ffprobe")
-            .output()
-            .await
-            .ok()?;
+        let mut cmd = Command::new("which");
+        cmd.arg("ffprobe");
+        cmd.hide_window();
+        let output = cmd.output().await.ok()?;
         
         if output.status.success() {
             let path_str = String::from_utf8_lossy(&output.stdout).trim().to_string();
@@ -1120,11 +1121,10 @@ async fn get_ffprobe_path(app: &AppHandle) -> Option<std::path::PathBuf> {
     
     #[cfg(windows)]
     {
-        let output = Command::new("where")
-            .arg("ffprobe")
-            .output()
-            .await
-            .ok()?;
+        let mut cmd = Command::new("where");
+        cmd.arg("ffprobe");
+        cmd.hide_window();
+        let output = cmd.output().await.ok()?;
         
         if output.status.success() {
             let path_str = String::from_utf8_lossy(&output.stdout).lines().next()?.to_string();
@@ -1215,8 +1215,8 @@ pub async fn generate_video_preview(
     
     // Generate preview with FFmpeg
     // Settings: 720p, H.264, 30fps, fast preset, lower bitrate
-    let output = Command::new(&ffmpeg_path)
-        .args([
+    let mut cmd = Command::new(&ffmpeg_path);
+    cmd.args([
             "-y",
             "-i", &input_path,
             "-vf", "scale=-2:720",
@@ -1230,9 +1230,9 @@ pub async fn generate_video_preview(
             preview_path.to_str().unwrap(),
         ])
         .stdout(Stdio::piped())
-        .stderr(Stdio::piped())
-        .output()
-        .await
+        .stderr(Stdio::piped());
+    cmd.hide_window();
+    let output = cmd.output().await
         .map_err(|e| format!("Failed to run FFmpeg: {}", e))?;
     
     if !output.status.success() {
