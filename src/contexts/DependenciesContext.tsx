@@ -16,7 +16,7 @@ export interface FfmpegStatus {
   is_system: boolean;
 }
 
-export interface BunStatus {
+export interface DenoStatus {
   installed: boolean;
   version: string | null;
   binary_path: string | null;
@@ -30,7 +30,7 @@ export interface FfmpegUpdateInfo {
   release_url: string | null;
 }
 
-export interface BunUpdateInfo {
+export interface DenoUpdateInfo {
   has_update: boolean;
   current_version: string | null;
   latest_version: string | null;
@@ -66,19 +66,20 @@ interface DependenciesContextType {
   checkFfmpegUpdate: () => Promise<void>;
   downloadFfmpeg: () => Promise<void>;
 
-  // Bun state
-  bunStatus: BunStatus | null;
-  bunLoading: boolean;
-  bunDownloading: boolean;
-  bunError: string | null;
-  bunSuccess: boolean;
-  bunUpdateInfo: BunUpdateInfo | null;
-  bunCheckingUpdate: boolean;
+  // Deno state
+  denoStatus: DenoStatus | null;
+  denoLoading: boolean;
+  denoDownloading: boolean;
+  denoError: string | null;
+  denoSuccess: boolean;
+  denoUpdateInfo: DenoUpdateInfo | null;
+  denoCheckingUpdate: boolean;
+  isAutoDownloadingDeno: boolean; // True when auto-downloading on first launch
 
-  // Bun actions
-  checkBun: () => Promise<void>;
-  checkBunUpdate: () => Promise<void>;
-  downloadBun: () => Promise<void>;
+  // Deno actions
+  checkDeno: () => Promise<void>;
+  checkDenoUpdate: () => Promise<void>;
+  downloadDeno: () => Promise<void>;
 }
 
 const DependenciesContext = createContext<DependenciesContextType | null>(null);
@@ -102,14 +103,15 @@ export function DependenciesProvider({ children }: { children: ReactNode }) {
   const [ffmpegUpdateInfo, setFfmpegUpdateInfo] = useState<FfmpegUpdateInfo | null>(null);
   const [ffmpegCheckingUpdate, setFfmpegCheckingUpdate] = useState(false);
 
-  // Bun state
-  const [bunStatus, setBunStatus] = useState<BunStatus | null>(null);
-  const [bunLoading, setBunLoading] = useState(false);
-  const [bunDownloading, setBunDownloading] = useState(false);
-  const [bunError, setBunError] = useState<string | null>(null);
-  const [bunSuccess, setBunSuccess] = useState(false);
-  const [bunUpdateInfo, setBunUpdateInfo] = useState<BunUpdateInfo | null>(null);
-  const [bunCheckingUpdate, setBunCheckingUpdate] = useState(false);
+  // Deno state
+  const [denoStatus, setDenoStatus] = useState<DenoStatus | null>(null);
+  const [denoLoading, setDenoLoading] = useState(false);
+  const [denoDownloading, setDenoDownloading] = useState(false);
+  const [denoError, setDenoError] = useState<string | null>(null);
+  const [denoSuccess, setDenoSuccess] = useState(false);
+  const [denoUpdateInfo, setDenoUpdateInfo] = useState<DenoUpdateInfo | null>(null);
+  const [denoCheckingUpdate, setDenoCheckingUpdate] = useState(false);
+  const [isAutoDownloadingDeno, setIsAutoDownloadingDeno] = useState(false);
 
   // Load yt-dlp version (only once on first mount)
   const refreshYtdlpVersion = useCallback(async () => {
@@ -185,75 +187,101 @@ export function DependenciesProvider({ children }: { children: ReactNode }) {
     }
   }, [checkFfmpeg]);
 
-  // Check Bun status
-  const checkBun = useCallback(async () => {
-    setBunLoading(true);
-    setBunError(null);
+  // Check Deno status
+  const checkDeno = useCallback(async () => {
+    setDenoLoading(true);
+    setDenoError(null);
     try {
-      const status = await invoke<BunStatus>('check_bun');
-      setBunStatus(status);
+      const status = await invoke<DenoStatus>('check_deno');
+      setDenoStatus(status);
     } catch (err) {
-      setBunError(err instanceof Error ? err.message : String(err));
+      setDenoError(err instanceof Error ? err.message : String(err));
     } finally {
-      setBunLoading(false);
+      setDenoLoading(false);
     }
   }, []);
 
-  // Check Bun update
-  const checkBunUpdate = useCallback(async () => {
-    setBunCheckingUpdate(true);
-    setBunError(null);
+  // Check Deno update
+  const checkDenoUpdate = useCallback(async () => {
+    setDenoCheckingUpdate(true);
+    setDenoError(null);
     try {
-      const updateInfo = await invoke<BunUpdateInfo>('check_bun_update');
-      setBunUpdateInfo(updateInfo);
+      const updateInfo = await invoke<DenoUpdateInfo>('check_deno_update');
+      setDenoUpdateInfo(updateInfo);
     } catch (err) {
-      setBunError(err instanceof Error ? err.message : String(err));
+      setDenoError(err instanceof Error ? err.message : String(err));
     } finally {
-      setBunCheckingUpdate(false);
+      setDenoCheckingUpdate(false);
     }
   }, []);
 
-  // Download Bun
-  const downloadBun = useCallback(async () => {
-    setBunDownloading(true);
-    setBunError(null);
-    setBunSuccess(false);
+  // Download Deno
+  const downloadDeno = useCallback(async () => {
+    setDenoDownloading(true);
+    setDenoError(null);
+    setDenoSuccess(false);
     try {
-      const version = await invoke<string>('download_bun');
-      setBunStatus({
+      const version = await invoke<string>('download_deno');
+      setDenoStatus({
         installed: true,
         version,
         binary_path: null, // Will be updated on next check
         is_system: false,
       });
-      setBunSuccess(true);
+      setDenoSuccess(true);
       // Set update info to show "Up to date" instead of null
-      setBunUpdateInfo({
+      setDenoUpdateInfo({
         has_update: false,
         current_version: version,
         latest_version: version,
         release_url: null,
       });
       // Hide success message after 3 seconds
-      setTimeout(() => setBunSuccess(false), 3000);
+      setTimeout(() => setDenoSuccess(false), 3000);
       // Refresh to get full status
-      await checkBun();
+      await checkDeno();
     } catch (err) {
-      setBunError(err instanceof Error ? err.message : String(err));
+      setDenoError(err instanceof Error ? err.message : String(err));
     } finally {
-      setBunDownloading(false);
+      setDenoDownloading(false);
     }
-  }, [checkBun]);
+  }, [checkDeno]);
 
-  // Initialize on first mount
+  // Initialize on first mount - auto download Deno if not installed
   useEffect(() => {
     if (!initialized) {
       setInitialized(true);
       refreshYtdlpVersion();
       checkFfmpeg();
-      checkBun();
+      // Check Deno and auto-download if not installed
+      checkDeno().then(async () => {
+        // Auto-download Deno if not installed (for YouTube support)
+        const status = await invoke<DenoStatus>('check_deno');
+        if (!status.installed) {
+          setIsAutoDownloadingDeno(true);
+          setDenoDownloading(true);
+          try {
+            const version = await invoke<string>('download_deno');
+            setDenoStatus({
+              installed: true,
+              version,
+              binary_path: null,
+              is_system: false,
+            });
+            setDenoSuccess(true);
+            await checkDeno();
+            // Hide success message after 3 seconds
+            setTimeout(() => setDenoSuccess(false), 3000);
+          } catch (err) {
+            setDenoError(err instanceof Error ? err.message : String(err));
+          } finally {
+            setDenoDownloading(false);
+            // Keep isAutoDownloadingDeno true until user dismisses or success auto-closes
+          }
+        }
+      });
     }
-  }, [initialized, refreshYtdlpVersion, checkFfmpeg, checkBun]);
+  }, [initialized, refreshYtdlpVersion, checkFfmpeg, checkDeno]);
 
   // Check for updates
   const checkForUpdate = useCallback(async () => {
@@ -314,17 +342,18 @@ export function DependenciesProvider({ children }: { children: ReactNode }) {
         checkFfmpeg,
         checkFfmpegUpdate,
         downloadFfmpeg,
-        // Bun
-        bunStatus,
-        bunLoading,
-        bunDownloading,
-        bunError,
-        bunSuccess,
-        bunUpdateInfo,
-        bunCheckingUpdate,
-        checkBun,
-        checkBunUpdate,
-        downloadBun,
+        // Deno
+        denoStatus,
+        denoLoading,
+        denoDownloading,
+        denoError,
+        denoSuccess,
+        denoUpdateInfo,
+        denoCheckingUpdate,
+        isAutoDownloadingDeno,
+        checkDeno,
+        checkDenoUpdate,
+        downloadDeno,
       }}
     >
       {children}

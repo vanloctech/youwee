@@ -23,7 +23,7 @@ interface DependenciesSectionProps {
 
 export function DependenciesSection({ highlightId }: DependenciesSectionProps) {
   const { t } = useTranslation('settings');
-  const { settings, updateUseBunRuntime, updateUseActualPlayerJs } = useDownload();
+  const { settings, updateUseActualPlayerJs } = useDownload();
   const {
     // yt-dlp
     ytdlpInfo,
@@ -45,16 +45,16 @@ export function DependenciesSection({ highlightId }: DependenciesSectionProps) {
     ffmpegSuccess,
     checkFfmpegUpdate,
     downloadFfmpeg,
-    // Bun
-    bunStatus,
-    bunLoading,
-    bunDownloading,
-    bunCheckingUpdate,
-    bunUpdateInfo,
-    bunError,
-    bunSuccess,
-    checkBunUpdate,
-    downloadBun,
+    // Deno
+    denoStatus,
+    denoLoading,
+    denoDownloading,
+    denoCheckingUpdate,
+    denoUpdateInfo,
+    denoError,
+    denoSuccess,
+    checkDenoUpdate,
+    downloadDeno,
   } = useDependencies();
 
   // Compare versions: update available if latestVersion exists and differs from current
@@ -256,59 +256,59 @@ export function DependenciesSection({ highlightId }: DependenciesSectionProps) {
           </a>
         </SettingsCard>
 
-        {/* Bun Runtime */}
-        <SettingsCard id="bun" highlight={highlightId === 'bun'}>
+        {/* Deno Runtime */}
+        <SettingsCard id="deno" highlight={highlightId === 'deno'}>
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center shadow-lg shadow-amber-500/20">
+              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-cyan-500 to-blue-600 flex items-center justify-center shadow-lg shadow-cyan-500/20">
                 <Terminal className="w-5 h-5 text-white" />
               </div>
               <div>
                 <div className="flex items-center gap-2">
-                  <span className="font-medium">{t('dependencies.bunRuntime')}</span>
-                  {bunLoading ? (
+                  <span className="font-medium">{t('dependencies.denoRuntime')}</span>
+                  {denoLoading ? (
                     <Loader2 className="w-3 h-3 animate-spin text-muted-foreground" />
-                  ) : bunStatus?.installed ? (
+                  ) : denoStatus?.installed ? (
                     <Badge variant="secondary" className="font-mono text-xs">
-                      {bunStatus.version || t('dependencies.installed')}
+                      {denoStatus.version || t('dependencies.installed')}
                     </Badge>
                   ) : (
-                    <Badge variant="outline" className="text-xs">
-                      {t('dependencies.optional')}
+                    <Badge variant="destructive" className="text-xs">
+                      {t('dependencies.notFound')}
                     </Badge>
                   )}
                 </div>
                 <p className="text-xs text-muted-foreground mt-0.5">
-                  {bunDownloading ? (
+                  {denoDownloading ? (
                     <span className="flex items-center gap-1 text-primary">
                       <Loader2 className="w-3 h-3 animate-spin" />
-                      {bunUpdateInfo?.has_update
+                      {denoUpdateInfo?.has_update
                         ? t('dependencies.updating')
                         : t('dependencies.installing')}
                     </span>
-                  ) : bunCheckingUpdate ? (
+                  ) : denoCheckingUpdate ? (
                     <span className="flex items-center gap-1 text-muted-foreground">
                       <Loader2 className="w-3 h-3 animate-spin" />
                       {t('dependencies.checkingUpdates')}
                     </span>
-                  ) : bunSuccess ? (
+                  ) : denoSuccess ? (
                     <span className="text-emerald-500">
-                      {bunUpdateInfo?.has_update
+                      {denoUpdateInfo?.has_update
                         ? t('dependencies.updated')
                         : t('dependencies.installed')}
                     </span>
-                  ) : bunError ? (
-                    <span className="text-destructive">{bunError}</span>
-                  ) : bunUpdateInfo?.has_update ? (
+                  ) : denoError ? (
+                    <span className="text-destructive">{denoError}</span>
+                  ) : denoUpdateInfo?.has_update ? (
                     <span className="text-primary">
-                      {t('dependencies.available', { version: bunUpdateInfo.latest_version })}
+                      {t('dependencies.available', { version: denoUpdateInfo.latest_version })}
                     </span>
-                  ) : bunUpdateInfo && !bunUpdateInfo.has_update ? (
+                  ) : denoUpdateInfo && !denoUpdateInfo.has_update ? (
                     <span className="text-emerald-500">{t('dependencies.upToDate')}</span>
-                  ) : !bunStatus?.installed ? (
-                    <span className="text-amber-500">{t('dependencies.enable360pFix')}</span>
-                  ) : bunStatus?.is_system ? (
-                    t('dependencies.systemBun')
+                  ) : !denoStatus?.installed ? (
+                    <span className="text-amber-500">{t('dependencies.requiredForYoutube')}</span>
+                  ) : denoStatus?.is_system ? (
+                    t('dependencies.systemDeno')
                   ) : (
                     t('dependencies.jsRuntimeForYoutube')
                   )}
@@ -316,18 +316,18 @@ export function DependenciesSection({ highlightId }: DependenciesSectionProps) {
               </div>
             </div>
             <div className="flex items-center gap-2">
-              {bunUpdateInfo?.has_update && !bunStatus?.is_system && (
-                <Button size="sm" onClick={downloadBun} disabled={bunDownloading}>
-                  {bunDownloading ? (
+              {denoUpdateInfo?.has_update && !denoStatus?.is_system && (
+                <Button size="sm" onClick={downloadDeno} disabled={denoDownloading}>
+                  {denoDownloading ? (
                     <Loader2 className="w-4 h-4 animate-spin" />
                   ) : (
                     t('dependencies.update')
                   )}
                 </Button>
               )}
-              {!bunStatus?.installed && !bunLoading && (
-                <Button size="sm" onClick={downloadBun} disabled={bunDownloading}>
-                  {bunDownloading ? (
+              {!denoStatus?.installed && !denoLoading && (
+                <Button size="sm" onClick={downloadDeno} disabled={denoDownloading}>
+                  {denoDownloading ? (
                     <Loader2 className="w-4 h-4 animate-spin" />
                   ) : (
                     t('dependencies.install')
@@ -337,42 +337,30 @@ export function DependenciesSection({ highlightId }: DependenciesSectionProps) {
               <Button
                 variant="ghost"
                 size="icon"
-                onClick={checkBunUpdate}
+                onClick={checkDenoUpdate}
                 disabled={
-                  bunLoading ||
-                  bunDownloading ||
-                  bunCheckingUpdate ||
-                  !bunStatus?.installed ||
-                  bunStatus?.is_system
+                  denoLoading ||
+                  denoDownloading ||
+                  denoCheckingUpdate ||
+                  !denoStatus?.installed ||
+                  denoStatus?.is_system
                 }
                 title={t('dependencies.checkForUpdates')}
               >
                 <RefreshCw
-                  className={cn('w-4 h-4', (bunLoading || bunCheckingUpdate) && 'animate-spin')}
+                  className={cn('w-4 h-4', (denoLoading || denoCheckingUpdate) && 'animate-spin')}
                 />
               </Button>
             </div>
           </div>
-          <div className="mt-3 pt-3 border-t border-border/50">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-xs font-medium">{t('dependencies.useBunForYoutube')}</p>
-                <p className="text-xs text-muted-foreground">{t('dependencies.fixes360pIssue')}</p>
-              </div>
-              <Switch
-                checked={settings.useBunRuntime}
-                onCheckedChange={updateUseBunRuntime}
-                disabled={!bunStatus?.installed}
-              />
-            </div>
-          </div>
           <a
-            href="https://bun.sh"
+            href="https://deno.land"
             target="_blank"
             rel="noopener noreferrer"
             className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground mt-3 pt-3 border-t border-border/50"
           >
-            bun.sh
+            <Github className="w-3 h-3" />
+            deno.land
             <ExternalLink className="w-3 h-3" />
           </a>
         </SettingsCard>

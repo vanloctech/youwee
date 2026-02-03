@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+- **Replaced Bun with Deno** - Now uses Deno runtime for YouTube JavaScript extraction (required by yt-dlp)
+- **Auto-download Deno on first launch** - App automatically downloads Deno if not installed
+- **Setup progress dialog** - Shows "Setting Up YouTube Support" popup when downloading Deno on first launch
+
+### Fixed
+- **YouTube downloads with bundled Deno** - Fixed path escaping issue when Deno is installed in Application Support folder (paths with spaces)
+- **Use `--js-runtimes` flag** - Switched from `--extractor-args` to `--js-runtimes deno:PATH` for better compatibility
+
 
 ## [0.5.4] - 2026-01-28
 

@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { DenoDialog } from '@/components/DenoDialog';
 import { FFmpegDialog } from '@/components/FFmpegDialog';
 import type { Page } from '@/components/layout';
 import { MainLayout } from '@/components/layout';
@@ -25,9 +26,10 @@ import {
 function AppContent() {
   const [currentPage, setCurrentPage] = useState<Page>('youtube');
   const [showFfmpegDialog, setShowFfmpegDialog] = useState(false);
+  const [showDenoDialog, setShowDenoDialog] = useState(false);
   const [ffmpegChecked, setFfmpegChecked] = useState(false);
   const updater = useUpdater();
-  const { ffmpegStatus, ffmpegLoading } = useDependencies();
+  const { ffmpegStatus, ffmpegLoading, isAutoDownloadingDeno, denoStatus, denoSuccess } = useDependencies();
 
   // Show FFmpeg dialog on startup if not installed
   useEffect(() => {
@@ -49,6 +51,24 @@ function AppContent() {
       setShowFfmpegDialog(false);
     }
   }, [ffmpegStatus, showFfmpegDialog]);
+
+  // Show Deno dialog when auto-downloading on first launch
+  useEffect(() => {
+    if (isAutoDownloadingDeno && !showDenoDialog) {
+      setShowDenoDialog(true);
+    }
+  }, [isAutoDownloadingDeno, showDenoDialog]);
+
+  // Close Deno dialog when Deno gets installed successfully
+  useEffect(() => {
+    if ((denoStatus?.installed || denoSuccess) && showDenoDialog) {
+      // Small delay to show success state
+      const timer = setTimeout(() => {
+        setShowDenoDialog(false);
+      }, 1500);
+      return () => clearTimeout(timer);
+    }
+  }, [denoStatus, denoSuccess, showDenoDialog]);
 
   return (
     <>
@@ -76,6 +96,8 @@ function AppContent() {
       />
 
       {showFfmpegDialog && <FFmpegDialog onDismiss={() => setShowFfmpegDialog(false)} />}
+
+      {showDenoDialog && <DenoDialog onDismiss={() => setShowDenoDialog(false)} />}
     </>
   );
 }

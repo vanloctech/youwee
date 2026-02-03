@@ -82,7 +82,7 @@ export interface DownloadSettings {
   subtitleEmbed: boolean; // true = embed into video, false = separate file
   subtitleFormat: SubtitleFormat; // srt, vtt, ass
   // YouTube specific settings
-  useBunRuntime: boolean; // Use Bun runtime for YouTube downloads (fixes 360p issue)
+  useBunRuntime: boolean; // Deprecated - Deno is now used automatically
   useActualPlayerJs: boolean; // Use actual player.js version for YouTube (fixes some download issues)
   // Post-processing settings
   embedMetadata: boolean; // Embed metadata (title, artist, description) into downloaded files

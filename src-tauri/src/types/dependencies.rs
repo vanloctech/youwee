@@ -19,9 +19,9 @@ pub struct FfmpegStatus {
     pub is_system: bool,
 }
 
-/// Bun runtime installation status
+/// Deno runtime installation status
 #[derive(Clone, Serialize, Debug)]
-pub struct BunStatus {
+pub struct DenoStatus {
     pub installed: bool,
     pub version: Option<String>,
     pub binary_path: Option<String>,

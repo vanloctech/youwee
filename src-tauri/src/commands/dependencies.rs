@@ -2,14 +2,14 @@ use std::process::Stdio;
 use serde::{Deserialize, Serialize};
 use tauri::{AppHandle, Manager};
 use tokio::process::Command;
-use crate::types::{YtdlpVersionInfo, FfmpegStatus, BunStatus};
+use crate::types::{YtdlpVersionInfo, FfmpegStatus, DenoStatus};
 use crate::services::{
     get_ytdlp_version_internal, get_ytdlp_download_info, verify_sha256,
     check_ffmpeg_internal, get_ffmpeg_download_info, parse_ffmpeg_version,
     get_ffmpeg_path, check_ffmpeg_update_internal, FfmpegUpdateInfo,
-    check_bun_internal, get_bun_download_url, check_bun_update_internal, BunUpdateInfo,
+    check_deno_internal, get_deno_download_url, check_deno_update_internal, DenoUpdateInfo,
 };
-use crate::utils::{extract_tar_gz, extract_tar_xz, extract_zip, extract_bun_from_zip};
+use crate::utils::{extract_tar_gz, extract_tar_xz, extract_zip};
 
 #[derive(Deserialize)]
 struct GitHubRelease {
@@ -280,18 +280,18 @@ pub async fn get_ffmpeg_path_for_ytdlp(app: AppHandle) -> Result<Option<String>,
 }
 
 #[tauri::command]
-pub async fn check_bun(app: AppHandle) -> Result<BunStatus, String> {
-    check_bun_internal(&app).await
+pub async fn check_deno(app: AppHandle) -> Result<DenoStatus, String> {
+    check_deno_internal(&app).await
 }
 
 #[tauri::command]
-pub async fn check_bun_update(app: AppHandle) -> Result<BunUpdateInfo, String> {
-    check_bun_update_internal(&app).await
+pub async fn check_deno_update(app: AppHandle) -> Result<DenoUpdateInfo, String> {
+    check_deno_update_internal(&app).await
 }
 
 #[tauri::command]
-pub async fn download_bun(app: AppHandle) -> Result<String, String> {
-    let download_url = get_bun_download_url();
+pub async fn download_deno(app: AppHandle) -> Result<String, String> {
+    let download_url = get_deno_download_url();
     
     if download_url.is_empty() {
         return Err("Unsupported platform".to_string());
@@ -306,13 +306,13 @@ pub async fn download_bun(app: AppHandle) -> Result<String, String> {
         .map_err(|e| format!("Failed to create bin directory: {}", e))?;
     
     let client = reqwest::Client::builder()
-        .user_agent("Youwee/0.4.0")
+        .user_agent("Youwee/0.5.4")
         .timeout(std::time::Duration::from_secs(300))
         .build()
         .map_err(|e| format!("Failed to create HTTP client: {}", e))?;
     
     let response = client.get(download_url).send().await
-        .map_err(|e| format!("Failed to download Bun: {}", e))?;
+        .map_err(|e| format!("Failed to download Deno: {}", e))?;
     
     if !response.status().is_success() {
         return Err(format!("Download failed with status: {}", response.status()));
@@ -322,34 +322,41 @@ pub async fn download_bun(app: AppHandle) -> Result<String, String> {
         .map_err(|e| format!("Failed to read response: {}", e))?;
     
     #[cfg(windows)]
-    let bun_binary = "bun.exe";
+    let deno_binary = "deno.exe";
     #[cfg(not(windows))]
-    let bun_binary = "bun";
+    let deno_binary = "deno";
     
-    let bun_path = bin_dir.join(bun_binary);
+    let deno_path = bin_dir.join(deno_binary);
     
-    extract_bun_from_zip(&bytes, &bin_dir, bun_binary).await?;
+    // Extract deno from zip (deno zip contains just the binary directly)
+    extract_zip(&bytes, &bin_dir, deno_binary).await?;
     
     #[cfg(unix)]
     {
         use std::os::unix::fs::PermissionsExt;
-        let mut perms = tokio::fs::metadata(&bun_path).await
+        let mut perms = tokio::fs::metadata(&deno_path).await
             .map_err(|e| format!("Failed to get file metadata: {}", e))?
             .permissions();
         perms.set_mode(0o755);
-        tokio::fs::set_permissions(&bun_path, perms).await
+        tokio::fs::set_permissions(&deno_path, perms).await
             .map_err(|e| format!("Failed to set permissions: {}", e))?;
     }
     
-    let output = Command::new(&bun_path)
+    let output = Command::new(&deno_path)
         .args(["--version"])
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())
         .output()
         .await
-        .map_err(|e| format!("Failed to verify Bun installation: {}", e))?;
+        .map_err(|e| format!("Failed to verify Deno installation: {}", e))?;
     
-    Ok(String::from_utf8_lossy(&output.stdout).trim().to_string())
+    // Parse version from "deno 2.1.2 (...)" format
+    let version_output = String::from_utf8_lossy(&output.stdout);
+    let version = version_output.lines().next()
+        .map(|l| l.trim_start_matches("deno ").split_whitespace().next().unwrap_or("").to_string())
+        .unwrap_or_default();
+    
+    Ok(version)
 }
 
 #[tauri::command]

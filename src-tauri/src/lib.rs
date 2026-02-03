@@ -6,7 +6,7 @@
 //! - `types`: Data structures (VideoInfo, DownloadProgress, etc.)
 //! - `database`: SQLite operations for logs and history
 //! - `utils`: Helper functions (format_size, parse_progress, etc.)
-//! - `services`: Core services (yt-dlp, FFmpeg, Bun runtime)
+//! - `services`: Core services (yt-dlp, FFmpeg, Deno runtime)
 //! - `commands`: Tauri commands exposed to the frontend
 
 pub mod types;
@@ -57,10 +57,10 @@ pub fn run() {
             commands::check_ffmpeg_update,
             commands::download_ffmpeg,
             commands::get_ffmpeg_path_for_ytdlp,
-            // Bun commands
-            commands::check_bun,
-            commands::check_bun_update,
-            commands::download_bun,
+            // Deno commands
+            commands::check_deno,
+            commands::check_deno_update,
+            commands::download_deno,
             // Browser detection
             commands::detect_installed_browsers,
             commands::get_browser_profiles,

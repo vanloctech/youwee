@@ -19,7 +19,7 @@ use crate::database::add_log_internal;
 use crate::database::add_history_internal;
 use crate::database::update_history_download;
 use crate::utils::{build_format_string, parse_progress, format_size, sanitize_output_path};
-use crate::services::{get_ffmpeg_path, get_bun_path, get_ytdlp_path};
+use crate::services::{get_ffmpeg_path, get_deno_path, get_ytdlp_path};
 
 pub static CANCEL_FLAG: AtomicBool = AtomicBool::new(false);
 
@@ -56,7 +56,7 @@ pub async fn download_video(
     subtitle_embed: bool,
     subtitle_format: String,
     log_stderr: Option<bool>,
-    use_bun_runtime: Option<bool>,
+    _use_bun_runtime: Option<bool>, // Deprecated - now auto uses deno
     use_actual_player_js: Option<bool>,
     history_id: Option<String>,
     // Cookie settings
@@ -91,11 +91,12 @@ pub async fn download_video(
         "--no-keep-fragments".to_string(),
     ];
     
-    // Add Bun runtime args if enabled
-    if use_bun_runtime.unwrap_or(false) && (url.contains("youtube.com") || url.contains("youtu.be")) {
-        if let Some(bun_path) = get_bun_path(&app).await {
-            args.push("--extractor-args".to_string());
-            args.push(format!("youtube:ejs_runtimes=bun;ejs_bun_path={}", bun_path.to_string_lossy()));
+    // Auto use Deno runtime for YouTube (required for JS extractor)
+    // Use --js-runtimes instead of --extractor-args (handles spaces in path correctly)
+    if url.contains("youtube.com") || url.contains("youtu.be") {
+        if let Some(deno_path) = get_deno_path(&app).await {
+            args.push("--js-runtimes".to_string());
+            args.push(format!("deno:{}", deno_path.to_string_lossy()));
         }
     }
     
