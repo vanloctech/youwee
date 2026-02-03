@@ -61,6 +61,11 @@
 
 > 在 [Releases 页面](https://github.com/vanloctech/youwee/releases) 查看所有版本
 
+> ⚠️ **注意**: 该应用尚未使用 Apple 开发者证书签名。如果 macOS 阻止应用运行，请执行：
+> ```bash
+> xattr -cr /Applications/Youwee.app
+> ```
+
 ### 从源码构建
 
 #### 环境要求
@@ -149,6 +154,27 @@ bun run tauri build
 - **Issues**: [GitHub Issues](https://github.com/vanloctech/youwee/issues)
 
 ---
+
+## Star History
+
+<picture>
+  <source
+    media="(prefers-color-scheme: dark)"
+    srcset="
+      https://api.star-history.com/svg?repos=vanloctech/youwee&type=Date&theme=dark
+    "
+  />
+  <source
+    media="(prefers-color-scheme: light)"
+    srcset="
+      https://api.star-history.com/svg?repos=vanloctech/youwee&type=Date
+    "
+  />
+  <img
+    alt="Star History Chart"
+    src="https://api.star-history.com/svg?repos=vanloctech/youwee&type=Date"
+  />
+</picture>
 
 <div align="center">
   Made with ❤️ by 越南

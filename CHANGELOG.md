@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **yt-dlp channel selection** - Choose between Bundled, Stable, or Nightly versions in Settings → Dependencies
+- **Auto-download yt-dlp Stable** - Automatically downloads latest stable yt-dlp on first launch
+- **Fallback to bundled** - Uses bundled yt-dlp when Stable/Nightly not available (no internet, download failed)
+
+### Changed
+- **Default channel is now Stable** - App defaults to Stable channel instead of Bundled for latest features and fixes
+- **Status indicators** - Shows "Using bundled temporarily..." when falling back, "Downloading yt-dlp..." during auto-download
+
 
 ## [0.6.0] - 2026-02-03
 

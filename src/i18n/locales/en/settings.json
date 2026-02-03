@@ -58,7 +58,14 @@
     "optionsToFixIssues": "Options to fix download issues",
     "useActualPlayerJs": "Use Actual Player.js",
     "fixesUnableToDownload": "Fixes \"unable to download\" errors on some videos",
-    "learnMore": "Learn more about this issue"
+    "learnMore": "Learn more about this issue",
+    "channelBundled": "Bundled",
+    "channelStable": "Stable",
+    "channelNightly": "Nightly",
+    "stableShipped": "Stable version shipped with app",
+    "notInstalled": "Not installed",
+    "usingBundledTemporarily": "Using bundled temporarily...",
+    "downloadingYtdlp": "Downloading yt-dlp..."
   },
   "network": {
     "title": "Network & Authentication",

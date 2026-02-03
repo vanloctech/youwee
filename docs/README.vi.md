@@ -61,6 +61,11 @@
 
 > Xem tất cả các phiên bản tại [trang Releases](https://github.com/vanloctech/youwee/releases)
 
+> ⚠️ **Lưu ý**: Ứng dụng chưa được ký bằng chứng chỉ Apple Developer. Nếu macOS chặn ứng dụng, hãy chạy:
+> ```bash
+> xattr -cr /Applications/Youwee.app
+> ```
+
 ### Xây dựng từ mã nguồn
 
 #### Yêu cầu
@@ -149,6 +154,27 @@ Dự án này được cấp phép theo MIT License - xem file [LICENSE](../LICE
 - **Issues**: [GitHub Issues](https://github.com/vanloctech/youwee/issues)
 
 ---
+
+## Star History
+
+<picture>
+  <source
+    media="(prefers-color-scheme: dark)"
+    srcset="
+      https://api.star-history.com/svg?repos=vanloctech/youwee&type=Date&theme=dark
+    "
+  />
+  <source
+    media="(prefers-color-scheme: light)"
+    srcset="
+      https://api.star-history.com/svg?repos=vanloctech/youwee&type=Date
+    "
+  />
+  <img
+    alt="Star History Chart"
+    src="https://api.star-history.com/svg?repos=vanloctech/youwee&type=Date"
+  />
+</picture>
 
 <div align="center">
   Made with ❤️ by Việt Nam

@@ -58,7 +58,14 @@
     "optionsToFixIssues": "Tùy chọn để sửa lỗi tải xuống",
     "useActualPlayerJs": "Dùng Actual Player.js",
     "fixesUnableToDownload": "Khắc phục lỗi \"không thể tải\" trên một số video",
-    "learnMore": "Tìm hiểu thêm về vấn đề này"
+    "learnMore": "Tìm hiểu thêm về vấn đề này",
+    "channelBundled": "Đi kèm",
+    "channelStable": "Ổn định",
+    "channelNightly": "Nightly",
+    "stableShipped": "Phiên bản ổn định đi kèm ứng dụng",
+    "notInstalled": "Chưa cài đặt",
+    "usingBundledTemporarily": "Đang dùng tạm bản đi kèm...",
+    "downloadingYtdlp": "Đang tải yt-dlp..."
   },
   "network": {
     "title": "Mạng & Xác thực",

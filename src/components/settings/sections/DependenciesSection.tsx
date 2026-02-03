@@ -1,5 +1,6 @@
 import {
   AlertCircle,
+  Download,
   ExternalLink,
   Film,
   Github,
@@ -11,10 +12,17 @@ import {
 import { useTranslation } from 'react-i18next';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
 import { useDependencies } from '@/contexts/DependenciesContext';
 import { useDownload } from '@/contexts/DownloadContext';
-import { cn } from '@/lib/utils';
+import type { YtdlpChannel } from '@/lib/types';
 import { SettingsCard, SettingsSection } from '../SettingsSection';
 
 interface DependenciesSectionProps {
@@ -35,6 +43,19 @@ export function DependenciesSection({ highlightId }: DependenciesSectionProps) {
     error,
     checkForUpdate,
     updateYtdlp,
+    // yt-dlp channel
+    ytdlpChannel,
+    ytdlpAllVersions,
+    ytdlpChannelUpdateInfo,
+    isChannelLoading,
+    isChannelDownloading,
+    isChannelCheckingUpdate,
+    channelError,
+    channelDownloadSuccess,
+    isAutoDownloadingYtdlp,
+    setYtdlpChannel,
+    checkChannelUpdate,
+    downloadChannelBinary,
     // FFmpeg
     ffmpegStatus,
     ffmpegLoading,
@@ -61,6 +82,27 @@ export function DependenciesSection({ highlightId }: DependenciesSectionProps) {
   const isUpdateAvailable =
     latestVersion && ytdlpInfo?.version ? latestVersion !== ytdlpInfo.version : false;
 
+  // Check if current channel needs download (not installed)
+  const needsDownload = () => {
+    if (ytdlpChannel === 'bundled') return false;
+    if (!ytdlpAllVersions) return false;
+    const info = ytdlpChannel === 'stable' ? ytdlpAllVersions.stable : ytdlpAllVersions.nightly;
+    return !info.installed;
+  };
+
+  // Handle channel change
+  const handleChannelChange = async (channel: YtdlpChannel) => {
+    await setYtdlpChannel(channel);
+    // If the channel binary is not installed, download it
+    if (channel !== 'bundled') {
+      const versions = ytdlpAllVersions;
+      const info = channel === 'stable' ? versions?.stable : versions?.nightly;
+      if (!info?.installed) {
+        await downloadChannelBinary(channel);
+      }
+    }
+  };
+
   return (
     <div className="space-y-8">
       <SettingsSection
@@ -79,7 +121,7 @@ export function DependenciesSection({ highlightId }: DependenciesSectionProps) {
               <div>
                 <div className="flex items-center gap-2">
                   <span className="font-medium">{t('dependencies.ytdlp')}</span>
-                  {isLoading ? (
+                  {isLoading || isChannelLoading ? (
                     <Loader2 className="w-3 h-3 animate-spin text-muted-foreground" />
                   ) : ytdlpInfo ? (
                     <Badge variant="secondary" className="font-mono text-xs">
@@ -92,20 +134,30 @@ export function DependenciesSection({ highlightId }: DependenciesSectionProps) {
                   )}
                 </div>
                 <p className="text-xs text-muted-foreground mt-0.5">
-                  {isUpdating ? (
+                  {isUpdating || isChannelDownloading ? (
                     <span className="flex items-center gap-1 text-primary">
                       <Loader2 className="w-3 h-3 animate-spin" />
-                      {t('dependencies.updating')}
+                      {isAutoDownloadingYtdlp
+                        ? t('dependencies.downloadingYtdlp')
+                        : needsDownload()
+                          ? t('dependencies.installing')
+                          : t('dependencies.updating')}
                     </span>
-                  ) : updateSuccess ? (
+                  ) : updateSuccess || channelDownloadSuccess ? (
                     <span className="text-emerald-500">{t('dependencies.updated')}</span>
-                  ) : error ? (
-                    <span className="text-destructive">{error}</span>
-                  ) : isUpdateAvailable ? (
-                    <span className="text-primary">
-                      {t('dependencies.available', { version: latestVersion })}
+                  ) : error || channelError ? (
+                    <span className="text-destructive">{error || channelError}</span>
+                  ) : ytdlpAllVersions?.using_fallback ? (
+                    <span className="text-amber-500">
+                      {t('dependencies.usingBundledTemporarily')}
                     </span>
-                  ) : latestVersion ? (
+                  ) : ytdlpChannelUpdateInfo?.update_available ? (
+                    <span className="text-primary">
+                      {t('dependencies.available', {
+                        version: ytdlpChannelUpdateInfo.latest_version,
+                      })}
+                    </span>
+                  ) : ytdlpChannelUpdateInfo && !ytdlpChannelUpdateInfo.update_available ? (
                     <span className="text-emerald-500">{t('dependencies.upToDate')}</span>
                   ) : (
                     t('dependencies.videoDownloadEngine')
@@ -114,7 +166,55 @@ export function DependenciesSection({ highlightId }: DependenciesSectionProps) {
               </div>
             </div>
             <div className="flex items-center gap-2">
-              {isUpdateAvailable && (
+              {/* Channel selector */}
+              <Select
+                value={ytdlpChannel}
+                onValueChange={(value) => handleChannelChange(value as YtdlpChannel)}
+                disabled={isChannelLoading || isChannelDownloading}
+              >
+                <SelectTrigger className="w-[120px] h-8">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="bundled">{t('dependencies.channelBundled')}</SelectItem>
+                  <SelectItem value="stable">{t('dependencies.channelStable')}</SelectItem>
+                  <SelectItem value="nightly">{t('dependencies.channelNightly')}</SelectItem>
+                </SelectContent>
+              </Select>
+
+              {/* Update/Download button */}
+              {ytdlpChannel !== 'bundled' &&
+                (needsDownload() ? (
+                  <Button
+                    size="sm"
+                    onClick={() => downloadChannelBinary(ytdlpChannel)}
+                    disabled={isChannelDownloading}
+                  >
+                    {isChannelDownloading ? (
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                    ) : (
+                      <>
+                        <Download className="w-4 h-4 mr-1" />
+                        {t('dependencies.install')}
+                      </>
+                    )}
+                  </Button>
+                ) : ytdlpChannelUpdateInfo?.update_available ? (
+                  <Button
+                    size="sm"
+                    onClick={() => downloadChannelBinary(ytdlpChannel)}
+                    disabled={isChannelDownloading}
+                  >
+                    {isChannelDownloading ? (
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                    ) : (
+                      t('dependencies.update')
+                    )}
+                  </Button>
+                ) : null)}
+
+              {/* Legacy update for bundled (stable releases) */}
+              {ytdlpChannel === 'bundled' && isUpdateAvailable && (
                 <Button size="sm" onClick={updateYtdlp} disabled={isUpdating}>
                   {isUpdating ? (
                     <Loader2 className="w-4 h-4 animate-spin" />
@@ -123,13 +223,27 @@ export function DependenciesSection({ highlightId }: DependenciesSectionProps) {
                   )}
                 </Button>
               )}
+
+              {/* Check for updates button */}
               <Button
                 variant="ghost"
                 size="icon"
-                onClick={checkForUpdate}
-                disabled={isChecking || isUpdating}
+                onClick={() => {
+                  if (ytdlpChannel === 'bundled') {
+                    checkForUpdate();
+                  } else {
+                    checkChannelUpdate(ytdlpChannel);
+                  }
+                }}
+                disabled={
+                  isChecking || isUpdating || isChannelCheckingUpdate || isChannelDownloading
+                }
               >
-                <RefreshCw className={cn('w-4 h-4', isChecking && 'animate-spin')} />
+                {isChecking || isChannelCheckingUpdate ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <RefreshCw className="w-4 h-4" />
+                )}
               </Button>
             </div>
           </div>
@@ -236,12 +350,11 @@ export function DependenciesSection({ highlightId }: DependenciesSectionProps) {
                 }
                 title={t('dependencies.checkForUpdates')}
               >
-                <RefreshCw
-                  className={cn(
-                    'w-4 h-4',
-                    (ffmpegLoading || ffmpegCheckingUpdate) && 'animate-spin',
-                  )}
-                />
+                {ffmpegLoading || ffmpegCheckingUpdate ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <RefreshCw className="w-4 h-4" />
+                )}
               </Button>
             </div>
           </div>
@@ -347,9 +460,11 @@ export function DependenciesSection({ highlightId }: DependenciesSectionProps) {
                 }
                 title={t('dependencies.checkForUpdates')}
               >
-                <RefreshCw
-                  className={cn('w-4 h-4', (denoLoading || denoCheckingUpdate) && 'animate-spin')}
-                />
+                {denoLoading || denoCheckingUpdate ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <RefreshCw className="w-4 h-4" />
+                )}
               </Button>
             </div>
           </div>

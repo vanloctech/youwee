@@ -52,6 +52,12 @@ pub fn run() {
             commands::get_ytdlp_version,
             commands::check_ytdlp_update,
             commands::update_ytdlp,
+            // yt-dlp channel commands
+            commands::get_ytdlp_channel_cmd,
+            commands::set_ytdlp_channel_cmd,
+            commands::get_all_ytdlp_versions_cmd,
+            commands::check_ytdlp_channel_update,
+            commands::download_ytdlp_channel,
             // FFmpeg commands
             commands::check_ffmpeg,
             commands::check_ffmpeg_update,

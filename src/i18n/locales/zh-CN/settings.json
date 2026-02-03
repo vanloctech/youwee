@@ -58,7 +58,14 @@
     "optionsToFixIssues": "修复下载问题的选项",
     "useActualPlayerJs": "使用实际 Player.js",
     "fixesUnableToDownload": "修复某些视频的「无法下载」错误",
-    "learnMore": "了解更多关于此问题"
+    "learnMore": "了解更多关于此问题",
+    "channelBundled": "内置版",
+    "channelStable": "稳定版",
+    "channelNightly": "每日构建",
+    "stableShipped": "应用内置的稳定版本",
+    "notInstalled": "未安装",
+    "usingBundledTemporarily": "暂时使用内置版...",
+    "downloadingYtdlp": "正在下载 yt-dlp..."
   },
   "network": {
     "title": "网络与认证",

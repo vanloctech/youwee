@@ -476,3 +476,31 @@ export const QUICK_ACTIONS: QuickAction[] = [
     needsInput: 'file',
   },
 ];
+
+// ============================================
+// yt-dlp Channel Types
+// ============================================
+
+export type YtdlpChannel = 'bundled' | 'stable' | 'nightly';
+
+export interface YtdlpChannelInfo {
+  channel: string;
+  version: string | null;
+  installed: boolean;
+  binary_path: string | null;
+}
+
+export interface YtdlpAllVersions {
+  current_channel: string;
+  using_fallback: boolean;
+  bundled: YtdlpChannelInfo;
+  stable: YtdlpChannelInfo;
+  nightly: YtdlpChannelInfo;
+}
+
+export interface YtdlpChannelUpdateInfo {
+  channel: string;
+  current_version: string | null;
+  latest_version: string;
+  update_available: boolean;
+}

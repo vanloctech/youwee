@@ -60,6 +60,11 @@
 
 > See all releases on the [Releases page](https://github.com/vanloctech/youwee/releases)
 
+> ⚠️ **Note**: The app is not signed with an Apple Developer certificate yet. If macOS blocks the app, run:
+> ```bash
+> xattr -cr /Applications/Youwee.app
+> ```
+
 ### Build from Source
 
 #### Prerequisites
@@ -148,6 +153,27 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 - **Issues**: [GitHub Issues](https://github.com/vanloctech/youwee/issues)
 
 ---
+
+## Star History
+
+<picture>
+  <source
+    media="(prefers-color-scheme: dark)"
+    srcset="
+      https://api.star-history.com/svg?repos=vanloctech/youwee&type=Date&theme=dark
+    "
+  />
+  <source
+    media="(prefers-color-scheme: light)"
+    srcset="
+      https://api.star-history.com/svg?repos=vanloctech/youwee&type=Date
+    "
+  />
+  <img
+    alt="Star History Chart"
+    src="https://api.star-history.com/svg?repos=vanloctech/youwee&type=Date"
+  />
+</picture>
 
 <div align="center">
   Made with ❤️ by VietNam

@@ -2,12 +2,14 @@ use std::process::Stdio;
 use serde::{Deserialize, Serialize};
 use tauri::{AppHandle, Manager};
 use tokio::process::Command;
-use crate::types::{YtdlpVersionInfo, FfmpegStatus, DenoStatus};
+use crate::types::{YtdlpVersionInfo, FfmpegStatus, DenoStatus, YtdlpChannel, YtdlpAllVersions, YtdlpChannelUpdateInfo};
 use crate::services::{
     get_ytdlp_version_internal, get_ytdlp_download_info, verify_sha256,
     check_ffmpeg_internal, get_ffmpeg_download_info, parse_ffmpeg_version,
     get_ffmpeg_path, check_ffmpeg_update_internal, FfmpegUpdateInfo,
     check_deno_internal, get_deno_download_url, check_deno_update_internal, DenoUpdateInfo,
+    get_ytdlp_channel, set_ytdlp_channel, get_all_ytdlp_versions,
+    get_ytdlp_channel_download_url, get_channel_api_url,
 };
 use crate::utils::{extract_tar_gz, extract_tar_xz, extract_zip};
 
@@ -159,6 +161,204 @@ pub async fn update_ytdlp(app: AppHandle) -> Result<String, String> {
         .output()
         .await
         .map_err(|e| format!("Failed to verify update: {}", e))?;
+    
+    Ok(String::from_utf8_lossy(&output.stdout).trim().to_string())
+}
+
+// ============ yt-dlp Channel Commands ============
+
+#[tauri::command]
+pub async fn get_ytdlp_channel_cmd(app: AppHandle) -> Result<String, String> {
+    let channel = get_ytdlp_channel(&app).await;
+    Ok(channel.as_str().to_string())
+}
+
+#[tauri::command]
+pub async fn set_ytdlp_channel_cmd(app: AppHandle, channel: String) -> Result<(), String> {
+    let channel_enum = YtdlpChannel::from_str(&channel);
+    set_ytdlp_channel(&app, &channel_enum).await
+}
+
+#[tauri::command]
+pub async fn get_all_ytdlp_versions_cmd(app: AppHandle) -> Result<YtdlpAllVersions, String> {
+    Ok(get_all_ytdlp_versions(&app).await)
+}
+
+#[tauri::command]
+pub async fn check_ytdlp_channel_update(app: AppHandle, channel: String) -> Result<YtdlpChannelUpdateInfo, String> {
+    let channel_enum = YtdlpChannel::from_str(&channel);
+    
+    // Get API URL for the channel
+    let api_url = get_channel_api_url(&channel_enum)
+        .ok_or("Cannot check updates for bundled channel")?;
+    
+    // Get current installed version
+    let all_versions = get_all_ytdlp_versions(&app).await;
+    let current_version = match channel_enum {
+        YtdlpChannel::Bundled => all_versions.bundled.version,
+        YtdlpChannel::Stable => all_versions.stable.version,
+        YtdlpChannel::Nightly => all_versions.nightly.version,
+    };
+    
+    // Fetch latest version from GitHub
+    let client = reqwest::Client::builder()
+        .user_agent("Youwee/0.6.0")
+        .timeout(std::time::Duration::from_secs(10))
+        .build()
+        .map_err(|e| format!("Failed to create HTTP client: {}", e))?;
+    
+    let response = client
+        .get(api_url)
+        .send()
+        .await
+        .map_err(|e| {
+            if e.is_timeout() {
+                "Request timed out. Please try again later.".to_string()
+            } else if e.is_connect() {
+                "Unable to connect. Please check your internet connection.".to_string()
+            } else {
+                format!("Failed to check for updates: {}", e)
+            }
+        })?;
+    
+    let status = response.status();
+    
+    if status == reqwest::StatusCode::FORBIDDEN || status == reqwest::StatusCode::TOO_MANY_REQUESTS {
+        return Err("GitHub API rate limit exceeded. Please try again later.".to_string());
+    }
+    
+    if !status.is_success() {
+        return Err(format!("GitHub API error: {}", status));
+    }
+    
+    let release: GitHubRelease = response
+        .json()
+        .await
+        .map_err(|e| format!("Failed to parse release info: {}", e))?;
+    
+    let latest_version = release.tag_name;
+    let update_available = current_version.as_ref()
+        .map(|cv| cv != &latest_version)
+        .unwrap_or(true); // If not installed, update is available
+    
+    Ok(YtdlpChannelUpdateInfo {
+        channel: channel_enum.as_str().to_string(),
+        current_version,
+        latest_version,
+        update_available,
+    })
+}
+
+#[tauri::command]
+pub async fn download_ytdlp_channel(app: AppHandle, channel: String) -> Result<String, String> {
+    let channel_enum = YtdlpChannel::from_str(&channel);
+    
+    // Get download URL for the channel
+    let (download_url, checksum_filename) = get_ytdlp_channel_download_url(&channel_enum)
+        .ok_or("Cannot download bundled channel")?;
+    
+    let app_data_dir = app.path().app_data_dir()
+        .map_err(|e| format!("Failed to get app data directory: {}", e))?;
+    
+    let bin_dir = app_data_dir.join("bin");
+    
+    tokio::fs::create_dir_all(&bin_dir)
+        .await
+        .map_err(|e| format!("Failed to create bin directory: {}", e))?;
+    
+    // Determine binary name based on channel
+    #[cfg(windows)]
+    let binary_name = match channel_enum {
+        YtdlpChannel::Bundled => "yt-dlp.exe",
+        YtdlpChannel::Stable => "yt-dlp-stable.exe",
+        YtdlpChannel::Nightly => "yt-dlp-nightly.exe",
+    };
+    #[cfg(not(windows))]
+    let binary_name = match channel_enum {
+        YtdlpChannel::Bundled => "yt-dlp",
+        YtdlpChannel::Stable => "yt-dlp-stable",
+        YtdlpChannel::Nightly => "yt-dlp-nightly",
+    };
+    
+    let binary_path = bin_dir.join(binary_name);
+    
+    let client = reqwest::Client::builder()
+        .user_agent("Youwee/0.6.0")
+        .timeout(std::time::Duration::from_secs(300))
+        .build()
+        .map_err(|e| format!("Failed to create HTTP client: {}", e))?;
+    
+    // Get checksums URL based on channel
+    let checksums_url = match channel_enum {
+        YtdlpChannel::Bundled => return Err("Cannot download bundled channel".to_string()),
+        YtdlpChannel::Stable => "https://github.com/yt-dlp/yt-dlp/releases/latest/download/SHA2-256SUMS",
+        YtdlpChannel::Nightly => "https://github.com/yt-dlp/yt-dlp-nightly-builds/releases/latest/download/SHA2-256SUMS",
+    };
+    
+    // Download checksums
+    let checksums_response = client.get(checksums_url).send().await
+        .map_err(|e| format!("Failed to download checksums: {}", e))?;
+    
+    if !checksums_response.status().is_success() {
+        return Err(format!("Failed to download checksums: HTTP {}", checksums_response.status()));
+    }
+    
+    let checksums_text = checksums_response.text().await
+        .map_err(|e| format!("Failed to read checksums: {}", e))?;
+    
+    let expected_hash = checksums_text
+        .lines()
+        .find_map(|line| {
+            let parts: Vec<&str> = line.split_whitespace().collect();
+            if parts.len() >= 2 && parts[1] == checksum_filename {
+                Some(parts[0].to_string())
+            } else {
+                None
+            }
+        })
+        .ok_or_else(|| format!("Checksum not found for {}", checksum_filename))?;
+    
+    // Download binary
+    let response = client.get(download_url).send().await
+        .map_err(|e| format!("Failed to download yt-dlp: {}", e))?;
+    
+    if !response.status().is_success() {
+        return Err(format!("Download failed with status: {}", response.status()));
+    }
+    
+    let bytes = response.bytes().await
+        .map_err(|e| format!("Failed to read response: {}", e))?;
+    
+    // Verify checksum
+    if !verify_sha256(&bytes, &expected_hash) {
+        return Err("Security error: SHA256 checksum verification failed.".to_string());
+    }
+    
+    // Write binary
+    let temp_path = binary_path.with_extension("tmp");
+    tokio::fs::write(&temp_path, &bytes).await
+        .map_err(|e| format!("Failed to write binary: {}", e))?;
+    
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        let mut perms = tokio::fs::metadata(&temp_path).await
+            .map_err(|e| format!("Failed to get file metadata: {}", e))?
+            .permissions();
+        perms.set_mode(0o755);
+        tokio::fs::set_permissions(&temp_path, perms).await
+            .map_err(|e| format!("Failed to set permissions: {}", e))?;
+    }
+    
+    tokio::fs::rename(&temp_path, &binary_path).await
+        .map_err(|e| format!("Failed to rename binary: {}", e))?;
+    
+    // Get version
+    let output = Command::new(&binary_path)
+        .args(["--version"])
+        .output()
+        .await
+        .map_err(|e| format!("Failed to verify installation: {}", e))?;
     
     Ok(String::from_utf8_lossy(&output.stdout).trim().to_string())
 }

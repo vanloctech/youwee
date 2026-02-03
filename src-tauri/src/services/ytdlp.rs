@@ -4,47 +4,242 @@ use tauri::{AppHandle, Manager};
 use tauri_plugin_shell::ShellExt;
 use tauri_plugin_shell::process::CommandEvent;
 use tokio::process::Command;
-use crate::types::YtdlpVersionInfo;
+use crate::types::{YtdlpVersionInfo, YtdlpChannel, YtdlpChannelInfo, YtdlpAllVersions};
 
-/// Get the path to yt-dlp binary, prioritizing USER-UPDATED version
-/// Returns: (path, is_bundled)
-/// - First checks app_data_dir/bin (user-updated version takes priority)
-/// - Then checks bundled sidecar next to executable
-/// - Then checks resource_dir/bin (Tauri bundled)
-/// - Finally falls back to system yt-dlp
-pub async fn get_ytdlp_path(app: &AppHandle) -> Option<(PathBuf, bool)> {
+const CHANNEL_CONFIG_FILE: &str = "ytdlp-channel.txt";
+
+/// Get the config file path for storing channel selection
+fn get_channel_config_path(app: &AppHandle) -> Option<PathBuf> {
+    app.path().app_data_dir().ok().map(|p| p.join("bin").join(CHANNEL_CONFIG_FILE))
+}
+
+/// Read the current yt-dlp channel from config file
+pub async fn get_ytdlp_channel(app: &AppHandle) -> YtdlpChannel {
+    if let Some(config_path) = get_channel_config_path(app) {
+        if let Ok(content) = tokio::fs::read_to_string(&config_path).await {
+            return YtdlpChannel::from_str(content.trim());
+        }
+    }
+    YtdlpChannel::Bundled
+}
+
+/// Save the yt-dlp channel to config file
+pub async fn set_ytdlp_channel(app: &AppHandle, channel: &YtdlpChannel) -> Result<(), String> {
+    let config_path = get_channel_config_path(app)
+        .ok_or("Failed to get config path")?;
+    
+    // Ensure bin directory exists
+    if let Some(parent) = config_path.parent() {
+        tokio::fs::create_dir_all(parent).await
+            .map_err(|e| format!("Failed to create bin directory: {}", e))?;
+    }
+    
+    tokio::fs::write(&config_path, channel.as_str()).await
+        .map_err(|e| format!("Failed to save channel config: {}", e))?;
+    
+    Ok(())
+}
+
+/// Get the binary name for a specific channel
+fn get_channel_binary_name(channel: &YtdlpChannel) -> &'static str {
+    #[cfg(windows)]
+    match channel {
+        YtdlpChannel::Bundled => "yt-dlp.exe",
+        YtdlpChannel::Stable => "yt-dlp-stable.exe",
+        YtdlpChannel::Nightly => "yt-dlp-nightly.exe",
+    }
+    #[cfg(not(windows))]
+    match channel {
+        YtdlpChannel::Bundled => "yt-dlp",
+        YtdlpChannel::Stable => "yt-dlp-stable",
+        YtdlpChannel::Nightly => "yt-dlp-nightly",
+    }
+}
+
+/// Get the path to a specific channel's binary in app_data_dir
+fn get_channel_binary_path(app: &AppHandle, channel: &YtdlpChannel) -> Option<PathBuf> {
+    app.path().app_data_dir().ok().map(|p| p.join("bin").join(get_channel_binary_name(channel)))
+}
+
+/// Get the bundled yt-dlp path
+fn get_bundled_ytdlp_path() -> Option<PathBuf> {
     #[cfg(windows)]
     let binary_name = "yt-dlp.exe";
     #[cfg(not(windows))]
     let binary_name = "yt-dlp";
     
-    // 1. Check app_data_dir/bin FIRST (user-updated version takes priority)
-    if let Ok(app_data_dir) = app.path().app_data_dir() {
-        let user_binary = app_data_dir.join("bin").join(binary_name);
-        if user_binary.exists() {
-            return Some((user_binary, false));
-        }
-    }
-    
-    // 2. Check bundled sidecar next to executable
+    // Check next to executable first
     if let Ok(exe_path) = std::env::current_exe() {
         if let Some(exe_dir) = exe_path.parent() {
-            let bundled_binary = exe_dir.join(binary_name);
-            if bundled_binary.exists() {
-                return Some((bundled_binary, true));
+            let bundled = exe_dir.join(binary_name);
+            if bundled.exists() {
+                return Some(bundled);
+            }
+        }
+    }
+    None
+}
+
+/// Get version of a specific binary
+async fn get_binary_version(binary_path: &PathBuf) -> Option<String> {
+    if !binary_path.exists() {
+        return None;
+    }
+    
+    let output = Command::new(binary_path)
+        .args(["--version"])
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .output()
+        .await
+        .ok()?;
+    
+    if output.status.success() {
+        Some(String::from_utf8_lossy(&output.stdout).trim().to_string())
+    } else {
+        None
+    }
+}
+
+/// Get info for all yt-dlp channels
+pub async fn get_all_ytdlp_versions(app: &AppHandle) -> YtdlpAllVersions {
+    let current_channel = get_ytdlp_channel(app).await;
+    
+    // Bundled version
+    let bundled_path = get_bundled_ytdlp_path();
+    let bundled_version = if let Some(ref path) = bundled_path {
+        get_binary_version(path).await
+    } else {
+        None
+    };
+    let bundled = YtdlpChannelInfo {
+        channel: "bundled".to_string(),
+        version: bundled_version,
+        installed: bundled_path.as_ref().map(|p| p.exists()).unwrap_or(false),
+        binary_path: bundled_path.map(|p| p.to_string_lossy().to_string()),
+    };
+    
+    // Stable version
+    let stable_path = get_channel_binary_path(app, &YtdlpChannel::Stable);
+    let stable_installed = stable_path.as_ref().map(|p| p.exists()).unwrap_or(false);
+    let stable_version = if let Some(ref path) = stable_path {
+        get_binary_version(path).await
+    } else {
+        None
+    };
+    let stable = YtdlpChannelInfo {
+        channel: "stable".to_string(),
+        version: stable_version,
+        installed: stable_installed,
+        binary_path: stable_path.map(|p| p.to_string_lossy().to_string()),
+    };
+    
+    // Nightly version
+    let nightly_path = get_channel_binary_path(app, &YtdlpChannel::Nightly);
+    let nightly_installed = nightly_path.as_ref().map(|p| p.exists()).unwrap_or(false);
+    let nightly_version = if let Some(ref path) = nightly_path {
+        get_binary_version(path).await
+    } else {
+        None
+    };
+    let nightly = YtdlpChannelInfo {
+        channel: "nightly".to_string(),
+        version: nightly_version,
+        installed: nightly_installed,
+        binary_path: nightly_path.map(|p| p.to_string_lossy().to_string()),
+    };
+    
+    // Check if using fallback (channel is stable/nightly but binary not installed)
+    let using_fallback = match current_channel {
+        YtdlpChannel::Bundled => false,
+        YtdlpChannel::Stable => !stable_installed,
+        YtdlpChannel::Nightly => !nightly_installed,
+    };
+    
+    YtdlpAllVersions {
+        current_channel: current_channel.as_str().to_string(),
+        using_fallback,
+        bundled,
+        stable,
+        nightly,
+    }
+}
+
+/// Get download URL for a specific channel
+pub fn get_ytdlp_channel_download_url(channel: &YtdlpChannel) -> Option<(&'static str, &'static str)> {
+    match channel {
+        YtdlpChannel::Bundled => None, // Bundled doesn't need download
+        YtdlpChannel::Stable => {
+            #[cfg(target_os = "macos")]
+            { Some(("https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp_macos", "yt-dlp_macos")) }
+            #[cfg(target_os = "linux")]
+            { Some(("https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp_linux", "yt-dlp_linux")) }
+            #[cfg(target_os = "windows")]
+            { Some(("https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp.exe", "yt-dlp.exe")) }
+            #[cfg(not(any(target_os = "macos", target_os = "linux", target_os = "windows")))]
+            { None }
+        }
+        YtdlpChannel::Nightly => {
+            #[cfg(target_os = "macos")]
+            { Some(("https://github.com/yt-dlp/yt-dlp-nightly-builds/releases/latest/download/yt-dlp_macos", "yt-dlp_macos")) }
+            #[cfg(target_os = "linux")]
+            { Some(("https://github.com/yt-dlp/yt-dlp-nightly-builds/releases/latest/download/yt-dlp_linux", "yt-dlp_linux")) }
+            #[cfg(target_os = "windows")]
+            { Some(("https://github.com/yt-dlp/yt-dlp-nightly-builds/releases/latest/download/yt-dlp.exe", "yt-dlp.exe")) }
+            #[cfg(not(any(target_os = "macos", target_os = "linux", target_os = "windows")))]
+            { None }
+        }
+    }
+}
+
+/// Get GitHub API URL for checking latest version of a channel
+pub fn get_channel_api_url(channel: &YtdlpChannel) -> Option<&'static str> {
+    match channel {
+        YtdlpChannel::Bundled => None,
+        YtdlpChannel::Stable => Some("https://api.github.com/repos/yt-dlp/yt-dlp/releases/latest"),
+        YtdlpChannel::Nightly => Some("https://api.github.com/repos/yt-dlp/yt-dlp-nightly-builds/releases/latest"),
+    }
+}
+
+/// Get the path to yt-dlp binary based on current channel setting
+/// Returns: (path, is_bundled)
+pub async fn get_ytdlp_path(app: &AppHandle) -> Option<(PathBuf, bool)> {
+    let channel = get_ytdlp_channel(app).await;
+    
+    match channel {
+        YtdlpChannel::Bundled => {
+            // Use bundled version
+            if let Some(bundled) = get_bundled_ytdlp_path() {
+                return Some((bundled, true));
+            }
+        }
+        YtdlpChannel::Stable | YtdlpChannel::Nightly => {
+            // Check channel-specific binary first
+            if let Some(channel_path) = get_channel_binary_path(app, &channel) {
+                if channel_path.exists() {
+                    return Some((channel_path, false));
+                }
+            }
+            // Fallback to bundled if channel binary not found
+            if let Some(bundled) = get_bundled_ytdlp_path() {
+                return Some((bundled, true));
             }
         }
     }
     
-    // 3. Check bundled sidecar in resource_dir
-    if let Ok(resource_dir) = app.path().resource_dir() {
-        let bundled_binary = resource_dir.join("bin").join(binary_name);
-        if bundled_binary.exists() {
-            return Some((bundled_binary, true));
+    // Final fallback: check app_data_dir/bin/yt-dlp (legacy location)
+    #[cfg(windows)]
+    let binary_name = "yt-dlp.exe";
+    #[cfg(not(windows))]
+    let binary_name = "yt-dlp";
+    
+    if let Ok(app_data_dir) = app.path().app_data_dir() {
+        let legacy_binary = app_data_dir.join("bin").join(binary_name);
+        if legacy_binary.exists() {
+            return Some((legacy_binary, false));
         }
     }
     
-    // 4. Fallback to system yt-dlp
     None
 }
 

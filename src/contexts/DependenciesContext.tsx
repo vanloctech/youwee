@@ -1,5 +1,6 @@
 import { invoke } from '@tauri-apps/api/core';
 import { createContext, type ReactNode, useCallback, useContext, useEffect, useState } from 'react';
+import type { YtdlpAllVersions, YtdlpChannel, YtdlpChannelUpdateInfo } from '../lib/types';
 
 export interface YtdlpVersionInfo {
   version: string;
@@ -47,6 +48,17 @@ interface DependenciesContextType {
   error: string | null;
   updateSuccess: boolean;
 
+  // yt-dlp channel state
+  ytdlpChannel: YtdlpChannel;
+  ytdlpAllVersions: YtdlpAllVersions | null;
+  ytdlpChannelUpdateInfo: YtdlpChannelUpdateInfo | null;
+  isChannelLoading: boolean;
+  isChannelDownloading: boolean;
+  isChannelCheckingUpdate: boolean;
+  channelError: string | null;
+  channelDownloadSuccess: boolean;
+  isAutoDownloadingYtdlp: boolean; // True when auto-downloading stable on first launch
+
   // FFmpeg state
   ffmpegStatus: FfmpegStatus | null;
   ffmpegLoading: boolean;
@@ -60,6 +72,12 @@ interface DependenciesContextType {
   refreshYtdlpVersion: () => Promise<void>;
   checkForUpdate: () => Promise<void>;
   updateYtdlp: () => Promise<void>;
+
+  // yt-dlp channel actions
+  setYtdlpChannel: (channel: YtdlpChannel) => Promise<void>;
+  refreshAllYtdlpVersions: () => Promise<void>;
+  checkChannelUpdate: (channel: YtdlpChannel) => Promise<void>;
+  downloadChannelBinary: (channel: YtdlpChannel) => Promise<void>;
 
   // FFmpeg actions
   checkFfmpeg: () => Promise<void>;
@@ -94,6 +112,18 @@ export function DependenciesProvider({ children }: { children: ReactNode }) {
   const [updateSuccess, setUpdateSuccess] = useState(false);
   const [initialized, setInitialized] = useState(false);
 
+  // yt-dlp channel state
+  const [ytdlpChannel, setYtdlpChannelState] = useState<YtdlpChannel>('stable'); // Default to stable
+  const [ytdlpAllVersions, setYtdlpAllVersions] = useState<YtdlpAllVersions | null>(null);
+  const [ytdlpChannelUpdateInfo, setYtdlpChannelUpdateInfo] =
+    useState<YtdlpChannelUpdateInfo | null>(null);
+  const [isChannelLoading, setIsChannelLoading] = useState(false);
+  const [isChannelDownloading, setIsChannelDownloading] = useState(false);
+  const [isChannelCheckingUpdate, setIsChannelCheckingUpdate] = useState(false);
+  const [channelError, setChannelError] = useState<string | null>(null);
+  const [channelDownloadSuccess, setChannelDownloadSuccess] = useState(false);
+  const [isAutoDownloadingYtdlp, setIsAutoDownloadingYtdlp] = useState(false);
+
   // FFmpeg state
   const [ffmpegStatus, setFfmpegStatus] = useState<FfmpegStatus | null>(null);
   const [ffmpegLoading, setFfmpegLoading] = useState(false);
@@ -126,6 +156,81 @@ export function DependenciesProvider({ children }: { children: ReactNode }) {
       setIsLoading(false);
     }
   }, []);
+
+  // Refresh all yt-dlp versions (bundled, stable, nightly)
+  const refreshAllYtdlpVersions = useCallback(async () => {
+    setIsChannelLoading(true);
+    setChannelError(null);
+    try {
+      const versions = await invoke<YtdlpAllVersions>('get_all_ytdlp_versions_cmd');
+      setYtdlpAllVersions(versions);
+      setYtdlpChannelState(versions.current_channel as YtdlpChannel);
+    } catch (err) {
+      setChannelError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setIsChannelLoading(false);
+    }
+  }, []);
+
+  // Set yt-dlp channel
+  const setYtdlpChannel = useCallback(
+    async (channel: YtdlpChannel) => {
+      setChannelError(null);
+      try {
+        await invoke('set_ytdlp_channel_cmd', { channel });
+        setYtdlpChannelState(channel);
+        // Refresh yt-dlp version info to reflect the change
+        await refreshYtdlpVersion();
+      } catch (err) {
+        setChannelError(err instanceof Error ? err.message : String(err));
+      }
+    },
+    [refreshYtdlpVersion],
+  );
+
+  // Check for channel update
+  const checkChannelUpdate = useCallback(async (channel: YtdlpChannel) => {
+    if (channel === 'bundled') return; // Bundled doesn't have updates
+    setIsChannelCheckingUpdate(true);
+    setChannelError(null);
+    try {
+      const updateInfo = await invoke<YtdlpChannelUpdateInfo>('check_ytdlp_channel_update', {
+        channel,
+      });
+      setYtdlpChannelUpdateInfo(updateInfo);
+    } catch (err) {
+      setChannelError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setIsChannelCheckingUpdate(false);
+    }
+  }, []);
+
+  // Download channel binary
+  const downloadChannelBinary = useCallback(
+    async (channel: YtdlpChannel) => {
+      if (channel === 'bundled') return; // Bundled doesn't need download
+      setIsChannelDownloading(true);
+      setChannelError(null);
+      setChannelDownloadSuccess(false);
+      try {
+        await invoke<string>('download_ytdlp_channel', { channel });
+        setChannelDownloadSuccess(true);
+        // Refresh all versions to update UI
+        await refreshAllYtdlpVersions();
+        // If current channel is the one we downloaded, refresh main version too
+        if (channel === ytdlpChannel) {
+          await refreshYtdlpVersion();
+        }
+        // Hide success message after 3 seconds
+        setTimeout(() => setChannelDownloadSuccess(false), 3000);
+      } catch (err) {
+        setChannelError(err instanceof Error ? err.message : String(err));
+      } finally {
+        setIsChannelDownloading(false);
+      }
+    },
+    [refreshAllYtdlpVersions, refreshYtdlpVersion, ytdlpChannel],
+  );
 
   // Check FFmpeg status
   const checkFfmpeg = useCallback(async () => {
@@ -247,12 +352,42 @@ export function DependenciesProvider({ children }: { children: ReactNode }) {
     }
   }, [checkDeno]);
 
-  // Initialize on first mount - auto download Deno if not installed
+  // Initialize on first mount - auto download Deno and yt-dlp stable if not installed
   useEffect(() => {
     if (!initialized) {
       setInitialized(true);
       refreshYtdlpVersion();
       checkFfmpeg();
+
+      // Load channel info and auto-download stable if needed
+      refreshAllYtdlpVersions().then(async () => {
+        const versions = await invoke<YtdlpAllVersions>('get_all_ytdlp_versions_cmd');
+        // Auto-download stable if channel is stable/nightly but binary not installed
+        if (versions.using_fallback && versions.current_channel !== 'bundled') {
+          setIsAutoDownloadingYtdlp(true);
+          setIsChannelDownloading(true);
+          try {
+            await invoke<string>('download_ytdlp_channel', {
+              channel: versions.current_channel,
+            });
+            setChannelDownloadSuccess(true);
+            await refreshAllYtdlpVersions();
+            await refreshYtdlpVersion();
+            // Hide success message after 3 seconds
+            setTimeout(() => {
+              setChannelDownloadSuccess(false);
+              setIsAutoDownloadingYtdlp(false);
+            }, 3000);
+          } catch {
+            // Silently fail - continue using bundled
+            // Will retry on next app launch
+            setIsAutoDownloadingYtdlp(false);
+          } finally {
+            setIsChannelDownloading(false);
+          }
+        }
+      });
+
       // Check Deno and auto-download if not installed
       checkDeno().then(async () => {
         // Auto-download Deno if not installed (for YouTube support)
@@ -281,7 +416,7 @@ export function DependenciesProvider({ children }: { children: ReactNode }) {
         }
       });
     }
-  }, [initialized, refreshYtdlpVersion, checkFfmpeg, checkDeno]);
+  }, [initialized, refreshYtdlpVersion, refreshAllYtdlpVersions, checkFfmpeg, checkDeno]);
 
   // Check for updates
   const checkForUpdate = useCallback(async () => {
@@ -331,6 +466,20 @@ export function DependenciesProvider({ children }: { children: ReactNode }) {
         refreshYtdlpVersion,
         checkForUpdate,
         updateYtdlp,
+        // yt-dlp channel
+        ytdlpChannel,
+        ytdlpAllVersions,
+        ytdlpChannelUpdateInfo,
+        isChannelLoading,
+        isChannelDownloading,
+        isChannelCheckingUpdate,
+        channelError,
+        channelDownloadSuccess,
+        isAutoDownloadingYtdlp,
+        setYtdlpChannel,
+        refreshAllYtdlpVersions,
+        checkChannelUpdate,
+        downloadChannelBinary,
         // FFmpeg
         ffmpegStatus,
         ffmpegLoading,
