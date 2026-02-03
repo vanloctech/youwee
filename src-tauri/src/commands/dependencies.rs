@@ -42,7 +42,7 @@ pub async fn check_ytdlp_update() -> Result<String, String> {
         .map_err(|e| format!("Failed to create HTTP client: {}", e))?;
     
     let response = client
-        .get("https://api.github.com/repos/yt-dlp/yt-dlp-nightly-builds/releases/latest")
+        .get("https://api.github.com/repos/yt-dlp/yt-dlp/releases/latest")
         .send()
         .await
         .map_err(|e| {
@@ -94,8 +94,8 @@ pub async fn update_ytdlp(app: AppHandle) -> Result<String, String> {
         .build()
         .map_err(|e| format!("Failed to create HTTP client: {}", e))?;
     
-    // Download checksums
-    let checksums_url = "https://github.com/yt-dlp/yt-dlp-nightly-builds/releases/latest/download/SHA2-256SUMS";
+    // Download checksums (using stable releases for reliability)
+    let checksums_url = "https://github.com/yt-dlp/yt-dlp/releases/latest/download/SHA2-256SUMS";
     let checksums_response = client.get(checksums_url).send().await
         .map_err(|e| format!("Failed to download checksums: {}", e))?;
     

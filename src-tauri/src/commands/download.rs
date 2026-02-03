@@ -212,14 +212,30 @@ pub async fn download_video(
     
     args.push(url.clone());
     
-    // Log command
-    let command_str = format!("yt-dlp {}", args.join(" "));
+    // Get binary info for logging
+    let binary_info = get_ytdlp_path(&app).await;
+    let binary_path_str = binary_info.as_ref()
+        .map(|(p, is_bundled)| format!("{} (bundled: {})", p.display(), is_bundled))
+        .unwrap_or_else(|| "sidecar".to_string());
+    
+    // Log command with binary path
+    let command_str = format!("[{}] yt-dlp {}", binary_path_str, args.join(" "));
     add_log_internal("command", &command_str, None, Some(&url)).ok();
     
-    // Try to get yt-dlp path (prioritizes user-updated version)
+    // Try to get yt-dlp path (prioritizes bundled version for stability)
     if let Some((binary_path, _)) = get_ytdlp_path(&app).await {
+        // Build extended PATH with deno/bun locations for JavaScript runtime support
+        let home_dir = std::env::var("HOME").unwrap_or_else(|_| "/Users".to_string());
+        let current_path = std::env::var("PATH").unwrap_or_default();
+        let extended_path = format!(
+            "{}/.deno/bin:{}/.bun/bin:/opt/homebrew/bin:/usr/local/bin:{}",
+            home_dir, home_dir, current_path
+        );
+        
         let process = Command::new(&binary_path)
             .args(&args)
+            .env("HOME", &home_dir)
+            .env("PATH", &extended_path)
             .stdout(Stdio::piped())
             .stderr(Stdio::piped())
             .spawn()

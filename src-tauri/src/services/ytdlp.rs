@@ -6,39 +6,45 @@ use tauri_plugin_shell::process::CommandEvent;
 use tokio::process::Command;
 use crate::types::YtdlpVersionInfo;
 
-/// Get the path to yt-dlp binary, prioritizing user-updated version in app_data_dir
+/// Get the path to yt-dlp binary, prioritizing BUNDLED version for stability
 /// Returns: (path, is_bundled)
-/// - First checks app_data_dir/bin/yt-dlp (where updates are saved)
-/// - Then falls back to bundled sidecar
+/// - First checks bundled sidecar next to executable (most stable)
+/// - Then checks resource_dir/bin (Tauri bundled)
+/// - Then checks app_data_dir/bin (user-updated - may have bugs)
 /// - Finally falls back to system yt-dlp
 pub async fn get_ytdlp_path(app: &AppHandle) -> Option<(PathBuf, bool)> {
-    // 1. Check app_data_dir/bin first (user-updated version)
-    if let Ok(app_data_dir) = app.path().app_data_dir() {
-        #[cfg(windows)]
-        let binary_name = "yt-dlp.exe";
-        #[cfg(not(windows))]
-        let binary_name = "yt-dlp";
-        
-        let user_binary = app_data_dir.join("bin").join(binary_name);
-        if user_binary.exists() {
-            return Some((user_binary, false));
+    #[cfg(windows)]
+    let binary_name = "yt-dlp.exe";
+    #[cfg(not(windows))]
+    let binary_name = "yt-dlp";
+    
+    // 1. Check bundled sidecar next to executable FIRST (most stable)
+    if let Ok(exe_path) = std::env::current_exe() {
+        if let Some(exe_dir) = exe_path.parent() {
+            let bundled_binary = exe_dir.join(binary_name);
+            if bundled_binary.exists() {
+                return Some((bundled_binary, true));
+            }
         }
     }
     
     // 2. Check bundled sidecar in resource_dir
     if let Ok(resource_dir) = app.path().resource_dir() {
-        #[cfg(windows)]
-        let binary_name = "yt-dlp.exe";
-        #[cfg(not(windows))]
-        let binary_name = "yt-dlp";
-        
         let bundled_binary = resource_dir.join("bin").join(binary_name);
         if bundled_binary.exists() {
             return Some((bundled_binary, true));
         }
     }
     
-    // 3. Fallback to system yt-dlp
+    // 3. Check app_data_dir/bin (user-updated version - may have bugs in nightly)
+    if let Ok(app_data_dir) = app.path().app_data_dir() {
+        let user_binary = app_data_dir.join("bin").join(binary_name);
+        if user_binary.exists() {
+            return Some((user_binary, false));
+        }
+    }
+    
+    // 4. Fallback to system yt-dlp
     None
 }
 
@@ -345,16 +351,16 @@ pub async fn get_ytdlp_version_internal(app: &AppHandle) -> Result<YtdlpVersionI
 
 /// Get the appropriate download URL and binary name for current platform
 /// Note: yt-dlp_macos is a Universal Binary that works on both Intel and Apple Silicon
-/// Using nightly builds for latest features and fixes
+/// Using stable releases for reliability
 pub fn get_ytdlp_download_info() -> (&'static str, &'static str, &'static str) {
     #[cfg(target_os = "macos")]
-    { ("https://github.com/yt-dlp/yt-dlp-nightly-builds/releases/latest/download/yt-dlp_macos", "yt-dlp", "yt-dlp_macos") }
+    { ("https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp_macos", "yt-dlp", "yt-dlp_macos") }
     #[cfg(target_os = "linux")]
-    { ("https://github.com/yt-dlp/yt-dlp-nightly-builds/releases/latest/download/yt-dlp_linux", "yt-dlp", "yt-dlp_linux") }
+    { ("https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp_linux", "yt-dlp", "yt-dlp_linux") }
     #[cfg(target_os = "windows")]
-    { ("https://github.com/yt-dlp/yt-dlp-nightly-builds/releases/latest/download/yt-dlp.exe", "yt-dlp.exe", "yt-dlp.exe") }
+    { ("https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp.exe", "yt-dlp.exe", "yt-dlp.exe") }
     #[cfg(not(any(target_os = "macos", target_os = "linux", target_os = "windows")))]
-    { ("https://github.com/yt-dlp/yt-dlp-nightly-builds/releases/latest/download/yt-dlp", "yt-dlp", "yt-dlp") }
+    { ("https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp", "yt-dlp", "yt-dlp") }
 }
 
 /// Verify SHA256 checksum

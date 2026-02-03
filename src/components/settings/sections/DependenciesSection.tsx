@@ -57,7 +57,9 @@ export function DependenciesSection({ highlightId }: DependenciesSectionProps) {
     downloadBun,
   } = useDependencies();
 
-  const isUpdateAvailable = ytdlpInfo?.update_available ?? false;
+  // Compare versions: update available if latestVersion exists and differs from current
+  const isUpdateAvailable =
+    latestVersion && ytdlpInfo?.version ? latestVersion !== ytdlpInfo.version : false;
 
   return (
     <div className="space-y-8">
