@@ -282,6 +282,7 @@ export function DownloadProvider({ children }: { children: ReactNode }) {
                     : progress.status === 'error'
                       ? 'error'
                       : 'downloading',
+                error: progress.error_message,
                 playlistIndex: progress.playlist_index,
                 playlistTotal: progress.playlist_count,
                 // Store completed info when finished

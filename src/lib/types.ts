@@ -102,6 +102,8 @@ export interface DownloadProgress {
   filesize?: number;
   resolution?: string;
   format_ext?: string;
+  // Error message when status is 'error'
+  error_message?: string;
 }
 
 export interface VideoInfo {

@@ -13,4 +13,5 @@ pub struct DownloadProgress {
     pub filesize: Option<u64>,
     pub resolution: Option<String>,
     pub format_ext: Option<String>,
+    pub error_message: Option<String>,
 }

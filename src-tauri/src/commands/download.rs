@@ -374,6 +374,7 @@ pub async fn download_video(
                                 filesize: None,
                                 resolution: None,
                                 format_ext: None,
+                                error_message: None,
                             };
                             app.emit("download-progress", progress).ok();
                         }
@@ -397,6 +398,7 @@ pub async fn download_video(
                                 filesize: None,
                                 resolution: None,
                                 format_ext: None,
+                                error_message: None,
                             };
                             app.emit("download-progress", progress).ok();
                         }
@@ -492,12 +494,32 @@ pub async fn download_video(
                                 filesize: reported_filesize,
                                 resolution: quality_display.clone(),
                                 format_ext: Some(format.clone()),
+                                error_message: None,
                             };
                             app.emit("download-progress", progress).ok();
                             return Ok(());
                         } else {
-                            add_log_internal("error", "Download failed", None, Some(&url)).ok();
-                            return Err("Download failed".to_string());
+                            let error_msg = "Download failed";
+                            add_log_internal("error", error_msg, None, Some(&url)).ok();
+                            
+                            // Emit error progress so frontend can display error message
+                            let progress = DownloadProgress {
+                                id: id.clone(),
+                                percent: 0.0,
+                                speed: String::new(),
+                                eta: String::new(),
+                                status: "error".to_string(),
+                                title: current_title.clone(),
+                                playlist_index: current_index,
+                                playlist_count: total_count,
+                                filesize: None,
+                                resolution: None,
+                                format_ext: None,
+                                error_message: Some(error_msg.to_string()),
+                            };
+                            app.emit("download-progress", progress).ok();
+                            
+                            return Err(error_msg.to_string());
                         }
                     }
                     _ => {}
@@ -578,6 +600,7 @@ async fn handle_tokio_download(
                 filesize: None,
                 resolution: None,
                 format_ext: None,
+                error_message: None,
             };
             app.emit("download-progress", progress).ok();
         }
@@ -696,12 +719,32 @@ async fn handle_tokio_download(
             filesize: reported_filesize,
             resolution: quality_display,
             format_ext: Some(format),
+            error_message: None,
         };
         app.emit("download-progress", progress).ok();
         Ok(())
     } else {
-        add_log_internal("error", "Download failed", None, Some(&url)).ok();
-        Err("Download failed".to_string())
+        let error_msg = "Download failed";
+        add_log_internal("error", error_msg, None, Some(&url)).ok();
+        
+        // Emit error progress so frontend can display error message
+        let progress = DownloadProgress {
+            id: id.clone(),
+            percent: 0.0,
+            speed: String::new(),
+            eta: String::new(),
+            status: "error".to_string(),
+            title: current_title,
+            playlist_index: current_index,
+            playlist_count: total_count,
+            filesize: None,
+            resolution: None,
+            format_ext: None,
+            error_message: Some(error_msg.to_string()),
+        };
+        app.emit("download-progress", progress).ok();
+        
+        Err(error_msg.to_string())
     }
 }
 
