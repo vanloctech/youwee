@@ -214,7 +214,7 @@ export function DownloadProvider({ children }: { children: ReactNode }) {
       useActualPlayerJs: saved.useActualPlayerJs || false,
       // Post-processing settings
       embedMetadata: saved.embedMetadata !== false, // Default to true
-      embedThumbnail: saved.embedThumbnail !== false, // Default to true
+      embedThumbnail: saved.embedThumbnail === true, // Default to false (requires FFmpeg)
     };
   });
 

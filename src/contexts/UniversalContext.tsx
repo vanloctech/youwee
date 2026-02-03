@@ -100,13 +100,13 @@ function loadEmbedSettings(): { embedMetadata: boolean; embedThumbnail: boolean 
       const parsed = JSON.parse(saved);
       return {
         embedMetadata: parsed.embedMetadata !== false, // Default true
-        embedThumbnail: parsed.embedThumbnail !== false, // Default true
+        embedThumbnail: parsed.embedThumbnail === true, // Default false (requires FFmpeg)
       };
     }
   } catch (e) {
     console.error('Failed to load embed settings:', e);
   }
-  return { embedMetadata: true, embedThumbnail: true };
+  return { embedMetadata: true, embedThumbnail: false };
 }
 
 // Save settings to localStorage
