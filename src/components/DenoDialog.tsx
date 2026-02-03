@@ -7,8 +7,7 @@ interface DenoDialogProps {
 }
 
 export function DenoDialog({ onDismiss }: DenoDialogProps) {
-  const { denoStatus, denoDownloading, denoError, denoSuccess, downloadDeno } =
-    useDependencies();
+  const { denoStatus, denoDownloading, denoError, denoSuccess, downloadDeno } = useDependencies();
 
   // Don't show if Deno is already installed
   if (denoStatus?.installed || denoSuccess) {
@@ -41,9 +40,7 @@ export function DenoDialog({ onDismiss }: DenoDialogProps) {
               <p className="text-sm text-muted-foreground">
                 Downloading Deno runtime... This is required for YouTube downloads.
               </p>
-              <p className="text-xs text-muted-foreground/70">
-                This only needs to happen once.
-              </p>
+              <p className="text-xs text-muted-foreground/70">This only needs to happen once.</p>
             </div>
           ) : denoSuccess ? (
             <div className="text-center space-y-3">

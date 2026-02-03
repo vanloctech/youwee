@@ -29,7 +29,8 @@ function AppContent() {
   const [showDenoDialog, setShowDenoDialog] = useState(false);
   const [ffmpegChecked, setFfmpegChecked] = useState(false);
   const updater = useUpdater();
-  const { ffmpegStatus, ffmpegLoading, isAutoDownloadingDeno, denoStatus, denoSuccess } = useDependencies();
+  const { ffmpegStatus, ffmpegLoading, isAutoDownloadingDeno, denoStatus, denoSuccess } =
+    useDependencies();
 
   // Show FFmpeg dialog on startup if not installed
   useEffect(() => {
