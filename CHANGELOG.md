@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+
+## [0.6.0] - 2026-02-03
+
 ### Changed
 - **Replaced Bun with Deno** - Now uses Deno runtime for YouTube JavaScript extraction (required by yt-dlp)
 - **Auto-download Deno on first launch** - App automatically downloads Deno if not installed

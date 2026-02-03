@@ -226,7 +226,7 @@ pub async fn check_deno_update_internal(app: &AppHandle) -> Result<DenoUpdateInf
     
     // Fetch latest release from GitHub API
     let client = reqwest::Client::builder()
-        .user_agent("Youwee/0.5.4")
+        .user_agent("Youwee/0.6.0")
         .timeout(std::time::Duration::from_secs(30))
         .build()
         .map_err(|e| format!("Failed to create HTTP client: {}", e))?;
