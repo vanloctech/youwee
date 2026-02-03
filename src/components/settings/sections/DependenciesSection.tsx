@@ -66,6 +66,7 @@ export function DependenciesSection({ highlightId }: DependenciesSectionProps) {
     ffmpegSuccess,
     checkFfmpegUpdate,
     downloadFfmpeg,
+    ffmpegDownloadProgress,
     // Deno
     denoStatus,
     denoLoading,
@@ -74,6 +75,7 @@ export function DependenciesSection({ highlightId }: DependenciesSectionProps) {
     denoUpdateInfo,
     denoError,
     denoSuccess,
+    denoDownloadProgress,
     checkDenoUpdate,
     downloadDeno,
   } = useDependencies();
@@ -285,9 +287,17 @@ export function DependenciesSection({ highlightId }: DependenciesSectionProps) {
                   {ffmpegDownloading ? (
                     <span className="flex items-center gap-1 text-primary">
                       <Loader2 className="w-3 h-3 animate-spin" />
-                      {ffmpegUpdateInfo?.has_update
-                        ? t('dependencies.updating')
-                        : t('dependencies.installing')}
+                      {ffmpegDownloadProgress
+                        ? ffmpegDownloadProgress.stage === 'downloading'
+                          ? `${t('dependencies.downloading')} ${ffmpegDownloadProgress.percent}%`
+                          : ffmpegDownloadProgress.stage === 'extracting'
+                            ? t('dependencies.extracting')
+                            : ffmpegDownloadProgress.stage === 'verifying'
+                              ? t('dependencies.verifying')
+                              : t('dependencies.installing')
+                        : ffmpegUpdateInfo?.has_update
+                          ? t('dependencies.updating')
+                          : t('dependencies.installing')}
                     </span>
                   ) : ffmpegCheckingUpdate ? (
                     <span className="flex items-center gap-1 text-muted-foreground">
@@ -395,9 +405,15 @@ export function DependenciesSection({ highlightId }: DependenciesSectionProps) {
                   {denoDownloading ? (
                     <span className="flex items-center gap-1 text-primary">
                       <Loader2 className="w-3 h-3 animate-spin" />
-                      {denoUpdateInfo?.has_update
-                        ? t('dependencies.updating')
-                        : t('dependencies.installing')}
+                      {denoDownloadProgress
+                        ? denoDownloadProgress.stage === 'downloading'
+                          ? `${t('dependencies.downloading')} ${denoDownloadProgress.percent}%`
+                          : denoDownloadProgress.stage === 'extracting'
+                            ? t('dependencies.extracting')
+                            : t('dependencies.installing')
+                        : denoUpdateInfo?.has_update
+                          ? t('dependencies.updating')
+                          : t('dependencies.installing')}
                     </span>
                   ) : denoCheckingUpdate ? (
                     <span className="flex items-center gap-1 text-muted-foreground">

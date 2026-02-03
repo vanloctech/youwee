@@ -1,8 +1,8 @@
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::io::Cursor;
 
-/// Extract binary from tar.gz archive
-pub async fn extract_tar_gz(data: &[u8], dest_dir: &Path, target_binary: &str) -> Result<(), String> {
+/// Extract binary from tar.gz archive (sync version for spawn_blocking)
+pub fn extract_tar_gz_sync(data: Vec<u8>, dest_dir: PathBuf, target_binary: String) -> Result<(), String> {
     use flate2::read::GzDecoder;
     use tar::Archive;
     
@@ -27,8 +27,8 @@ pub async fn extract_tar_gz(data: &[u8], dest_dir: &Path, target_binary: &str) -
     Ok(())
 }
 
-/// Extract binary from tar.xz archive
-pub async fn extract_tar_xz(data: &[u8], dest_dir: &Path, target_binary: &str) -> Result<(), String> {
+/// Extract binary from tar.xz archive (sync version for spawn_blocking)
+pub fn extract_tar_xz_sync(data: Vec<u8>, dest_dir: PathBuf, target_binary: String) -> Result<(), String> {
     use xz2::read::XzDecoder;
     use tar::Archive;
     
@@ -52,8 +52,8 @@ pub async fn extract_tar_xz(data: &[u8], dest_dir: &Path, target_binary: &str) -
     Ok(())
 }
 
-/// Extract binary from zip archive
-pub async fn extract_zip(data: &[u8], dest_dir: &Path, target_binary: &str) -> Result<(), String> {
+/// Extract binary from zip archive (sync version for spawn_blocking)
+pub fn extract_zip_sync(data: Vec<u8>, dest_dir: PathBuf, target_binary: String) -> Result<(), String> {
     use zip::ZipArchive;
     
     let cursor = Cursor::new(data);
@@ -67,7 +67,7 @@ pub async fn extract_zip(data: &[u8], dest_dir: &Path, target_binary: &str) -> R
         let name = file.name().to_string();
         
         // Look for ffmpeg/ffprobe binaries
-        if name.ends_with(target_binary) || name.ends_with("ffprobe") || name.ends_with("ffprobe.exe") {
+        if name.ends_with(&target_binary) || name.ends_with("ffprobe") || name.ends_with("ffprobe.exe") {
             let file_name = Path::new(&name).file_name()
                 .ok_or_else(|| "Invalid file name".to_string())?;
             let dest_path = dest_dir.join(file_name);
@@ -82,8 +82,8 @@ pub async fn extract_zip(data: &[u8], dest_dir: &Path, target_binary: &str) -> R
     Ok(())
 }
 
-/// Extract bun binary from zip archive
-pub async fn extract_bun_from_zip(data: &[u8], dest_dir: &Path, target_binary: &str) -> Result<(), String> {
+/// Extract deno binary from zip archive (sync version for spawn_blocking)
+pub fn extract_deno_zip_sync(data: Vec<u8>, dest_dir: PathBuf, target_binary: String) -> Result<(), String> {
     use zip::ZipArchive;
     
     let cursor = Cursor::new(data);
@@ -96,14 +96,14 @@ pub async fn extract_bun_from_zip(data: &[u8], dest_dir: &Path, target_binary: &
         
         let name = file.name().to_string();
         
-        // Look for bun binary - it's usually in a folder like bun-darwin-aarch64/bun
+        // Look for deno binary
         #[cfg(windows)]
-        let is_bun = name.ends_with("/bun.exe") || name == "bun.exe";
+        let is_deno = name == "deno.exe" || name.ends_with("/deno.exe");
         #[cfg(not(windows))]
-        let is_bun = (name.ends_with("/bun") || name == "bun") && !name.ends_with(".dSYM/bun");
+        let is_deno = name == "deno" || name.ends_with("/deno");
         
-        if is_bun {
-            let dest_path = dest_dir.join(target_binary);
+        if is_deno {
+            let dest_path = dest_dir.join(&target_binary);
             let mut outfile = std::fs::File::create(&dest_path)
                 .map_err(|e| format!("Failed to create file: {}", e))?;
             std::io::copy(&mut file, &mut outfile)
@@ -112,5 +112,59 @@ pub async fn extract_bun_from_zip(data: &[u8], dest_dir: &Path, target_binary: &
         }
     }
     
-    Err("Bun binary not found in archive".to_string())
+    Err("Deno binary not found in archive".to_string())
+}
+
+// ============ Async wrappers using spawn_blocking ============
+
+/// Extract binary from tar.gz archive
+pub async fn extract_tar_gz(data: &[u8], dest_dir: &Path, target_binary: &str) -> Result<(), String> {
+    let data = data.to_vec();
+    let dest_dir = dest_dir.to_path_buf();
+    let target_binary = target_binary.to_string();
+    
+    tokio::task::spawn_blocking(move || {
+        extract_tar_gz_sync(data, dest_dir, target_binary)
+    })
+    .await
+    .map_err(|e| format!("Task join error: {}", e))?
+}
+
+/// Extract binary from tar.xz archive
+pub async fn extract_tar_xz(data: &[u8], dest_dir: &Path, target_binary: &str) -> Result<(), String> {
+    let data = data.to_vec();
+    let dest_dir = dest_dir.to_path_buf();
+    let target_binary = target_binary.to_string();
+    
+    tokio::task::spawn_blocking(move || {
+        extract_tar_xz_sync(data, dest_dir, target_binary)
+    })
+    .await
+    .map_err(|e| format!("Task join error: {}", e))?
+}
+
+/// Extract binary from zip archive
+pub async fn extract_zip(data: &[u8], dest_dir: &Path, target_binary: &str) -> Result<(), String> {
+    let data = data.to_vec();
+    let dest_dir = dest_dir.to_path_buf();
+    let target_binary = target_binary.to_string();
+    
+    tokio::task::spawn_blocking(move || {
+        extract_zip_sync(data, dest_dir, target_binary)
+    })
+    .await
+    .map_err(|e| format!("Task join error: {}", e))?
+}
+
+/// Extract deno from zip archive
+pub async fn extract_deno_zip(data: &[u8], dest_dir: &Path, target_binary: &str) -> Result<(), String> {
+    let data = data.to_vec();
+    let dest_dir = dest_dir.to_path_buf();
+    let target_binary = target_binary.to_string();
+    
+    tokio::task::spawn_blocking(move || {
+        extract_deno_zip_sync(data, dest_dir, target_binary)
+    })
+    .await
+    .map_err(|e| format!("Task join error: {}", e))?
 }

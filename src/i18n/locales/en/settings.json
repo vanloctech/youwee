@@ -65,7 +65,10 @@
     "stableShipped": "Stable version shipped with app",
     "notInstalled": "Not installed",
     "usingBundledTemporarily": "Using bundled temporarily...",
-    "downloadingYtdlp": "Downloading yt-dlp..."
+    "downloadingYtdlp": "Downloading yt-dlp...",
+    "downloading": "Downloading",
+    "extracting": "Extracting...",
+    "verifying": "Verifying..."
   },
   "network": {
     "title": "Network & Authentication",

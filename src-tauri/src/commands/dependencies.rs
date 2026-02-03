@@ -1,7 +1,9 @@
 use std::process::Stdio;
 use serde::{Deserialize, Serialize};
-use tauri::{AppHandle, Manager};
+use tauri::{AppHandle, Emitter, Manager};
 use tokio::process::Command;
+use tokio::io::AsyncWriteExt;
+use futures_util::StreamExt;
 use crate::types::{YtdlpVersionInfo, FfmpegStatus, DenoStatus, YtdlpChannel, YtdlpAllVersions, YtdlpChannelUpdateInfo};
 use crate::services::{
     get_ytdlp_version_internal, get_ytdlp_download_info, verify_sha256,
@@ -11,7 +13,16 @@ use crate::services::{
     get_ytdlp_channel, set_ytdlp_channel, get_all_ytdlp_versions,
     get_ytdlp_channel_download_url, get_channel_api_url,
 };
-use crate::utils::{extract_tar_gz, extract_tar_xz, extract_zip, CommandExt};
+use crate::utils::{extract_tar_gz, extract_tar_xz, extract_zip, extract_deno_zip, CommandExt};
+
+/// Download progress event payload
+#[derive(Clone, Serialize)]
+struct DownloadProgress {
+    stage: String,
+    percent: u8,
+    downloaded: u64,
+    total: u64,
+}
 
 #[derive(Deserialize)]
 struct GitHubRelease {
@@ -381,6 +392,14 @@ pub async fn download_ffmpeg(app: AppHandle) -> Result<String, String> {
         return Err("Unsupported platform".to_string());
     }
     
+    // Emit: Starting
+    let _ = app.emit("ffmpeg-download-progress", DownloadProgress {
+        stage: "checksum".to_string(),
+        percent: 0,
+        downloaded: 0,
+        total: 0,
+    });
+    
     let app_data_dir = app.path().app_data_dir()
         .map_err(|e| format!("Failed to get app data directory: {}", e))?;
     
@@ -390,8 +409,7 @@ pub async fn download_ffmpeg(app: AppHandle) -> Result<String, String> {
         .map_err(|e| format!("Failed to create bin directory: {}", e))?;
     
     let client = reqwest::Client::builder()
-        .user_agent("Youwee/0.4.0")
-        .timeout(std::time::Duration::from_secs(600))
+        .user_agent("Youwee/0.6.0")
         .build()
         .map_err(|e| format!("Failed to create HTTP client: {}", e))?;
     
@@ -422,7 +440,15 @@ pub async fn download_ffmpeg(app: AppHandle) -> Result<String, String> {
         })
         .ok_or_else(|| format!("Checksum not found for {}", info.checksum_filename))?;
     
-    // Download FFmpeg archive
+    // Emit: Downloading FFmpeg
+    let _ = app.emit("ffmpeg-download-progress", DownloadProgress {
+        stage: "downloading".to_string(),
+        percent: 0,
+        downloaded: 0,
+        total: 0,
+    });
+    
+    // Download FFmpeg archive with progress
     let response = client.get(info.url).send().await
         .map_err(|e| format!("Failed to download FFmpeg: {}", e))?;
     
@@ -430,13 +456,70 @@ pub async fn download_ffmpeg(app: AppHandle) -> Result<String, String> {
         return Err(format!("Download failed with status: {}", response.status()));
     }
     
-    let bytes = response.bytes().await
-        .map_err(|e| format!("Failed to read response: {}", e))?;
+    let total_size = response.content_length().unwrap_or(0);
+    let mut downloaded: u64 = 0;
+    let mut last_percent: u8 = 0;
+    
+    // Stream download to temp file
+    let temp_path = bin_dir.join("ffmpeg_download.tmp");
+    let mut file = tokio::fs::File::create(&temp_path).await
+        .map_err(|e| format!("Failed to create temp file: {}", e))?;
+    
+    let mut stream = response.bytes_stream();
+    
+    while let Some(chunk) = stream.next().await {
+        let chunk = chunk.map_err(|e| format!("Download error: {}", e))?;
+        file.write_all(&chunk).await
+            .map_err(|e| format!("Failed to write chunk: {}", e))?;
+        
+        downloaded += chunk.len() as u64;
+        
+        let percent = if total_size > 0 {
+            ((downloaded as f64 / total_size as f64) * 100.0) as u8
+        } else {
+            0
+        };
+        
+        // Only emit every 5% to avoid spamming
+        if percent >= last_percent + 5 || percent == 100 {
+            last_percent = percent;
+            let _ = app.emit("ffmpeg-download-progress", DownloadProgress {
+                stage: "downloading".to_string(),
+                percent,
+                downloaded,
+                total: total_size,
+            });
+        }
+    }
+    
+    file.flush().await.map_err(|e| format!("Failed to flush file: {}", e))?;
+    drop(file);
+    
+    // Read file for checksum verification
+    let bytes = tokio::fs::read(&temp_path).await
+        .map_err(|e| format!("Failed to read downloaded file: {}", e))?;
+    
+    // Emit: Verifying checksum
+    let _ = app.emit("ffmpeg-download-progress", DownloadProgress {
+        stage: "verifying".to_string(),
+        percent: 100,
+        downloaded,
+        total: total_size,
+    });
     
     // Verify checksum
     if !verify_sha256(&bytes, &expected_hash) {
+        let _ = tokio::fs::remove_file(&temp_path).await;
         return Err("Security error: SHA256 checksum verification failed.".to_string());
     }
+    
+    // Emit: Extracting
+    let _ = app.emit("ffmpeg-download-progress", DownloadProgress {
+        stage: "extracting".to_string(),
+        percent: 100,
+        downloaded,
+        total: total_size,
+    });
     
     #[cfg(windows)]
     let ffmpeg_binary = "ffmpeg.exe";
@@ -452,6 +535,9 @@ pub async fn download_ffmpeg(app: AppHandle) -> Result<String, String> {
         _ => return Err("Unsupported archive type".to_string()),
     }
     
+    // Clean up temp file
+    let _ = tokio::fs::remove_file(&temp_path).await;
+    
     #[cfg(unix)]
     {
         use std::os::unix::fs::PermissionsExt;
@@ -462,6 +548,14 @@ pub async fn download_ffmpeg(app: AppHandle) -> Result<String, String> {
         tokio::fs::set_permissions(&ffmpeg_path, perms).await
             .map_err(|e| format!("Failed to set permissions: {}", e))?;
     }
+    
+    // Emit: Complete
+    let _ = app.emit("ffmpeg-download-progress", DownloadProgress {
+        stage: "complete".to_string(),
+        percent: 100,
+        downloaded,
+        total: total_size,
+    });
     
     let mut cmd = Command::new(&ffmpeg_path);
     cmd.args(["-version"])
@@ -497,6 +591,14 @@ pub async fn download_deno(app: AppHandle) -> Result<String, String> {
         return Err("Unsupported platform".to_string());
     }
     
+    // Emit: Starting
+    let _ = app.emit("deno-download-progress", DownloadProgress {
+        stage: "downloading".to_string(),
+        percent: 0,
+        downloaded: 0,
+        total: 0,
+    });
+    
     let app_data_dir = app.path().app_data_dir()
         .map_err(|e| format!("Failed to get app data directory: {}", e))?;
     
@@ -507,7 +609,6 @@ pub async fn download_deno(app: AppHandle) -> Result<String, String> {
     
     let client = reqwest::Client::builder()
         .user_agent("Youwee/0.6.0")
-        .timeout(std::time::Duration::from_secs(300))
         .build()
         .map_err(|e| format!("Failed to create HTTP client: {}", e))?;
     
@@ -518,8 +619,56 @@ pub async fn download_deno(app: AppHandle) -> Result<String, String> {
         return Err(format!("Download failed with status: {}", response.status()));
     }
     
-    let bytes = response.bytes().await
-        .map_err(|e| format!("Failed to read response: {}", e))?;
+    let total_size = response.content_length().unwrap_or(0);
+    let mut downloaded: u64 = 0;
+    let mut last_percent: u8 = 0;
+    
+    // Stream download to temp file
+    let temp_path = bin_dir.join("deno_download.tmp");
+    let mut file = tokio::fs::File::create(&temp_path).await
+        .map_err(|e| format!("Failed to create temp file: {}", e))?;
+    
+    let mut stream = response.bytes_stream();
+    
+    while let Some(chunk) = stream.next().await {
+        let chunk = chunk.map_err(|e| format!("Download error: {}", e))?;
+        file.write_all(&chunk).await
+            .map_err(|e| format!("Failed to write chunk: {}", e))?;
+        
+        downloaded += chunk.len() as u64;
+        
+        let percent = if total_size > 0 {
+            ((downloaded as f64 / total_size as f64) * 100.0) as u8
+        } else {
+            0
+        };
+        
+        // Only emit every 5% to avoid spamming
+        if percent >= last_percent + 5 || percent == 100 {
+            last_percent = percent;
+            let _ = app.emit("deno-download-progress", DownloadProgress {
+                stage: "downloading".to_string(),
+                percent,
+                downloaded,
+                total: total_size,
+            });
+        }
+    }
+    
+    file.flush().await.map_err(|e| format!("Failed to flush file: {}", e))?;
+    drop(file);
+    
+    // Read file for extraction
+    let bytes = tokio::fs::read(&temp_path).await
+        .map_err(|e| format!("Failed to read downloaded file: {}", e))?;
+    
+    // Emit: Extracting
+    let _ = app.emit("deno-download-progress", DownloadProgress {
+        stage: "extracting".to_string(),
+        percent: 100,
+        downloaded,
+        total: total_size,
+    });
     
     #[cfg(windows)]
     let deno_binary = "deno.exe";
@@ -529,7 +678,10 @@ pub async fn download_deno(app: AppHandle) -> Result<String, String> {
     let deno_path = bin_dir.join(deno_binary);
     
     // Extract deno from zip (deno zip contains just the binary directly)
-    extract_zip(&bytes, &bin_dir, deno_binary).await?;
+    extract_deno_zip(&bytes, &bin_dir, deno_binary).await?;
+    
+    // Clean up temp file
+    let _ = tokio::fs::remove_file(&temp_path).await;
     
     #[cfg(unix)]
     {
@@ -541,6 +693,14 @@ pub async fn download_deno(app: AppHandle) -> Result<String, String> {
         tokio::fs::set_permissions(&deno_path, perms).await
             .map_err(|e| format!("Failed to set permissions: {}", e))?;
     }
+    
+    // Emit: Complete
+    let _ = app.emit("deno-download-progress", DownloadProgress {
+        stage: "complete".to_string(),
+        percent: 100,
+        downloaded,
+        total: total_size,
+    });
     
     let mut cmd = Command::new(&deno_path);
     cmd.args(["--version"])

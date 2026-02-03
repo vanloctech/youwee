@@ -1,4 +1,5 @@
 import { invoke } from '@tauri-apps/api/core';
+import { listen, type UnlistenFn } from '@tauri-apps/api/event';
 import { createContext, type ReactNode, useCallback, useContext, useEffect, useState } from 'react';
 import type { YtdlpAllVersions, YtdlpChannel, YtdlpChannelUpdateInfo } from '../lib/types';
 
@@ -38,6 +39,14 @@ export interface DenoUpdateInfo {
   release_url: string | null;
 }
 
+// Download progress from backend
+export interface DownloadProgress {
+  stage: 'checksum' | 'downloading' | 'verifying' | 'extracting' | 'complete';
+  percent: number;
+  downloaded: number;
+  total: number;
+}
+
 interface DependenciesContextType {
   // yt-dlp state
   ytdlpInfo: YtdlpVersionInfo | null;
@@ -67,6 +76,7 @@ interface DependenciesContextType {
   ffmpegSuccess: boolean;
   ffmpegUpdateInfo: FfmpegUpdateInfo | null;
   ffmpegCheckingUpdate: boolean;
+  ffmpegDownloadProgress: DownloadProgress | null;
 
   // Actions
   refreshYtdlpVersion: () => Promise<void>;
@@ -93,6 +103,7 @@ interface DependenciesContextType {
   denoUpdateInfo: DenoUpdateInfo | null;
   denoCheckingUpdate: boolean;
   isAutoDownloadingDeno: boolean; // True when auto-downloading on first launch
+  denoDownloadProgress: DownloadProgress | null;
 
   // Deno actions
   checkDeno: () => Promise<void>;
@@ -132,6 +143,9 @@ export function DependenciesProvider({ children }: { children: ReactNode }) {
   const [ffmpegSuccess, setFfmpegSuccess] = useState(false);
   const [ffmpegUpdateInfo, setFfmpegUpdateInfo] = useState<FfmpegUpdateInfo | null>(null);
   const [ffmpegCheckingUpdate, setFfmpegCheckingUpdate] = useState(false);
+  const [ffmpegDownloadProgress, setFfmpegDownloadProgress] = useState<DownloadProgress | null>(
+    null,
+  );
 
   // Deno state
   const [denoStatus, setDenoStatus] = useState<DenoStatus | null>(null);
@@ -142,6 +156,7 @@ export function DependenciesProvider({ children }: { children: ReactNode }) {
   const [denoUpdateInfo, setDenoUpdateInfo] = useState<DenoUpdateInfo | null>(null);
   const [denoCheckingUpdate, setDenoCheckingUpdate] = useState(false);
   const [isAutoDownloadingDeno, setIsAutoDownloadingDeno] = useState(false);
+  const [denoDownloadProgress, setDenoDownloadProgress] = useState<DownloadProgress | null>(null);
 
   // Load yt-dlp version (only once on first mount)
   const refreshYtdlpVersion = useCallback(async () => {
@@ -418,6 +433,35 @@ export function DependenciesProvider({ children }: { children: ReactNode }) {
     }
   }, [initialized, refreshYtdlpVersion, refreshAllYtdlpVersions, checkFfmpeg, checkDeno]);
 
+  // Listen to download progress events
+  useEffect(() => {
+    const unlisteners: UnlistenFn[] = [];
+
+    // FFmpeg download progress
+    listen<DownloadProgress>('ffmpeg-download-progress', (event) => {
+      setFfmpegDownloadProgress(event.payload);
+      if (event.payload.stage === 'complete') {
+        // Clear progress after completion
+        setTimeout(() => setFfmpegDownloadProgress(null), 1000);
+      }
+    }).then((unlisten) => unlisteners.push(unlisten));
+
+    // Deno download progress
+    listen<DownloadProgress>('deno-download-progress', (event) => {
+      setDenoDownloadProgress(event.payload);
+      if (event.payload.stage === 'complete') {
+        // Clear progress after completion
+        setTimeout(() => setDenoDownloadProgress(null), 1000);
+      }
+    }).then((unlisten) => unlisteners.push(unlisten));
+
+    return () => {
+      for (const unlisten of unlisteners) {
+        unlisten();
+      }
+    };
+  }, []);
+
   // Check for updates
   const checkForUpdate = useCallback(async () => {
     setIsChecking(true);
@@ -488,6 +532,7 @@ export function DependenciesProvider({ children }: { children: ReactNode }) {
         ffmpegSuccess,
         ffmpegUpdateInfo,
         ffmpegCheckingUpdate,
+        ffmpegDownloadProgress,
         checkFfmpeg,
         checkFfmpegUpdate,
         downloadFfmpeg,
@@ -500,6 +545,7 @@ export function DependenciesProvider({ children }: { children: ReactNode }) {
         denoUpdateInfo,
         denoCheckingUpdate,
         isAutoDownloadingDeno,
+        denoDownloadProgress,
         checkDeno,
         checkDenoUpdate,
         downloadDeno,

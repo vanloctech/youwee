@@ -65,7 +65,10 @@
     "stableShipped": "应用内置的稳定版本",
     "notInstalled": "未安装",
     "usingBundledTemporarily": "暂时使用内置版...",
-    "downloadingYtdlp": "正在下载 yt-dlp..."
+    "downloadingYtdlp": "正在下载 yt-dlp...",
+    "downloading": "下载中",
+    "extracting": "正在解压...",
+    "verifying": "正在验证..."
   },
   "network": {
     "title": "网络与认证",

@@ -65,7 +65,10 @@
     "stableShipped": "Phiên bản ổn định đi kèm ứng dụng",
     "notInstalled": "Chưa cài đặt",
     "usingBundledTemporarily": "Đang dùng tạm bản đi kèm...",
-    "downloadingYtdlp": "Đang tải yt-dlp..."
+    "downloadingYtdlp": "Đang tải yt-dlp...",
+    "downloading": "Đang tải",
+    "extracting": "Đang giải nén...",
+    "verifying": "Đang xác minh..."
   },
   "network": {
     "title": "Mạng & Xác thực",

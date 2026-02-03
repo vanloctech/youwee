@@ -6210,6 +6210,7 @@ version = "0.6.0"
 dependencies = [
  "chrono",
  "flate2",
+ "futures-util",
  "hex",
  "log",
  "regex",
