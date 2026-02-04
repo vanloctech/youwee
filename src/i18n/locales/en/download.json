@@ -52,6 +52,8 @@
     "unlimited": "Unlimited",
     "videos": "{{count}} videos",
     "downloadFullPlaylist": "Download full playlist",
+    "liveFromStart": "Download live from start",
+    "liveFromStartDesc": "For live streams",
     "saveTo": "Save to",
     "selectFolder": "Select folder...",
     "outputFolder": "Output folder: {{path}}",
@@ -101,7 +103,8 @@
     "generating": "Generating...",
     "showMore": "Show more",
     "showLess": "Show less",
-    "playlist": "Playlist"
+    "playlist": "Playlist",
+    "live": "LIVE"
   },
   "actions": {
     "startDownload": "Start Download",

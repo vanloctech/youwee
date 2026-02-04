@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **Live stream download support** - Download YouTube live streams with option to start from beginning
+  - Toggle "Download live from start" in Settings Panel (More Settings) or Settings → General
+  - LIVE badge displayed on queue items for live stream videos
+  - Uses yt-dlp's `--live-from-start` flag when enabled (default: ON)
+
 ## [0.6.1] - 2026-02-03
 
 ### Added

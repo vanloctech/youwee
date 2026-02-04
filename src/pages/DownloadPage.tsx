@@ -39,6 +39,7 @@ export function DownloadPage({ onNavigateToSettings }: DownloadPageProps) {
     updateSubtitleLangs,
     updateSubtitleEmbed,
     updateSubtitleFormat,
+    updateLiveFromStart,
   } = useDownload();
 
   const { ffmpegStatus } = useDependencies();
@@ -94,6 +95,7 @@ export function DownloadPage({ onNavigateToSettings }: DownloadPageProps) {
             onSubtitleLangsChange={updateSubtitleLangs}
             onSubtitleEmbedChange={updateSubtitleEmbed}
             onSubtitleFormatChange={updateSubtitleFormat}
+            onLiveFromStartChange={updateLiveFromStart}
             onGoToSettings={onNavigateToSettings}
           />
         </div>

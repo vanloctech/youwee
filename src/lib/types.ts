@@ -50,6 +50,7 @@ export interface DownloadItem {
   eta: string;
   error?: string;
   isPlaylist?: boolean;
+  isLive?: boolean; // true if video is currently live streaming
   playlistIndex?: number;
   playlistTotal?: number;
   thumbnail?: string;
@@ -87,6 +88,8 @@ export interface DownloadSettings {
   // Post-processing settings
   embedMetadata: boolean; // Embed metadata (title, artist, description) into downloaded files
   embedThumbnail: boolean; // Embed thumbnail as cover art (requires FFmpeg)
+  // Live stream settings
+  liveFromStart: boolean; // Download live streams from the beginning
 }
 
 export interface DownloadProgress {
@@ -119,6 +122,10 @@ export interface VideoInfo {
   // Source detection
   extractor?: string;
   extractor_key?: string;
+  // Live stream fields
+  is_live?: boolean; // true if currently live streaming
+  was_live?: boolean; // true if was a live stream (now ended)
+  live_status?: 'is_live' | 'was_live' | 'not_live' | 'is_upcoming';
 }
 
 export interface FormatOption {

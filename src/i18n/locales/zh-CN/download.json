@@ -52,6 +52,8 @@
     "unlimited": "无限制",
     "videos": "{{count}} 个视频",
     "downloadFullPlaylist": "下载完整播放列表",
+    "liveFromStart": "从头下载直播",
+    "liveFromStartDesc": "适用于直播视频",
     "saveTo": "保存到",
     "selectFolder": "选择文件夹...",
     "outputFolder": "输出文件夹：{{path}}",
@@ -101,7 +103,8 @@
     "generating": "生成中...",
     "showMore": "展开",
     "showLess": "收起",
-    "playlist": "播放列表"
+    "playlist": "播放列表",
+    "live": "直播"
   },
   "actions": {
     "startDownload": "开始下载",

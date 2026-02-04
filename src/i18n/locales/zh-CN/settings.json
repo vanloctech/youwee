@@ -28,7 +28,11 @@
     "storage": "存储",
     "storageDesc": "管理下载历史",
     "maxHistory": "最大历史记录数",
-    "currentlyStoring": "当前存储 {{count}} 个下载"
+    "currentlyStoring": "当前存储 {{count}} 个下载",
+    "liveStream": "直播",
+    "liveStreamDesc": "配置直播下载行为",
+    "liveFromStart": "从头下载",
+    "liveFromStartDesc": "从直播开始处下载，而不是从当前时间"
   },
   "dependencies": {
     "title": "依赖项",

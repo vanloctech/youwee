@@ -28,7 +28,11 @@
     "storage": "Lưu trữ",
     "storageDesc": "Quản lý lịch sử tải xuống",
     "maxHistory": "Số lượng lịch sử tối đa",
-    "currentlyStoring": "Đang lưu {{count}} bản tải"
+    "currentlyStoring": "Đang lưu {{count}} bản tải",
+    "liveStream": "Live Stream",
+    "liveStreamDesc": "Cấu hình tải video trực tiếp",
+    "liveFromStart": "Tải từ đầu",
+    "liveFromStartDesc": "Tải live stream từ đầu thay vì từ thời điểm hiện tại"
   },
   "dependencies": {
     "title": "Phụ thuộc",

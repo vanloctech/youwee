@@ -127,6 +127,7 @@ function saveSettings(settings: DownloadSettings) {
         useActualPlayerJs: settings.useActualPlayerJs,
         embedMetadata: settings.embedMetadata,
         embedThumbnail: settings.embedThumbnail,
+        liveFromStart: settings.liveFromStart,
       }),
     );
   } catch (e) {
@@ -182,6 +183,8 @@ interface DownloadContextType {
   // Post-processing settings
   updateEmbedMetadata: (enabled: boolean) => void;
   updateEmbedThumbnail: (enabled: boolean) => void;
+  // Live stream settings
+  updateLiveFromStart: (enabled: boolean) => void;
 }
 
 const DownloadContext = createContext<DownloadContextType | null>(null);
@@ -215,6 +218,8 @@ export function DownloadProvider({ children }: { children: ReactNode }) {
       // Post-processing settings
       embedMetadata: saved.embedMetadata !== false, // Default to true
       embedThumbnail: saved.embedThumbnail === true, // Default to false (requires FFmpeg)
+      // Live stream settings
+      liveFromStart: saved.liveFromStart !== false, // Default to true
     };
   });
 
@@ -621,6 +626,8 @@ export function DownloadProvider({ children }: { children: ReactNode }) {
           // Post-processing settings
           embedMetadata: settings.embedMetadata,
           embedThumbnail: settings.embedThumbnail,
+          // Live stream settings
+          liveFromStart: settings.liveFromStart,
           // No history_id for new downloads
           historyId: null,
         });
@@ -835,6 +842,14 @@ export function DownloadProvider({ children }: { children: ReactNode }) {
     });
   }, []);
 
+  const updateLiveFromStart = useCallback((liveFromStart: boolean) => {
+    setSettings((s) => {
+      const newSettings = { ...s, liveFromStart };
+      saveSettings(newSettings);
+      return newSettings;
+    });
+  }, []);
+
   const value: DownloadContextType = {
     items,
     isDownloading,
@@ -872,6 +887,7 @@ export function DownloadProvider({ children }: { children: ReactNode }) {
     getProxyUrl,
     updateEmbedMetadata,
     updateEmbedThumbnail,
+    updateLiveFromStart,
   };
 
   return <DownloadContext.Provider value={value}>{children}</DownloadContext.Provider>;

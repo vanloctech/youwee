@@ -28,7 +28,11 @@
     "storage": "Storage",
     "storageDesc": "Manage download history",
     "maxHistory": "Max history entries",
-    "currentlyStoring": "Currently storing {{count}} downloads"
+    "currentlyStoring": "Currently storing {{count}} downloads",
+    "liveStream": "Live Stream",
+    "liveStreamDesc": "Configure live stream download behavior",
+    "liveFromStart": "Download from Start",
+    "liveFromStartDesc": "Download live streams from the beginning instead of current time"
   },
   "dependencies": {
     "title": "Dependencies",

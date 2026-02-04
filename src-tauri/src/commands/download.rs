@@ -77,6 +77,8 @@ pub async fn download_video(
     embed_thumbnail: Option<bool>,
     // Proxy settings
     proxy_url: Option<String>,
+    // Live stream settings
+    live_from_start: Option<bool>,
 ) -> Result<(), String> {
     CANCEL_FLAG.store(false, Ordering::SeqCst);
     
@@ -174,6 +176,11 @@ pub async fn download_video(
             args.push("--proxy".to_string());
             args.push(proxy.clone());
         }
+    }
+    
+    // Live stream settings
+    if live_from_start.unwrap_or(false) {
+        args.push("--live-from-start".to_string());
     }
     
     // Playlist handling

@@ -52,6 +52,8 @@
     "unlimited": "Không giới hạn",
     "videos": "{{count}} video",
     "downloadFullPlaylist": "Tải toàn bộ playlist",
+    "liveFromStart": "Tải live từ đầu",
+    "liveFromStartDesc": "Cho video trực tiếp",
     "saveTo": "Lưu vào",
     "selectFolder": "Chọn thư mục...",
     "outputFolder": "Thư mục xuất: {{path}}",
@@ -101,7 +103,8 @@
     "generating": "Đang tạo...",
     "showMore": "Xem thêm",
     "showLess": "Thu gọn",
-    "playlist": "Playlist"
+    "playlist": "Playlist",
+    "live": "LIVE"
   },
   "actions": {
     "startDownload": "Bắt đầu tải",

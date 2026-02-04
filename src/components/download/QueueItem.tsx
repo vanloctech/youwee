@@ -207,6 +207,14 @@ export function QueueItem({ item, showPlaylistBadge, disabled, onRemove }: Queue
           </div>
         )}
 
+        {/* Live Badge */}
+        {item.isLive && (
+          <div className="absolute top-1.5 left-1.5 px-1.5 py-0.5 rounded bg-red-600 text-white text-[10px] flex items-center gap-1 font-medium animate-pulse">
+            <span className="w-1.5 h-1.5 rounded-full bg-white" />
+            <span>{t('queue.live')}</span>
+          </div>
+        )}
+
         {/* Playlist Progress */}
         {item.playlistIndex && item.playlistTotal && (
           <div className="absolute top-1.5 right-1.5 px-1.5 py-0.5 rounded bg-black/70 text-white text-[10px] font-medium tabular-nums">

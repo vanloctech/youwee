@@ -479,6 +479,10 @@ pub async fn get_video_info(
         playlist_count,
         extractor: json.get("extractor").and_then(|v| v.as_str()).map(|s| s.to_string()),
         extractor_key: json.get("extractor_key").and_then(|v| v.as_str()).map(|s| s.to_string()),
+        // Live stream fields
+        is_live: json.get("is_live").and_then(|v| v.as_bool()),
+        was_live: json.get("was_live").and_then(|v| v.as_bool()),
+        live_status: json.get("live_status").and_then(|v| v.as_str()).map(|s| s.to_string()),
     };
     
     let formats = if let Some(formats_arr) = json.get("formats").and_then(|v| v.as_array()) {

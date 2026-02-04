@@ -5,6 +5,7 @@ import {
   HardDrive,
   ListVideo,
   Music,
+  Radio,
   Settings2,
   Subtitles,
 } from 'lucide-react';
@@ -103,6 +104,8 @@ interface SettingsPanelProps {
   onSubtitleLangsChange: (langs: string[]) => void;
   onSubtitleEmbedChange: (embed: boolean) => void;
   onSubtitleFormatChange: (format: SubtitleFormat) => void;
+  // Live stream callback
+  onLiveFromStartChange: (enabled: boolean) => void;
   // Navigation callback for FFmpeg dialog
   onGoToSettings?: () => void;
 }
@@ -124,6 +127,7 @@ export function SettingsPanel({
   onSubtitleLangsChange,
   onSubtitleEmbedChange,
   onSubtitleFormatChange,
+  onLiveFromStartChange,
   onGoToSettings,
 }: SettingsPanelProps) {
   const { t } = useTranslation('download');
@@ -591,6 +595,24 @@ export function SettingsPanel({
                 <Switch
                   checked={settings.downloadPlaylist}
                   onCheckedChange={onPlaylistToggle}
+                  disabled={disabled}
+                />
+              </div>
+
+              {/* Live Stream Toggle */}
+              <div className="flex items-center justify-between py-2 px-3 rounded-lg bg-muted/50">
+                <div className="flex items-center gap-2.5">
+                  <Radio className="w-4 h-4 text-red-500" />
+                  <div className="flex flex-col">
+                    <span className="text-xs font-medium">{t('settings.liveFromStart')}</span>
+                    <span className="text-[10px] text-muted-foreground">
+                      {t('settings.liveFromStartDesc')}
+                    </span>
+                  </div>
+                </div>
+                <Switch
+                  checked={settings.liveFromStart}
+                  onCheckedChange={onLiveFromStartChange}
                   disabled={disabled}
                 />
               </div>
