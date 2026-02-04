@@ -1,6 +1,6 @@
 import { invoke } from '@tauri-apps/api/core';
 import { listen } from '@tauri-apps/api/event';
-import { downloadDir } from '@tauri-apps/api/path';
+import { downloadDir, homeDir } from '@tauri-apps/api/path';
 import { open } from '@tauri-apps/plugin-dialog';
 import { readTextFile } from '@tauri-apps/plugin-fs';
 import {
@@ -246,14 +246,42 @@ export function DownloadProvider({ children }: { children: ReactNode }) {
       if (settings.outputPath) return;
 
       try {
-        const path = await downloadDir();
-        setSettings((s) => {
-          const newSettings = { ...s, outputPath: path };
-          saveSettings(newSettings);
-          return newSettings;
-        });
+        // Try Tauri's downloadDir first
+        let path = await downloadDir();
+
+        // Validate path is absolute (starts with /)
+        if (!path || !path.startsWith('/')) {
+          // Fallback to home directory + Downloads (for ChromeOS/Linux)
+          const home = await homeDir();
+          if (home) {
+            path = `${home}Downloads`;
+          }
+        }
+
+        // Only set if we have a valid absolute path
+        if (path?.startsWith('/')) {
+          setSettings((s) => {
+            const newSettings = { ...s, outputPath: path };
+            saveSettings(newSettings);
+            return newSettings;
+          });
+        }
       } catch (error) {
         console.error('Failed to get download directory:', error);
+        // Try homeDir as final fallback
+        try {
+          const home = await homeDir();
+          if (home) {
+            const fallbackPath = `${home}Downloads`;
+            setSettings((s) => {
+              const newSettings = { ...s, outputPath: fallbackPath };
+              saveSettings(newSettings);
+              return newSettings;
+            });
+          }
+        } catch (fallbackError) {
+          console.error('Failed to get home directory:', fallbackError);
+        }
       }
     };
     getDefaultPath();
