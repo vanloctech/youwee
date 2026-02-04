@@ -219,7 +219,7 @@ export function DownloadProvider({ children }: { children: ReactNode }) {
       embedMetadata: saved.embedMetadata !== false, // Default to true
       embedThumbnail: saved.embedThumbnail === true, // Default to false (requires FFmpeg)
       // Live stream settings
-      liveFromStart: saved.liveFromStart !== false, // Default to true
+      liveFromStart: saved.liveFromStart === true, // Default to false
     };
   });
 

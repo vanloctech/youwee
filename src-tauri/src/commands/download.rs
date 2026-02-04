@@ -181,6 +181,7 @@ pub async fn download_video(
     // Live stream settings
     if live_from_start.unwrap_or(false) {
         args.push("--live-from-start".to_string());
+        args.push("--no-part".to_string());
     }
     
     // Playlist handling
