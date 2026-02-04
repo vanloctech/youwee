@@ -454,25 +454,25 @@ export function SettingsPanel({
               <span className="hidden sm:inline text-xs">{t('settings.more')}</span>
             </Button>
           </PopoverTrigger>
-          <PopoverContent className="w-80 p-0" align="end" side="bottom" sideOffset={8}>
+          <PopoverContent className="w-72 p-0" align="end" side="bottom" sideOffset={8}>
             {/* Header */}
-            <div className="flex items-center justify-between px-4 py-3 border-b bg-muted/30">
-              <h4 className="text-sm font-medium">{t('settings.advanced')}</h4>
+            <div className="flex items-center justify-between px-3 py-2 border-b bg-muted/30">
+              <h4 className="text-xs font-medium">{t('settings.advanced')}</h4>
               {fileSizeDisplay && (
-                <Badge variant="secondary" className="text-[10px] gap-1">
+                <Badge variant="secondary" className="text-[10px] gap-1 h-5">
                   <HardDrive className="w-3 h-3" />
                   {fileSizeDisplay}
                 </Badge>
               )}
             </div>
 
-            {/* Content - Grid Layout */}
-            <div className="p-4 space-y-4">
+            {/* Content - Compact Layout with Scroll */}
+            <div className="p-3 space-y-3 max-h-[50vh] overflow-y-auto">
               {/* Row 1: Codec & Bitrate */}
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-2 gap-2">
                 {/* Video Codec */}
-                <div className="space-y-1.5">
-                  <Label className="text-[11px] text-muted-foreground">
+                <div className="space-y-1">
+                  <Label className="text-[10px] text-muted-foreground">
                     {isAudioOnly ? t('settings.audioCodec') : t('settings.videoCodec')}
                   </Label>
                   <Select
@@ -480,7 +480,7 @@ export function SettingsPanel({
                     onValueChange={onVideoCodecChange}
                     disabled={disabled || isAudioOnly}
                   >
-                    <SelectTrigger className="h-8 text-xs">
+                    <SelectTrigger className="h-7 text-xs">
                       <SelectValue placeholder="Auto" />
                     </SelectTrigger>
                     <SelectContent>
@@ -501,8 +501,8 @@ export function SettingsPanel({
                 </div>
 
                 {/* Audio Bitrate */}
-                <div className="space-y-1.5">
-                  <Label className="text-[11px] text-muted-foreground">
+                <div className="space-y-1">
+                  <Label className="text-[10px] text-muted-foreground">
                     {t('settings.audioQuality')}
                   </Label>
                   <Select
@@ -510,7 +510,7 @@ export function SettingsPanel({
                     onValueChange={onAudioBitrateChange}
                     disabled={disabled}
                   >
-                    <SelectTrigger className="h-8 text-xs">
+                    <SelectTrigger className="h-7 text-xs">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
@@ -526,10 +526,10 @@ export function SettingsPanel({
               </div>
 
               {/* Row 2: Concurrent & Playlist Limit */}
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-2 gap-2">
                 {/* Concurrent Downloads */}
-                <div className="space-y-1.5">
-                  <Label className="text-[11px] text-muted-foreground">
+                <div className="space-y-1">
+                  <Label className="text-[10px] text-muted-foreground">
                     {t('settings.parallelDownloads')}
                   </Label>
                   <Select
@@ -537,7 +537,7 @@ export function SettingsPanel({
                     onValueChange={(v) => onConcurrentChange(Number(v))}
                     disabled={disabled}
                   >
-                    <SelectTrigger className="h-8 text-xs">
+                    <SelectTrigger className="h-7 text-xs">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
@@ -551,8 +551,8 @@ export function SettingsPanel({
                 </div>
 
                 {/* Playlist Limit */}
-                <div className="space-y-1.5">
-                  <Label className="text-[11px] text-muted-foreground">
+                <div className="space-y-1">
+                  <Label className="text-[10px] text-muted-foreground">
                     {t('settings.playlistLimit')}
                   </Label>
                   <Select
@@ -561,7 +561,7 @@ export function SettingsPanel({
                     disabled={disabled || !settings.downloadPlaylist}
                   >
                     <SelectTrigger
-                      className={cn('h-8 text-xs', !settings.downloadPlaylist && 'opacity-50')}
+                      className={cn('h-7 text-xs', !settings.downloadPlaylist && 'opacity-50')}
                     >
                       <SelectValue />
                     </SelectTrigger>
@@ -586,47 +586,49 @@ export function SettingsPanel({
                 </div>
               </div>
 
-              {/* Playlist Toggle */}
-              <div className="flex items-center justify-between py-2 px-3 rounded-lg bg-muted/50">
-                <div className="flex items-center gap-2.5">
-                  <ListVideo className="w-4 h-4 text-primary" />
-                  <span className="text-xs font-medium">{t('settings.downloadFullPlaylist')}</span>
-                </div>
-                <Switch
-                  checked={settings.downloadPlaylist}
-                  onCheckedChange={onPlaylistToggle}
-                  disabled={disabled}
-                />
-              </div>
-
-              {/* Live Stream Toggle */}
-              <div className="flex items-center justify-between py-2 px-3 rounded-lg bg-muted/50">
-                <div className="flex items-center gap-2.5">
-                  <Radio className="w-4 h-4 text-red-500" />
-                  <div className="flex flex-col">
-                    <span className="text-xs font-medium">{t('settings.liveFromStart')}</span>
-                    <span className="text-[10px] text-muted-foreground">
-                      {t('settings.liveFromStartDesc')}
+              {/* Toggles Section - Compact */}
+              <div className="space-y-2">
+                {/* Playlist Toggle */}
+                <div className="flex items-center justify-between py-1.5 px-2.5 rounded-md bg-muted/50">
+                  <div className="flex items-center gap-2">
+                    <ListVideo className="w-3.5 h-3.5 text-primary" />
+                    <span className="text-[11px] font-medium">
+                      {t('settings.downloadFullPlaylist')}
                     </span>
                   </div>
+                  <Switch
+                    checked={settings.downloadPlaylist}
+                    onCheckedChange={onPlaylistToggle}
+                    disabled={disabled}
+                    className="scale-90"
+                  />
                 </div>
-                <Switch
-                  checked={settings.liveFromStart}
-                  onCheckedChange={onLiveFromStartChange}
-                  disabled={disabled}
-                />
+
+                {/* Live Stream Toggle */}
+                <div className="flex items-center justify-between py-1.5 px-2.5 rounded-md bg-muted/50">
+                  <div className="flex items-center gap-2">
+                    <Radio className="w-3.5 h-3.5 text-red-500" />
+                    <span className="text-[11px] font-medium">{t('settings.liveFromStart')}</span>
+                  </div>
+                  <Switch
+                    checked={settings.liveFromStart}
+                    onCheckedChange={onLiveFromStartChange}
+                    disabled={disabled}
+                    className="scale-90"
+                  />
+                </div>
               </div>
 
               {/* Output Folder */}
-              <div className="space-y-1.5">
-                <Label className="text-[11px] text-muted-foreground">{t('settings.saveTo')}</Label>
+              <div className="space-y-1">
+                <Label className="text-[10px] text-muted-foreground">{t('settings.saveTo')}</Label>
                 <button
                   type="button"
                   onClick={onSelectFolder}
                   disabled={disabled}
-                  className="w-full h-8 px-3 rounded-md border bg-background text-xs flex items-center gap-2 text-left hover:bg-muted/50 transition-colors"
+                  className="w-full h-7 px-2.5 rounded-md border bg-background text-[11px] flex items-center gap-2 text-left hover:bg-muted/50 transition-colors"
                 >
-                  <FolderOpen className="w-3.5 h-3.5 text-muted-foreground flex-shrink-0" />
+                  <FolderOpen className="w-3 h-3 text-muted-foreground flex-shrink-0" />
                   <span className="truncate flex-1 text-muted-foreground">
                     {settings.outputPath || t('settings.selectFolder')}
                   </span>
