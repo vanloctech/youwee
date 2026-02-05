@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.7.0] - 2026-02-05
+
 ### Added
 - **Metadata page** - Fetch video info (JSON, description, comments, thumbnail) without downloading video
 - **Live stream download support** - Toggle in Settings → Download, shows LIVE badge on queue items
