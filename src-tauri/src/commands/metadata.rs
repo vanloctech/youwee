@@ -129,13 +129,10 @@ pub async fn fetch_metadata(
         output_template.clone(),
     ];
 
-    // Description uses separate output template with .txt extension
+    // Description output template - yt-dlp adds .description automatically
     if write_description {
         args.push("-o".to_string());
-        args.push(format!(
-            "description:{}/%(title)s.description.txt",
-            sanitized_path
-        ));
+        args.push(format!("description:{}/%(title)s", sanitized_path));
     }
 
     // Comments require info.json to be written first, then we'll split them
@@ -348,6 +345,24 @@ pub async fn fetch_metadata(
 
         if status.success() {
             let title = video_title.clone().unwrap_or_else(|| "Unknown".to_string());
+
+            // Sanitize title for filename (same logic as split_info_json_and_comments)
+            let safe_title: String = title
+                .chars()
+                .map(|c| match c {
+                    '/' | '\\' | ':' | '*' | '?' | '"' | '<' | '>' | '|' => '_',
+                    _ => c,
+                })
+                .collect();
+
+            // Post-process: rename description file to .description.txt
+            if write_description {
+                let old_path = Path::new(&sanitized_path).join(format!("{}.description", safe_title));
+                let new_path = Path::new(&sanitized_path).join(format!("{}.description.txt", safe_title));
+                if old_path.exists() {
+                    std::fs::rename(&old_path, &new_path).ok();
+                }
+            }
 
             // Post-process: split comments into separate file
             if write_comments || (write_info_json && write_comments) {

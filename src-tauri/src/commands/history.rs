@@ -75,31 +75,60 @@ pub async fn open_file_location(filepath: String) -> Result<(), String> {
         return Err("File not found".to_string());
     }
     
+    let is_dir = path.is_dir();
+    
     #[cfg(target_os = "macos")]
     {
-        tokio::process::Command::new("open")
-            .arg("-R")
-            .arg(&filepath)
-            .spawn()
-            .map_err(|e| format!("Failed to open location: {}", e))?;
+        if is_dir {
+            // Open directory directly in Finder
+            tokio::process::Command::new("open")
+                .arg(&filepath)
+                .spawn()
+                .map_err(|e| format!("Failed to open folder: {}", e))?;
+        } else {
+            // Reveal file in Finder
+            tokio::process::Command::new("open")
+                .arg("-R")
+                .arg(&filepath)
+                .spawn()
+                .map_err(|e| format!("Failed to open location: {}", e))?;
+        }
     }
     
     #[cfg(target_os = "windows")]
     {
-        tokio::process::Command::new("explorer")
-            .arg("/select,")
-            .arg(&filepath)
-            .spawn()
-            .map_err(|e| format!("Failed to open location: {}", e))?;
+        if is_dir {
+            // Open directory in Explorer
+            tokio::process::Command::new("explorer")
+                .arg(&filepath)
+                .spawn()
+                .map_err(|e| format!("Failed to open folder: {}", e))?;
+        } else {
+            // Select file in Explorer
+            tokio::process::Command::new("explorer")
+                .arg("/select,")
+                .arg(&filepath)
+                .spawn()
+                .map_err(|e| format!("Failed to open location: {}", e))?;
+        }
     }
     
     #[cfg(target_os = "linux")]
     {
-        let dir = path.parent().unwrap_or(path);
-        tokio::process::Command::new("xdg-open")
-            .arg(dir)
-            .spawn()
-            .map_err(|e| format!("Failed to open location: {}", e))?;
+        if is_dir {
+            // Open directory directly
+            tokio::process::Command::new("xdg-open")
+                .arg(&filepath)
+                .spawn()
+                .map_err(|e| format!("Failed to open folder: {}", e))?;
+        } else {
+            // Open parent directory (Linux doesn't have native file select)
+            let dir = path.parent().unwrap_or(path);
+            tokio::process::Command::new("xdg-open")
+                .arg(dir)
+                .spawn()
+                .map_err(|e| format!("Failed to open location: {}", e))?;
+        }
     }
     
     Ok(())
