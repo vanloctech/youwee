@@ -2,6 +2,7 @@
 //!
 //! Supports: info.json, description, comments, thumbnail
 
+use std::path::Path;
 use std::process::Stdio;
 use std::sync::atomic::{AtomicBool, Ordering};
 use tauri::{AppHandle, Emitter};
@@ -26,6 +27,74 @@ pub struct MetadataProgress {
 #[tauri::command]
 pub fn cancel_metadata_fetch() {
     METADATA_CANCEL_FLAG.store(true, Ordering::SeqCst);
+}
+
+/// Split comments from info.json into separate files
+fn split_info_json_and_comments(
+    output_dir: &str,
+    title: &str,
+    write_info_json: bool,
+    write_comments: bool,
+) -> Result<(), String> {
+    // Sanitize title for filename (remove invalid chars)
+    let safe_title = title
+        .chars()
+        .map(|c| match c {
+            '/' | '\\' | ':' | '*' | '?' | '"' | '<' | '>' | '|' => '_',
+            _ => c,
+        })
+        .collect::<String>();
+
+    let info_json_path = Path::new(output_dir).join(format!("{}.info.json", safe_title));
+
+    if !info_json_path.exists() {
+        return Ok(()); // No info.json to process
+    }
+
+    // Read the original info.json
+    let content = std::fs::read_to_string(&info_json_path)
+        .map_err(|e| format!("Failed to read info.json: {}", e))?;
+
+    let mut json: serde_json::Value = serde_json::from_str(&content)
+        .map_err(|e| format!("Failed to parse info.json: {}", e))?;
+
+    // Extract comments if they exist
+    let comments = json.get("comments").cloned();
+    let comment_count = json.get("comment_count").cloned();
+
+    if write_comments {
+        if let Some(ref comments_data) = comments {
+            // Write comments to separate file
+            let comments_path = Path::new(output_dir).join(format!("{}.comments.json", safe_title));
+            let comments_json = serde_json::json!({
+                "video_id": json.get("id"),
+                "video_title": json.get("title"),
+                "comment_count": comment_count,
+                "comments": comments_data
+            });
+            let comments_str = serde_json::to_string_pretty(&comments_json)
+                .map_err(|e| format!("Failed to serialize comments: {}", e))?;
+            std::fs::write(&comments_path, comments_str)
+                .map_err(|e| format!("Failed to write comments.json: {}", e))?;
+        }
+    }
+
+    // If user wants info.json without comments, remove comments from it
+    if write_info_json && write_comments {
+        // Remove comments from info.json to keep it clean
+        if let Some(obj) = json.as_object_mut() {
+            obj.remove("comments");
+        }
+        let clean_info = serde_json::to_string_pretty(&json)
+            .map_err(|e| format!("Failed to serialize info.json: {}", e))?;
+        std::fs::write(&info_json_path, clean_info)
+            .map_err(|e| format!("Failed to write clean info.json: {}", e))?;
+    } else if !write_info_json && write_comments {
+        // User only wanted comments, delete the info.json
+        std::fs::remove_file(&info_json_path).ok();
+    }
+
+    Ok(())
 }
 
 #[tauri::command]
@@ -56,13 +125,16 @@ pub async fn fetch_metadata(
     // Description uses separate output template with .txt extension
     if write_description {
         args.push("-o".to_string());
-        args.push(format!("description:{}/%(title)s.description.txt", sanitized_path));
+        args.push(format!(
+            "description:{}/%(title)s.description.txt",
+            sanitized_path
+        ));
     }
 
-    // Comments require info.json, so auto-enable it
+    // Comments require info.json to be written first, then we'll split them
     let need_info_json = write_info_json || write_comments;
 
-    // Info JSON - full metadata
+    // Info JSON - full metadata (we'll split comments out later if needed)
     if need_info_json {
         args.push("--write-info-json".to_string());
         args.push("--no-clean-info-json".to_string()); // Keep all fields
@@ -73,7 +145,7 @@ pub async fn fetch_metadata(
         args.push("--write-description".to_string());
     }
 
-    // Comments (stored in info.json)
+    // Comments (stored in info.json, we'll extract to separate file)
     if write_comments {
         args.push("--write-comments".to_string());
     }
@@ -218,10 +290,23 @@ pub async fn fetch_metadata(
         if status.success() {
             let title = video_title.clone().unwrap_or_else(|| "Unknown".to_string());
 
+            // Post-process: split comments into separate file
+            if write_comments || (write_info_json && write_comments) {
+                if let Err(e) =
+                    split_info_json_and_comments(&sanitized_path, &title, write_info_json, write_comments)
+                {
+                    add_log_internal("stderr", &format!("Post-process warning: {}", e), None, Some(&url))
+                        .ok();
+                }
+            }
+
             // Build output file info
             let mut files_saved = Vec::new();
-            if need_info_json {
+            if write_info_json {
                 files_saved.push("info.json");
+            }
+            if write_comments {
+                files_saved.push("comments.json");
             }
             if write_description {
                 files_saved.push("description.txt");
@@ -230,11 +315,7 @@ pub async fn fetch_metadata(
                 files_saved.push("thumbnail.jpg");
             }
 
-            let success_msg = format!(
-                "Metadata fetched: {} ({})",
-                title,
-                files_saved.join(", ")
-            );
+            let success_msg = format!("Metadata fetched: {} ({})", title, files_saved.join(", "));
             add_log_internal("success", &success_msg, None, Some(&url)).ok();
 
             // Save to library/history
@@ -242,12 +323,12 @@ pub async fn fetch_metadata(
                 url.clone(),
                 title.clone(),
                 video_thumbnail.clone(),
-                sanitized_path.clone(),        // filepath = output folder
-                None,                          // filesize
+                sanitized_path.clone(),           // filepath = output folder
+                None,                             // filesize
                 video_duration.map(|d| d as u64), // duration as u64
-                Some("metadata".to_string()), // quality field used for type
-                Some(files_saved.join(", ")), // format field used for what was saved
-                Some("metadata".to_string()), // source
+                Some("metadata".to_string()),    // quality field used for type
+                Some(files_saved.join(", ")),    // format field used for what was saved
+                Some("metadata".to_string()),    // source
             )
             .ok();
 
