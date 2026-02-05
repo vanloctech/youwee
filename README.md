@@ -21,12 +21,15 @@
 ## Features
 
 - **Video Downloads** — YouTube, TikTok, Facebook, Instagram, and 1800+ sites
+- **Metadata Fetcher** — Download video info, descriptions, comments, and thumbnails without the video
+- **Live Stream Support** — Download live streams with dedicated toggle
 - **AI Video Summary** — Summarize videos with Gemini, OpenAI, or Ollama
 - **AI Video Processing** — Edit videos using natural language (cut, convert, resize, extract audio)
 - **Batch & Playlist** — Download multiple videos or entire playlists
 - **Audio Extraction** — Extract audio in MP3, M4A, or Opus formats
 - **Subtitle Support** — Download or embed subtitles
 - **Post-Processing** — Auto-embed metadata and thumbnails into files
+- **Speed Limit** — Control download bandwidth (KB/s, MB/s, GB/s)
 - **Download Library** — Track and manage all your downloads
 - **6 Beautiful Themes** — Midnight, Aurora, Sunset, Ocean, Forest, Candy
 - **Fast & Lightweight** — Built with Tauri for minimal resource usage
@@ -142,7 +145,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 - [yt-dlp](https://github.com/yt-dlp/yt-dlp) - The powerful video downloader
 - [FFmpeg](https://ffmpeg.org/) - Multimedia framework for audio/video processing
-- [Bun](https://bun.sh/) - Fast JavaScript runtime for YouTube extraction
+- [Deno](https://deno.com/) - JavaScript runtime for YouTube extraction
 - [Tauri](https://tauri.app/) - Build smaller, faster, and more secure desktop apps
 - [shadcn/ui](https://ui.shadcn.com/) - Beautiful UI components
 - [Lucide Icons](https://lucide.dev/) - Beautiful open-source icons
