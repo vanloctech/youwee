@@ -247,6 +247,10 @@ export function UniversalProvider({ children }: { children: ReactNode }) {
                     : progress.status === 'error'
                       ? 'error'
                       : 'downloading',
+                downloadedSize: progress.downloaded_size,
+                elapsedTime: progress.elapsed_time,
+                // Auto-detect live stream if we receive downloaded_size (live stream format)
+                isLive: progress.downloaded_size ? true : item.isLive,
                 // Store completed info when finished
                 ...(progress.status === 'finished'
                   ? {

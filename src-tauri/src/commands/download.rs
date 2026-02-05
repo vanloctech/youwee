@@ -376,7 +376,7 @@ pub async fn download_video(
                         }
                         
                         // Parse progress
-                        if let Some((percent, speed, eta, pi, pc)) = parse_progress(&line) {
+                        if let Some((percent, speed, eta, pi, pc, downloaded_size, elapsed_time)) = parse_progress(&line) {
                             if pi.is_some() { current_index = pi; }
                             if pc.is_some() { total_count = pc; }
                             
@@ -393,6 +393,8 @@ pub async fn download_video(
                                 resolution: None,
                                 format_ext: None,
                                 error_message: None,
+                                downloaded_size,
+                                elapsed_time,
                             };
                             app.emit("download-progress", progress).ok();
                         }
@@ -400,7 +402,7 @@ pub async fn download_video(
                     CommandEvent::Stderr(bytes) => {
                         let stderr_line = String::from_utf8_lossy(&bytes).trim().to_string();
                         
-                        if let Some((percent, speed, eta, pi, pc)) = parse_progress(&stderr_line) {
+                        if let Some((percent, speed, eta, pi, pc, downloaded_size, elapsed_time)) = parse_progress(&stderr_line) {
                             if pi.is_some() { current_index = pi; }
                             if pc.is_some() { total_count = pc; }
                             
@@ -417,6 +419,8 @@ pub async fn download_video(
                                 resolution: None,
                                 format_ext: None,
                                 error_message: None,
+                                downloaded_size,
+                                elapsed_time,
                             };
                             app.emit("download-progress", progress).ok();
                         }
@@ -513,6 +517,8 @@ pub async fn download_video(
                                 resolution: quality_display.clone(),
                                 format_ext: Some(format.clone()),
                                 error_message: None,
+                                downloaded_size: None,
+                                elapsed_time: None,
                             };
                             app.emit("download-progress", progress).ok();
                             return Ok(());
@@ -534,6 +540,8 @@ pub async fn download_video(
                                 resolution: None,
                                 format_ext: None,
                                 error_message: Some(error_msg.to_string()),
+                                downloaded_size: None,
+                                elapsed_time: None,
                             };
                             app.emit("download-progress", progress).ok();
                             
@@ -572,7 +580,7 @@ async fn handle_tokio_download(
 ) -> Result<(), String> {
     let stdout = process.stdout.take().ok_or("Failed to get stdout")?;
     let stderr = process.stderr.take();
-    let mut reader = BufReader::new(stdout).lines();
+    let mut stdout_reader = BufReader::new(stdout).lines();
     
     let mut current_title: Option<String> = None;
     let mut current_index: Option<u32> = None;
@@ -594,7 +602,51 @@ async fn handle_tokio_download(
         _ => None,
     };
     
-    while let Ok(Some(line)) = reader.next_line().await {
+    // Spawn task to read stderr in parallel (for live stream progress)
+    let stderr_app = app.clone();
+    let stderr_id = id.clone();
+    let stderr_url = url.clone();
+    let stderr_task = if let Some(stderr_handle) = stderr {
+        Some(tokio::spawn(async move {
+            let mut stderr_reader = BufReader::new(stderr_handle).lines();
+            while let Ok(Some(line)) = stderr_reader.next_line().await {
+                if CANCEL_FLAG.load(Ordering::SeqCst) {
+                    break;
+                }
+                
+                // Parse progress from stderr (live streams output here)
+                if let Some((percent, speed, eta, pi, pc, downloaded_size, elapsed_time)) = parse_progress(&line) {
+                    let progress = DownloadProgress {
+                        id: stderr_id.clone(),
+                        percent,
+                        speed,
+                        eta,
+                        status: "downloading".to_string(),
+                        title: None,
+                        playlist_index: pi,
+                        playlist_count: pc,
+                        filesize: None,
+                        resolution: None,
+                        format_ext: None,
+                        error_message: None,
+                        downloaded_size,
+                        elapsed_time,
+                    };
+                    stderr_app.emit("download-progress", progress).ok();
+                }
+                
+                // Log stderr if enabled
+                if should_log_stderr && !line.trim().is_empty() {
+                    add_log_internal("stderr", line.trim(), None, Some(&stderr_url)).ok();
+                }
+            }
+        }))
+    } else {
+        None
+    };
+    
+    // Read stdout
+    while let Ok(Some(line)) = stdout_reader.next_line().await {
         if CANCEL_FLAG.load(Ordering::SeqCst) {
             process.kill().await.ok();
             kill_all_download_processes();
@@ -602,7 +654,7 @@ async fn handle_tokio_download(
         }
         
         // Parse progress and emit events
-        if let Some((percent, speed, eta, pi, pc)) = parse_progress(&line) {
+        if let Some((percent, speed, eta, pi, pc, downloaded_size, elapsed_time)) = parse_progress(&line) {
             if pi.is_some() { current_index = pi; }
             if pc.is_some() { total_count = pc; }
             
@@ -619,6 +671,8 @@ async fn handle_tokio_download(
                 resolution: None,
                 format_ext: None,
                 error_message: None,
+                downloaded_size,
+                elapsed_time,
             };
             app.emit("download-progress", progress).ok();
         }
@@ -669,19 +723,12 @@ async fn handle_tokio_download(
         }
     }
     
-    let status = process.wait().await.map_err(|e| format!("Process error: {}", e))?;
-    
-    // Process stderr
-    if should_log_stderr {
-        if let Some(stderr_handle) = stderr {
-            let mut stderr_reader = BufReader::new(stderr_handle).lines();
-            while let Ok(Some(stderr_line)) = stderr_reader.next_line().await {
-                if !stderr_line.trim().is_empty() {
-                    add_log_internal("stderr", stderr_line.trim(), None, Some(&url)).ok();
-                }
-            }
-        }
+    // Wait for stderr task to finish
+    if let Some(task) = stderr_task {
+        task.abort(); // Stop reading stderr when stdout is done
     }
+    
+    let status = process.wait().await.map_err(|e| format!("Process error: {}", e))?;
     
     if status.success() {
         let actual_filesize = final_filepath.as_ref()
@@ -738,6 +785,8 @@ async fn handle_tokio_download(
             resolution: quality_display,
             format_ext: Some(format),
             error_message: None,
+            downloaded_size: None,
+            elapsed_time: None,
         };
         app.emit("download-progress", progress).ok();
         Ok(())
@@ -759,6 +808,8 @@ async fn handle_tokio_download(
             resolution: None,
             format_ext: None,
             error_message: Some(error_msg.to_string()),
+            downloaded_size: None,
+            elapsed_time: None,
         };
         app.emit("download-progress", progress).ok();
         

@@ -324,6 +324,10 @@ export function DownloadProvider({ children }: { children: ReactNode }) {
                 error: progress.error_message,
                 playlistIndex: progress.playlist_index,
                 playlistTotal: progress.playlist_count,
+                downloadedSize: progress.downloaded_size,
+                elapsedTime: progress.elapsed_time,
+                // Auto-detect live stream if we receive downloaded_size (live stream format)
+                isLive: progress.downloaded_size ? true : item.isLive,
                 // Store completed info when finished
                 ...(progress.status === 'finished'
                   ? {

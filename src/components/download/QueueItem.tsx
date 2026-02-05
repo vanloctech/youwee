@@ -145,28 +145,58 @@ export function QueueItem({ item, showPlaylistBadge, disabled, onRemove }: Queue
             {/* Progress Bar at bottom */}
             <div className="absolute bottom-0 left-0 right-0 p-2">
               <div className="h-1.5 rounded-full overflow-hidden bg-white/20 mb-1 backdrop-blur-sm">
-                <div
-                  className="h-full rounded-full transition-all duration-300 relative overflow-hidden"
-                  style={{
-                    width: `${item.progress}%`,
-                    background:
-                      'linear-gradient(90deg, hsl(var(--primary)) 0%, hsl(var(--primary)/0.8) 50%, hsl(var(--primary)) 100%)',
-                  }}
-                >
-                  {/* Shimmer effect */}
+                {/* Live stream: indeterminate shimmer progress bar */}
+                {item.isLive && item.progress === 0 ? (
                   <div
-                    className="absolute inset-0 w-full h-full animate-shimmer"
+                    className="h-full w-full rounded-full animate-shimmer"
                     style={{
                       background:
-                        'linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.4) 50%, transparent 100%)',
+                        'linear-gradient(90deg, hsl(var(--primary)) 0%, hsl(var(--primary)/0.5) 25%, hsl(var(--primary)) 50%, hsl(var(--primary)/0.5) 75%, hsl(var(--primary)) 100%)',
                       backgroundSize: '200% 100%',
                     }}
                   />
-                </div>
+                ) : (
+                  <div
+                    className="h-full rounded-full transition-all duration-300 relative overflow-hidden"
+                    style={{
+                      width: `${item.progress}%`,
+                      background:
+                        'linear-gradient(90deg, hsl(var(--primary)) 0%, hsl(var(--primary)/0.8) 50%, hsl(var(--primary)) 100%)',
+                    }}
+                  >
+                    {/* Shimmer effect */}
+                    <div
+                      className="absolute inset-0 w-full h-full animate-shimmer"
+                      style={{
+                        background:
+                          'linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.4) 50%, transparent 100%)',
+                        backgroundSize: '200% 100%',
+                      }}
+                    />
+                  </div>
+                )}
               </div>
               <div className="flex items-center justify-between text-[10px] text-white/90 font-medium">
-                <span>{item.progress.toFixed(0)}%</span>
-                {item.speed && <span>{item.speed}</span>}
+                {/* Live stream: show "LIVE • elapsed time" only */}
+                {item.isLive && item.progress === 0 ? (
+                  <div className="flex items-center gap-1.5">
+                    <span className="flex items-center gap-1 text-red-400">
+                      <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse" />
+                      LIVE
+                    </span>
+                    {item.elapsedTime && (
+                      <>
+                        <span className="text-white/50">•</span>
+                        <span>{item.elapsedTime}</span>
+                      </>
+                    )}
+                  </div>
+                ) : (
+                  <>
+                    <span>{item.progress.toFixed(0)}%</span>
+                    {item.speed && <span>{item.speed}</span>}
+                  </>
+                )}
               </div>
             </div>
           </div>

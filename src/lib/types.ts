@@ -51,6 +51,8 @@ export interface DownloadItem {
   error?: string;
   isPlaylist?: boolean;
   isLive?: boolean; // true if video is currently live streaming
+  downloadedSize?: string; // For live streams: "2.87 MiB"
+  elapsedTime?: string; // For live streams: "00:00:07"
   playlistIndex?: number;
   playlistTotal?: number;
   thumbnail?: string;
@@ -111,6 +113,9 @@ export interface DownloadProgress {
   format_ext?: string;
   // Error message when status is 'error'
   error_message?: string;
+  // For live streams (no percentage available)
+  downloaded_size?: string; // e.g. "2.87 MiB"
+  elapsed_time?: string; // e.g. "00:00:07"
 }
 
 export interface VideoInfo {

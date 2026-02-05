@@ -14,4 +14,6 @@ pub struct DownloadProgress {
     pub resolution: Option<String>,
     pub format_ext: Option<String>,
     pub error_message: Option<String>,
+    pub downloaded_size: Option<String>, // For live streams: "2.87 MiB"
+    pub elapsed_time: Option<String>,    // For live streams: "00:00:07"
 }
