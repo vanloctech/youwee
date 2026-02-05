@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { createContext, useContext, useEffect, useState } from 'react';
+import { createContext, useCallback, useContext, useEffect, useState } from 'react';
 import type { ThemeMode, ThemeName } from '@/lib/themes';
 import { getTheme } from '@/lib/themes';
 
@@ -9,6 +9,12 @@ interface ThemeContextType {
   setTheme: (theme: ThemeName) => void;
   setMode: (mode: ThemeMode) => void;
   toggleMode: () => void;
+  // Meteor transition
+  isTransitioning: boolean;
+  pendingMode: ThemeMode | null;
+  oldMode: ThemeMode | null;
+  applyPendingTheme: () => void;
+  onTransitionComplete: () => void;
 }
 
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
@@ -33,19 +39,46 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     return 'dark';
   });
 
+  // Meteor transition state
+  const [isTransitioning, setIsTransitioning] = useState(false);
+  const [pendingMode, setPendingMode] = useState<ThemeMode | null>(null);
+  const [oldMode, setOldMode] = useState<ThemeMode | null>(null);
+
   const setTheme = (newTheme: ThemeName) => {
     setThemeState(newTheme);
     localStorage.setItem(THEME_KEY, newTheme);
   };
 
-  const setMode = (newMode: ThemeMode) => {
-    setModeState(newMode);
-    localStorage.setItem(MODE_KEY, newMode);
-  };
+  const setMode = useCallback(
+    (newMode: ThemeMode) => {
+      // If same mode, do nothing
+      if (newMode === mode) return;
 
-  const toggleMode = () => {
+      // Start meteor transition - save old mode for the shrinking overlay
+      setOldMode(mode);
+      setIsTransitioning(true);
+      setPendingMode(newMode);
+    },
+    [mode],
+  );
+
+  // Apply theme immediately when reveal starts (called from MeteorTransition)
+  const applyPendingTheme = useCallback(() => {
+    if (pendingMode) {
+      setModeState(pendingMode);
+      localStorage.setItem(MODE_KEY, pendingMode);
+    }
+  }, [pendingMode]);
+
+  const onTransitionComplete = useCallback(() => {
+    setIsTransitioning(false);
+    setPendingMode(null);
+    setOldMode(null);
+  }, []);
+
+  const toggleMode = useCallback(() => {
     setMode(mode === 'dark' ? 'light' : 'dark');
-  };
+  }, [mode, setMode]);
 
   // Apply theme CSS variables
   useEffect(() => {
@@ -74,7 +107,20 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   }, [theme, mode]);
 
   return (
-    <ThemeContext.Provider value={{ theme, mode, setTheme, setMode, toggleMode }}>
+    <ThemeContext.Provider
+      value={{
+        theme,
+        mode,
+        setTheme,
+        setMode,
+        toggleMode,
+        isTransitioning,
+        pendingMode,
+        oldMode,
+        applyPendingTheme,
+        onTransitionComplete,
+      }}
+    >
       {children}
     </ThemeContext.Provider>
   );

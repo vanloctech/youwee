@@ -604,3 +604,102 @@
 .animate-pulse-subtle {
   animation: pulse-subtle 2s ease-in-out infinite;
 }
+
+/* Meteor Theme Transition */
+@keyframes meteor-fall {
+  0% {
+    transform: translateX(-50%) translateY(0);
+    opacity: 1;
+  }
+  100% {
+    transform: translateX(-50%) translateY(calc(50vh - 10px));
+    opacity: 1;
+  }
+}
+
+@keyframes impact-flash {
+  0% {
+    transform: translate(-50%, -50%) scale(0);
+    opacity: 1;
+  }
+  50% {
+    transform: translate(-50%, -50%) scale(1);
+    opacity: 1;
+  }
+  100% {
+    transform: translate(-50%, -50%) scale(1.5);
+    opacity: 0;
+  }
+}
+
+@keyframes shockwave {
+  0% {
+    transform: translate(-50%, -50%) scale(1);
+    opacity: 0.6;
+  }
+  100% {
+    transform: translate(-50%, -50%) scale(50);
+    opacity: 0;
+  }
+}
+
+@keyframes theme-reveal {
+  0% {
+    clip-path: circle(0% at 50% 50%);
+  }
+  100% {
+    clip-path: circle(150% at 50% 50%);
+  }
+}
+
+@keyframes theme-shrink {
+  0% {
+    clip-path: circle(150% at 50% 50%);
+  }
+  100% {
+    clip-path: circle(0% at 50% 50%);
+  }
+}
+
+@keyframes screen-shake {
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  20% {
+    transform: translateX(-4px) translateY(2px);
+  }
+  40% {
+    transform: translateX(4px) translateY(-2px);
+  }
+  60% {
+    transform: translateX(-3px) translateY(1px);
+  }
+  80% {
+    transform: translateX(3px) translateY(-1px);
+  }
+}
+
+.meteor-fall {
+  animation: meteor-fall 0.4s ease-in forwards;
+}
+
+.animate-impact-flash {
+  animation: impact-flash 0.2s ease-out forwards;
+}
+
+.animate-shockwave {
+  animation: shockwave 0.5s ease-out forwards;
+}
+
+.animate-theme-reveal {
+  animation: theme-reveal 0.5s ease-out forwards;
+}
+
+.animate-theme-shrink {
+  animation: theme-shrink 0.5s ease-out forwards;
+}
+
+.screen-shake {
+  animation: screen-shake 0.2s ease-in-out;
+}

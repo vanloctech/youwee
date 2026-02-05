@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { DenoDialog } from '@/components/DenoDialog';
+import { MeteorTransition } from '@/components/effects/MeteorTransition';
 import { FFmpegDialog } from '@/components/FFmpegDialog';
 import type { Page } from '@/components/layout';
 import { MainLayout } from '@/components/layout';
@@ -11,7 +12,7 @@ import { HistoryProvider } from '@/contexts/HistoryContext';
 import { LogProvider } from '@/contexts/LogContext';
 import { MetadataProvider } from '@/contexts/MetadataContext';
 import { ProcessingProvider } from '@/contexts/ProcessingContext';
-import { ThemeProvider } from '@/contexts/ThemeContext';
+import { ThemeProvider, useTheme } from '@/contexts/ThemeContext';
 import { UniversalProvider } from '@/contexts/UniversalContext';
 import { UpdaterProvider, useUpdater } from '@/contexts/UpdaterContext';
 import {
@@ -33,6 +34,7 @@ function AppContent() {
   const updater = useUpdater();
   const { ffmpegStatus, ffmpegLoading, isAutoDownloadingDeno, denoStatus, denoSuccess } =
     useDependencies();
+  const { isTransitioning, oldMode, applyPendingTheme, onTransitionComplete } = useTheme();
 
   // Show FFmpeg dialog on startup if not installed
   useEffect(() => {
@@ -102,6 +104,13 @@ function AppContent() {
       {showFfmpegDialog && <FFmpegDialog onDismiss={() => setShowFfmpegDialog(false)} />}
 
       {showDenoDialog && <DenoDialog onDismiss={() => setShowDenoDialog(false)} />}
+
+      <MeteorTransition
+        isActive={isTransitioning}
+        oldMode={oldMode}
+        onRevealStart={applyPendingTheme}
+        onComplete={onTransitionComplete}
+      />
     </>
   );
 }
