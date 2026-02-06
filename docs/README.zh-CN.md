@@ -102,40 +102,11 @@ bun run tauri build
 
 ## 贡献
 
-我们欢迎贡献！以下是参与方式：
+我们欢迎贡献！请查看我们的[贡献指南](CONTRIBUTING.zh-CN.md)了解：
 
-### 开始
-
-1. Fork 仓库
-2. 创建功能分支：`git checkout -b feature/新功能`
-3. 进行更改
-4. 运行测试和代码检查：
-   ```bash
-   bun run lint
-   bun run build
-   cd src-tauri && cargo check
-   ```
-5. 提交更改：`git commit -m 'feat: 添加新功能'`
-6. 推送到分支：`git push origin feature/新功能`
-7. 创建 Pull Request
-
-### 提交规范
-
-我们遵循 [Conventional Commits](https://www.conventionalcommits.org/)：
-
-- `feat:` - 新功能
-- `fix:` - Bug 修复
-- `docs:` - 文档更改
-- `style:` - 代码风格更改（格式化等）
-- `refactor:` - 代码重构
-- `test:` - 添加或更新测试
-- `chore:` - 维护任务
-
-### 开发提示
-
-- 运行 `bun run tauri dev` 进行热重载开发
-- 前端更改立即生效
-- Rust 更改需要重新编译（开发模式下自动进行）
+- 开始开发
+- 提交规范
+- Pull Request 指南
 
 ## 许可证
 
