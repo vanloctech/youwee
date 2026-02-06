@@ -15,6 +15,14 @@ import { useDownload } from './DownloadContext';
 
 const STORAGE_KEY = 'youwee_metadata_settings';
 
+// Check if path is absolute (cross-platform)
+const isAbsolutePath = (path: string): boolean => {
+  if (!path) return false;
+  if (path.startsWith('/')) return true;
+  if (/^[A-Za-z]:[\\/]/.test(path)) return true;
+  return false;
+};
+
 export interface MetadataItem {
   id: string;
   url: string;
@@ -98,13 +106,13 @@ export function MetadataProvider({ children }: { children: ReactNode }) {
 
       try {
         let path = await downloadDir();
-        if (!path || !path.startsWith('/')) {
+        if (!isAbsolutePath(path)) {
           const home = await homeDir();
           if (home) {
             path = `${home}Downloads`;
           }
         }
-        if (path?.startsWith('/')) {
+        if (isAbsolutePath(path)) {
           setSettings((s) => {
             const newSettings = { ...s, outputPath: path };
             saveSettings(newSettings);

@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 - **Metadata ignores playlist** - URLs with `?list=` now fetch only single video metadata
+- **Windows path handling** - Fixed download folder detection for Windows paths (C:\, D:\)
 
 ### Changed
 - **Larger default window** - 1100x800 (was 1000x700)

@@ -32,6 +32,14 @@ const STORAGE_KEY = 'youwee-settings';
 const COOKIE_STORAGE_KEY = 'youwee-cookie-settings';
 const PROXY_STORAGE_KEY = 'youwee-proxy-settings';
 
+// Check if path is absolute (cross-platform)
+const isAbsolutePath = (path: string): boolean => {
+  if (!path) return false;
+  if (path.startsWith('/')) return true;
+  if (/^[A-Za-z]:[\\/]/.test(path)) return true;
+  return false;
+};
+
 // Load settings from localStorage
 function loadSavedSettings(): Partial<DownloadSettings> {
   try {
@@ -255,8 +263,8 @@ export function DownloadProvider({ children }: { children: ReactNode }) {
         // Try Tauri's downloadDir first
         let path = await downloadDir();
 
-        // Validate path is absolute (starts with /)
-        if (!path || !path.startsWith('/')) {
+        // Validate path is absolute (cross-platform)
+        if (!isAbsolutePath(path)) {
           // Fallback to home directory + Downloads (for ChromeOS/Linux)
           const home = await homeDir();
           if (home) {
@@ -265,7 +273,7 @@ export function DownloadProvider({ children }: { children: ReactNode }) {
         }
 
         // Only set if we have a valid absolute path
-        if (path?.startsWith('/')) {
+        if (isAbsolutePath(path)) {
           setSettings((s) => {
             const newSettings = { ...s, outputPath: path };
             saveSettings(newSettings);
