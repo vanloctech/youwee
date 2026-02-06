@@ -276,6 +276,19 @@ export function NetworkSection({ highlightId }: NetworkSectionProps) {
                   </div>
                 </div>
               )}
+
+              {/* Windows Browser Lock Warning */}
+              {navigator.platform.includes('Win') && (
+                <div className="flex items-start gap-2 p-2 rounded-lg bg-amber-500/10 border border-amber-500/20">
+                  <AlertCircle className="w-4 h-4 text-amber-500 flex-shrink-0 mt-0.5" />
+                  <div className="flex-1 text-xs">
+                    <p className="font-medium text-amber-500">{t('network.browserMustBeClosed')}</p>
+                    <p className="text-muted-foreground mt-0.5">
+                      {t('network.browserMustBeClosedDesc')}
+                    </p>
+                  </div>
+                </div>
+              )}
             </div>
           )}
 

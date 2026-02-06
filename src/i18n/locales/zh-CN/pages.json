@@ -158,7 +158,8 @@
       "videoUnavailable": "此视频在平台上已不可用",
       "rateLimit": "被平台限速。请等待几分钟后重试",
       "proxyError": "检查 设置 → 网络 中的代理设置",
-      "networkError": "检查网络连接后重试"
+      "networkError": "检查网络连接后重试",
+      "cookieLocked": "下载前请完全关闭浏览器，或使用 Cookie 文件模式"
     }
   },
   "library": {

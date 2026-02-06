@@ -41,7 +41,8 @@ type TroubleshootingKey =
   | 'videoUnavailable'
   | 'rateLimit'
   | 'proxyError'
-  | 'networkError';
+  | 'networkError'
+  | 'cookieLocked';
 
 interface ErrorPattern {
   patterns: RegExp[];
@@ -80,6 +81,15 @@ const ERROR_PATTERNS: ErrorPattern[] = [
   {
     patterns: [/connection.*refused/i, /network.*error/i, /timeout/i, /econnrefused/i],
     hint: 'networkError',
+  },
+  {
+    patterns: [
+      /could not copy.*cookie/i,
+      /permission denied.*cookies/i,
+      /cookie.*database/i,
+      /failed to.*cookie/i,
+    ],
+    hint: 'cookieLocked',
   },
 ];
 

@@ -107,6 +107,8 @@
     "fullDiskAccess": "Full Disk Access Required",
     "fullDiskAccessDesc": "macOS requires Full Disk Access permission to read browser cookies.",
     "openSettings": "Open Settings",
+    "browserMustBeClosed": "Browser Must Be Closed",
+    "browserMustBeClosedDesc": "On Windows, your browser must be completely closed before downloading. Otherwise cookie extraction will fail.",
     "cookieFile": "Cookie File",
     "noFileSelected": "No file selected",
     "browse": "Browse",

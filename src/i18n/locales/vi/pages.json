@@ -158,7 +158,8 @@
       "videoUnavailable": "Video này không còn khả dụng trên nền tảng",
       "rateLimit": "Bị giới hạn tốc độ. Đợi vài phút rồi thử lại",
       "proxyError": "Kiểm tra cài đặt Proxy trong Cài đặt → Mạng",
-      "networkError": "Kiểm tra kết nối internet và thử lại"
+      "networkError": "Kiểm tra kết nối internet và thử lại",
+      "cookieLocked": "Đóng trình duyệt hoàn toàn trước khi tải, hoặc sử dụng chế độ Cookie File"
     }
   },
   "library": {

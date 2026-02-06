@@ -1,6 +1,7 @@
 import { Play, Square, Trash2 } from 'lucide-react';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { BrowserCookieErrorDialog } from '@/components/BrowserCookieErrorDialog';
 import { QueueList, SettingsPanel, UrlInput } from '@/components/download';
 import { FFmpegRequiredDialog } from '@/components/FFmpegRequiredDialog';
 import { ThemePicker } from '@/components/settings/ThemePicker';
@@ -24,6 +25,7 @@ export function DownloadPage({ onNavigateToSettings }: DownloadPageProps) {
     isDownloading,
     isExpandingPlaylist,
     settings,
+    cookieSettings,
     currentPlaylistInfo,
     addFromText,
     importFromFile,
@@ -46,6 +48,9 @@ export function DownloadPage({ onNavigateToSettings }: DownloadPageProps) {
     updateSubtitleEmbed,
     updateSubtitleFormat,
     updateLiveFromStart,
+    cookieError,
+    clearCookieError,
+    retryFailedDownload,
   } = useDownload();
 
   const { ffmpegStatus } = useDependencies();
@@ -209,6 +214,20 @@ export function DownloadPage({ onNavigateToSettings }: DownloadPageProps) {
           onGoToSettings={onNavigateToSettings}
         />
       )}
+
+      {/* Browser Cookie Error Dialog - shown when cookie extraction fails on Windows */}
+      {(() => {
+        const itemId = cookieError?.itemId;
+        if (!cookieError?.show || !itemId) return null;
+        return (
+          <BrowserCookieErrorDialog
+            browserName={cookieSettings.browser}
+            onRetry={() => retryFailedDownload(itemId)}
+            onDismiss={clearCookieError}
+            onGoToSettings={onNavigateToSettings}
+          />
+        );
+      })()}
     </div>
   );
 }

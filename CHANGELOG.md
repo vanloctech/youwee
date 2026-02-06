@@ -11,6 +11,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **FFmpeg check before download** - Shows FFmpeg install dialog when starting download with Best/4K/2K quality without FFmpeg installed
 - **Failed download hints** - Shows "View Logs page for details" when download fails
 - **Troubleshooting tips in Logs** - Auto-detect common errors and show fix suggestions (FFmpeg missing, auth required, rate limit, etc.)
+- **Windows cookie error handling** - Auto-detect browser cookie lock errors, show retry dialog with instructions to close browser
+- **Windows cookie warning** - Shows warning in Settings → Network when using browser cookie mode on Windows
 
 ### Fixed
 - **Metadata ignores playlist** - URLs with `?list=` now fetch only single video metadata

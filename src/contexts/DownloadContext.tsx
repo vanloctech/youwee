@@ -195,6 +195,10 @@ interface DownloadContextType {
   updateLiveFromStart: (enabled: boolean) => void;
   // Speed limit settings
   updateSpeedLimit: (enabled: boolean, value: number, unit: 'K' | 'M' | 'G') => void;
+  // Cookie error detection
+  cookieError: { show: boolean; itemId?: string } | null;
+  clearCookieError: () => void;
+  retryFailedDownload: (itemId: string) => void;
 }
 
 const DownloadContext = createContext<DownloadContextType | null>(null);
@@ -203,6 +207,7 @@ export function DownloadProvider({ children }: { children: ReactNode }) {
   const [items, setItems] = useState<DownloadItem[]>([]);
   const [isDownloading, setIsDownloading] = useState(false);
   const [isExpandingPlaylist, setIsExpandingPlaylist] = useState(false);
+  const [cookieError, setCookieError] = useState<{ show: boolean; itemId?: string } | null>(null);
 
   // Load saved settings on init
   const [settings, setSettings] = useState<DownloadSettings>(() => {
@@ -312,6 +317,17 @@ export function DownloadProvider({ children }: { children: ReactNode }) {
           total: progress.playlist_count,
           title: progress.title || '',
         });
+      }
+
+      // Detect cookie lock error on Windows
+      const cookieErrorPattern =
+        /could not copy.*cookie|permission denied.*cookies|cookie.*database|failed to.*cookie/i;
+      if (
+        progress.status === 'error' &&
+        progress.error_message &&
+        cookieErrorPattern.test(progress.error_message)
+      ) {
+        setCookieError({ show: true, itemId: progress.id });
       }
 
       setItems((currentItems) =>
@@ -911,6 +927,30 @@ export function DownloadProvider({ children }: { children: ReactNode }) {
     [],
   );
 
+  // Clear cookie error dialog
+  const clearCookieError = useCallback(() => {
+    setCookieError(null);
+  }, []);
+
+  // Retry a failed download (reset item and restart)
+  const retryFailedDownload = useCallback(
+    (itemId: string) => {
+      // Reset item status to pending
+      setItems((currentItems) =>
+        currentItems.map((item) =>
+          item.id === itemId ? { ...item, status: 'pending', progress: 0, error: undefined } : item,
+        ),
+      );
+      // Clear cookie error
+      setCookieError(null);
+      // Use a short delay to ensure state update before starting download
+      setTimeout(() => {
+        startDownload();
+      }, 100);
+    },
+    [startDownload],
+  );
+
   const value: DownloadContextType = {
     items,
     isDownloading,
@@ -950,6 +990,10 @@ export function DownloadProvider({ children }: { children: ReactNode }) {
     updateEmbedThumbnail,
     updateLiveFromStart,
     updateSpeedLimit,
+    // Cookie error detection
+    cookieError,
+    clearCookieError,
+    retryFailedDownload,
   };
 
   return <DownloadContext.Provider value={value}>{children}</DownloadContext.Provider>;

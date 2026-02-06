@@ -1,6 +1,7 @@
 import { Play, Square, Trash2 } from 'lucide-react';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { BrowserCookieErrorDialog } from '@/components/BrowserCookieErrorDialog';
 import {
   UniversalQueueList,
   UniversalSettingsPanel,
@@ -11,8 +12,21 @@ import { ThemePicker } from '@/components/settings/ThemePicker';
 import { Button } from '@/components/ui/button';
 import { useDependencies } from '@/contexts/DependenciesContext';
 import { useUniversal } from '@/contexts/UniversalContext';
-import type { Quality } from '@/lib/types';
+import type { CookieSettings, Quality } from '@/lib/types';
 import { cn } from '@/lib/utils';
+
+// Load cookie settings from localStorage (for dialog browser name)
+function loadCookieSettings(): CookieSettings {
+  try {
+    const saved = localStorage.getItem('youwee-cookie-settings');
+    if (saved) {
+      return JSON.parse(saved);
+    }
+  } catch (e) {
+    console.error('Failed to load cookie settings:', e);
+  }
+  return { mode: 'off' };
+}
 
 // Qualities that require FFmpeg for video+audio merging
 const FFMPEG_REQUIRED_QUALITIES: Quality[] = ['best', '8k', '4k', '2k'];
@@ -40,6 +54,9 @@ export function UniversalPage({ onNavigateToSettings }: UniversalPageProps) {
     updateFormat,
     updateAudioBitrate,
     updateConcurrentDownloads,
+    cookieError,
+    clearCookieError,
+    retryFailedDownload,
   } = useUniversal();
 
   const { ffmpegStatus } = useDependencies();
@@ -189,6 +206,20 @@ export function UniversalPage({ onNavigateToSettings }: UniversalPageProps) {
           onGoToSettings={onNavigateToSettings}
         />
       )}
+
+      {/* Browser Cookie Error Dialog - shown when cookie extraction fails on Windows */}
+      {(() => {
+        const itemId = cookieError?.itemId;
+        if (!cookieError?.show || !itemId) return null;
+        return (
+          <BrowserCookieErrorDialog
+            browserName={loadCookieSettings().browser}
+            onRetry={() => retryFailedDownload(itemId)}
+            onDismiss={clearCookieError}
+            onGoToSettings={onNavigateToSettings}
+          />
+        );
+      })()}
     </div>
   );
 }
