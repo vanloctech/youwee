@@ -96,7 +96,8 @@
       "fetching": "Fetching",
       "downloading": "Downloading",
       "completed": "Completed",
-      "failed": "Failed"
+      "failed": "Failed",
+      "failedHint": "View Logs page for details"
     },
     "summarize": "Summarize",
     "fetchingTranscript": "Fetching transcript...",

@@ -69,7 +69,8 @@
       "fetching": "获取中",
       "downloading": "下载中",
       "completed": "已完成",
-      "failed": "失败"
+      "failed": "失败",
+      "failedHint": "查看日志页面了解详情"
     },
     "summarize": "摘要",
     "fetchingTranscript": "获取字幕中...",

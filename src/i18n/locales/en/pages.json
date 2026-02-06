@@ -148,6 +148,17 @@
       "copy": "Copy",
       "copied": "Copied",
       "url": "URL"
+    },
+    "troubleshooting": {
+      "tip": "Tip",
+      "ffmpegMissing": "Go to Settings → Dependencies to install FFmpeg",
+      "ytdlpError": "Go to Settings → Dependencies to update yt-dlp",
+      "authRequired": "Try enabling Cookies in Settings → Network",
+      "privateVideo": "This video requires login. Enable Cookies in Settings → Network",
+      "videoUnavailable": "This video is no longer available on the platform",
+      "rateLimit": "Rate limited by the platform. Wait a few minutes and try again",
+      "proxyError": "Check your Proxy settings in Settings → Network",
+      "networkError": "Check your internet connection and try again"
     }
   },
   "library": {

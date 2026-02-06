@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **Failed download hints** - Shows "View Logs page for details" when download fails
+- **Troubleshooting tips in Logs** - Auto-detect common errors and show fix suggestions (FFmpeg missing, auth required, rate limit, etc.)
+
 ### Fixed
 - **Metadata ignores playlist** - URLs with `?list=` now fetch only single video metadata
 - **Windows path handling** - Fixed download folder detection for Windows paths (C:\, D:\)

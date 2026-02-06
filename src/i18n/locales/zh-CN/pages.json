@@ -148,6 +148,17 @@
       "copy": "复制",
       "copied": "已复制",
       "url": "链接"
+    },
+    "troubleshooting": {
+      "tip": "提示",
+      "ffmpegMissing": "前往 设置 → 依赖项 安装 FFmpeg",
+      "ytdlpError": "前往 设置 → 依赖项 更新 yt-dlp",
+      "authRequired": "尝试在 设置 → 网络 中启用 Cookies",
+      "privateVideo": "此视频需要登录。请在 设置 → 网络 中启用 Cookies",
+      "videoUnavailable": "此视频在平台上已不可用",
+      "rateLimit": "被平台限速。请等待几分钟后重试",
+      "proxyError": "检查 设置 → 网络 中的代理设置",
+      "networkError": "检查网络连接后重试"
     }
   },
   "library": {

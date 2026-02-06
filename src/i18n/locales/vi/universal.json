@@ -69,7 +69,8 @@
       "fetching": "Đang lấy",
       "downloading": "Đang tải",
       "completed": "Hoàn thành",
-      "failed": "Thất bại"
+      "failed": "Thất bại",
+      "failedHint": "Xem trang Logs để biết chi tiết"
     },
     "summarize": "Tóm tắt",
     "fetchingTranscript": "Đang lấy phụ đề...",

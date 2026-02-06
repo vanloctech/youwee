@@ -1,5 +1,14 @@
-import { AlertTriangle, Check, CheckCircle, Copy, Info, Terminal, XCircle } from 'lucide-react';
-import { useCallback, useState } from 'react';
+import {
+  AlertTriangle,
+  Check,
+  CheckCircle,
+  Copy,
+  Info,
+  Lightbulb,
+  Terminal,
+  XCircle,
+} from 'lucide-react';
+import { useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { LogEntry as LogEntryType } from '@/lib/types';
 import { cn } from '@/lib/utils';
@@ -23,9 +32,82 @@ function formatTimestamp(isoString: string): string {
   }
 }
 
+// Error pattern matching for troubleshooting hints
+type TroubleshootingKey =
+  | 'ffmpegMissing'
+  | 'ytdlpError'
+  | 'authRequired'
+  | 'privateVideo'
+  | 'videoUnavailable'
+  | 'rateLimit'
+  | 'proxyError'
+  | 'networkError';
+
+interface ErrorPattern {
+  patterns: RegExp[];
+  hint: TroubleshootingKey;
+}
+
+const ERROR_PATTERNS: ErrorPattern[] = [
+  {
+    patterns: [/ffmpeg.*not found/i, /ffprobe.*not found/i, /ffmpeg is not installed/i],
+    hint: 'ffmpegMissing',
+  },
+  {
+    patterns: [/yt-dlp.*not found/i, /yt-dlp.*error/i, /unable to extract/i],
+    hint: 'ytdlpError',
+  },
+  {
+    patterns: [/sign in to confirm/i, /403 forbidden/i, /login required/i],
+    hint: 'authRequired',
+  },
+  {
+    patterns: [/private video/i, /members.only/i, /join this channel/i],
+    hint: 'privateVideo',
+  },
+  {
+    patterns: [/video unavailable/i, /video.*removed/i, /video.*deleted/i, /not available/i],
+    hint: 'videoUnavailable',
+  },
+  {
+    patterns: [/rate.limit/i, /too many requests/i, /429/i],
+    hint: 'rateLimit',
+  },
+  {
+    patterns: [/proxy.*error/i, /proxy.*failed/i, /socks/i],
+    hint: 'proxyError',
+  },
+  {
+    patterns: [/connection.*refused/i, /network.*error/i, /timeout/i, /econnrefused/i],
+    hint: 'networkError',
+  },
+];
+
+function getTroubleshootingHint(message: string, details?: string): TroubleshootingKey | null {
+  const fullText = `${message} ${details || ''}`.toLowerCase();
+
+  for (const { patterns, hint } of ERROR_PATTERNS) {
+    for (const pattern of patterns) {
+      if (pattern.test(fullText)) {
+        return hint;
+      }
+    }
+  }
+
+  return null;
+}
+
 export function LogEntry({ log }: LogEntryProps) {
   const { t } = useTranslation('pages');
   const [copied, setCopied] = useState(false);
+
+  // Get troubleshooting hint for error logs
+  const troubleshootingHint = useMemo(() => {
+    if (log.log_type !== 'error') return null;
+    const hintKey = getTroubleshootingHint(log.message, log.details);
+    if (!hintKey) return null;
+    return t(`logs.troubleshooting.${hintKey}`);
+  }, [log, t]);
 
   const logTypeConfig = {
     command: {
@@ -151,6 +233,19 @@ export function LogEntry({ log }: LogEntryProps) {
               {log.url}
             </a>
           </p>
+        )}
+
+        {/* Troubleshooting Hint */}
+        {troubleshootingHint && (
+          <div className="mt-2 pt-2 border-t border-white/[0.06]">
+            <p className="text-xs text-amber-500/90 flex items-center gap-1.5">
+              <Lightbulb className="w-3.5 h-3.5 flex-shrink-0" />
+              <span>
+                <span className="font-medium">{t('logs.troubleshooting.tip')}:</span>{' '}
+                {troubleshootingHint}
+              </span>
+            </p>
+          </div>
         )}
       </div>
     </div>

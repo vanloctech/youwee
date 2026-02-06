@@ -4,6 +4,7 @@ import {
   ChevronUp,
   Clock,
   HardDrive,
+  Lightbulb,
   ListVideo,
   Loader2,
   MonitorPlay,
@@ -340,6 +341,14 @@ export function QueueItem({ item, showPlaylistBadge, disabled, onRemove }: Queue
           {isError && item.error && (
             <span className="text-xs text-red-500/80 line-clamp-2" title={item.error}>
               {item.error}
+            </span>
+          )}
+
+          {/* Failed Hint - View Logs */}
+          {isError && (
+            <span className="inline-flex items-center gap-1 text-[10px] text-muted-foreground/70">
+              <Lightbulb className="w-3 h-3" />
+              {t('queue.status.failedHint')}
             </span>
           )}
 

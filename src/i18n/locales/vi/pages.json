@@ -148,6 +148,17 @@
       "copy": "Sao chép",
       "copied": "Đã sao chép",
       "url": "URL"
+    },
+    "troubleshooting": {
+      "tip": "Mẹo",
+      "ffmpegMissing": "Vào Cài đặt → Thành phần để cài đặt FFmpeg",
+      "ytdlpError": "Vào Cài đặt → Thành phần để cập nhật yt-dlp",
+      "authRequired": "Thử bật Cookies trong Cài đặt → Mạng",
+      "privateVideo": "Video này yêu cầu đăng nhập. Bật Cookies trong Cài đặt → Mạng",
+      "videoUnavailable": "Video này không còn khả dụng trên nền tảng",
+      "rateLimit": "Bị giới hạn tốc độ. Đợi vài phút rồi thử lại",
+      "proxyError": "Kiểm tra cài đặt Proxy trong Cài đặt → Mạng",
+      "networkError": "Kiểm tra kết nối internet và thử lại"
     }
   },
   "library": {
