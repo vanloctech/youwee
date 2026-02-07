@@ -159,7 +159,8 @@
       "rateLimit": "Bị giới hạn tốc độ. Đợi vài phút rồi thử lại",
       "proxyError": "Kiểm tra cài đặt Proxy trong Cài đặt → Mạng",
       "networkError": "Kiểm tra kết nối internet và thử lại",
-      "cookieLocked": "Đóng trình duyệt hoàn toàn trước khi tải, hoặc sử dụng chế độ Cookie File"
+      "cookieLocked": "Đóng trình duyệt hoàn toàn trước khi tải, hoặc sử dụng chế độ Cookie File",
+      "cookieDpapi": "Chrome 127+ chặn truy cập cookie trên Windows. Hãy dùng Firefox hoặc chế độ Cookie File"
     }
   },
   "library": {

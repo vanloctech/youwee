@@ -319,9 +319,9 @@ export function DownloadProvider({ children }: { children: ReactNode }) {
         });
       }
 
-      // Detect cookie lock error on Windows
+      // Detect cookie error on Windows (lock error or DPAPI/App-Bound Encryption)
       const cookieErrorPattern =
-        /could not copy.*cookie|permission denied.*cookies|cookie.*database|failed to.*cookie/i;
+        /could not copy.*cookie|permission denied.*cookies|cookie.*database|failed to.*cookie|failed to decrypt.*dpapi|app.bound.encryption/i;
       if (
         progress.status === 'error' &&
         progress.error_message &&

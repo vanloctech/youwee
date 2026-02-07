@@ -42,7 +42,8 @@ type TroubleshootingKey =
   | 'rateLimit'
   | 'proxyError'
   | 'networkError'
-  | 'cookieLocked';
+  | 'cookieLocked'
+  | 'cookieDpapi';
 
 interface ErrorPattern {
   patterns: RegExp[];
@@ -81,6 +82,10 @@ const ERROR_PATTERNS: ErrorPattern[] = [
   {
     patterns: [/connection.*refused/i, /network.*error/i, /timeout/i, /econnrefused/i],
     hint: 'networkError',
+  },
+  {
+    patterns: [/failed to decrypt.*dpapi/i, /app.bound.encryption/i],
+    hint: 'cookieDpapi',
   },
   {
     patterns: [

@@ -245,9 +245,9 @@ export function UniversalProvider({ children }: { children: ReactNode }) {
     const unlisten = listen<DownloadProgress>('download-progress', (event) => {
       const progress = event.payload;
 
-      // Detect cookie lock error on Windows
+      // Detect cookie error on Windows (lock error or DPAPI/App-Bound Encryption)
       const cookieErrorPattern =
-        /could not copy.*cookie|permission denied.*cookies|cookie.*database|failed to.*cookie/i;
+        /could not copy.*cookie|permission denied.*cookies|cookie.*database|failed to.*cookie|failed to decrypt.*dpapi|app.bound.encryption/i;
       if (
         progress.status === 'error' &&
         progress.error_message &&

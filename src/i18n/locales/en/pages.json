@@ -159,7 +159,8 @@
       "rateLimit": "Rate limited by the platform. Wait a few minutes and try again",
       "proxyError": "Check your Proxy settings in Settings → Network",
       "networkError": "Check your internet connection and try again",
-      "cookieLocked": "Close your browser completely before downloading, or use Cookie File mode instead"
+      "cookieLocked": "Close your browser completely before downloading, or use Cookie File mode instead",
+      "cookieDpapi": "Chrome 127+ blocks cookie access on Windows. Use Firefox or Cookie File mode instead"
     }
   },
   "library": {
