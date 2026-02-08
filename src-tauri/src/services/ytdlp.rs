@@ -81,80 +81,45 @@ fn get_bundled_ytdlp_path() -> Option<PathBuf> {
     None
 }
 
-/// Get version of a specific binary
-async fn get_binary_version(binary_path: &PathBuf) -> Option<String> {
-    if !binary_path.exists() {
-        return None;
-    }
-    
-    let mut cmd = Command::new(binary_path);
-    cmd.args(["--version"])
-        .stdout(Stdio::piped())
-        .stderr(Stdio::piped());
-    cmd.hide_window();
-    
-    let output = cmd.output().await.ok()?;
-    
-    if output.status.success() {
-        Some(String::from_utf8_lossy(&output.stdout).trim().to_string())
-    } else {
-        None
-    }
-}
-
-/// Get info for all yt-dlp channels
+/// Get info for all yt-dlp channels (lightweight - no binary execution)
 pub async fn get_all_ytdlp_versions(app: &AppHandle) -> YtdlpAllVersions {
     let current_channel = get_ytdlp_channel(app).await;
     
-    // Bundled version
+    // Just check file existence - no --version calls needed
     let bundled_path = get_bundled_ytdlp_path();
-    let bundled_version = if let Some(ref path) = bundled_path {
-        get_binary_version(path).await
-    } else {
-        None
-    };
+    let stable_path = get_channel_binary_path(app, &YtdlpChannel::Stable);
+    let nightly_path = get_channel_binary_path(app, &YtdlpChannel::Nightly);
+    
+    let bundled_exists = bundled_path.as_ref().map(|p| p.exists()).unwrap_or(false);
+    let stable_exists = stable_path.as_ref().map(|p| p.exists()).unwrap_or(false);
+    let nightly_exists = nightly_path.as_ref().map(|p| p.exists()).unwrap_or(false);
+    
     let bundled = YtdlpChannelInfo {
         channel: "bundled".to_string(),
-        version: bundled_version,
-        installed: bundled_path.as_ref().map(|p| p.exists()).unwrap_or(false),
+        version: None,
+        installed: bundled_exists,
         binary_path: bundled_path.map(|p| p.to_string_lossy().to_string()),
     };
     
-    // Stable version
-    let stable_path = get_channel_binary_path(app, &YtdlpChannel::Stable);
-    let stable_installed = stable_path.as_ref().map(|p| p.exists()).unwrap_or(false);
-    let stable_version = if let Some(ref path) = stable_path {
-        get_binary_version(path).await
-    } else {
-        None
-    };
     let stable = YtdlpChannelInfo {
         channel: "stable".to_string(),
-        version: stable_version,
-        installed: stable_installed,
+        version: None,
+        installed: stable_exists,
         binary_path: stable_path.map(|p| p.to_string_lossy().to_string()),
     };
     
-    // Nightly version
-    let nightly_path = get_channel_binary_path(app, &YtdlpChannel::Nightly);
-    let nightly_installed = nightly_path.as_ref().map(|p| p.exists()).unwrap_or(false);
-    let nightly_version = if let Some(ref path) = nightly_path {
-        get_binary_version(path).await
-    } else {
-        None
-    };
     let nightly = YtdlpChannelInfo {
         channel: "nightly".to_string(),
-        version: nightly_version,
-        installed: nightly_installed,
+        version: None,
+        installed: nightly_exists,
         binary_path: nightly_path.map(|p| p.to_string_lossy().to_string()),
     };
     
     // Check if using fallback (channel is stable/nightly but binary not installed)
     let using_fallback = match current_channel {
         YtdlpChannel::Bundled => false,
-        YtdlpChannel::Stable => !stable_installed,
-        YtdlpChannel::Nightly => !nightly_installed,
+        YtdlpChannel::Stable => !stable_exists,
+        YtdlpChannel::Nightly => !nightly_exists,
     };
     
     YtdlpAllVersions {

@@ -121,6 +121,36 @@ function loadEmbedSettings(): { embedMetadata: boolean; embedThumbnail: boolean 
   return { embedMetadata: true, embedThumbnail: false };
 }
 
+// Load SponsorBlock settings from main download settings
+function loadSponsorBlockArgs(): { remove: string | null; mark: string | null } {
+  try {
+    const saved = localStorage.getItem(DOWNLOAD_STORAGE_KEY);
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      if (!parsed.sponsorBlock) return { remove: null, mark: null };
+
+      if (parsed.sponsorBlockMode === 'remove') return { remove: 'all', mark: null };
+      if (parsed.sponsorBlockMode === 'mark') return { remove: null, mark: 'all' };
+
+      // Custom mode
+      const cats = parsed.sponsorBlockCategories || {};
+      const removeCats: string[] = [];
+      const markCats: string[] = [];
+      for (const [cat, action] of Object.entries(cats)) {
+        if (action === 'remove') removeCats.push(cat);
+        else if (action === 'mark') markCats.push(cat);
+      }
+      return {
+        remove: removeCats.length > 0 ? removeCats.join(',') : null,
+        mark: markCats.length > 0 ? markCats.join(',') : null,
+      };
+    }
+  } catch (e) {
+    console.error('Failed to load sponsorblock settings:', e);
+  }
+  return { remove: null, mark: null };
+}
+
 // Save settings to localStorage
 function saveSettings(settings: UniversalSettings) {
   try {
@@ -245,9 +275,9 @@ export function UniversalProvider({ children }: { children: ReactNode }) {
     const unlisten = listen<DownloadProgress>('download-progress', (event) => {
       const progress = event.payload;
 
-      // Detect cookie lock error on Windows
+      // Detect cookie error on Windows (lock error or DPAPI/App-Bound Encryption)
       const cookieErrorPattern =
-        /could not copy.*cookie|permission denied.*cookies|cookie.*database|failed to.*cookie/i;
+        /could not copy.*cookie|permission denied.*cookies|cookie.*database|failed to.*cookie|failed to decrypt.*dpapi|app.bound.encryption/i;
       if (
         progress.status === 'error' &&
         progress.error_message &&
@@ -438,6 +468,7 @@ export function UniversalProvider({ children }: { children: ReactNode }) {
         const cookieSettings = loadCookieSettings();
         const proxySettings = loadProxySettings();
         const embedSettings = loadEmbedSettings();
+        const sponsorBlockArgs = loadSponsorBlockArgs();
 
         await invoke('download_video', {
           id: item.id,
@@ -469,6 +500,11 @@ export function UniversalProvider({ children }: { children: ReactNode }) {
           speedLimit: settings.speedLimitEnabled
             ? `${settings.speedLimitValue}${settings.speedLimitUnit}`
             : null,
+          // SponsorBlock settings
+          sponsorblockRemove: sponsorBlockArgs.remove,
+          sponsorblockMark: sponsorBlockArgs.mark,
+          // Title from video info fetch
+          title: item.title || null,
         });
 
         setItems((items) =>

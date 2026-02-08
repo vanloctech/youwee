@@ -5,6 +5,34 @@ export type AudioBitrate = 'auto' | '128';
 export type SubtitleMode = 'off' | 'auto' | 'manual';
 export type SubtitleFormat = 'srt' | 'vtt' | 'ass';
 
+// SponsorBlock types
+export type SponsorBlockMode = 'remove' | 'mark' | 'custom';
+export type SponsorBlockAction = 'remove' | 'mark' | 'off';
+
+export const SPONSORBLOCK_CATEGORIES = [
+  'sponsor',
+  'selfpromo',
+  'interaction',
+  'intro',
+  'outro',
+  'preview',
+  'music_offtopic',
+  'filler',
+] as const;
+
+export type SponsorBlockCategory = (typeof SPONSORBLOCK_CATEGORIES)[number];
+
+export const DEFAULT_SPONSORBLOCK_CATEGORIES: Record<SponsorBlockCategory, SponsorBlockAction> = {
+  sponsor: 'remove',
+  selfpromo: 'remove',
+  interaction: 'remove',
+  intro: 'mark',
+  outro: 'mark',
+  preview: 'off',
+  music_offtopic: 'off',
+  filler: 'off',
+};
+
 // Source platforms supported by yt-dlp
 export type SourcePlatform =
   | 'youtube'
@@ -96,6 +124,10 @@ export interface DownloadSettings {
   speedLimitEnabled: boolean; // true = limited, false = unlimited
   speedLimitValue: number; // e.g. 10
   speedLimitUnit: 'K' | 'M' | 'G'; // KB/s, MB/s, GB/s
+  // SponsorBlock settings
+  sponsorBlock: boolean; // toggle on/off
+  sponsorBlockMode: SponsorBlockMode; // 'remove' | 'mark' | 'custom'
+  sponsorBlockCategories: Record<SponsorBlockCategory, SponsorBlockAction>; // per-category action (custom mode)
 }
 
 export interface DownloadProgress {
@@ -281,6 +313,8 @@ export interface AIConfig {
   // Whisper settings
   whisper_enabled?: boolean; // Enable Whisper as fallback transcription
   whisper_api_key?: string; // Separate OpenAI key for Whisper (used when provider !== 'openai')
+  whisper_endpoint_url?: string; // Custom Whisper API endpoint URL
+  whisper_model?: string; // Custom Whisper model name (default: whisper-1)
 }
 
 // Available languages (shared between transcript extraction and summary output)
@@ -414,6 +448,17 @@ export interface ProcessingPreset {
   created_at: string;
 }
 
+export interface ChatAttachment {
+  id: string;
+  path: string; // absolute path on disk
+  name: string; // filename
+  width: number;
+  height: number;
+  size: number; // file size in bytes
+  format: string; // png, jpg, webp, etc.
+  previewUrl: string; // blob URL for preview in chat
+}
+
 export interface ChatMessage {
   id: string;
   role: 'user' | 'assistant' | 'system' | 'complete';
@@ -421,6 +466,7 @@ export interface ChatMessage {
   timestamp: string;
   command?: FFmpegCommandResult;
   outputPath?: string; // For 'complete' role
+  attachments?: ChatAttachment[];
 }
 
 // Quick action definitions

@@ -58,6 +58,8 @@
       "openInFolder": "Mở thư mục",
       "cancel": "Hủy",
       "inputPlaceholder": "Mô tả chỉnh sửa của bạn...",
+      "attachImage": "Đính kèm ảnh",
+      "dropImages": "Thả ảnh vào đây",
       "prompts": {
         "cut": "Cắt",
         "cutPrompt": "Cắt video từ [thời_gian_bắt_đầu] đến [thời_gian_kết_thúc]",
@@ -78,7 +80,13 @@
         "thumbnail": "Ảnh thu nhỏ",
         "thumbnailPrompt": "Trích xuất ảnh thu nhỏ tại [thời_gian]",
         "mute": "Tắt tiếng",
-        "mutePrompt": "Xóa âm thanh khỏi video"
+        "mutePrompt": "Xóa âm thanh khỏi video",
+        "overlay": "Chèn ảnh",
+        "overlayPrompt": "Chèn ảnh đính kèm tại [vị trí: giữa/trên-trái/dưới-phải] với [độ mờ: 100%]",
+        "watermark": "Watermark",
+        "watermarkPrompt": "Thêm ảnh đính kèm làm watermark ở góc dưới-phải với độ mờ 50%",
+        "intro": "Ảnh mở đầu",
+        "introPrompt": "Tạo slide mở đầu [3] giây từ ảnh đính kèm trước video"
       }
     },
     "player": {
@@ -159,7 +167,8 @@
       "rateLimit": "Bị giới hạn tốc độ. Đợi vài phút rồi thử lại",
       "proxyError": "Kiểm tra cài đặt Proxy trong Cài đặt → Mạng",
       "networkError": "Kiểm tra kết nối internet và thử lại",
-      "cookieLocked": "Đóng trình duyệt hoàn toàn trước khi tải, hoặc sử dụng chế độ Cookie File"
+      "cookieLocked": "Đóng trình duyệt hoàn toàn trước khi tải, hoặc sử dụng chế độ Cookie File",
+      "cookieDpapi": "Chrome 127+ chặn truy cập cookie trên Windows. Hãy dùng Firefox hoặc chế độ Cookie File"
     }
   },
   "library": {

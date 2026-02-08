@@ -23,10 +23,14 @@ import type {
   PlaylistVideoEntry,
   ProxySettings,
   Quality,
+  SponsorBlockAction,
+  SponsorBlockCategory,
+  SponsorBlockMode,
   SubtitleFormat,
   SubtitleMode,
   VideoCodec,
 } from '@/lib/types';
+import { DEFAULT_SPONSORBLOCK_CATEGORIES } from '@/lib/types';
 
 const STORAGE_KEY = 'youwee-settings';
 const COOKIE_STORAGE_KEY = 'youwee-cookie-settings';
@@ -97,6 +101,35 @@ function saveProxySettings(settings: ProxySettings) {
   }
 }
 
+// Build SponsorBlock category strings for yt-dlp args
+function buildSponsorBlockArgs(settings: DownloadSettings): {
+  remove: string | null;
+  mark: string | null;
+} {
+  if (!settings.sponsorBlock) return { remove: null, mark: null };
+
+  const cats = settings.sponsorBlockCategories;
+
+  if (settings.sponsorBlockMode === 'remove') {
+    return { remove: 'all', mark: null };
+  }
+  if (settings.sponsorBlockMode === 'mark') {
+    return { remove: null, mark: 'all' };
+  }
+
+  // Custom mode: build comma-separated lists
+  const removeCats: string[] = [];
+  const markCats: string[] = [];
+  for (const [cat, action] of Object.entries(cats)) {
+    if (action === 'remove') removeCats.push(cat);
+    else if (action === 'mark') markCats.push(cat);
+  }
+  return {
+    remove: removeCats.length > 0 ? removeCats.join(',') : null,
+    mark: markCats.length > 0 ? markCats.join(',') : null,
+  };
+}
+
 // Build proxy URL string from settings
 export function buildProxyUrl(settings: ProxySettings): string | undefined {
   if (settings.mode === 'off' || !settings.host || !settings.port) {
@@ -136,6 +169,9 @@ function saveSettings(settings: DownloadSettings) {
         embedMetadata: settings.embedMetadata,
         embedThumbnail: settings.embedThumbnail,
         liveFromStart: settings.liveFromStart,
+        sponsorBlock: settings.sponsorBlock,
+        sponsorBlockMode: settings.sponsorBlockMode,
+        sponsorBlockCategories: settings.sponsorBlockCategories,
       }),
     );
   } catch (e) {
@@ -195,6 +231,10 @@ interface DownloadContextType {
   updateLiveFromStart: (enabled: boolean) => void;
   // Speed limit settings
   updateSpeedLimit: (enabled: boolean, value: number, unit: 'K' | 'M' | 'G') => void;
+  // SponsorBlock settings
+  updateSponsorBlock: (enabled: boolean) => void;
+  updateSponsorBlockMode: (mode: SponsorBlockMode) => void;
+  updateSponsorBlockCategory: (category: SponsorBlockCategory, action: SponsorBlockAction) => void;
   // Cookie error detection
   cookieError: { show: boolean; itemId?: string } | null;
   clearCookieError: () => void;
@@ -239,6 +279,12 @@ export function DownloadProvider({ children }: { children: ReactNode }) {
       speedLimitEnabled: saved.speedLimitEnabled === true, // Default to false (unlimited)
       speedLimitValue: saved.speedLimitValue || 10,
       speedLimitUnit: saved.speedLimitUnit || 'M',
+      // SponsorBlock settings
+      sponsorBlock: saved.sponsorBlock === true, // Default to false
+      sponsorBlockMode: saved.sponsorBlockMode || 'remove',
+      sponsorBlockCategories: saved.sponsorBlockCategories || {
+        ...DEFAULT_SPONSORBLOCK_CATEGORIES,
+      },
     };
   });
 
@@ -319,9 +365,9 @@ export function DownloadProvider({ children }: { children: ReactNode }) {
         });
       }
 
-      // Detect cookie lock error on Windows
+      // Detect cookie error on Windows (lock error or DPAPI/App-Bound Encryption)
       const cookieErrorPattern =
-        /could not copy.*cookie|permission denied.*cookies|cookie.*database|failed to.*cookie/i;
+        /could not copy.*cookie|permission denied.*cookies|cookie.*database|failed to.*cookie|failed to decrypt.*dpapi|app.bound.encryption/i;
       if (
         progress.status === 'error' &&
         progress.error_message &&
@@ -658,6 +704,8 @@ export function DownloadProvider({ children }: { children: ReactNode }) {
         const itemSettings = item.settings as ItemDownloadSettings | undefined;
         const logStderr = localStorage.getItem('youwee_log_stderr') !== 'false';
 
+        const sponsorBlockArgs = buildSponsorBlockArgs(settings);
+
         await invoke('download_video', {
           id: item.id,
           url: item.url,
@@ -694,8 +742,13 @@ export function DownloadProvider({ children }: { children: ReactNode }) {
           speedLimit: settings.speedLimitEnabled
             ? `${settings.speedLimitValue}${settings.speedLimitUnit}`
             : null,
+          // SponsorBlock settings
+          sponsorblockRemove: sponsorBlockArgs.remove,
+          sponsorblockMark: sponsorBlockArgs.mark,
           // No history_id for new downloads
           historyId: null,
+          // Title from video info fetch
+          title: item.title || null,
         });
 
         setItems((items) =>
@@ -927,6 +980,36 @@ export function DownloadProvider({ children }: { children: ReactNode }) {
     [],
   );
 
+  const updateSponsorBlock = useCallback((sponsorBlock: boolean) => {
+    setSettings((s) => {
+      const newSettings = { ...s, sponsorBlock };
+      saveSettings(newSettings);
+      return newSettings;
+    });
+  }, []);
+
+  const updateSponsorBlockMode = useCallback((sponsorBlockMode: SponsorBlockMode) => {
+    setSettings((s) => {
+      const newSettings = { ...s, sponsorBlockMode };
+      saveSettings(newSettings);
+      return newSettings;
+    });
+  }, []);
+
+  const updateSponsorBlockCategory = useCallback(
+    (category: SponsorBlockCategory, action: SponsorBlockAction) => {
+      setSettings((s) => {
+        const newSettings = {
+          ...s,
+          sponsorBlockCategories: { ...s.sponsorBlockCategories, [category]: action },
+        };
+        saveSettings(newSettings);
+        return newSettings;
+      });
+    },
+    [],
+  );
+
   // Clear cookie error dialog
   const clearCookieError = useCallback(() => {
     setCookieError(null);
@@ -990,6 +1073,10 @@ export function DownloadProvider({ children }: { children: ReactNode }) {
     updateEmbedThumbnail,
     updateLiveFromStart,
     updateSpeedLimit,
+    // SponsorBlock settings
+    updateSponsorBlock,
+    updateSponsorBlockMode,
+    updateSponsorBlockCategory,
     // Cookie error detection
     cookieError,
     clearCookieError,

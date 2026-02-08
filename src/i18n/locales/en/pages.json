@@ -58,6 +58,8 @@
       "openInFolder": "Open in Folder",
       "cancel": "Cancel",
       "inputPlaceholder": "Describe your edit...",
+      "attachImage": "Attach Image",
+      "dropImages": "Drop images here",
       "prompts": {
         "cut": "Cut",
         "cutPrompt": "Cut video from [start_time] to [end_time]",
@@ -78,7 +80,13 @@
         "thumbnail": "Thumbnail",
         "thumbnailPrompt": "Extract thumbnail at [time]",
         "mute": "Mute",
-        "mutePrompt": "Remove audio from video"
+        "mutePrompt": "Remove audio from video",
+        "overlay": "Overlay Image",
+        "overlayPrompt": "Overlay the attached image at [position: center/top-left/bottom-right] with [opacity: 100%]",
+        "watermark": "Watermark",
+        "watermarkPrompt": "Add attached image as watermark at bottom-right corner with 50% opacity",
+        "intro": "Image Intro",
+        "introPrompt": "Create a [3] second intro slide from the attached image before the video"
       }
     },
     "player": {
@@ -159,7 +167,8 @@
       "rateLimit": "Rate limited by the platform. Wait a few minutes and try again",
       "proxyError": "Check your Proxy settings in Settings → Network",
       "networkError": "Check your internet connection and try again",
-      "cookieLocked": "Close your browser completely before downloading, or use Cookie File mode instead"
+      "cookieLocked": "Close your browser completely before downloading, or use Cookie File mode instead",
+      "cookieDpapi": "Chrome 127+ blocks cookie access on Windows. Use Firefox or Cookie File mode instead"
     }
   },
   "library": {

@@ -252,13 +252,6 @@ export function QueueItem({ item, showPlaylistBadge, disabled, onRemove }: Queue
             {item.playlistIndex}/{item.playlistTotal}
           </div>
         )}
-
-        {/* Duration/ETA Badge */}
-        {isActive && item.eta && (
-          <div className="absolute top-1.5 right-1.5 px-1.5 py-0.5 rounded bg-primary text-primary-foreground text-[10px] font-medium">
-            {item.eta}
-          </div>
-        )}
       </div>
 
       {/* Content */}

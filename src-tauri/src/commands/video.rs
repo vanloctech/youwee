@@ -7,7 +7,7 @@ use tokio::process::Command;
 use tokio::time::timeout;
 use uuid::Uuid;
 use crate::types::{VideoInfo, FormatOption, VideoInfoResponse, PlaylistVideoEntry, SubtitleInfo};
-use crate::services::{parse_ytdlp_error, run_ytdlp_json_with_cookies, run_ytdlp_with_stderr_and_cookies, build_cookie_args};
+use crate::services::{parse_ytdlp_error, run_ytdlp_json_with_cookies, run_ytdlp_with_stderr_and_cookies, build_cookie_args, get_deno_path};
 use crate::utils::CommandExt;
 use crate::database::add_log_internal;
 
@@ -56,6 +56,17 @@ pub async fn get_video_transcript(
     
     add_log_internal("info", &format!("Trying languages: {}", lang_list.join(", ")), None, Some(&url)).ok();
     
+    // Get Deno runtime args for YouTube
+    let deno_args: Vec<String> = if url.contains("youtube.com") || url.contains("youtu.be") {
+        if let Some(deno_path) = get_deno_path(&app).await {
+            vec!["--js-runtimes".to_string(), format!("deno:{}", deno_path.to_string_lossy())]
+        } else {
+            vec![]
+        }
+    } else {
+        vec![]
+    };
+    
     // Track if we hit a rate limit error
     let mut rate_limited = false;
     let mut specific_error: Option<String> = None;
@@ -65,20 +76,23 @@ pub async fn get_video_transcript(
         #[cfg(debug_assertions)]
         println!("[TRANSCRIPT] Trying language: {} ({}/{})", lang, idx + 1, lang_list.len());
         
-        let subtitle_args = vec![
-            "--skip-download",
-            "--no-playlist",  // Important: only get single video, not playlist
-            "--write-auto-subs",
-            "--write-subs",
-            "--sub-langs", lang.as_str(),
-            "--convert-subs", "vtt",
-            "-o", &temp_path_str,
-            "--no-warnings",
-            "--no-check-certificates",
-            "--no-cache-dir",
-            "--socket-timeout", "30",
-            &url_for_subs,
+        let mut subtitle_args: Vec<String> = vec![
+            "--skip-download".to_string(),
+            "--no-playlist".to_string(),
+            "--write-auto-subs".to_string(),
+            "--write-subs".to_string(),
+            "--sub-langs".to_string(), lang.clone(),
+            "--convert-subs".to_string(), "vtt".to_string(),
+            "-o".to_string(), temp_path_str.clone(),
+            "--no-warnings".to_string(),
+            "--no-check-certificates".to_string(),
+            "--no-cache-dir".to_string(),
+            "--socket-timeout".to_string(), "30".to_string(),
         ];
+        subtitle_args.extend(deno_args.clone());
+        subtitle_args.push(url_for_subs.clone());
+        
+        let subtitle_args_ref: Vec<&str> = subtitle_args.iter().map(|s| s.as_str()).collect();
         
         if idx == 0 {
             let subtitle_cmd = format!("yt-dlp {}", subtitle_args.join(" "));
@@ -89,7 +103,7 @@ pub async fn get_video_transcript(
             Duration::from_secs(45),
             run_ytdlp_with_stderr_and_cookies(
                 &app,
-                &subtitle_args.iter().map(|s| *s).collect::<Vec<_>>(),
+                &subtitle_args_ref,
                 cookie_mode.as_deref(),
                 cookie_browser.as_deref(),
                 cookie_browser_profile.as_deref(),
@@ -430,18 +444,29 @@ pub async fn get_video_info(
     cookie_file_path: Option<String>,
     proxy_url: Option<String>,
 ) -> Result<VideoInfoResponse, String> {
-    let args = [
-        "--dump-json",
-        "--no-download",
-        "--no-playlist",
-        "--no-warnings",
-        "--socket-timeout", "15",
-        &url,
+    let mut args = vec![
+        "--dump-json".to_string(),
+        "--no-download".to_string(),
+        "--no-playlist".to_string(),
+        "--no-warnings".to_string(),
+        "--socket-timeout".to_string(), "15".to_string(),
     ];
+    
+    // Add Deno runtime for YouTube (required for JS extractor)
+    if url.contains("youtube.com") || url.contains("youtu.be") {
+        if let Some(deno_path) = get_deno_path(&app).await {
+            args.push("--js-runtimes".to_string());
+            args.push(format!("deno:{}", deno_path.to_string_lossy()));
+        }
+    }
+    
+    args.push(url.clone());
+    
+    let args_ref: Vec<&str> = args.iter().map(|s| s.as_str()).collect();
     
     let json_output = run_ytdlp_json_with_cookies(
         &app,
-        &args,
+        &args_ref,
         cookie_mode.as_deref(),
         cookie_browser.as_deref(),
         cookie_browser_profile.as_deref(),
@@ -535,6 +560,14 @@ pub async fn get_playlist_entries(
         if l > 0 {
             args.push("--playlist-end".to_string());
             args.push(l.to_string());
+        }
+    }
+    
+    // Add Deno runtime for YouTube (required for JS extractor)
+    if url.contains("youtube.com") || url.contains("youtu.be") {
+        if let Some(deno_path) = get_deno_path(&app).await {
+            args.push("--js-runtimes".to_string());
+            args.push(format!("deno:{}", deno_path.to_string_lossy()));
         }
     }
     
@@ -665,16 +698,27 @@ pub async fn get_available_subtitles(
     cookie_file_path: Option<String>,
     proxy_url: Option<String>,
 ) -> Result<Vec<SubtitleInfo>, String> {
-    let args = [
-        "--list-subs",
-        "--skip-download",
-        "--no-warnings",
-        &url,
+    let mut args = vec![
+        "--list-subs".to_string(),
+        "--skip-download".to_string(),
+        "--no-warnings".to_string(),
     ];
+    
+    // Add Deno runtime for YouTube (required for JS extractor)
+    if url.contains("youtube.com") || url.contains("youtu.be") {
+        if let Some(deno_path) = get_deno_path(&app).await {
+            args.push("--js-runtimes".to_string());
+            args.push(format!("deno:{}", deno_path.to_string_lossy()));
+        }
+    }
+    
+    args.push(url.clone());
+    
+    let args_ref: Vec<&str> = args.iter().map(|s| s.as_str()).collect();
     
     let output = run_ytdlp_json_with_cookies(
         &app,
-        &args,
+        &args_ref,
         cookie_mode.as_deref(),
         cookie_browser.as_deref(),
         cookie_browser_profile.as_deref(),

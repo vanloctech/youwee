@@ -112,6 +112,19 @@
     "stopDownload": "停止下载",
     "clearAll": "清空队列中的所有项目"
   },
+  "schedule": {
+    "title": "定时下载",
+    "preset_in1h": "1小时后",
+    "preset_in3h": "3小时后",
+    "preset_tonight": "今晚 23:00",
+    "preset_tomorrow": "明天 2:00",
+    "startAt": "开始时间",
+    "stopAt": "停止时间（可选）",
+    "addStopTime": "+ 添加停止时间",
+    "setSchedule": "设置定时",
+    "cancel": "取消定时",
+    "startNow": "立即开始"
+  },
   "languages": {
     "en": "英语",
     "vi": "越南语",

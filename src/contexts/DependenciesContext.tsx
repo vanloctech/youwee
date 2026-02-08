@@ -180,8 +180,10 @@ export function DependenciesProvider({ children }: { children: ReactNode }) {
       const versions = await invoke<YtdlpAllVersions>('get_all_ytdlp_versions_cmd');
       setYtdlpAllVersions(versions);
       setYtdlpChannelState(versions.current_channel as YtdlpChannel);
+      return versions;
     } catch (err) {
       setChannelError(err instanceof Error ? err.message : String(err));
+      return null;
     } finally {
       setIsChannelLoading(false);
     }
@@ -321,8 +323,10 @@ export function DependenciesProvider({ children }: { children: ReactNode }) {
     try {
       const status = await invoke<DenoStatus>('check_deno');
       setDenoStatus(status);
+      return status;
     } catch (err) {
       setDenoError(err instanceof Error ? err.message : String(err));
+      return null;
     } finally {
       setDenoLoading(false);
     }
@@ -382,8 +386,8 @@ export function DependenciesProvider({ children }: { children: ReactNode }) {
       checkFfmpeg();
 
       // Load channel info and auto-download stable if needed
-      refreshAllYtdlpVersions().then(async () => {
-        const versions = await invoke<YtdlpAllVersions>('get_all_ytdlp_versions_cmd');
+      refreshAllYtdlpVersions().then(async (versions) => {
+        if (!versions) return;
         // Auto-download stable if channel is stable/nightly but binary not installed
         if (versions.using_fallback && versions.current_channel !== 'bundled') {
           setIsAutoDownloadingYtdlp(true);
@@ -411,9 +415,9 @@ export function DependenciesProvider({ children }: { children: ReactNode }) {
       });
 
       // Check Deno and auto-download if not installed
-      checkDeno().then(async () => {
+      checkDeno().then(async (status) => {
+        if (!status) return;
         // Auto-download Deno if not installed (for YouTube support)
-        const status = await invoke<DenoStatus>('check_deno');
         if (!status.installed) {
           setIsAutoDownloadingDeno(true);
           setDenoDownloading(true);

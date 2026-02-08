@@ -84,6 +84,23 @@ export const SEARCHABLE_SETTINGS: SearchableSetting[] = [
     keywords: ['speed', 'limit', 'bandwidth', 'rate', 'throttle', 'slow'],
     section: 'download',
   },
+  {
+    id: 'sponsorblock',
+    label: 'SponsorBlock',
+    description: 'Auto-skip sponsors and promotions',
+    keywords: [
+      'sponsorblock',
+      'sponsor',
+      'ad',
+      'skip',
+      'chapter',
+      'intro',
+      'outro',
+      'promotion',
+      'subscribe',
+    ],
+    section: 'download',
+  },
 
   // Dependencies Section
   {

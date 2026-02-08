@@ -112,6 +112,19 @@
     "stopDownload": "Dừng tải",
     "clearAll": "Xóa tất cả khỏi hàng đợi"
   },
+  "schedule": {
+    "title": "Hẹn giờ tải",
+    "preset_in1h": "Sau 1 giờ",
+    "preset_in3h": "Sau 3 giờ",
+    "preset_tonight": "Tối nay 23:00",
+    "preset_tomorrow": "Ngày mai 2:00",
+    "startAt": "Bắt đầu lúc",
+    "stopAt": "Dừng lúc (tùy chọn)",
+    "addStopTime": "+ Thêm giờ dừng",
+    "setSchedule": "Đặt lịch",
+    "cancel": "Hủy lịch",
+    "startNow": "Tải ngay"
+  },
   "languages": {
     "en": "Tiếng Anh",
     "vi": "Tiếng Việt",

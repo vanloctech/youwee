@@ -1,13 +1,14 @@
-import { Play, Square, Trash2 } from 'lucide-react';
+import { Clock, Play, Square, Trash2, X } from 'lucide-react';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { BrowserCookieErrorDialog } from '@/components/BrowserCookieErrorDialog';
-import { QueueList, SettingsPanel, UrlInput } from '@/components/download';
+import { QueueList, SchedulePopover, SettingsPanel, UrlInput } from '@/components/download';
 import { FFmpegRequiredDialog } from '@/components/FFmpegRequiredDialog';
 import { ThemePicker } from '@/components/settings/ThemePicker';
 import { Button } from '@/components/ui/button';
 import { useDependencies } from '@/contexts/DependenciesContext';
 import { useDownload } from '@/contexts/DownloadContext';
+import { formatTime, useSchedule } from '@/hooks/useSchedule';
 import type { Quality } from '@/lib/types';
 import { cn } from '@/lib/utils';
 
@@ -56,6 +57,13 @@ export function DownloadPage({ onNavigateToSettings }: DownloadPageProps) {
   const { ffmpegStatus } = useDependencies();
 
   const [showFfmpegDialog, setShowFfmpegDialog] = useState(false);
+
+  const schedule = useSchedule({
+    storageKey: 'youwee-schedule-download',
+    onStart: startDownload,
+    onStop: stopDownload,
+    isDownloading,
+  });
 
   const pendingCount = items.filter((i) => i.status !== 'completed').length;
   const hasItems = items.length > 0;
@@ -156,28 +164,79 @@ export function DownloadPage({ onNavigateToSettings }: DownloadPageProps) {
 
           <div className="px-4 sm:px-6 py-3 sm:py-4">
             <div className="flex items-center gap-3">
-              {!isDownloading ? (
-                <button
-                  type="button"
-                  className={cn(
-                    'flex-1 h-11 px-6 rounded-xl font-medium text-sm sm:text-base',
-                    'btn-gradient flex items-center justify-center gap-2',
-                    'disabled:opacity-50 disabled:cursor-not-allowed',
-                    'shadow-lg shadow-primary/20',
-                    pendingCount > 0 && 'animate-pulse-subtle',
-                  )}
-                  onClick={handleStartDownload}
-                  disabled={pendingCount === 0}
-                  title={t('actions.startDownload')}
-                >
-                  <Play className="w-5 h-5" />
-                  <span>{t('actions.startDownload')}</span>
-                  {pendingCount > 0 && (
-                    <span className="ml-1 px-2 py-0.5 rounded-full bg-white/20 text-xs">
-                      {pendingCount}
-                    </span>
-                  )}
-                </button>
+              {!isDownloading && !schedule.isScheduled ? (
+                <>
+                  {/* Start Download button */}
+                  <button
+                    type="button"
+                    className={cn(
+                      'flex-1 h-11 px-6 rounded-xl font-medium text-sm sm:text-base',
+                      'btn-gradient flex items-center justify-center gap-2',
+                      'disabled:opacity-50 disabled:cursor-not-allowed',
+                      'shadow-lg shadow-primary/20',
+                      pendingCount > 0 && 'animate-pulse-subtle',
+                    )}
+                    onClick={handleStartDownload}
+                    disabled={pendingCount === 0}
+                    title={t('actions.startDownload')}
+                  >
+                    <Play className="w-5 h-5" />
+                    <span>{t('actions.startDownload')}</span>
+                    {pendingCount > 0 && (
+                      <span className="ml-1 px-2 py-0.5 rounded-full bg-white/20 text-xs">
+                        {pendingCount}
+                      </span>
+                    )}
+                  </button>
+
+                  {/* Schedule button */}
+                  <SchedulePopover
+                    onSchedule={schedule.setSchedule}
+                    disabled={pendingCount === 0}
+                    ns="download"
+                  />
+                </>
+              ) : schedule.isScheduled && !isDownloading ? (
+                <>
+                  {/* Schedule active display */}
+                  <div className="flex-1 h-11 px-4 rounded-xl bg-muted/50 border border-border/50 flex items-center gap-2.5">
+                    <Clock className="w-4 h-4 text-primary shrink-0" />
+                    <div className="flex-1 min-w-0">
+                      <span className="text-sm font-medium">
+                        {formatTime(schedule.schedule?.startAt ?? 0)}
+                      </span>
+                      <span className="text-xs text-muted-foreground ml-1.5">
+                        {schedule.countdown}
+                      </span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={schedule.cancelSchedule}
+                      className="text-muted-foreground hover:text-foreground p-0.5"
+                      title={t('schedule.cancel')}
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
+
+                  {/* Start Now button */}
+                  <button
+                    type="button"
+                    className={cn(
+                      'h-11 px-4 rounded-xl font-medium text-sm',
+                      'btn-gradient flex items-center justify-center gap-1.5',
+                      'shadow-lg shadow-primary/20',
+                    )}
+                    onClick={() => {
+                      schedule.cancelSchedule();
+                      handleStartDownload();
+                    }}
+                    title={t('schedule.startNow')}
+                  >
+                    <Play className="w-4 h-4" />
+                    <span>{t('schedule.startNow')}</span>
+                  </button>
+                </>
               ) : (
                 <Button
                   className="flex-1 h-11 text-sm sm:text-base rounded-xl"

@@ -1,5 +1,6 @@
 export { QueueItem } from './QueueItem';
 export { QueueList } from './QueueList';
+export { SchedulePopover } from './SchedulePopover';
 export { SettingsPanel } from './SettingsPanel';
 export { SourceBadge } from './SourceBadge';
 export { UniversalQueueItem } from './UniversalQueueItem';

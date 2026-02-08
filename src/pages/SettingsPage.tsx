@@ -611,12 +611,45 @@ function AISettingsContent({
               </div>
               {ai.config.whisper_enabled && (
                 <div className="space-y-2 pl-4 border-l-2 border-primary/20">
-                  {ai.config.provider === 'openai' ? (
-                    <div className="flex items-center gap-2 text-xs p-2 rounded-lg bg-emerald-500/10 text-emerald-500">
-                      <Check className="w-3.5 h-3.5" />
-                      <span>{t('ai.usingOpenAI')}</span>
-                    </div>
-                  ) : (
+                  {/* Provider toggle: OpenAI / Custom */}
+                  <div className="flex items-center gap-1 p-0.5 bg-muted/50 rounded-lg w-fit">
+                    <button
+                      type="button"
+                      onClick={() =>
+                        ai.updateConfig({
+                          whisper_endpoint_url: undefined,
+                          whisper_model: undefined,
+                        })
+                      }
+                      className={cn(
+                        'px-3 py-1 text-xs font-medium rounded-md transition-all',
+                        ai.config.whisper_endpoint_url === undefined
+                          ? 'bg-background shadow-sm text-foreground'
+                          : 'text-muted-foreground hover:text-foreground',
+                      )}
+                    >
+                      OpenAI
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        ai.updateConfig({
+                          whisper_endpoint_url: ai.config.whisper_endpoint_url ?? '',
+                        })
+                      }
+                      className={cn(
+                        'px-3 py-1 text-xs font-medium rounded-md transition-all',
+                        ai.config.whisper_endpoint_url !== undefined
+                          ? 'bg-background shadow-sm text-foreground'
+                          : 'text-muted-foreground hover:text-foreground',
+                      )}
+                    >
+                      {t('ai.whisperCustom')}
+                    </button>
+                  </div>
+
+                  {ai.config.whisper_endpoint_url !== undefined ? (
+                    // Custom backend
                     <div className="space-y-2">
                       <Input
                         type="password"
@@ -625,9 +658,46 @@ function AISettingsContent({
                         placeholder={t('ai.whisperApiKey')}
                         className="h-9"
                       />
+                      <Input
+                        type="text"
+                        value={ai.config.whisper_endpoint_url || ''}
+                        onChange={(e) => ai.updateConfig({ whisper_endpoint_url: e.target.value })}
+                        placeholder={t('ai.whisperEndpointPlaceholder')}
+                        className="h-9"
+                      />
+                      <Input
+                        type="text"
+                        value={ai.config.whisper_model || ''}
+                        onChange={(e) =>
+                          ai.updateConfig({ whisper_model: e.target.value || undefined })
+                        }
+                        placeholder={t('ai.whisperModelPlaceholder')}
+                        className="h-9"
+                      />
+                      <p className="text-xs text-muted-foreground/60">
+                        {t('ai.whisperCompatible')}
+                      </p>
+                    </div>
+                  ) : (
+                    // OpenAI (default)
+                    <div className="space-y-2">
+                      {ai.config.provider === 'openai' ? (
+                        <div className="flex items-center gap-2 text-xs p-2 rounded-lg bg-emerald-500/10 text-emerald-500">
+                          <Check className="w-3.5 h-3.5" />
+                          <span>{t('ai.usingOpenAI')}</span>
+                        </div>
+                      ) : (
+                        <Input
+                          type="password"
+                          value={ai.config.whisper_api_key || ''}
+                          onChange={(e) => ai.updateConfig({ whisper_api_key: e.target.value })}
+                          placeholder={t('ai.whisperApiKey')}
+                          className="h-9"
+                        />
+                      )}
+                      <p className="text-xs text-muted-foreground">{t('ai.whisperCost')}</p>
                     </div>
                   )}
-                  <p className="text-xs text-muted-foreground">{t('ai.whisperCost')}</p>
                 </div>
               )}
             </div>

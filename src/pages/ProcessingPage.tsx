@@ -30,6 +30,10 @@ export function ProcessingPage() {
     loadHistory,
     deleteJob,
     clearHistory,
+    attachedImages,
+    attachImages,
+    removeAttachment,
+    clearAttachments,
   } = useProcessing();
 
   // History dialog
@@ -156,8 +160,12 @@ export function ProcessingPage() {
             isProcessing={isProcessing}
             progress={progress}
             hasVideo={!!metadata && !!videoPath}
+            attachedImages={attachedImages}
             onSendMessage={sendMessage}
             onCancelProcessing={cancelProcessing}
+            onAttachImages={attachImages}
+            onRemoveAttachment={removeAttachment}
+            onClearAttachments={clearAttachments}
           />
         </div>
 

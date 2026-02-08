@@ -102,6 +102,8 @@ pub async fn transcribe_audio(
     audio_path: &str,
     response_format: WhisperResponseFormat,
     language: Option<&str>,
+    endpoint_url: Option<&str>,
+    model: Option<&str>,
 ) -> Result<WhisperResult, WhisperError> {
     let path = Path::new(audio_path);
     
@@ -159,9 +161,11 @@ pub async fn transcribe_audio(
         .mime_str(mime_type)
         .map_err(|e| WhisperError::ParseError(format!("Invalid MIME type: {}", e)))?;
     
+    let model_name = model.unwrap_or("whisper-1");
+    
     let mut form = Form::new()
         .part("file", file_part)
-        .text("model", "whisper-1")
+        .text("model", model_name.to_string())
         .text("response_format", response_format.to_string());
     
     // Add language hint if provided
@@ -170,9 +174,11 @@ pub async fn transcribe_audio(
     }
     
     // Send request
+    let api_url = endpoint_url.unwrap_or("https://api.openai.com/v1/audio/transcriptions");
+    
     let client = Client::new();
     let response = client
-        .post("https://api.openai.com/v1/audio/transcriptions")
+        .post(api_url)
         .header("Authorization", format!("Bearer {}", api_key))
         .multipart(form)
         .send()
