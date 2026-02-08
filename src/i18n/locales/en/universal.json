@@ -83,5 +83,18 @@
     "startDownload": "Start Download",
     "stopDownload": "Stop Download",
     "clearAll": "Clear all items from queue"
+  },
+  "schedule": {
+    "title": "Schedule Download",
+    "preset_in1h": "In 1 hour",
+    "preset_in3h": "In 3 hours",
+    "preset_tonight": "Tonight 11 PM",
+    "preset_tomorrow": "Tomorrow 2 AM",
+    "startAt": "Start at",
+    "stopAt": "Stop at (optional)",
+    "addStopTime": "+ Add stop time",
+    "setSchedule": "Set Schedule",
+    "cancel": "Cancel schedule",
+    "startNow": "Start Now"
   }
 }
