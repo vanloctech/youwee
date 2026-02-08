@@ -281,6 +281,8 @@ export interface AIConfig {
   // Whisper settings
   whisper_enabled?: boolean; // Enable Whisper as fallback transcription
   whisper_api_key?: string; // Separate OpenAI key for Whisper (used when provider !== 'openai')
+  whisper_endpoint_url?: string; // Custom Whisper API endpoint URL
+  whisper_model?: string; // Custom Whisper model name (default: whisper-1)
 }
 
 // Available languages (shared between transcript extraction and summary output)

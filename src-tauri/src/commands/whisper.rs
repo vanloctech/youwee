@@ -20,6 +20,8 @@ pub async fn transcribe_video_with_whisper(
     response_format: String, // "text", "srt", "vtt"
     openai_api_key: String,
     language: Option<String>,
+    whisper_endpoint_url: Option<String>,
+    whisper_model: Option<String>,
 ) -> Result<String, String> {
     add_log_internal("info", &format!("Starting Whisper transcription for: {}", video_path), None, None).ok();
     
@@ -81,6 +83,8 @@ pub async fn transcribe_video_with_whisper(
         &audio_path,
         format,
         language.as_deref(),
+        whisper_endpoint_url.as_deref(),
+        whisper_model.as_deref(),
     ).await.map_err(|e| e.to_string())?;
     
     // Clean up temp audio file if we created one
@@ -115,6 +119,9 @@ pub async fn transcribe_url_with_whisper(
     cookie_file_path: Option<String>,
     // Proxy
     proxy_url: Option<String>,
+    // Whisper backend settings
+    whisper_endpoint_url: Option<String>,
+    whisper_model: Option<String>,
 ) -> Result<String, String> {
     add_log_internal("info", &format!("Starting Whisper transcription for URL: {}", url), None, Some(&url)).ok();
     
@@ -230,6 +237,8 @@ pub async fn transcribe_url_with_whisper(
         &audio_file,
         format,
         language.as_deref(),
+        whisper_endpoint_url.as_deref(),
+        whisper_model.as_deref(),
     ).await.map_err(|e| e.to_string())?;
     
     // Clean up temp files
@@ -253,6 +262,8 @@ pub async fn generate_subtitles_with_whisper(
     output_format: String, // "srt" or "vtt"
     openai_api_key: String,
     language: Option<String>,
+    whisper_endpoint_url: Option<String>,
+    whisper_model: Option<String>,
 ) -> Result<String, String> {
     // Validate format
     let format = match output_format.to_lowercase().as_str() {
@@ -268,6 +279,8 @@ pub async fn generate_subtitles_with_whisper(
         format.to_string(),
         openai_api_key,
         language,
+        whisper_endpoint_url,
+        whisper_model,
     ).await?;
     
     // Determine output path

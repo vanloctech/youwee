@@ -118,6 +118,8 @@ const defaultConfig: AIConfig = {
   transcript_languages: ['en'],
   whisper_enabled: false,
   whisper_api_key: undefined,
+  whisper_endpoint_url: undefined,
+  whisper_model: undefined,
 };
 
 const AIContext = createContext<AIContextValue | undefined>(undefined);
@@ -272,6 +274,8 @@ export function AIProvider({ children }: { children: ReactNode }) {
             cookieBrowserProfile: cookieSettings.browserProfile || null,
             cookieFilePath: cookieSettings.filePath || null,
             proxyUrl: buildProxyUrl(proxySettings) || null,
+            whisperEndpointUrl: config.whisper_endpoint_url || null,
+            whisperModel: config.whisper_model || null,
           });
         } else {
           throw new Error(
@@ -293,6 +297,8 @@ export function AIProvider({ children }: { children: ReactNode }) {
       config.provider,
       config.api_key,
       config.whisper_api_key,
+      config.whisper_endpoint_url,
+      config.whisper_model,
     ],
   );
 

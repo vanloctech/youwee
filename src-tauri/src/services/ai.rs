@@ -53,6 +53,10 @@ pub struct AIConfig {
     pub whisper_enabled: bool, // Enable Whisper as fallback transcription
     #[serde(default)]
     pub whisper_api_key: Option<String>, // Separate OpenAI key for Whisper (used when provider != openai)
+    #[serde(default)]
+    pub whisper_endpoint_url: Option<String>, // Custom Whisper API endpoint URL
+    #[serde(default)]
+    pub whisper_model: Option<String>, // Custom Whisper model name (default: whisper-1)
 }
 
 impl Default for AIConfig {
@@ -70,6 +74,8 @@ impl Default for AIConfig {
             transcript_languages: Some(vec!["en".to_string()]),
             whisper_enabled: false,
             whisper_api_key: None,
+            whisper_endpoint_url: None,
+            whisper_model: None,
         }
     }
 }
