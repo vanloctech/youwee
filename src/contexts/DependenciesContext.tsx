@@ -85,7 +85,7 @@ interface DependenciesContextType {
 
   // yt-dlp channel actions
   setYtdlpChannel: (channel: YtdlpChannel) => Promise<void>;
-  refreshAllYtdlpVersions: () => Promise<void>;
+  refreshAllYtdlpVersions: () => Promise<YtdlpAllVersions | null>;
   checkChannelUpdate: (channel: YtdlpChannel) => Promise<void>;
   downloadChannelBinary: (channel: YtdlpChannel) => Promise<void>;
 
@@ -106,7 +106,7 @@ interface DependenciesContextType {
   denoDownloadProgress: DownloadProgress | null;
 
   // Deno actions
-  checkDeno: () => Promise<void>;
+  checkDeno: () => Promise<DenoStatus | null>;
   checkDenoUpdate: () => Promise<void>;
   downloadDeno: () => Promise<void>;
 }
