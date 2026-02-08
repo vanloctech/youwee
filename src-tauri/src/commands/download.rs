@@ -81,6 +81,8 @@ pub async fn download_video(
     live_from_start: Option<bool>,
     // Speed limit settings
     speed_limit: Option<String>,
+    // Title (optional, passed from frontend for display purposes)
+    title: Option<String>,
 ) -> Result<(), String> {
     CANCEL_FLAG.store(false, Ordering::SeqCst);
     
@@ -270,7 +272,7 @@ pub async fn download_video(
         let process = cmd.spawn()
             .map_err(|e| format!("Failed to start yt-dlp: {}", e))?;
         
-        return handle_tokio_download(app, id, process, quality, format, url, should_log_stderr).await;
+        return handle_tokio_download(app, id, process, quality, format, url, should_log_stderr, title).await;
     }
     
     // Fallback to sidecar
@@ -283,7 +285,8 @@ pub async fn download_video(
                 .spawn()
                 .map_err(|e| format!("Failed to start bundled yt-dlp: {}", e))?;
             
-            let mut current_title: Option<String> = None;
+            // Only use frontend title if it's not a URL (placeholder)
+            let mut current_title: Option<String> = title.clone().filter(|t| !t.starts_with("http"));
             let mut current_index: Option<u32> = None;
             let mut total_count: Option<u32> = None;
             let mut total_filesize: u64 = 0;
@@ -324,10 +327,14 @@ pub async fn download_video(
                             }
                         }
                         
-                        // Extract title
-                        if line.contains("[download] Destination:") || line.contains("[ExtractAudio]") {
-                            if let Some(start) = line.rfind('/') {
+                        // Extract title from [download] messages
+                        // Handles both: "Destination: /path/file.mp4" and "/path/file.mp4 has already been downloaded"
+                        if line.contains("[download]") && (line.contains("Destination:") || line.contains("has already been downloaded") || line.contains("[ExtractAudio]")) {
+                            let path_sep = if line.contains('\\') { '\\' } else { '/' };
+                            if let Some(start) = line.rfind(path_sep) {
                                 let filename = &line[start + 1..];
+                                // Remove suffix if present
+                                let filename = filename.trim_end_matches(" has already been downloaded");
                                 if let Some(end) = filename.rfind('.') {
                                     current_title = Some(filename[..end].to_string());
                                 }
@@ -564,7 +571,7 @@ pub async fn download_video(
             let process = cmd.spawn()
                 .map_err(|e| format!("Failed to start yt-dlp: {}", e))?;
             
-            handle_tokio_download(app, id, process, quality, format, url, should_log_stderr).await
+            handle_tokio_download(app, id, process, quality, format, url, should_log_stderr, title).await
         }
     }
 }
@@ -577,12 +584,14 @@ async fn handle_tokio_download(
     format: String,
     url: String,
     should_log_stderr: bool,
+    title: Option<String>,
 ) -> Result<(), String> {
     let stdout = process.stdout.take().ok_or("Failed to get stdout")?;
     let stderr = process.stderr.take();
     let mut stdout_reader = BufReader::new(stdout).lines();
     
-    let mut current_title: Option<String> = None;
+    // Only use frontend title if it's not a URL (placeholder)
+    let mut current_title: Option<String> = title.filter(|t| !t.starts_with("http"));
     let mut current_index: Option<u32> = None;
     let mut total_count: Option<u32> = None;
     let mut total_filesize: u64 = 0;
@@ -677,10 +686,14 @@ async fn handle_tokio_download(
             app.emit("download-progress", progress).ok();
         }
         
-        // Extract title
-        if line.contains("[download] Destination:") {
-            if let Some(start) = line.rfind('/') {
+        // Extract title from [download] messages
+        // Handles both: "Destination: /path/file.mp4" and "/path/file.mp4 has already been downloaded"
+        if line.contains("[download]") && (line.contains("Destination:") || line.contains("has already been downloaded")) {
+            let path_sep = if line.contains('\\') { '\\' } else { '/' };
+            if let Some(start) = line.rfind(path_sep) {
                 let filename = &line[start + 1..];
+                // Remove suffix if present
+                let filename = filename.trim_end_matches(" has already been downloaded");
                 if let Some(end) = filename.rfind('.') {
                     current_title = Some(filename[..end].to_string());
                 }
@@ -745,7 +758,17 @@ async fn handle_tokio_download(
             }
         });
         
-        let success_msg = format!("Downloaded: {}", current_title.clone().unwrap_or_else(|| "Unknown".to_string()));
+        // Fallback: extract title from final_filepath if current_title is None
+        let display_title = current_title.or_else(|| {
+            final_filepath.as_ref().and_then(|path| {
+                std::path::Path::new(path)
+                    .file_stem()
+                    .and_then(|s| s.to_str())
+                    .map(|s| s.to_string())
+            })
+        });
+        
+        let success_msg = format!("Downloaded: {}", display_title.clone().unwrap_or_else(|| "Unknown".to_string()));
         let details = format!(
             "Size: {} · Quality: {} · Format: {}",
             reported_filesize.map(format_size).unwrap_or_else(|| "Unknown".to_string()),
@@ -761,7 +784,7 @@ async fn handle_tokio_download(
             
             add_history_internal(
                 url.clone(),
-                current_title.clone().unwrap_or_else(|| "Unknown".to_string()),
+                display_title.clone().unwrap_or_else(|| "Unknown".to_string()),
                 thumbnail,
                 filepath.clone(),
                 reported_filesize,
@@ -778,7 +801,7 @@ async fn handle_tokio_download(
             speed: String::new(),
             eta: String::new(),
             status: "finished".to_string(),
-            title: current_title,
+            title: display_title,
             playlist_index: current_index,
             playlist_count: total_count,
             filesize: reported_filesize,

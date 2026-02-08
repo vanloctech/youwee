@@ -696,6 +696,8 @@ export function DownloadProvider({ children }: { children: ReactNode }) {
             : null,
           // No history_id for new downloads
           historyId: null,
+          // Title from video info fetch
+          title: item.title || null,
         });
 
         setItems((items) =>

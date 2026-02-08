@@ -469,6 +469,8 @@ export function UniversalProvider({ children }: { children: ReactNode }) {
           speedLimit: settings.speedLimitEnabled
             ? `${settings.speedLimitValue}${settings.speedLimitUnit}`
             : null,
+          // Title from video info fetch
+          title: item.title || null,
         });
 
         setItems((items) =>
