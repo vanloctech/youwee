@@ -5,6 +5,34 @@ export type AudioBitrate = 'auto' | '128';
 export type SubtitleMode = 'off' | 'auto' | 'manual';
 export type SubtitleFormat = 'srt' | 'vtt' | 'ass';
 
+// SponsorBlock types
+export type SponsorBlockMode = 'remove' | 'mark' | 'custom';
+export type SponsorBlockAction = 'remove' | 'mark' | 'off';
+
+export const SPONSORBLOCK_CATEGORIES = [
+  'sponsor',
+  'selfpromo',
+  'interaction',
+  'intro',
+  'outro',
+  'preview',
+  'music_offtopic',
+  'filler',
+] as const;
+
+export type SponsorBlockCategory = (typeof SPONSORBLOCK_CATEGORIES)[number];
+
+export const DEFAULT_SPONSORBLOCK_CATEGORIES: Record<SponsorBlockCategory, SponsorBlockAction> = {
+  sponsor: 'remove',
+  selfpromo: 'remove',
+  interaction: 'remove',
+  intro: 'mark',
+  outro: 'mark',
+  preview: 'off',
+  music_offtopic: 'off',
+  filler: 'off',
+};
+
 // Source platforms supported by yt-dlp
 export type SourcePlatform =
   | 'youtube'
@@ -96,6 +124,10 @@ export interface DownloadSettings {
   speedLimitEnabled: boolean; // true = limited, false = unlimited
   speedLimitValue: number; // e.g. 10
   speedLimitUnit: 'K' | 'M' | 'G'; // KB/s, MB/s, GB/s
+  // SponsorBlock settings
+  sponsorBlock: boolean; // toggle on/off
+  sponsorBlockMode: SponsorBlockMode; // 'remove' | 'mark' | 'custom'
+  sponsorBlockCategories: Record<SponsorBlockCategory, SponsorBlockAction>; // per-category action (custom mode)
 }
 
 export interface DownloadProgress {

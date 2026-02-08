@@ -81,6 +81,9 @@ pub async fn download_video(
     live_from_start: Option<bool>,
     // Speed limit settings
     speed_limit: Option<String>,
+    // SponsorBlock settings
+    sponsorblock_remove: Option<String>,  // comma-separated categories to remove
+    sponsorblock_mark: Option<String>,    // comma-separated categories to mark as chapters
     // Title (optional, passed from frontend for display purposes)
     title: Option<String>,
 ) -> Result<(), String> {
@@ -237,6 +240,20 @@ pub async fn download_video(
         // Convert thumbnail to jpg for better compatibility with MP4 container
         args.push("--convert-thumbnails".to_string());
         args.push("jpg".to_string());
+    }
+    
+    // SponsorBlock settings
+    if let Some(ref remove_cats) = sponsorblock_remove {
+        if !remove_cats.is_empty() {
+            args.push("--sponsorblock-remove".to_string());
+            args.push(remove_cats.clone());
+        }
+    }
+    if let Some(ref mark_cats) = sponsorblock_mark {
+        if !mark_cats.is_empty() {
+            args.push("--sponsorblock-mark".to_string());
+            args.push(mark_cats.clone());
+        }
     }
     
     args.push(url.clone());
