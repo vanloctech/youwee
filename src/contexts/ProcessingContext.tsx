@@ -13,6 +13,7 @@ import {
   useState,
 } from 'react';
 import type {
+  ChatAttachment,
   ChatMessage,
   FFmpegCommandResult,
   ProcessingJob,
@@ -52,6 +53,9 @@ interface ProcessingContextValue {
   messages: ChatMessage[];
   isGenerating: boolean;
 
+  // Image attachments
+  attachedImages: ChatAttachment[];
+
   // History & Presets
   history: ProcessingJob[];
   presets: ProcessingPreset[];
@@ -77,6 +81,11 @@ interface ProcessingContextValue {
     taskType: ProcessingTaskType,
     options?: Record<string, unknown>,
   ) => Promise<void>;
+
+  // Image Actions
+  attachImages: (paths: string[]) => Promise<void>;
+  removeAttachment: (id: string) => void;
+  clearAttachments: () => void;
 
   // Processing Actions
   executeCommand: (command?: FFmpegCommandResult) => Promise<void>;
@@ -134,6 +143,9 @@ export function ProcessingProvider({ children }: { children: ReactNode }) {
   // Chat
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [isGenerating, setIsGenerating] = useState(false);
+
+  // Image attachments
+  const [attachedImages, setAttachedImages] = useState<ChatAttachment[]>([]);
 
   // History & Presets
   const [history, setHistory] = useState<ProcessingJob[]>([]);
@@ -303,29 +315,116 @@ export function ProcessingProvider({ children }: { children: ReactNode }) {
     }
   }, [loadVideo]);
 
+  // Image attachment interface from Rust
+  interface ImageInfoResult {
+    path: string;
+    filename: string;
+    width: number;
+    height: number;
+    size: number;
+    format: string;
+  }
+
+  // Attach images by file paths
+  const attachImages = useCallback(async (paths: string[]) => {
+    const newAttachments: ChatAttachment[] = [];
+
+    for (const path of paths) {
+      try {
+        const info = await invoke<ImageInfoResult>('get_image_metadata', { path });
+
+        // Read file as blob for preview
+        const fileData = await readFile(path);
+        const blob = new Blob([fileData]);
+        const previewUrl = URL.createObjectURL(blob);
+
+        newAttachments.push({
+          id: crypto.randomUUID(),
+          path: info.path,
+          name: info.filename,
+          width: info.width,
+          height: info.height,
+          size: info.size,
+          format: info.format,
+          previewUrl,
+        });
+      } catch (error) {
+        console.error(`Failed to load image ${path}:`, error);
+      }
+    }
+
+    if (newAttachments.length > 0) {
+      setAttachedImages((prev) => [...prev, ...newAttachments]);
+    }
+  }, []);
+
+  // Remove a single attachment
+  const removeAttachment = useCallback((id: string) => {
+    setAttachedImages((prev) => {
+      const removed = prev.find((a) => a.id === id);
+      if (removed) {
+        URL.revokeObjectURL(removed.previewUrl);
+      }
+      return prev.filter((a) => a.id !== id);
+    });
+  }, []);
+
+  // Clear all attachments
+  const clearAttachments = useCallback(() => {
+    setAttachedImages((prev) => {
+      for (const a of prev) {
+        URL.revokeObjectURL(a.previewUrl);
+      }
+      return [];
+    });
+  }, []);
+
   // Send chat message and auto-execute
   const sendMessage = useCallback(
     async (content: string) => {
       if (!videoMetadata || isGenerating || !videoPath) return;
 
-      // Add user message
+      // Capture current attachments before clearing
+      const currentAttachments = [...attachedImages];
+
+      // Add user message with attachments
       const userMessage: ChatMessage = {
         id: crypto.randomUUID(),
         role: 'user',
         content,
         timestamp: new Date().toISOString(),
+        attachments: currentAttachments.length > 0 ? currentAttachments : undefined,
       };
       setMessages((prev) => [...prev, userMessage]);
       setIsGenerating(true);
       setStatus('generating');
 
+      // Clear attachments after capturing
+      if (currentAttachments.length > 0) {
+        setAttachedImages([]);
+      }
+
       try {
+        // Build image info for backend
+        const imageInfos =
+          currentAttachments.length > 0
+            ? currentAttachments.map((a) => ({
+                path: a.path,
+                filename: a.name,
+                width: a.width,
+                height: a.height,
+                size: a.size,
+                format: a.format,
+              }))
+            : null;
+
         const result = await invoke<FFmpegCommandResult>('generate_processing_command', {
           inputPath: videoPath,
           userPrompt: content,
           timelineStart: selection?.start ?? null,
           timelineEnd: selection?.end ?? null,
           metadata: videoMetadata,
+          imagePaths: imageInfos,
         });
 
         // Add assistant message with explanation
@@ -394,7 +493,7 @@ export function ProcessingProvider({ children }: { children: ReactNode }) {
         setCurrentJobId(null);
       }
     },
-    [videoPath, videoMetadata, selection, isGenerating, addMessage, loadHistory],
+    [videoPath, videoMetadata, selection, isGenerating, attachedImages, addMessage, loadHistory],
   );
 
   // Generate command from quick action
@@ -692,6 +791,7 @@ export function ProcessingProvider({ children }: { children: ReactNode }) {
         completedOutputPath,
         messages,
         isGenerating,
+        attachedImages,
         history,
         presets,
         batchFiles,
@@ -703,6 +803,9 @@ export function ProcessingProvider({ children }: { children: ReactNode }) {
         addMessage,
         sendMessage,
         generateCommand,
+        attachImages,
+        removeAttachment,
+        clearAttachments,
         executeCommand,
         cancelProcessing,
         clearCommand,

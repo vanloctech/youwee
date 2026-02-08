@@ -122,6 +122,61 @@ pub struct ProcessingPreset {
     pub created_at: String,
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ImageInfo {
+    pub path: String,
+    pub filename: String,
+    pub width: u32,
+    pub height: u32,
+    pub size: u64,
+    pub format: String,
+}
+
+/// Get image metadata (dimensions, format, size)
+#[tauri::command]
+pub async fn get_image_metadata(path: String) -> Result<ImageInfo, String> {
+    let file_path = std::path::Path::new(&path);
+    
+    if !file_path.exists() {
+        return Err(format!("File not found: {}", path));
+    }
+    
+    let file_size = std::fs::metadata(&path)
+        .map_err(|e| format!("Failed to read file metadata: {}", e))?
+        .len();
+    
+    let filename = file_path
+        .file_name()
+        .map(|n| n.to_string_lossy().to_string())
+        .unwrap_or_else(|| "unknown".to_string());
+    
+    // Read image dimensions
+    let reader = image::ImageReader::open(&path)
+        .map_err(|e| format!("Failed to open image: {}", e))?
+        .with_guessed_format()
+        .map_err(|e| format!("Failed to detect image format: {}", e))?;
+    
+    let format = reader.format()
+        .map(|f| format!("{:?}", f).to_lowercase())
+        .unwrap_or_else(|| {
+            file_path.extension()
+                .map(|e| e.to_string_lossy().to_lowercase())
+                .unwrap_or_else(|| "unknown".to_string())
+        });
+    
+    let (width, height) = reader.into_dimensions()
+        .map_err(|e| format!("Failed to read image dimensions: {}", e))?;
+    
+    Ok(ImageInfo {
+        path,
+        filename,
+        width,
+        height,
+        size: file_size,
+        format,
+    })
+}
+
 /// Get video metadata using FFprobe
 #[tauri::command]
 pub async fn get_video_metadata(app: AppHandle, path: String) -> Result<VideoMetadata, String> {
@@ -240,6 +295,7 @@ pub async fn generate_processing_command(
     timeline_start: Option<f64>,
     timeline_end: Option<f64>,
     metadata: VideoMetadata,
+    image_paths: Option<Vec<ImageInfo>>,
 ) -> Result<FFmpegCommandResult, String> {
     // Build context for AI
     let selection_info = if let (Some(start), Some(end)) = (timeline_start, timeline_end) {
@@ -247,6 +303,43 @@ pub async fn generate_processing_command(
             format_time(start), format_time(end), end - start)
     } else {
         "No timeline selection".to_string()
+    };
+    
+    // Build image context if images are attached
+    let image_section = if let Some(ref images) = image_paths {
+        if !images.is_empty() {
+            let mut section = String::from("\n## Attached Images\n");
+            for (i, img) in images.iter().enumerate() {
+                section.push_str(&format!(
+                    "{}. \"{}\" ({}x{}, {}, {} KB)\n   Full path: {}\n",
+                    i + 1,
+                    img.filename,
+                    img.width,
+                    img.height,
+                    img.format.to_uppercase(),
+                    img.size / 1024,
+                    img.path,
+                ));
+            }
+            section.push_str(r#"
+## FFmpeg Image Operations Available
+- Overlay image: `-i "image.png" -filter_complex "[0:v][1:v]overlay=x:y"`
+- Multiple images: Add each as `-i "image1.png" -i "image2.png"`, then reference as [1:v], [2:v], etc.
+- Position overlay: `overlay=10:10` (top-left), `overlay=W-w-10:H-h-10` (bottom-right), `overlay=(W-w)/2:(H-h)/2` (center)
+- Overlay with opacity: `overlay=x:y:format=auto` with `colorchannelmixer=aa=0.5` or `format=rgba,colorchannelmixer=aa=0.5`
+- Scale image before overlay: `[1:v]scale=200:-1[img];[0:v][img]overlay=...`
+- Image as intro/outro: `-loop 1 -t 3 -i "image.png" -i "video.mp4" -filter_complex "[0:v]scale=W:H[img];[img][1:v]concat=n=2:v=1:a=0"`
+- Image as background (PiP): `-i "bg.png" -i "video.mp4" -filter_complex "[0:v]scale=1920:1080[bg];[1:v]scale=960:-1[vid];[bg][vid]overlay=(W-w)/2:(H-h)/2"`
+- Timed overlay: `overlay=x:y:enable='between(t,5,10)'` (show from 5s to 10s)
+- IMPORTANT: The video input is always -i index 0. Image inputs start from index 1.
+- IMPORTANT: Always use the exact full paths provided above for image files.
+"#);
+            section
+        } else {
+            String::new()
+        }
+    } else {
+        String::new()
     };
     
     let ai_prompt = format!(
@@ -263,7 +356,7 @@ pub async fn generate_processing_command(
 - Bitrate: {} kbps
 - Size: {} MB
 - {}
-
+{}
 ## User Request
 {}
 
@@ -276,6 +369,9 @@ First, determine if the user's request is related to video/audio processing. Val
 - Compressing, resizing
 - Creating GIFs, thumbnails
 - Adding/removing subtitles
+- Overlaying images, watermarks, logos
+- Creating intros/outros from images
+- Picture-in-picture with images
 - Any FFmpeg-related operation
 
 If the request is NOT related to video/audio processing (e.g., general chat, questions, greetings, unrelated topics), respond with:
@@ -321,6 +417,7 @@ For valid video requests:
         metadata.bitrate,
         metadata.file_size / 1_000_000,
         selection_info,
+        image_section,
         user_prompt,
     );
     

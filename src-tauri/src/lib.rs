@@ -96,6 +96,7 @@ pub fn run() {
             commands::get_summary_languages,
             // Processing commands
             commands::get_video_metadata,
+            commands::get_image_metadata,
             commands::generate_processing_command,
             commands::generate_quick_action_command,
             commands::execute_ffmpeg_command,

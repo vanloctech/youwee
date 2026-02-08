@@ -1,11 +1,25 @@
+import { open } from '@tauri-apps/plugin-dialog';
 import { revealItemInDir } from '@tauri-apps/plugin-opener';
-import { Check, FolderOpen, Lightbulb, Loader2, Send, Square, Wand2 } from 'lucide-react';
-import { useEffect, useRef, useState } from 'react';
+import {
+  Check,
+  FolderOpen,
+  ImagePlus,
+  Lightbulb,
+  Loader2,
+  Paperclip,
+  Send,
+  Square,
+  Wand2,
+  X,
+} from 'lucide-react';
+import { type DragEvent, useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
-import type { ChatMessage, ProcessingProgress } from '@/lib/types';
+import type { ChatAttachment, ChatMessage, ProcessingProgress } from '@/lib/types';
 import { cn } from '@/lib/utils';
+
+const IMAGE_EXTENSIONS = ['png', 'jpg', 'jpeg', 'webp', 'gif', 'bmp', 'svg', 'tiff', 'tif'];
 
 export interface ChatPanelProps {
   messages: ChatMessage[];
@@ -13,8 +27,12 @@ export interface ChatPanelProps {
   isProcessing: boolean;
   progress: ProcessingProgress | null;
   hasVideo: boolean;
+  attachedImages: ChatAttachment[];
   onSendMessage: (message: string) => Promise<void>;
   onCancelProcessing: () => void;
+  onAttachImages: (paths: string[]) => Promise<void>;
+  onRemoveAttachment: (id: string) => void;
+  onClearAttachments: () => void;
 }
 
 export function ChatPanel({
@@ -23,14 +41,19 @@ export function ChatPanel({
   isProcessing,
   progress,
   hasVideo,
+  attachedImages,
   onSendMessage,
   onCancelProcessing,
+  onAttachImages,
+  onRemoveAttachment,
 }: ChatPanelProps) {
   const { t } = useTranslation('pages');
   const [inputMessage, setInputMessage] = useState('');
   const [isInputFocused, setIsInputFocused] = useState(false);
   const [showSuggestions, setShowSuggestions] = useState(false);
+  const [isDragOver, setIsDragOver] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const dragCounterRef = useRef(0);
 
   // Prompt suggestions for chat
   const promptSuggestions = [
@@ -84,6 +107,21 @@ export function ChatPanel({
       label: t('processing.chat.prompts.mute'),
       prompt: t('processing.chat.prompts.mutePrompt'),
     },
+    {
+      id: 'overlay',
+      label: t('processing.chat.prompts.overlay'),
+      prompt: t('processing.chat.prompts.overlayPrompt'),
+    },
+    {
+      id: 'watermark',
+      label: t('processing.chat.prompts.watermark'),
+      prompt: t('processing.chat.prompts.watermarkPrompt'),
+    },
+    {
+      id: 'intro',
+      label: t('processing.chat.prompts.intro'),
+      prompt: t('processing.chat.prompts.introPrompt'),
+    },
   ];
 
   // Auto-scroll to bottom when messages change
@@ -106,8 +144,103 @@ export function ChatPanel({
     await onSendMessage(message);
   };
 
+  // File picker for images
+  const handleAttachImages = async () => {
+    try {
+      const selected = await open({
+        multiple: true,
+        filters: [
+          {
+            name: 'Image',
+            extensions: IMAGE_EXTENSIONS,
+          },
+        ],
+      });
+
+      if (selected) {
+        const paths = Array.isArray(selected) ? selected : [selected];
+        const validPaths = paths.filter((p): p is string => typeof p === 'string');
+        if (validPaths.length > 0) {
+          await onAttachImages(validPaths);
+        }
+      }
+    } catch (error) {
+      console.error('Failed to select images:', error);
+    }
+  };
+
+  // Drag & drop handlers
+  const handleDragEnter = useCallback((e: DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    dragCounterRef.current++;
+    if (e.dataTransfer.types.includes('Files')) {
+      setIsDragOver(true);
+    }
+  }, []);
+
+  const handleDragLeave = useCallback((e: DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    dragCounterRef.current--;
+    if (dragCounterRef.current === 0) {
+      setIsDragOver(false);
+    }
+  }, []);
+
+  const handleDragOver = useCallback((e: DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+  }, []);
+
+  const handleDrop = useCallback(
+    async (e: DragEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+      dragCounterRef.current = 0;
+      setIsDragOver(false);
+
+      const files = Array.from(e.dataTransfer.files);
+      const imageFiles = files.filter((f) => {
+        const ext = f.name.split('.').pop()?.toLowerCase() || '';
+        return IMAGE_EXTENSIONS.includes(ext);
+      });
+
+      if (imageFiles.length > 0) {
+        // For Tauri, we need absolute paths. dataTransfer.files gives us File objects
+        // but in Tauri webview, dropped files have a path property
+        const paths = imageFiles
+          .map((f) => (f as File & { path?: string }).path)
+          .filter((p): p is string => !!p);
+
+        if (paths.length > 0) {
+          await onAttachImages(paths);
+        }
+      }
+    },
+    [onAttachImages],
+  );
+
   return (
-    <div className="w-[30%] border-l border-border flex flex-col bg-gradient-to-b from-muted/30 to-background overflow-hidden">
+    // biome-ignore lint/a11y/useSemanticElements: drag-drop container needs event handlers
+    <div
+      role="region"
+      className="w-[30%] border-l border-border flex flex-col bg-gradient-to-b from-muted/30 to-background overflow-hidden relative"
+      onDragEnter={handleDragEnter}
+      onDragLeave={handleDragLeave}
+      onDragOver={handleDragOver}
+      onDrop={handleDrop}
+    >
+      {/* Drag overlay */}
+      {isDragOver && (
+        <div className="absolute inset-0 z-50 flex items-center justify-center bg-primary/10 backdrop-blur-sm border-2 border-dashed border-primary/50 rounded-lg m-2">
+          <div className="flex flex-col items-center gap-2 text-primary">
+            <ImagePlus className="w-8 h-8" />
+            <span className="text-sm font-medium">{t('processing.chat.dropImages')}</span>
+          </div>
+        </div>
+      )}
+
       {/* Header */}
       <div className="flex-shrink-0 p-4 border-b border-border/50">
         <div className="flex items-center justify-between">
@@ -189,6 +322,28 @@ export function ChatPanel({
                       <div className="flex items-center gap-1.5 mb-1.5 text-xs text-muted-foreground">
                         <Wand2 className="w-3 h-3" />
                         <span>{t('processing.chat.title')}</span>
+                      </div>
+                    )}
+                    {/* Attachment thumbnails */}
+                    {msg.attachments && msg.attachments.length > 0 && (
+                      <div className="flex flex-wrap gap-1.5 mb-2">
+                        {msg.attachments.map((att) => (
+                          <div
+                            key={att.id}
+                            className="relative group/att rounded-lg overflow-hidden bg-black/20"
+                          >
+                            <img
+                              src={att.previewUrl}
+                              alt={att.name}
+                              className="h-16 w-auto max-w-[100px] object-cover rounded-lg"
+                            />
+                            <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/60 to-transparent p-1">
+                              <span className="text-[10px] text-white/80 truncate block">
+                                {att.name}
+                              </span>
+                            </div>
+                          </div>
+                        ))}
                       </div>
                     )}
                     <p
@@ -335,63 +490,123 @@ export function ChatPanel({
             />
           </div>
 
-          {/* Bottom row: Prompt Templates (left) + Send (right) */}
+          {/* Attached images preview strip */}
+          {attachedImages.length > 0 && (
+            <div className="relative flex gap-1.5 px-2 py-1.5 overflow-x-auto">
+              {attachedImages.map((img) => (
+                <div
+                  key={img.id}
+                  className="relative group/preview flex-shrink-0 rounded-lg overflow-hidden bg-muted/50 border border-border/30"
+                >
+                  <img
+                    src={img.previewUrl}
+                    alt={img.name}
+                    className="h-12 w-auto max-w-[80px] object-cover"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => onRemoveAttachment(img.id)}
+                    className="absolute -top-0.5 -right-0.5 w-4 h-4 rounded-full bg-destructive text-destructive-foreground flex items-center justify-center opacity-0 group-hover/preview:opacity-100 transition-opacity shadow-sm"
+                  >
+                    <X className="w-2.5 h-2.5" />
+                  </button>
+                  <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/50 to-transparent px-1 py-0.5">
+                    <span className="text-[9px] text-white/80 truncate block max-w-[70px]">
+                      {img.name}
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Bottom row: Prompt Templates + Attach (left) + Send (right) */}
           <div className="relative flex items-center justify-between mt-1 px-1">
-            {/* Prompt Templates Button */}
-            <div className="relative">
+            <div className="flex items-center gap-0.5">
+              {/* Prompt Templates Button */}
+              <div className="relative">
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <button
+                      type="button"
+                      onClick={() => setShowSuggestions(!showSuggestions)}
+                      disabled={!hasVideo || isProcessing || isGenerating}
+                      className={cn(
+                        'h-8 w-8 rounded-lg flex items-center justify-center',
+                        'transition-all duration-200',
+                        'hover:bg-muted text-muted-foreground hover:text-foreground',
+                        'disabled:opacity-50 disabled:cursor-not-allowed',
+                        showSuggestions && 'bg-muted text-foreground',
+                      )}
+                    >
+                      <Lightbulb className="w-4 h-4" />
+                    </button>
+                  </TooltipTrigger>
+                  <TooltipContent>{t('processing.chat.promptTemplates')}</TooltipContent>
+                </Tooltip>
+
+                {/* Suggestions Dropdown */}
+                {showSuggestions && (
+                  <div
+                    className={cn(
+                      'absolute bottom-full left-0 mb-2 w-64',
+                      'bg-background/95 backdrop-blur-xl',
+                      'border border-border/50 rounded-xl shadow-xl',
+                      'p-2 z-50',
+                    )}
+                  >
+                    <div className="text-xs text-muted-foreground px-2 py-1 mb-1">
+                      {t('processing.chat.promptTemplates')}
+                    </div>
+                    <div className="space-y-0.5 max-h-64 overflow-y-auto">
+                      {promptSuggestions.map((suggestion) => (
+                        <button
+                          type="button"
+                          key={suggestion.id}
+                          onClick={() => handleSelectSuggestion(suggestion.prompt)}
+                          className={cn(
+                            'w-full text-left px-3 py-2 rounded-lg',
+                            'text-sm transition-colors',
+                            'hover:bg-muted/70 text-foreground',
+                          )}
+                        >
+                          <div className="font-medium">{suggestion.label}</div>
+                          <div className="text-xs text-muted-foreground truncate">
+                            {suggestion.prompt}
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Attach Image Button */}
               <Tooltip>
                 <TooltipTrigger asChild>
                   <button
                     type="button"
-                    onClick={() => setShowSuggestions(!showSuggestions)}
+                    onClick={handleAttachImages}
                     disabled={!hasVideo || isProcessing || isGenerating}
                     className={cn(
                       'h-8 w-8 rounded-lg flex items-center justify-center',
                       'transition-all duration-200',
                       'hover:bg-muted text-muted-foreground hover:text-foreground',
                       'disabled:opacity-50 disabled:cursor-not-allowed',
-                      showSuggestions && 'bg-muted text-foreground',
+                      attachedImages.length > 0 && 'text-primary',
                     )}
                   >
-                    <Lightbulb className="w-4 h-4" />
+                    <Paperclip className="w-4 h-4" />
                   </button>
                 </TooltipTrigger>
-                <TooltipContent>{t('processing.chat.promptTemplates')}</TooltipContent>
+                <TooltipContent>{t('processing.chat.attachImage')}</TooltipContent>
               </Tooltip>
 
-              {/* Suggestions Dropdown */}
-              {showSuggestions && (
-                <div
-                  className={cn(
-                    'absolute bottom-full left-0 mb-2 w-64',
-                    'bg-background/95 backdrop-blur-xl',
-                    'border border-border/50 rounded-xl shadow-xl',
-                    'p-2 z-50',
-                  )}
-                >
-                  <div className="text-xs text-muted-foreground px-2 py-1 mb-1">
-                    {t('processing.chat.promptTemplates')}
-                  </div>
-                  <div className="space-y-0.5 max-h-64 overflow-y-auto">
-                    {promptSuggestions.map((suggestion) => (
-                      <button
-                        type="button"
-                        key={suggestion.id}
-                        onClick={() => handleSelectSuggestion(suggestion.prompt)}
-                        className={cn(
-                          'w-full text-left px-3 py-2 rounded-lg',
-                          'text-sm transition-colors',
-                          'hover:bg-muted/70 text-foreground',
-                        )}
-                      >
-                        <div className="font-medium">{suggestion.label}</div>
-                        <div className="text-xs text-muted-foreground truncate">
-                          {suggestion.prompt}
-                        </div>
-                      </button>
-                    ))}
-                  </div>
-                </div>
+              {/* Attachment count badge */}
+              {attachedImages.length > 0 && (
+                <span className="text-[10px] font-medium text-primary bg-primary/10 rounded-full px-1.5 py-0.5">
+                  {attachedImages.length}
+                </span>
               )}
             </div>
 

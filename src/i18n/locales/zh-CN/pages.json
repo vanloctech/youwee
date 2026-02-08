@@ -58,6 +58,8 @@
       "openInFolder": "在文件夹中打开",
       "cancel": "取消",
       "inputPlaceholder": "描述您的编辑需求...",
+      "attachImage": "附加图片",
+      "dropImages": "将图片拖放到此处",
       "prompts": {
         "cut": "剪切",
         "cutPrompt": "从 [开始时间] 剪切到 [结束时间]",
@@ -78,7 +80,13 @@
         "thumbnail": "缩略图",
         "thumbnailPrompt": "在 [时间点] 提取缩略图",
         "mute": "静音",
-        "mutePrompt": "移除视频中的音频"
+        "mutePrompt": "移除视频中的音频",
+        "overlay": "叠加图片",
+        "overlayPrompt": "将附加图片叠加到 [位置: 居中/左上/右下]，透明度 [100%]",
+        "watermark": "水印",
+        "watermarkPrompt": "将附加图片作为水印添加到右下角，透明度 50%",
+        "intro": "图片片头",
+        "introPrompt": "用附加图片创建 [3] 秒的片头幻灯片"
       }
     },
     "player": {

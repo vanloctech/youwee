@@ -414,6 +414,17 @@ export interface ProcessingPreset {
   created_at: string;
 }
 
+export interface ChatAttachment {
+  id: string;
+  path: string; // absolute path on disk
+  name: string; // filename
+  width: number;
+  height: number;
+  size: number; // file size in bytes
+  format: string; // png, jpg, webp, etc.
+  previewUrl: string; // blob URL for preview in chat
+}
+
 export interface ChatMessage {
   id: string;
   role: 'user' | 'assistant' | 'system' | 'complete';
@@ -421,6 +432,7 @@ export interface ChatMessage {
   timestamp: string;
   command?: FFmpegCommandResult;
   outputPath?: string; // For 'complete' role
+  attachments?: ChatAttachment[];
 }
 
 // Quick action definitions

@@ -40,3 +40,4 @@ rusqlite = { version = "0.31", features = ["bundled"] }
 uuid = { version = "1", features = ["v4"] }
 chrono = "0.4"
 tauri-plugin-opener = "2.5.3"
+image = { version = "0.25", default-features = false, features = ["png", "jpeg", "webp", "gif"] }
