@@ -96,27 +96,40 @@ pub fn get_history_from_db(
     limit: Option<i64>,
     offset: Option<i64>,
     source: Option<String>,
+    search: Option<String>,
 ) -> Result<Vec<HistoryEntry>, String> {
     let conn = get_db()?;
 
     let limit = limit.unwrap_or(50).min(500);
     let offset = offset.unwrap_or(0);
 
-    let mut query = String::from(
-        "SELECT id, url, title, thumbnail, filepath, filesize, duration, quality, format, source, downloaded_at, summary 
-         FROM history WHERE 1=1"
-    );
-
     let source_filter = source
         .as_ref()
         .map(|s| s != "all" && !s.is_empty())
         .unwrap_or(false);
 
+    let search_filter = search
+        .as_ref()
+        .map(|s| !s.trim().is_empty())
+        .unwrap_or(false);
+
+    let search_pattern = search
+        .as_ref()
+        .map(|s| format!("%{}%", s.trim()))
+        .unwrap_or_default();
+
+    let mut query = String::from(
+        "SELECT id, url, title, thumbnail, filepath, filesize, duration, quality, format, source, downloaded_at, summary 
+         FROM history WHERE 1=1"
+    );
+
     if source_filter {
-        query.push_str(" AND source = ?1 ORDER BY downloaded_at DESC LIMIT ?2 OFFSET ?3");
-    } else {
-        query.push_str(" ORDER BY downloaded_at DESC LIMIT ?1 OFFSET ?2");
+        query.push_str(" AND source = ?");
     }
+    if search_filter {
+        query.push_str(" AND (title LIKE ? OR url LIKE ?)");
+    }
+    query.push_str(" ORDER BY downloaded_at DESC LIMIT ? OFFSET ?");
 
     let mut stmt = conn
         .prepare(&query)
@@ -147,17 +160,37 @@ pub fn get_history_from_db(
         })
     }
 
-    let entries: Vec<HistoryEntry> = if source_filter {
-        let s = source.as_ref().unwrap();
-        stmt.query_map(params![s, limit, offset], parse_row)
+    let entries: Vec<HistoryEntry> = match (source_filter, search_filter) {
+        (true, true) => {
+            let s = source.as_ref().unwrap();
+            stmt.query_map(
+                params![s, &search_pattern, &search_pattern, limit, offset],
+                parse_row,
+            )
             .map_err(|e| format!("Query failed: {}", e))?
             .filter_map(|r| r.ok())
             .collect()
-    } else {
-        stmt.query_map(params![limit, offset], parse_row)
+        }
+        (true, false) => {
+            let s = source.as_ref().unwrap();
+            stmt.query_map(params![s, limit, offset], parse_row)
+                .map_err(|e| format!("Query failed: {}", e))?
+                .filter_map(|r| r.ok())
+                .collect()
+        }
+        (false, true) => stmt
+            .query_map(
+                params![&search_pattern, &search_pattern, limit, offset],
+                parse_row,
+            )
             .map_err(|e| format!("Query failed: {}", e))?
             .filter_map(|r| r.ok())
-            .collect()
+            .collect(),
+        (false, false) => stmt
+            .query_map(params![limit, offset], parse_row)
+            .map_err(|e| format!("Query failed: {}", e))?
+            .filter_map(|r| r.ok())
+            .collect(),
     };
 
     Ok(entries)
@@ -180,10 +213,55 @@ pub fn clear_history_from_db() -> Result<(), String> {
 }
 
 /// Get history count
-pub fn get_history_count_from_db() -> Result<i64, String> {
+pub fn get_history_count_from_db(
+    source: Option<String>,
+    search: Option<String>,
+) -> Result<i64, String> {
     let conn = get_db()?;
-    let count: i64 = conn
-        .query_row("SELECT COUNT(*) FROM history", [], |row| row.get(0))
-        .map_err(|e| format!("Failed to count history: {}", e))?;
+
+    let source_filter = source
+        .as_ref()
+        .map(|s| s != "all" && !s.is_empty())
+        .unwrap_or(false);
+
+    let search_filter = search
+        .as_ref()
+        .map(|s| !s.trim().is_empty())
+        .unwrap_or(false);
+
+    let search_pattern = search
+        .as_ref()
+        .map(|s| format!("%{}%", s.trim()))
+        .unwrap_or_default();
+
+    let mut query = String::from("SELECT COUNT(*) FROM history WHERE 1=1");
+
+    if source_filter {
+        query.push_str(" AND source = ?");
+    }
+    if search_filter {
+        query.push_str(" AND (title LIKE ? OR url LIKE ?)");
+    }
+
+    let count: i64 = match (source_filter, search_filter) {
+        (true, true) => {
+            let s = source.as_ref().unwrap();
+            conn.query_row(
+                &query,
+                params![s, &search_pattern, &search_pattern],
+                |row| row.get(0),
+            )
+        }
+        (true, false) => {
+            let s = source.as_ref().unwrap();
+            conn.query_row(&query, params![s], |row| row.get(0))
+        }
+        (false, true) => conn.query_row(&query, params![&search_pattern, &search_pattern], |row| {
+            row.get(0)
+        }),
+        (false, false) => conn.query_row(&query, [], |row| row.get(0)),
+    }
+    .map_err(|e| format!("Failed to count history: {}", e))?;
+
     Ok(count)
 }

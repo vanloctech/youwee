@@ -103,10 +103,13 @@ export function HistoryProvider({ children }: { children: ReactNode }) {
         invoke<HistoryEntry[]>('get_history', {
           limit: 500,
           offset: 0,
-          sourceFilter,
+          source: sourceFilter,
           search: searchParam,
         }),
-        invoke<number>('get_history_count'),
+        invoke<number>('get_history_count', {
+          source: sourceFilter,
+          search: searchParam,
+        }),
       ]);
 
       setEntries(result);
