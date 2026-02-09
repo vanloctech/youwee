@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- **HTTP 416 error on re-download** - Add `--force-overwrites` flag to prevent "Requested range not satisfiable" errors caused by stale `.part` files from interrupted downloads
+
 ## [0.8.0] - 2026-02-09
 
 ### Added

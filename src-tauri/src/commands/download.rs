@@ -199,6 +199,9 @@ pub async fn download_video(
         }
     }
     
+    // Force overwrite to avoid HTTP 416 errors from stale .part files
+    args.push("--force-overwrites".to_string());
+    
     // Playlist handling
     if !download_playlist {
         args.push("--no-playlist".to_string());
