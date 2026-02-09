@@ -217,11 +217,17 @@ export function UniversalProvider({ children }: { children: ReactNode }) {
 
   const isDownloadingRef = useRef(false);
   const itemsRef = useRef<DownloadItem[]>([]);
+  const settingsRef = useRef<UniversalSettings>(settings);
 
   // Keep itemsRef in sync with items state
   useEffect(() => {
     itemsRef.current = items;
   }, [items]);
+
+  // Keep settingsRef in sync with settings state
+  useEffect(() => {
+    settingsRef.current = settings;
+  }, [settings]);
 
   // Get default download path on mount (only if not saved)
   useEffect(() => {
@@ -324,43 +330,41 @@ export function UniversalProvider({ children }: { children: ReactNode }) {
     };
   }, []);
 
-  const addFromText = useCallback(
-    async (text: string): Promise<number> => {
-      const urls = parseUniversalUrls(text);
-      if (urls.length === 0) return 0;
+  const addFromText = useCallback(async (text: string): Promise<number> => {
+    const urls = parseUniversalUrls(text);
+    if (urls.length === 0) return 0;
 
-      const currentItems = itemsRef.current;
+    const currentItems = itemsRef.current;
+    const currentSettings = settingsRef.current;
 
-      // Snapshot current settings for these items
-      const settingsSnapshot: ItemUniversalSettings = {
-        quality: settings.quality,
-        format: settings.format,
-        outputPath: settings.outputPath,
-        audioBitrate: settings.audioBitrate,
-      };
+    // Snapshot current settings for these items
+    const settingsSnapshot: ItemUniversalSettings = {
+      quality: currentSettings.quality,
+      format: currentSettings.format,
+      outputPath: currentSettings.outputPath,
+      audioBitrate: currentSettings.audioBitrate,
+    };
 
-      const newItems: DownloadItem[] = urls
-        .filter((url) => !currentItems.some((item) => item.url === url))
-        .map((url) => ({
-          id: crypto.randomUUID(),
-          url,
-          title: url,
-          status: 'pending' as const,
-          progress: 0,
-          speed: '',
-          eta: '',
-          // Store settings snapshot
-          settings: settingsSnapshot,
-        }));
+    const newItems: DownloadItem[] = urls
+      .filter((url) => !currentItems.some((item) => item.url === url))
+      .map((url) => ({
+        id: crypto.randomUUID(),
+        url,
+        title: url,
+        status: 'pending' as const,
+        progress: 0,
+        speed: '',
+        eta: '',
+        // Store settings snapshot
+        settings: settingsSnapshot,
+      }));
 
-      if (newItems.length > 0) {
-        setItems((prev) => [...prev, ...newItems]);
-      }
+    if (newItems.length > 0) {
+      setItems((prev) => [...prev, ...newItems]);
+    }
 
-      return newItems.length;
-    },
-    [settings],
-  );
+    return newItems.length;
+  }, []);
 
   const importFromFile = useCallback(async (): Promise<number> => {
     try {
