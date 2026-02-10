@@ -43,8 +43,9 @@ pub fn get_history(
     limit: Option<i64>,
     offset: Option<i64>,
     source: Option<String>,
+    search: Option<String>,
 ) -> Result<Vec<HistoryEntry>, String> {
-    get_history_from_db(limit, offset, source)
+    get_history_from_db(limit, offset, source, search)
 }
 
 #[tauri::command]
@@ -58,8 +59,11 @@ pub fn clear_history() -> Result<(), String> {
 }
 
 #[tauri::command]
-pub fn get_history_count() -> Result<i64, String> {
-    get_history_count_from_db()
+pub fn get_history_count(
+    source: Option<String>,
+    search: Option<String>,
+) -> Result<i64, String> {
+    get_history_count_from_db(source, search)
 }
 
 #[tauri::command]

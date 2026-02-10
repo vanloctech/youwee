@@ -89,6 +89,7 @@ export function DependenciesSection({ highlightId }: DependenciesSectionProps) {
 
   // Handle channel change
   const handleChannelChange = async (channel: YtdlpChannel) => {
+    if (channel === ytdlpChannel) return;
     await setYtdlpChannel(channel);
     // If the channel binary is not installed, download it
     if (channel !== 'bundled') {

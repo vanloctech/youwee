@@ -298,11 +298,17 @@ export function DownloadProvider({ children }: { children: ReactNode }) {
 
   const isDownloadingRef = useRef(false);
   const itemsRef = useRef<DownloadItem[]>([]);
+  const settingsRef = useRef<DownloadSettings>(settings);
 
   // Keep itemsRef in sync with items state
   useEffect(() => {
     itemsRef.current = items;
   }, [items]);
+
+  // Keep settingsRef in sync with settings state
+  useEffect(() => {
+    settingsRef.current = settings;
+  }, [settings]);
 
   // Get default download path on mount (only if not saved)
   useEffect(() => {
@@ -446,51 +452,49 @@ export function DownloadProvider({ children }: { children: ReactNode }) {
   }, []);
 
   // Add individual URLs (not playlist expansion)
-  const addUrlsDirectly = useCallback(
-    (urls: string[], playlistId?: string) => {
-      if (urls.length === 0) return 0;
+  const addUrlsDirectly = useCallback((urls: string[], playlistId?: string) => {
+    if (urls.length === 0) return 0;
 
-      const currentItems = itemsRef.current;
+    const currentItems = itemsRef.current;
+    const currentSettings = settingsRef.current;
 
-      // Snapshot current settings for these items
-      const settingsSnapshot: ItemDownloadSettings = {
-        quality: settings.quality,
-        format: settings.format,
-        outputPath: settings.outputPath,
-        videoCodec: settings.videoCodec,
-        audioBitrate: settings.audioBitrate,
-        subtitleMode: settings.subtitleMode,
-        subtitleLangs: [...settings.subtitleLangs],
-        subtitleEmbed: settings.subtitleEmbed,
-        subtitleFormat: settings.subtitleFormat,
-      };
+    // Snapshot current settings for these items
+    const settingsSnapshot: ItemDownloadSettings = {
+      quality: currentSettings.quality,
+      format: currentSettings.format,
+      outputPath: currentSettings.outputPath,
+      videoCodec: currentSettings.videoCodec,
+      audioBitrate: currentSettings.audioBitrate,
+      subtitleMode: currentSettings.subtitleMode,
+      subtitleLangs: [...currentSettings.subtitleLangs],
+      subtitleEmbed: currentSettings.subtitleEmbed,
+      subtitleFormat: currentSettings.subtitleFormat,
+    };
 
-      const newItems: DownloadItem[] = urls
-        .filter((url) => !currentItems.some((item) => item.url === url))
-        .map((url, index) => ({
-          id: crypto.randomUUID(),
-          url,
-          title: url,
-          status: 'pending' as const,
-          progress: 0,
-          speed: '',
-          eta: '',
-          isPlaylist: false,
-          // Store playlist context for display
-          playlistIndex: playlistId ? index + 1 : undefined,
-          playlistTotal: playlistId ? urls.length : undefined,
-          // Store settings snapshot
-          settings: settingsSnapshot,
-        }));
+    const newItems: DownloadItem[] = urls
+      .filter((url) => !currentItems.some((item) => item.url === url))
+      .map((url, index) => ({
+        id: crypto.randomUUID(),
+        url,
+        title: url,
+        status: 'pending' as const,
+        progress: 0,
+        speed: '',
+        eta: '',
+        isPlaylist: false,
+        // Store playlist context for display
+        playlistIndex: playlistId ? index + 1 : undefined,
+        playlistTotal: playlistId ? urls.length : undefined,
+        // Store settings snapshot
+        settings: settingsSnapshot,
+      }));
 
-      if (newItems.length > 0) {
-        setItems((prev) => [...prev, ...newItems]);
-      }
+    if (newItems.length > 0) {
+      setItems((prev) => [...prev, ...newItems]);
+    }
 
-      return newItems.length;
-    },
-    [settings],
-  );
+    return newItems.length;
+  }, []);
 
   // Expand playlist URL to individual videos
   const expandPlaylistUrl = useCallback(
@@ -509,15 +513,15 @@ export function DownloadProvider({ children }: { children: ReactNode }) {
 
         // Snapshot current settings for these items
         const settingsSnapshot: ItemDownloadSettings = {
-          quality: settings.quality,
-          format: settings.format,
-          outputPath: settings.outputPath,
-          videoCodec: settings.videoCodec,
-          audioBitrate: settings.audioBitrate,
-          subtitleMode: settings.subtitleMode,
-          subtitleLangs: [...settings.subtitleLangs],
-          subtitleEmbed: settings.subtitleEmbed,
-          subtitleFormat: settings.subtitleFormat,
+          quality: settingsRef.current.quality,
+          format: settingsRef.current.format,
+          outputPath: settingsRef.current.outputPath,
+          videoCodec: settingsRef.current.videoCodec,
+          audioBitrate: settingsRef.current.audioBitrate,
+          subtitleMode: settingsRef.current.subtitleMode,
+          subtitleLangs: [...settingsRef.current.subtitleLangs],
+          subtitleEmbed: settingsRef.current.subtitleEmbed,
+          subtitleFormat: settingsRef.current.subtitleFormat,
         };
 
         // Add items with titles and thumbnails from playlist data
