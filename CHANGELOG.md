@@ -8,16 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
-- **Channel Follow & Auto-Download** - Follow YouTube channels, browse their videos, select and batch download. Background polling detects new uploads with desktop notifications. System tray with close-to-tray support
-- **Channel download settings parity** - Channel downloads now use the same full settings as the YouTube page: video codec selector (H.264/VP9/AV1/Auto), audio bitrate, subtitles, embed metadata/thumbnail, SponsorBlock, speed limit. Settings are synced from the shared config
-- **Smart codec selection for high-res** - 8K defaults to AV1, 4K/2K defaults to VP9 when codec is set to Auto. FFmpeg required dialog shown when selecting high-res qualities without FFmpeg installed
-- **8K quality option** - Channel downloads now support 8K (4320p) quality, matching the YouTube page
-- **Per-channel new video badges** - Each followed channel shows a badge with the count of new unwatched videos
-- **Collapsible Followed Channels panel** - The right-side followed channels list can be collapsed/expanded with a toggle button
-
-### Fixed
-- **Channel downloads stuck at 1080p when selecting 4K** - Video codec was hardcoded to H.264 which doesn't exist above 1080p on YouTube. Now defaults to Auto codec with smart fallback chain
-- **Format dropdown blank on page load** - Settings loaded from localStorage could have audio format (mp3) while UI showed video format options. Now properly initializes audio/video mode from saved settings
+- **Channel Follow & Auto-Download** - Follow YouTube channels, browse their videos, select and batch download with full quality/codec/format controls. Background polling detects new uploads with desktop notifications and per-channel new video badges. Collapsible followed channels panel with system tray close-to-tray support
 
 ## [0.8.2] - 2026-02-11
 

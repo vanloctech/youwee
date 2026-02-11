@@ -8,16 +8,7 @@ và dự án tuân theo [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ## [Unreleased]
 
 ### Thêm mới
-- **Theo dõi kênh & Tải tự động** - Theo dõi các kênh YouTube, duyệt video, chọn và tải hàng loạt. Polling nền phát hiện video mới với thông báo desktop. System tray hỗ trợ thu nhỏ khi đóng
-- **Cài đặt tải kênh đầy đủ** - Tải từ kênh giờ dùng cùng cài đặt như trang YouTube: chọn codec video (H.264/VP9/AV1/Auto), bitrate âm thanh, phụ đề, nhúng metadata/thumbnail, SponsorBlock, giới hạn tốc độ. Cài đặt đồng bộ từ cấu hình chung
-- **Chọn codec thông minh cho độ phân giải cao** - 8K mặc định AV1, 4K/2K mặc định VP9 khi codec đặt Auto. Hiện hộp thoại FFmpeg khi chọn chất lượng cao mà chưa cài FFmpeg
-- **Tùy chọn chất lượng 8K** - Tải từ kênh giờ hỗ trợ 8K (4320p), giống trang YouTube
-- **Badge video mới theo kênh** - Mỗi kênh đã theo dõi hiện badge đếm số video mới chưa xem
-- **Panel kênh theo dõi thu gọn được** - Danh sách kênh bên phải có thể thu gọn/mở rộng bằng nút toggle
-
-### Sửa lỗi
-- **Tải kênh bị kẹt ở 1080p khi chọn 4K** - Codec video bị cố định H.264 mà YouTube không có H.264 trên 1080p. Giờ mặc định Auto codec với chuỗi fallback thông minh
-- **Dropdown định dạng trống khi mở trang** - Cài đặt từ localStorage có thể là format âm thanh (mp3) trong khi UI hiện các tùy chọn video. Giờ khởi tạo đúng chế độ âm thanh/video từ cài đặt đã lưu
+- **Theo dõi kênh & Tải tự động** - Theo dõi các kênh YouTube, duyệt video, chọn và tải hàng loạt với đầy đủ tùy chọn chất lượng/codec/định dạng. Polling nền phát hiện video mới với thông báo desktop và badge đếm video mới theo kênh. Panel kênh theo dõi thu gọn được, hỗ trợ thu nhỏ xuống system tray
 
 ## [0.8.2] - 2026-02-11
 
