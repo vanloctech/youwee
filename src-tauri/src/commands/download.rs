@@ -86,6 +86,10 @@ pub async fn download_video(
     sponsorblock_mark: Option<String>,    // comma-separated categories to mark as chapters
     // Title (optional, passed from frontend for display purposes)
     title: Option<String>,
+    // Thumbnail URL (optional, passed from frontend for non-YouTube sites)
+    thumbnail: Option<String>,
+    // Source/extractor name (optional, from yt-dlp extractor e.g. "BiliBili", "TikTok")
+    source: Option<String>,
 ) -> Result<(), String> {
     CANCEL_FLAG.store(false, Ordering::SeqCst);
     
@@ -292,7 +296,7 @@ pub async fn download_video(
         let process = cmd.spawn()
             .map_err(|e| format!("Failed to start yt-dlp: {}", e))?;
         
-        return handle_tokio_download(app, id, process, quality, format, url, should_log_stderr, title).await;
+        return handle_tokio_download(app, id, process, quality, format, url, should_log_stderr, title, thumbnail, source).await;
     }
     
     // Fallback to sidecar
@@ -514,19 +518,19 @@ pub async fn download_video(
                                     ).ok();
                                 } else {
                                     // Create new history entry
-                                    let source = detect_source(&url);
-                                    let thumbnail = generate_thumbnail_url(&url);
+                                    let src = source.clone().or_else(|| detect_source(&url));
+                                    let thumb = thumbnail.clone().or_else(|| generate_thumbnail_url(&url));
                                     
                                     add_history_internal(
                                         url.clone(),
                                         display_title.clone().unwrap_or_else(|| "Unknown".to_string()),
-                                        thumbnail,
+                                        thumb,
                                         filepath.clone(),
                                         reported_filesize,
                                         None,
                                         quality_display.clone(),
                                         Some(format.clone()),
-                                        source,
+                                        src,
                                     ).ok();
                                 }
                             }
@@ -591,7 +595,7 @@ pub async fn download_video(
             let process = cmd.spawn()
                 .map_err(|e| format!("Failed to start yt-dlp: {}", e))?;
             
-            handle_tokio_download(app, id, process, quality, format, url, should_log_stderr, title).await
+            handle_tokio_download(app, id, process, quality, format, url, should_log_stderr, title, thumbnail, source).await
         }
     }
 }
@@ -605,6 +609,8 @@ async fn handle_tokio_download(
     url: String,
     should_log_stderr: bool,
     title: Option<String>,
+    thumbnail: Option<String>,
+    source: Option<String>,
 ) -> Result<(), String> {
     let stdout = process.stdout.take().ok_or("Failed to get stdout")?;
     let stderr = process.stderr.take();
@@ -799,19 +805,19 @@ async fn handle_tokio_download(
         
         // Save to history
         if let Some(ref filepath) = final_filepath {
-            let source = detect_source(&url);
-            let thumbnail = generate_thumbnail_url(&url);
+            let src = source.clone().or_else(|| detect_source(&url));
+            let thumb = thumbnail.clone().or_else(|| generate_thumbnail_url(&url));
             
             add_history_internal(
                 url.clone(),
                 display_title.clone().unwrap_or_else(|| "Unknown".to_string()),
-                thumbnail,
+                thumb,
                 filepath.clone(),
                 reported_filesize,
                 None,
                 quality_display.clone(),
                 Some(format.clone()),
-                source,
+                src,
             ).ok();
         }
         
@@ -880,6 +886,8 @@ fn detect_source(url: &str) -> Option<String> {
         Some("instagram".to_string())
     } else if url.contains("twitter.com") || url.contains("x.com") {
         Some("twitter".to_string())
+    } else if url.contains("bilibili.com") || url.contains("b23.tv") {
+        Some("bilibili".to_string())
     } else {
         Some("other".to_string())
     }

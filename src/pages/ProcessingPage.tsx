@@ -15,6 +15,7 @@ export function ProcessingPage() {
     videoPath,
     videoSrc,
     videoMetadata: metadata,
+    videoError,
     isLoadingVideo,
     isGeneratingPreview,
     isUsingPreview,
@@ -25,6 +26,7 @@ export function ProcessingPage() {
     isGenerating,
     history,
     selectVideo,
+    setVideoError,
     sendMessage,
     cancelProcessing,
     loadHistory,
@@ -92,11 +94,13 @@ export function ProcessingPage() {
                 videoSrc={videoSrc}
                 videoPath={videoPath}
                 metadata={metadata}
+                videoError={videoError}
                 isLoadingVideo={isLoadingVideo}
                 isGeneratingPreview={isGeneratingPreview}
                 isUsingPreview={isUsingPreview}
                 selection={selection}
                 onSelectVideo={selectVideo}
+                onVideoError={setVideoError}
               />
             </div>
 

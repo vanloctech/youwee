@@ -753,6 +753,10 @@ export function DownloadProvider({ children }: { children: ReactNode }) {
           historyId: null,
           // Title from video info fetch
           title: item.title || null,
+          // Thumbnail from video info fetch
+          thumbnail: item.thumbnail || null,
+          // Source/extractor from video info fetch
+          source: item.extractor || null,
         });
 
         setItems((items) =>

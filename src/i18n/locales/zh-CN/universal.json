@@ -34,11 +34,18 @@
     "videoQuality": "视频质量",
     "outputFormat": "输出格式",
     "advanced": "高级设置",
-    "more": "更多"
+    "more": "更多",
+    "liveFromStart": "从头开始录制直播"
   },
   "quality": {
     "best": "最佳画质",
     "bestShort": "最佳",
+    "8k": "8K 超高清",
+    "8kShort": "8K",
+    "4k": "4K 超高清",
+    "4kShort": "4K",
+    "2k": "2K QHD",
+    "2kShort": "2K",
     "1080": "全高清 1080p",
     "1080Short": "1080p",
     "720": "高清 720p",

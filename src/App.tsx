@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { DenoDialog } from '@/components/DenoDialog';
+import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { MeteorTransition } from '@/components/effects/MeteorTransition';
 import { FFmpegDialog } from '@/components/FFmpegDialog';
 import type { Page } from '@/components/layout';
@@ -85,7 +86,14 @@ function AppContent() {
           <UniversalPage onNavigateToSettings={() => setCurrentPage('settings')} />
         )}
         {currentPage === 'summary' && <SummaryPage />}
-        {currentPage === 'processing' && <ProcessingPage />}
+        {currentPage === 'processing' && (
+          <ErrorBoundary
+            fallbackTitle="Processing Error"
+            fallbackMessage="The video processing page encountered an error. This may be caused by an unsupported video format or insufficient system resources."
+          >
+            <ProcessingPage />
+          </ErrorBoundary>
+        )}
         {currentPage === 'metadata' && <MetadataPage />}
         {currentPage === 'library' && <HistoryPage />}
         {currentPage === 'logs' && <LogsPage />}

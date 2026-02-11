@@ -1,4 +1,5 @@
 import {
+  AlertTriangle,
   Eye,
   Film,
   Loader2,
@@ -21,22 +22,26 @@ export interface VideoPlayerProps {
   videoSrc: string | null;
   videoPath: string | null;
   metadata: VideoMetadata | null;
+  videoError: string | null;
   isLoadingVideo: boolean;
   isGeneratingPreview: boolean;
   isUsingPreview: boolean;
   selection: TimelineSelection | null;
   onSelectVideo: () => void;
+  onVideoError: (error: string) => void;
 }
 
 export const VideoPlayer = memo(function VideoPlayer({
   videoSrc,
   videoPath,
   metadata,
+  videoError,
   isLoadingVideo,
   isGeneratingPreview,
   isUsingPreview,
   selection,
   onSelectVideo,
+  onVideoError,
 }: VideoPlayerProps) {
   const { t } = useTranslation('pages');
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -129,6 +134,29 @@ export const VideoPlayer = memo(function VideoPlayer({
     return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
 
+  const handleVideoError = useCallback(() => {
+    const video = videoRef.current;
+    const mediaError = video?.error;
+    let errorMsg = 'Video playback failed';
+    if (mediaError) {
+      switch (mediaError.code) {
+        case MediaError.MEDIA_ERR_ABORTED:
+          errorMsg = 'Playback aborted';
+          break;
+        case MediaError.MEDIA_ERR_NETWORK:
+          errorMsg = 'Network error while loading video';
+          break;
+        case MediaError.MEDIA_ERR_DECODE:
+          errorMsg = 'Video codec not supported. On Linux, install gstreamer1.0-libav';
+          break;
+        case MediaError.MEDIA_ERR_SRC_NOT_SUPPORTED:
+          errorMsg = 'Video format not supported by this system';
+          break;
+      }
+    }
+    onVideoError(errorMsg);
+  }, [onVideoError]);
+
   const videoAspectRatio = metadata ? metadata.width / metadata.height : 16 / 9;
 
   return (
@@ -161,7 +189,7 @@ export const VideoPlayer = memo(function VideoPlayer({
               : t('processing.player.loading')}
           </p>
         </div>
-      ) : videoSrc ? (
+      ) : videoSrc && !videoError ? (
         <>
           <video
             ref={videoRef}
@@ -171,6 +199,7 @@ export const VideoPlayer = memo(function VideoPlayer({
             onLoadedMetadata={handleLoadedMetadata}
             onPlay={() => setIsPlaying(true)}
             onPause={() => setIsPlaying(false)}
+            onError={handleVideoError}
             onClick={handlePlayPause}
           >
             <track kind="captions" src="data:text/vtt,WEBVTT" srcLang="en" label="English" />
@@ -310,6 +339,20 @@ export const VideoPlayer = memo(function VideoPlayer({
             </div>
           </div>
         </>
+      ) : videoError ? (
+        <div className="flex flex-col items-center gap-4 text-muted-foreground p-8">
+          <div className="w-16 h-16 rounded-full bg-destructive/10 flex items-center justify-center">
+            <AlertTriangle className="w-8 h-8 text-destructive" />
+          </div>
+          <div className="text-center">
+            <p className="font-medium text-destructive">{t('processing.player.videoError')}</p>
+            <p className="text-sm text-muted-foreground/70 mt-1 max-w-sm">{videoError}</p>
+          </div>
+          <Button onClick={onSelectVideo} variant="outline" className="mt-2">
+            <Upload className="w-4 h-4 mr-2" />
+            {t('processing.player.tryAnother')}
+          </Button>
+        </div>
       ) : (
         <div className="flex flex-col items-center gap-4 text-muted-foreground p-8">
           <div className="w-16 h-16 rounded-full bg-muted/50 flex items-center justify-center">

@@ -14,7 +14,7 @@ import {
   X,
   XCircle,
 } from 'lucide-react';
-import { useState } from 'react';
+import { useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { SimpleMarkdown } from '@/components/ui/simple-markdown';
 import { useAI } from '@/contexts/AIContext';
@@ -60,6 +60,11 @@ export function UniversalQueueItem({ item, disabled, onRemove }: UniversalQueueI
   const { t } = useTranslation('universal');
   const ai = useAI();
   const [showFullSummary, setShowFullSummary] = useState(false);
+  const [thumbError, setThumbError] = useState(false);
+
+  const handleThumbError = useCallback(() => {
+    setThumbError(true);
+  }, []);
 
   // Use background task for summary
   const taskId = `queue-${item.id}`;
@@ -79,6 +84,7 @@ export function UniversalQueueItem({ item, disabled, onRemove }: UniversalQueueI
   const isCompleted = item.status === 'completed';
   const isError = item.status === 'error';
   const isPending = item.status === 'pending';
+  const isFetchingMeta = isPending && !item.thumbnail && item.title === item.url;
 
   // Get saved settings for pending items
   const itemSettings = item.settings as ItemUniversalSettings | undefined;
@@ -111,7 +117,7 @@ export function UniversalQueueItem({ item, disabled, onRemove }: UniversalQueueI
     >
       {/* Thumbnail Placeholder */}
       <div className="relative flex-shrink-0 w-28 h-[72px] sm:w-36 sm:h-20 rounded-lg overflow-hidden bg-muted">
-        {item.thumbnail ? (
+        {item.thumbnail && !thumbError ? (
           <img
             src={item.thumbnail}
             alt=""
@@ -120,7 +126,10 @@ export function UniversalQueueItem({ item, disabled, onRemove }: UniversalQueueI
               isCompleted && 'opacity-60',
             )}
             loading="lazy"
+            onError={handleThumbError}
           />
+        ) : isFetchingMeta ? (
+          <div className="w-full h-full bg-muted animate-pulse" />
         ) : (
           <div className="w-full h-full flex items-center justify-center bg-muted">
             <Globe className="w-8 h-8 text-muted-foreground/30" />
@@ -221,15 +230,22 @@ export function UniversalQueueItem({ item, disabled, onRemove }: UniversalQueueI
       {/* Content */}
       <div className="flex-1 min-w-0 flex flex-col justify-center py-0.5">
         {/* Title */}
-        <p
-          className={cn(
-            'text-sm font-medium leading-snug line-clamp-2 transition-colors',
-            isCompleted && 'text-muted-foreground',
-          )}
-          title={item.title}
-        >
-          {item.title}
-        </p>
+        {isFetchingMeta ? (
+          <div className="space-y-1.5">
+            <div className="h-3.5 w-3/4 bg-muted animate-pulse rounded" />
+            <div className="h-3.5 w-1/2 bg-muted animate-pulse rounded" />
+          </div>
+        ) : (
+          <p
+            className={cn(
+              'text-sm font-medium leading-snug line-clamp-2 transition-colors',
+              isCompleted && 'text-muted-foreground',
+            )}
+            title={item.title}
+          >
+            {item.title}
+          </p>
+        )}
 
         {/* Status Row */}
         <div className="flex items-center gap-2 mt-1.5 flex-wrap">

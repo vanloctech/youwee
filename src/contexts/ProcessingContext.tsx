@@ -66,6 +66,7 @@ interface ProcessingContextValue {
   // Actions
   selectVideo: () => Promise<void>;
   loadVideo: (path: string) => Promise<void>;
+  setVideoError: (error: string | null) => void;
   setCurrentTime: (time: number) => void;
   setDuration: (duration: number) => void;
   setSelection: (selection: TimelineSelection | null) => void;
@@ -176,15 +177,60 @@ export function ProcessingProvider({ children }: { children: ReactNode }) {
     };
   }, []);
 
-  // Helper: load video as blob URL for better compatibility
-  const loadVideoAsBlob = useCallback(async (filePath: string): Promise<string> => {
-    try {
-      const fileData = await readFile(filePath);
-      const blob = new Blob([fileData], { type: 'video/mp4' });
-      return URL.createObjectURL(blob);
-    } catch (err) {
-      console.error('Failed to load video as blob:', err);
-      return convertFileSrc(filePath);
+  // Helper: get MIME type from file extension
+  const getMimeType = useCallback((filePath: string): string => {
+    const ext = filePath.split('.').pop()?.toLowerCase();
+    switch (ext) {
+      case 'mp4':
+      case 'm4v':
+        return 'video/mp4';
+      case 'webm':
+        return 'video/webm';
+      case 'mkv':
+        return 'video/x-matroska';
+      case 'avi':
+        return 'video/x-msvideo';
+      case 'mov':
+        return 'video/quicktime';
+      case 'wmv':
+        return 'video/x-ms-wmv';
+      case 'flv':
+        return 'video/x-flv';
+      case 'ts':
+      case 'mts':
+        return 'video/mp2t';
+      default:
+        return 'video/mp4';
+    }
+  }, []);
+
+  // Helper: load video source URL
+  // Uses convertFileSrc (streaming via asset protocol) as primary approach
+  // Falls back to blob URL only for transcoded preview files
+  const loadVideoSrc = useCallback((filePath: string): string => {
+    return convertFileSrc(filePath);
+  }, []);
+
+  // Helper: load video as blob URL (only used for transcoded preview files)
+  const loadVideoAsBlob = useCallback(
+    async (filePath: string): Promise<string> => {
+      try {
+        const fileData = await readFile(filePath);
+        const mimeType = getMimeType(filePath);
+        const blob = new Blob([fileData], { type: mimeType });
+        return URL.createObjectURL(blob);
+      } catch (err) {
+        console.error('Failed to load video as blob:', err);
+        return convertFileSrc(filePath);
+      }
+    },
+    [getMimeType],
+  );
+
+  // Helper: revoke previous blob URL to prevent memory leak
+  const revokePreviousVideoSrc = useCallback((src: string | null) => {
+    if (src?.startsWith('blob:')) {
+      URL.revokeObjectURL(src);
     }
   }, []);
 
@@ -225,6 +271,8 @@ export function ProcessingProvider({ children }: { children: ReactNode }) {
     async (path: string) => {
       setIsLoadingVideo(true);
       setVideoPath(path);
+      // Revoke previous blob URL before clearing
+      revokePreviousVideoSrc(videoSrc);
       setVideoSrc(null);
       setVideoError(null);
       setSelection(null);
@@ -253,6 +301,7 @@ export function ProcessingProvider({ children }: { children: ReactNode }) {
           });
 
           if (existingPreview) {
+            // Preview files are small transcoded mp4s, safe to load as blob
             const previewSrc = await loadVideoAsBlob(existingPreview);
             setVideoSrc(previewSrc);
             setIsUsingPreview(true);
@@ -269,7 +318,8 @@ export function ProcessingProvider({ children }: { children: ReactNode }) {
               setIsUsingPreview(true);
               addMessage('system', 'Preview ready - output will use original quality');
             } catch (previewErr) {
-              const originalSrc = await loadVideoAsBlob(path);
+              // Fallback: stream the original file directly (no RAM copy)
+              const originalSrc = loadVideoSrc(path);
               setVideoSrc(originalSrc);
               setIsUsingPreview(false);
               addMessage('system', `Preview failed: ${previewErr}`);
@@ -278,7 +328,8 @@ export function ProcessingProvider({ children }: { children: ReactNode }) {
             }
           }
         } else {
-          const videoSrcUrl = await loadVideoAsBlob(path);
+          // Standard codec: stream directly via asset protocol (no RAM copy)
+          const videoSrcUrl = loadVideoSrc(path);
           setVideoSrc(videoSrcUrl);
           addMessage('system', `${metadata.filename} loaded`);
         }
@@ -291,7 +342,7 @@ export function ProcessingProvider({ children }: { children: ReactNode }) {
         setIsLoadingVideo(false);
       }
     },
-    [addMessage, loadVideoAsBlob],
+    [addMessage, loadVideoAsBlob, loadVideoSrc, revokePreviousVideoSrc, videoSrc],
   );
 
   // Select video file
@@ -797,6 +848,7 @@ export function ProcessingProvider({ children }: { children: ReactNode }) {
         batchFiles,
         selectVideo,
         loadVideo,
+        setVideoError,
         setCurrentTime,
         setDuration,
         setSelection,

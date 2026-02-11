@@ -22,12 +22,24 @@ import type {
   ItemUniversalSettings,
   ProxySettings,
   Quality,
+  VideoInfoResponse,
 } from '@/lib/types';
 
 const STORAGE_KEY = 'youwee-universal-settings';
 const COOKIE_STORAGE_KEY = 'youwee-cookie-settings';
 const PROXY_STORAGE_KEY = 'youwee-proxy-settings';
 const DOWNLOAD_STORAGE_KEY = 'youwee-settings';
+
+// Format duration in seconds to HH:MM:SS or MM:SS
+function formatDuration(seconds: number): string {
+  const hrs = Math.floor(seconds / 3600);
+  const mins = Math.floor((seconds % 3600) / 60);
+  const secs = Math.floor(seconds % 60);
+  if (hrs > 0) {
+    return `${hrs}:${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+  }
+  return `${mins}:${secs.toString().padStart(2, '0')}`;
+}
 
 // Check if path is absolute (cross-platform)
 const isAbsolutePath = (path: string): boolean => {
@@ -44,6 +56,8 @@ export interface UniversalSettings {
   outputPath: string;
   audioBitrate: AudioBitrate;
   concurrentDownloads: number;
+  // Live stream settings
+  liveFromStart: boolean;
   // Speed limit settings
   speedLimitEnabled: boolean;
   speedLimitValue: number;
@@ -162,6 +176,10 @@ function saveSettings(settings: UniversalSettings) {
         format: settings.format,
         audioBitrate: settings.audioBitrate,
         concurrentDownloads: settings.concurrentDownloads,
+        liveFromStart: settings.liveFromStart,
+        speedLimitEnabled: settings.speedLimitEnabled,
+        speedLimitValue: settings.speedLimitValue,
+        speedLimitUnit: settings.speedLimitUnit,
       }),
     );
   } catch (e) {
@@ -186,6 +204,7 @@ interface UniversalContextType {
   updateFormat: (format: Format) => void;
   updateAudioBitrate: (bitrate: AudioBitrate) => void;
   updateConcurrentDownloads: (concurrent: number) => void;
+  updateLiveFromStart: (enabled: boolean) => void;
   // Cookie error detection
   cookieError: { show: boolean; itemId?: string } | null;
   clearCookieError: () => void;
@@ -208,6 +227,8 @@ export function UniversalProvider({ children }: { children: ReactNode }) {
       outputPath: saved.outputPath || '',
       audioBitrate: saved.audioBitrate || 'auto',
       concurrentDownloads: saved.concurrentDownloads || 1,
+      // Live stream settings
+      liveFromStart: saved.liveFromStart === true, // Default to false
       // Speed limit settings
       speedLimitEnabled: saved.speedLimitEnabled === true, // Default to false (unlimited)
       speedLimitValue: saved.speedLimitValue || 10,
@@ -330,41 +351,84 @@ export function UniversalProvider({ children }: { children: ReactNode }) {
     };
   }, []);
 
-  const addFromText = useCallback(async (text: string): Promise<number> => {
-    const urls = parseUniversalUrls(text);
-    if (urls.length === 0) return 0;
+  // Fetch metadata for items in background (fire-and-forget)
+  const fetchMetadataForItems = useCallback((items: DownloadItem[]) => {
+    const cookieSettings = loadCookieSettings();
+    const proxySettings = loadProxySettings();
 
-    const currentItems = itemsRef.current;
-    const currentSettings = settingsRef.current;
-
-    // Snapshot current settings for these items
-    const settingsSnapshot: ItemUniversalSettings = {
-      quality: currentSettings.quality,
-      format: currentSettings.format,
-      outputPath: currentSettings.outputPath,
-      audioBitrate: currentSettings.audioBitrate,
-    };
-
-    const newItems: DownloadItem[] = urls
-      .filter((url) => !currentItems.some((item) => item.url === url))
-      .map((url) => ({
-        id: crypto.randomUUID(),
-        url,
-        title: url,
-        status: 'pending' as const,
-        progress: 0,
-        speed: '',
-        eta: '',
-        // Store settings snapshot
-        settings: settingsSnapshot,
-      }));
-
-    if (newItems.length > 0) {
-      setItems((prev) => [...prev, ...newItems]);
+    for (const item of items) {
+      invoke<VideoInfoResponse>('get_video_info', {
+        url: item.url,
+        cookieMode: cookieSettings.mode,
+        cookieBrowser: cookieSettings.browser || null,
+        cookieBrowserProfile: cookieSettings.browserProfile || null,
+        cookieFilePath: cookieSettings.filePath || null,
+        proxyUrl: buildProxyUrl(proxySettings) || null,
+      })
+        .then((response) => {
+          const info = response.info;
+          const thumb = info.thumbnail?.replace(/^http:\/\//, 'https://') || null;
+          setItems((current) =>
+            current.map((i) =>
+              i.id === item.id
+                ? {
+                    ...i,
+                    thumbnail: thumb || i.thumbnail,
+                    title: info.title || i.title,
+                    duration: info.duration ? formatDuration(info.duration) : i.duration,
+                    extractor: info.extractor || i.extractor,
+                    channel: info.channel || i.channel,
+                  }
+                : i,
+            ),
+          );
+        })
+        .catch(() => {
+          // Silently ignore - item will keep URL as title and Globe placeholder
+        });
     }
-
-    return newItems.length;
   }, []);
+
+  const addFromText = useCallback(
+    async (text: string): Promise<number> => {
+      const urls = parseUniversalUrls(text);
+      if (urls.length === 0) return 0;
+
+      const currentItems = itemsRef.current;
+      const currentSettings = settingsRef.current;
+
+      // Snapshot current settings for these items
+      const settingsSnapshot: ItemUniversalSettings = {
+        quality: currentSettings.quality,
+        format: currentSettings.format,
+        outputPath: currentSettings.outputPath,
+        audioBitrate: currentSettings.audioBitrate,
+      };
+
+      const newItems: DownloadItem[] = urls
+        .filter((url) => !currentItems.some((item) => item.url === url))
+        .map((url) => ({
+          id: crypto.randomUUID(),
+          url,
+          title: url,
+          status: 'pending' as const,
+          progress: 0,
+          speed: '',
+          eta: '',
+          // Store settings snapshot
+          settings: settingsSnapshot,
+        }));
+
+      if (newItems.length > 0) {
+        setItems((prev) => [...prev, ...newItems]);
+        // Fetch metadata (thumbnail, title, duration) in background
+        fetchMetadataForItems(newItems);
+      }
+
+      return newItems.length;
+    },
+    [fetchMetadataForItems],
+  );
 
   const importFromFile = useCallback(async (): Promise<number> => {
     try {
@@ -500,6 +564,8 @@ export function UniversalProvider({ children }: { children: ReactNode }) {
           // Post-processing settings (from main download settings)
           embedMetadata: embedSettings.embedMetadata,
           embedThumbnail: embedSettings.embedThumbnail,
+          // Live stream settings
+          liveFromStart: settings.liveFromStart,
           // Speed limit settings
           speedLimit: settings.speedLimitEnabled
             ? `${settings.speedLimitValue}${settings.speedLimitUnit}`
@@ -509,6 +575,10 @@ export function UniversalProvider({ children }: { children: ReactNode }) {
           sponsorblockMark: sponsorBlockArgs.mark,
           // Title from video info fetch
           title: item.title || null,
+          // Thumbnail from video info fetch (for non-YouTube sites)
+          thumbnail: item.thumbnail || null,
+          // Source/extractor from video info fetch (e.g. "BiliBili", "TikTok")
+          source: item.extractor || null,
         });
 
         setItems((items) =>
@@ -591,6 +661,14 @@ export function UniversalProvider({ children }: { children: ReactNode }) {
     });
   }, []);
 
+  const updateLiveFromStart = useCallback((liveFromStart: boolean) => {
+    setSettings((s) => {
+      const newSettings = { ...s, liveFromStart };
+      saveSettings(newSettings);
+      return newSettings;
+    });
+  }, []);
+
   // Clear cookie error dialog
   const clearCookieError = useCallback(() => {
     setCookieError(null);
@@ -632,6 +710,7 @@ export function UniversalProvider({ children }: { children: ReactNode }) {
     updateFormat,
     updateAudioBitrate,
     updateConcurrentDownloads,
+    updateLiveFromStart,
     // Cookie error detection
     cookieError,
     clearCookieError,

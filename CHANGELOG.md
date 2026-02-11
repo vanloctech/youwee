@@ -5,6 +5,22 @@ All notable changes to Youwee will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+## [0.8.2] - 2026-02-11
+
+### Added
+- **Multilingual update notes** - Update dialog now shows release notes in user's language (English, Vietnamese, Chinese). CI automatically extracts changelogs from language-specific CHANGELOG files
+- **8K/4K/2K quality options for Universal downloads** - Quality dropdown now includes 8K Ultra HD, 4K Ultra HD and 2K QHD options, matching the YouTube tab. Falls back gracefully if the source doesn't have high-res formats
+- **Live from start toggle for Universal downloads** - New toggle in Advanced Settings to record live streams from the beginning instead of the current point. Uses yt-dlp's `--live-from-start` flag
+- **Video preview for Universal downloads** - Automatically shows thumbnail, title, duration and channel when adding URLs from TikTok, Bilibili, Facebook, Instagram, Twitter and other sites. Thumbnails are also saved to Library history
+- **Smarter platform detection** - Library now correctly identifies and tags all 1800+ sites supported by yt-dlp (Bilibili, Dailymotion, SoundCloud, etc.) instead of showing "Other". Added Bilibili as a dedicated filter tab
+
+### Fixed
+- **Processing page freezes on video upload (Linux)** - Video files were read entirely into RAM via `readFile()`, causing OOM crashes and white screens. Now uses Tauri's asset protocol to stream videos directly without loading into memory. Also adds error boundary to prevent unrecoverable white screens, video error handling with codec-specific messages, blob URL cleanup to prevent memory leaks, and correct MIME type detection for non-MP4 formats
+- **Broken thumbnails in Library** - Fix thumbnails from sites like Bilibili that use HTTP URLs. Thumbnails now gracefully fall back to a placeholder icon if they fail to load
+- **Library not refreshing on page switch** - Library now automatically loads latest downloads when navigating to the page instead of requiring a manual refresh
+
 ## [0.8.1] - 2026-02-09
 
 ### Fixed

@@ -97,7 +97,9 @@
       "change": "更换",
       "noVideoLoaded": "未加载视频",
       "selectVideoHint": "选择一个视频开始编辑",
-      "selectVideo": "选择视频"
+      "selectVideo": "选择视频",
+      "videoError": "视频加载失败",
+      "tryAnother": "尝试其他视频"
     },
     "historyDialog": {
       "title": "处理历史",
@@ -185,6 +187,7 @@
       "filterFacebook": "Facebook",
       "filterInstagram": "Instagram",
       "filterTwitter": "Twitter",
+      "filterBilibili": "Bilibili",
       "filterOther": "其他",
       "refresh": "刷新",
       "clear": "清除",
@@ -219,6 +222,7 @@
         "facebook": "Facebook",
         "instagram": "Instagram",
         "twitter": "Twitter",
+        "bilibili": "Bilibili",
         "other": "其他"
       }
     }

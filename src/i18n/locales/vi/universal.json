@@ -34,11 +34,18 @@
     "videoQuality": "Chất lượng video",
     "outputFormat": "Định dạng xuất",
     "advanced": "Cài đặt nâng cao",
-    "more": "Thêm"
+    "more": "Thêm",
+    "liveFromStart": "Phát trực tiếp từ đầu"
   },
   "quality": {
     "best": "Tốt nhất",
     "bestShort": "Tốt nhất",
+    "8k": "8K Ultra HD",
+    "8kShort": "8K",
+    "4k": "4K Ultra HD",
+    "4kShort": "4K",
+    "2k": "2K QHD",
+    "2kShort": "2K",
     "1080": "Full HD 1080p",
     "1080Short": "1080p",
     "720": "HD 720p",

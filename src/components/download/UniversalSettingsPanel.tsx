@@ -1,4 +1,4 @@
-import { FileVideo, FolderOpen, HardDrive, Music, Settings2 } from 'lucide-react';
+import { FileVideo, FolderOpen, HardDrive, Music, Radio, Settings2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -11,6 +11,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { Switch } from '@/components/ui/switch';
 import type { UniversalSettings } from '@/contexts/UniversalContext';
 import type { AudioBitrate, Format, Quality } from '@/lib/types';
 import { cn } from '@/lib/utils';
@@ -26,12 +27,15 @@ function formatFileSize(bytes: number): string {
   return `${bytes} B`;
 }
 
-const videoQualityOptions: { value: Quality; label: string; shortLabel: string }[] = [
-  { value: 'best', label: 'Best Available', shortLabel: 'Best' },
-  { value: '1080', label: 'Full HD 1080p', shortLabel: '1080p' },
-  { value: '720', label: 'HD 720p', shortLabel: '720p' },
-  { value: '480', label: 'SD 480p', shortLabel: '480p' },
-  { value: '360', label: 'Low 360p', shortLabel: '360p' },
+const videoQualityKeys: { value: Quality; labelKey: string; shortLabelKey: string }[] = [
+  { value: 'best', labelKey: 'quality.best', shortLabelKey: 'quality.bestShort' },
+  { value: '8k', labelKey: 'quality.8k', shortLabelKey: 'quality.8kShort' },
+  { value: '4k', labelKey: 'quality.4k', shortLabelKey: 'quality.4kShort' },
+  { value: '2k', labelKey: 'quality.2k', shortLabelKey: 'quality.2kShort' },
+  { value: '1080', labelKey: 'quality.1080', shortLabelKey: 'quality.1080Short' },
+  { value: '720', labelKey: 'quality.720', shortLabelKey: 'quality.720Short' },
+  { value: '480', labelKey: 'quality.480', shortLabelKey: 'quality.480Short' },
+  { value: '360', labelKey: 'quality.360', shortLabelKey: 'quality.360Short' },
 ];
 
 const videoFormatOptions: { value: Format; label: string }[] = [
@@ -55,6 +59,7 @@ interface UniversalSettingsPanelProps {
   onAudioBitrateChange: (bitrate: AudioBitrate) => void;
   onConcurrentChange: (concurrent: number) => void;
   onSelectFolder: () => void;
+  onLiveFromStartChange: (enabled: boolean) => void;
 }
 
 export function UniversalSettingsPanel({
@@ -66,6 +71,7 @@ export function UniversalSettingsPanel({
   onAudioBitrateChange,
   onConcurrentChange,
   onSelectFolder,
+  onLiveFromStartChange,
 }: UniversalSettingsPanelProps) {
   const { t } = useTranslation('universal');
   const isAudioOnly =
@@ -146,13 +152,16 @@ export function UniversalSettingsPanel({
             title={t('settings.videoQuality')}
           >
             <SelectValue>
-              {videoQualityOptions.find((q) => q.value === currentVideoQuality)?.shortLabel}
+              {t(
+                videoQualityKeys.find((q) => q.value === currentVideoQuality)?.shortLabelKey ??
+                  'quality.bestShort',
+              )}
             </SelectValue>
           </SelectTrigger>
           <SelectContent className="min-w-[180px]">
-            {videoQualityOptions.map((opt) => (
+            {videoQualityKeys.map((opt) => (
               <SelectItem key={opt.value} value={opt.value} className="text-xs">
-                {opt.label}
+                {t(opt.labelKey)}
               </SelectItem>
             ))}
           </SelectContent>
@@ -251,6 +260,23 @@ export function UniversalSettingsPanel({
                     ))}
                   </SelectContent>
                 </Select>
+              </div>
+            </div>
+
+            {/* Toggles Section */}
+            <div className="space-y-2">
+              {/* Live Stream Toggle */}
+              <div className="flex items-center justify-between py-1.5 px-2.5 rounded-md bg-muted/50">
+                <div className="flex items-center gap-2">
+                  <Radio className="w-3.5 h-3.5 text-red-500" />
+                  <span className="text-[11px] font-medium">{t('settings.liveFromStart')}</span>
+                </div>
+                <Switch
+                  checked={settings.liveFromStart}
+                  onCheckedChange={onLiveFromStartChange}
+                  disabled={disabled}
+                  className="scale-90"
+                />
               </div>
             </div>
 

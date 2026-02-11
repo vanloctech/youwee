@@ -21,5 +21,18 @@
     "zh-CN": "简体中文",
     "label": "Ngôn ngữ",
     "select": "Chọn ngôn ngữ"
+  },
+  "update": {
+    "available": "Có bản cập nhật",
+    "error": "Lỗi cập nhật",
+    "description": "Đã có phiên bản mới của Youwee. Bạn có muốn cập nhật ngay không?",
+    "downloading": "Đang tải bản cập nhật...",
+    "ready": "Đã tải xong bản cập nhật! Khởi động lại để áp dụng.",
+    "errorGeneric": "Đã xảy ra lỗi khi cập nhật.",
+    "later": "Để sau",
+    "updateNow": "Cập nhật ngay",
+    "restartNow": "Khởi động lại",
+    "dismiss": "Bỏ qua",
+    "retry": "Thử lại"
   }
 }

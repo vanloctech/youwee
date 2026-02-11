@@ -34,11 +34,18 @@
     "videoQuality": "Video quality",
     "outputFormat": "Output format",
     "advanced": "Advanced Settings",
-    "more": "More"
+    "more": "More",
+    "liveFromStart": "Live from start"
   },
   "quality": {
     "best": "Best Available",
     "bestShort": "Best",
+    "8k": "8K Ultra HD",
+    "8kShort": "8K",
+    "4k": "4K Ultra HD",
+    "4kShort": "4K",
+    "2k": "2K QHD",
+    "2kShort": "2K",
     "1080": "Full HD 1080p",
     "1080Short": "1080p",
     "720": "HD 720p",

@@ -97,7 +97,9 @@
       "change": "Change",
       "noVideoLoaded": "No video loaded",
       "selectVideoHint": "Select a video to start editing",
-      "selectVideo": "Select Video"
+      "selectVideo": "Select Video",
+      "videoError": "Failed to load video",
+      "tryAnother": "Try another video"
     },
     "historyDialog": {
       "title": "Processing History",
@@ -185,6 +187,7 @@
       "filterFacebook": "Facebook",
       "filterInstagram": "Instagram",
       "filterTwitter": "Twitter",
+      "filterBilibili": "Bilibili",
       "filterOther": "Other",
       "refresh": "Refresh",
       "clear": "Clear",
@@ -219,6 +222,7 @@
         "facebook": "Facebook",
         "instagram": "Instagram",
         "twitter": "Twitter",
+        "bilibili": "Bilibili",
         "other": "Other"
       }
     }

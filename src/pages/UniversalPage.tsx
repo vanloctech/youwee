@@ -56,6 +56,7 @@ export function UniversalPage({ onNavigateToSettings }: UniversalPageProps) {
     updateFormat,
     updateAudioBitrate,
     updateConcurrentDownloads,
+    updateLiveFromStart,
     cookieError,
     clearCookieError,
     retryFailedDownload,
@@ -132,6 +133,7 @@ export function UniversalPage({ onNavigateToSettings }: UniversalPageProps) {
             onAudioBitrateChange={updateAudioBitrate}
             onConcurrentChange={updateConcurrentDownloads}
             onSelectFolder={selectOutputFolder}
+            onLiveFromStartChange={updateLiveFromStart}
           />
         </div>
 

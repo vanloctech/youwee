@@ -97,7 +97,9 @@
       "change": "Thay đổi",
       "noVideoLoaded": "Chưa tải video",
       "selectVideoHint": "Chọn video để bắt đầu chỉnh sửa",
-      "selectVideo": "Chọn Video"
+      "selectVideo": "Chọn Video",
+      "videoError": "Không thể tải video",
+      "tryAnother": "Thử video khác"
     },
     "historyDialog": {
       "title": "Lịch sử xử lý",
@@ -185,6 +187,7 @@
       "filterFacebook": "Facebook",
       "filterInstagram": "Instagram",
       "filterTwitter": "Twitter",
+      "filterBilibili": "Bilibili",
       "filterOther": "Khác",
       "refresh": "Làm mới",
       "clear": "Xóa",
@@ -219,6 +222,7 @@
         "facebook": "Facebook",
         "instagram": "Instagram",
         "twitter": "Twitter",
+        "bilibili": "Bilibili",
         "other": "Khác"
       }
     }

@@ -20,6 +20,7 @@ import { useTranslation } from 'react-i18next';
 import { SimpleMarkdown } from '@/components/ui/simple-markdown';
 import { useAI } from '@/contexts/AIContext';
 import { useHistory } from '@/contexts/HistoryContext';
+import { detectSource } from '@/lib/sources';
 import type { HistoryEntry } from '@/lib/types';
 import { cn } from '@/lib/utils';
 
@@ -55,51 +56,6 @@ function formatRelativeTime(
   return date.toLocaleDateString();
 }
 
-// Get source config
-function getSourceConfig(
-  source: string | undefined,
-  t: (key: string) => string,
-): { icon: string; label: string; color: string } {
-  switch (source?.toLowerCase()) {
-    case 'youtube':
-      return {
-        icon: 'fa-youtube-play',
-        label: t('library.item.sources.youtube'),
-        color: 'text-red-500 bg-red-500/10',
-      };
-    case 'tiktok':
-      return {
-        icon: 'fa-music',
-        label: t('library.item.sources.tiktok'),
-        color: 'text-pink-500 bg-pink-500/10',
-      };
-    case 'facebook':
-      return {
-        icon: 'fa-facebook',
-        label: t('library.item.sources.facebook'),
-        color: 'text-blue-600 bg-blue-600/10',
-      };
-    case 'instagram':
-      return {
-        icon: 'fa-instagram',
-        label: t('library.item.sources.instagram'),
-        color: 'text-pink-600 bg-pink-600/10',
-      };
-    case 'twitter':
-      return {
-        icon: 'fa-twitter',
-        label: t('library.item.sources.twitter'),
-        color: 'text-sky-500 bg-sky-500/10',
-      };
-    default:
-      return {
-        icon: 'fa-globe',
-        label: t('library.item.sources.other'),
-        color: 'text-gray-500 bg-gray-500/10',
-      };
-  }
-}
-
 export function HistoryItem({ entry }: HistoryItemProps) {
   const { t } = useTranslation('pages');
   const { openFileLocation, deleteEntry, redownload, getRedownloadTask } = useHistory();
@@ -110,6 +66,7 @@ export function HistoryItem({ entry }: HistoryItemProps) {
   const [copiedSummary, setCopiedSummary] = useState(false);
   const [localSummary, setLocalSummary] = useState<string | undefined>(entry.summary);
   const [showFullSummary, setShowFullSummary] = useState(false);
+  const [thumbError, setThumbError] = useState(false);
 
   // Get redownload task from context (persists across page changes)
   const redownloadTask = getRedownloadTask(entry.id);
@@ -117,7 +74,7 @@ export function HistoryItem({ entry }: HistoryItemProps) {
   const redownloadProgress = redownloadTask?.progress || 0;
   const redownloadSpeed = redownloadTask?.speed || '';
 
-  const sourceConfig = getSourceConfig(entry.source, t);
+  const sourceConfig = detectSource(entry.source);
 
   // Reset local summary when entry changes (important for component reuse)
   useEffect(() => {
@@ -206,12 +163,13 @@ export function HistoryItem({ entry }: HistoryItemProps) {
       <div className="flex gap-4">
         {/* Thumbnail */}
         <div className="relative flex-shrink-0 w-32 h-20 sm:w-40 sm:h-24 rounded-lg overflow-hidden bg-muted">
-          {entry.thumbnail ? (
+          {entry.thumbnail && !thumbError ? (
             <img
-              src={entry.thumbnail}
+              src={entry.thumbnail.replace(/^http:\/\//, 'https://')}
               alt=""
               className="w-full h-full object-cover"
               loading="lazy"
+              onError={() => setThumbError(true)}
             />
           ) : (
             <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-muted to-muted/50">
@@ -222,11 +180,11 @@ export function HistoryItem({ entry }: HistoryItemProps) {
           {/* Source badge */}
           <div
             className={cn(
-              'absolute top-1.5 left-1.5 flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium',
+              'absolute top-1.5 left-1.5 flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium bg-black/60',
               sourceConfig.color,
             )}
           >
-            <i className={`fa ${sourceConfig.icon} text-[9px]`} />
+            <i className={`fa ${sourceConfig.faIcon} text-[9px]`} aria-hidden="true" />
             <span className="hidden sm:inline">{sourceConfig.label}</span>
           </div>
 
