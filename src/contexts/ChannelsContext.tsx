@@ -145,8 +145,8 @@ export function ChannelsProvider({ children }: { children: ReactNode }) {
 
   // Per-video download progress: videoId -> state
   const [videoStates, setVideoStates] = useState<Map<string, VideoDownloadState>>(new Map());
-  // Map downloadId -> videoId (to match progress events back to videos)
-  const downloadIdMapRef = useRef<Map<string, string>>(new Map());
+  // Map downloadId -> { videoId, channelUrl } (to match progress events back to videos and update DB)
+  const downloadIdMapRef = useRef<Map<string, { videoId: string; channelUrl: string }>>(new Map());
 
   // Output folder
   const [outputPath, setOutputPath] = useState(() => {
@@ -392,11 +392,40 @@ export function ChannelsProvider({ children }: { children: ReactNode }) {
           setBrowseChannelName(name);
         }
 
-        // If this channel is already followed, sync videos to DB
+        // If this channel is already followed, sync videos to DB and load statuses
         const followedChannel = followedChannelsRef.current.find((c) => c.url === url);
         if (followedChannel && videos.length > 0) {
           await syncVideosToDb(followedChannel.id, videos);
           await refreshChannelNewCounts();
+
+          // Load statuses from DB and merge into videoStates
+          try {
+            const savedVideos = await invoke<ChannelVideo[]>('get_saved_channel_videos', {
+              channelId: followedChannel.id,
+              status: null,
+              limit: videos.length + 50,
+            });
+
+            // Build a map: YouTube videoId -> DB status
+            const statusMap = new Map<string, string>();
+            for (const sv of savedVideos) {
+              statusMap.set(sv.video_id, sv.status);
+            }
+
+            // Apply DB statuses to videoStates
+            setVideoStates((prev) => {
+              const next = new Map(prev);
+              for (const video of videos) {
+                const dbStatus = statusMap.get(video.id);
+                if (dbStatus === 'downloaded') {
+                  next.set(video.id, { status: 'completed', progress: 100, speed: '' });
+                }
+              }
+              return next;
+            });
+          } catch {
+            // ignore status loading errors
+          }
         }
       } catch (error) {
         const msg = error instanceof Error ? error.message : String(error);
@@ -515,8 +544,8 @@ export function ChannelsProvider({ children }: { children: ReactNode }) {
       try {
         for (const video of videosToDownload) {
           const downloadId = `channel-${video.id}-${Date.now()}`;
-          // Register mapping so progress listener can find the video
-          downloadIdMapRef.current.set(downloadId, video.id);
+          // Register mapping so progress listener can find the video and update DB
+          downloadIdMapRef.current.set(downloadId, { videoId: video.id, channelUrl: browseUrl });
 
           newDownloadingIds.add(video.id);
           setDownloadingIds(new Set(newDownloadingIds));
@@ -577,7 +606,15 @@ export function ChannelsProvider({ children }: { children: ReactNode }) {
         setDownloadingIds(new Set());
       }
     },
-    [browseVideos, selectedVideoIds, downloadingIds, outputPath, getCookieSettings, getProxyUrl],
+    [
+      browseUrl,
+      browseVideos,
+      selectedVideoIds,
+      downloadingIds,
+      outputPath,
+      getCookieSettings,
+      getProxyUrl,
+    ],
   );
 
   // Stop all downloads
@@ -596,8 +633,10 @@ export function ChannelsProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const unlisten = listen<DownloadProgress>('download-progress', (event) => {
       const progress = event.payload;
-      const videoId = downloadIdMapRef.current.get(progress.id);
-      if (!videoId) return; // Not a channel download
+      const mapping = downloadIdMapRef.current.get(progress.id);
+      if (!mapping) return; // Not a channel download
+
+      const { videoId, channelUrl } = mapping;
 
       if (progress.status === 'finished') {
         setVideoStates((prev) => {
@@ -611,6 +650,13 @@ export function ChannelsProvider({ children }: { children: ReactNode }) {
           return next;
         });
         downloadIdMapRef.current.delete(progress.id);
+
+        // Persist download status to DB
+        invoke('update_channel_video_status_by_video_id', {
+          channelUrl,
+          videoId,
+          status: 'downloaded',
+        }).catch((e) => console.error('Failed to update video status in DB:', e));
       } else if (progress.status === 'error') {
         setVideoStates((prev) => {
           const next = new Map(prev);

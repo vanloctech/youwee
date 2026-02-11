@@ -274,6 +274,36 @@ pub fn update_channel_video_status_db(id: String, status: String) -> Result<(), 
     Ok(())
 }
 
+/// Update video status by channel_id + video_id (YouTube video ID)
+pub fn update_channel_video_status_by_video_id_db(
+    channel_id: String,
+    video_id: String,
+    status: String,
+) -> Result<(), String> {
+    let conn = get_db()?;
+    conn.execute(
+        "UPDATE channel_videos SET status = ?1 WHERE channel_id = ?2 AND video_id = ?3",
+        params![status, channel_id, video_id],
+    )
+    .map_err(|e| format!("Failed to update video status: {}", e))?;
+    Ok(())
+}
+
+/// Get channel_id for a followed channel by URL
+pub fn get_channel_id_by_url_db(url: String) -> Result<Option<String>, String> {
+    let conn = get_db()?;
+    let result = conn.query_row(
+        "SELECT id FROM followed_channels WHERE url = ?1",
+        params![url],
+        |row| row.get::<_, String>(0),
+    );
+    match result {
+        Ok(id) => Ok(Some(id)),
+        Err(rusqlite::Error::QueryReturnedNoRows) => Ok(None),
+        Err(e) => Err(format!("Failed to get channel id: {}", e)),
+    }
+}
+
 /// Update channel name and thumbnail (avatar)
 pub fn update_channel_info_db(
     id: String,

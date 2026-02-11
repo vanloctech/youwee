@@ -147,6 +147,7 @@ pub fn run() {
             commands::save_channel_videos,
             commands::get_saved_channel_videos,
             commands::update_channel_video_status,
+            commands::update_channel_video_status_by_video_id,
             commands::get_new_videos_count,
             commands::update_channel_last_checked,
             commands::update_channel_info,

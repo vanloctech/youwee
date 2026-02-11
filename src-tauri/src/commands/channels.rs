@@ -388,6 +388,19 @@ pub async fn update_channel_video_status(
     database::update_channel_video_status_db(id, status)
 }
 
+/// Update a channel video's status by channel URL + video_id (YouTube ID)
+#[tauri::command]
+pub async fn update_channel_video_status_by_video_id(
+    channel_url: String,
+    video_id: String,
+    status: String,
+) -> Result<(), String> {
+    // First find the channel_id by URL
+    let channel_id = database::get_channel_id_by_url_db(channel_url)?
+        .ok_or_else(|| "Channel not found".to_string())?;
+    database::update_channel_video_status_by_video_id_db(channel_id, video_id, status)
+}
+
 /// Get count of new (unwatched) videos across all channels
 #[tauri::command]
 pub async fn get_new_videos_count(
