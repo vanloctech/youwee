@@ -6,6 +6,8 @@ export interface UpdateInfo {
   version: string;
   currentVersion: string;
   body?: string;
+  bodyVi?: string;
+  bodyZhCN?: string;
   date?: string;
 }
 
@@ -37,10 +39,13 @@ export function useAppUpdater() {
       const update = await check();
 
       if (update) {
+        const raw = update.rawJson as Record<string, unknown>;
         setUpdateInfo({
           version: update.version,
           currentVersion: update.currentVersion,
           body: update.body ?? undefined,
+          bodyVi: (raw.notes_vi as string) || undefined,
+          bodyZhCN: (raw['notes_zh-CN'] as string) || undefined,
           date: update.date ?? undefined,
         });
         setStatus('available');

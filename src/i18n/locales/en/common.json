@@ -21,5 +21,18 @@
     "zh-CN": "简体中文",
     "label": "Language",
     "select": "Select language"
+  },
+  "update": {
+    "available": "Update Available",
+    "error": "Update Error",
+    "description": "A new version of Youwee is available. Would you like to update now?",
+    "downloading": "Downloading update...",
+    "ready": "Update downloaded successfully! Restart to apply changes.",
+    "errorGeneric": "An error occurred while updating.",
+    "later": "Later",
+    "updateNow": "Update Now",
+    "restartNow": "Restart Now",
+    "dismiss": "Dismiss",
+    "retry": "Retry"
   }
 }

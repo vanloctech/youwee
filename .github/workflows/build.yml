@@ -235,30 +235,52 @@ jobs:
           VERSION="${GITHUB_REF_NAME#v}"
           echo "Extracting changelog for version: $VERSION"
           
-          # Extract the section for this version from CHANGELOG.md
-          # Match from "## [version]" until the next "## [" or end of file
-          CHANGELOG_CONTENT=$(awk -v ver="$VERSION" '
-            BEGIN { found=0; content="" }
-            /^## \[/ {
-              if (found) exit
-              if (index($0, "[" ver "]") > 0) found=1
-              next
-            }
-            found { content = content $0 "\n" }
-            END { print content }
-          ' CHANGELOG.md)
+          # Function to extract changelog section for a given file
+          extract_changelog() {
+            local file="$1"
+            if [ ! -f "$file" ]; then
+              echo ""
+              return
+            fi
+            awk -v ver="$VERSION" '
+              BEGIN { found=0; content="" }
+              /^## \[/ {
+                if (found) exit
+                if (index($0, "[" ver "]") > 0) found=1
+                next
+              }
+              found { content = content $0 "\n" }
+              END { print content }
+            ' "$file"
+          }
           
-          # If no changelog found, use a default message
+          # Function to convert content to JSON-safe string
+          to_json_safe() {
+            echo "$1" | sed 's/\\/\\\\/g' | sed 's/"/\\"/g' | sed 's/$/\\n/' | tr -d '\n' | sed 's/\\n$//'
+          }
+          
+          # Extract English changelog (primary)
+          CHANGELOG_CONTENT=$(extract_changelog "CHANGELOG.md")
           if [ -z "$CHANGELOG_CONTENT" ]; then
             CHANGELOG_CONTENT="See commit history for changes in this release."
           fi
-          
-          # Save to file for use in release body
           echo "$CHANGELOG_CONTENT" > CHANGELOG_EXTRACT.md
-          
-          # Create a JSON-safe version (escape special chars and convert newlines)
-          CHANGELOG_JSON=$(echo "$CHANGELOG_CONTENT" | sed 's/\\/\\\\/g' | sed 's/"/\\"/g' | sed 's/$/\\n/' | tr -d '\n' | sed 's/\\n$//')
+          CHANGELOG_JSON=$(to_json_safe "$CHANGELOG_CONTENT")
           echo "$CHANGELOG_JSON" > CHANGELOG_JSON.txt
+          
+          # Extract Vietnamese changelog
+          CHANGELOG_VI=$(extract_changelog "CHANGELOG.vi.md")
+          if [ -n "$CHANGELOG_VI" ]; then
+            CHANGELOG_VI_JSON=$(to_json_safe "$CHANGELOG_VI")
+            echo "$CHANGELOG_VI_JSON" > CHANGELOG_VI_JSON.txt
+          fi
+          
+          # Extract Chinese changelog
+          CHANGELOG_ZH=$(extract_changelog "CHANGELOG.zh-CN.md")
+          if [ -n "$CHANGELOG_ZH" ]; then
+            CHANGELOG_ZH_JSON=$(to_json_safe "$CHANGELOG_ZH")
+            echo "$CHANGELOG_ZH_JSON" > CHANGELOG_ZH_JSON.txt
+          fi
           
           echo "Extracted changelog:"
           cat CHANGELOG_EXTRACT.md
@@ -268,14 +290,27 @@ jobs:
           VERSION="${GITHUB_REF_NAME#v}"
           PUB_DATE=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
           
-          # Read the JSON-safe changelog
+          # Read the JSON-safe changelogs
           NOTES=$(cat CHANGELOG_JSON.txt 2>/dev/null || echo "Youwee $GITHUB_REF_NAME - Check release notes for details")
+          NOTES_VI=$(cat CHANGELOG_VI_JSON.txt 2>/dev/null || echo "")
+          NOTES_ZH=$(cat CHANGELOG_ZH_JSON.txt 2>/dev/null || echo "")
+          
+          # Build notes fields
+          NOTES_EXTRA=""
+          if [ -n "$NOTES_VI" ]; then
+            NOTES_EXTRA="$NOTES_EXTRA
+            \"notes_vi\": \"$NOTES_VI\","
+          fi
+          if [ -n "$NOTES_ZH" ]; then
+            NOTES_EXTRA="$NOTES_EXTRA
+            \"notes_zh-CN\": \"$NOTES_ZH\","
+          fi
           
           # Find signature files and create platform entries
           cat > latest.json << EOF
           {
             "version": "$VERSION",
-            "notes": "$NOTES",
+            "notes": "$NOTES",${NOTES_EXTRA}
             "pub_date": "$PUB_DATE",
             "platforms": {
           EOF

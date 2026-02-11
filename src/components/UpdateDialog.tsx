@@ -1,8 +1,17 @@
 import { Download, RefreshCw, RotateCcw, Sparkles, X } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { SimpleMarkdown } from '@/components/ui/simple-markdown';
 import type { UpdateInfo, UpdateProgress, UpdateStatus } from '@/hooks/useAppUpdater';
+
+// Get the localized release notes based on current language
+function getLocalizedBody(updateInfo: UpdateInfo | null, lang: string): string | undefined {
+  if (!updateInfo) return undefined;
+  if (lang.startsWith('vi')) return updateInfo.bodyVi || updateInfo.body;
+  if (lang.startsWith('zh')) return updateInfo.bodyZhCN || updateInfo.body;
+  return updateInfo.body;
+}
 
 interface UpdateDialogProps {
   status: UpdateStatus;
@@ -25,6 +34,8 @@ export function UpdateDialog({
   onDismiss,
   onRetry,
 }: UpdateDialogProps) {
+  const { t, i18n } = useTranslation('common');
+
   // Only show dialog for specific states
   if (status === 'idle' || status === 'checking' || status === 'up-to-date') {
     return null;
@@ -41,6 +52,8 @@ export function UpdateDialog({
     return `${parseFloat((bytes / k ** i).toFixed(1))} ${sizes[i]}`;
   };
 
+  const localizedBody = getLocalizedBody(updateInfo, i18n.language);
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
       <div className="w-full max-w-md mx-4 bg-card border border-border rounded-xl shadow-2xl overflow-hidden">
@@ -52,7 +65,7 @@ export function UpdateDialog({
             </div>
             <div>
               <h2 className="text-lg font-semibold text-foreground">
-                {status === 'error' ? 'Update Error' : 'Update Available'}
+                {status === 'error' ? t('update.error') : t('update.available')}
               </h2>
               {updateInfo && status !== 'error' && (
                 <p className="text-sm text-muted-foreground">
@@ -76,13 +89,11 @@ export function UpdateDialog({
         <div className="px-6 py-4">
           {status === 'available' && (
             <div className="space-y-4">
-              <p className="text-sm text-muted-foreground">
-                A new version of Youwee is available. Would you like to update now?
-              </p>
-              {updateInfo?.body && (
+              <p className="text-sm text-muted-foreground">{t('update.description')}</p>
+              {localizedBody && (
                 <div className="p-3 bg-muted/50 rounded-lg max-h-48 overflow-y-auto">
                   <SimpleMarkdown
-                    content={updateInfo.body}
+                    content={localizedBody}
                     className="text-xs text-muted-foreground"
                   />
                 </div>
@@ -93,7 +104,7 @@ export function UpdateDialog({
           {status === 'downloading' && (
             <div className="space-y-3">
               <div className="flex items-center justify-between text-sm">
-                <span className="text-muted-foreground">Downloading update...</span>
+                <span className="text-muted-foreground">{t('update.downloading')}</span>
                 <span className="font-medium">{progressPercent}%</span>
               </div>
               <Progress value={progressPercent} className="h-2" />
@@ -110,17 +121,13 @@ export function UpdateDialog({
               <div className="inline-flex items-center justify-center w-12 h-12 bg-green-500/20 rounded-full mb-2">
                 <Download className="w-6 h-6 text-green-500" />
               </div>
-              <p className="text-sm text-muted-foreground">
-                Update downloaded successfully! Restart to apply changes.
-              </p>
+              <p className="text-sm text-muted-foreground">{t('update.ready')}</p>
             </div>
           )}
 
           {status === 'error' && (
             <div className="space-y-3">
-              <p className="text-sm text-destructive">
-                {error || 'An error occurred while updating.'}
-              </p>
+              <p className="text-sm text-destructive">{error || t('update.errorGeneric')}</p>
             </div>
           )}
         </div>
@@ -130,11 +137,11 @@ export function UpdateDialog({
           {status === 'available' && (
             <>
               <Button variant="outline" size="sm" onClick={onDismiss}>
-                Later
+                {t('update.later')}
               </Button>
               <Button size="sm" onClick={onDownload}>
                 <Download className="w-4 h-4 mr-1" />
-                Update Now
+                {t('update.updateNow')}
               </Button>
             </>
           )}
@@ -142,25 +149,25 @@ export function UpdateDialog({
           {status === 'downloading' && (
             <Button variant="outline" size="sm" disabled>
               <RefreshCw className="w-4 h-4 mr-1 animate-spin" />
-              Downloading...
+              {t('update.downloading')}
             </Button>
           )}
 
           {status === 'ready' && (
             <Button size="sm" onClick={onRestart}>
               <RotateCcw className="w-4 h-4 mr-1" />
-              Restart Now
+              {t('update.restartNow')}
             </Button>
           )}
 
           {status === 'error' && (
             <>
               <Button variant="outline" size="sm" onClick={onDismiss}>
-                Dismiss
+                {t('update.dismiss')}
               </Button>
               <Button size="sm" onClick={onRetry}>
                 <RefreshCw className="w-4 h-4 mr-1" />
-                Retry
+                {t('update.retry')}
               </Button>
             </>
           )}

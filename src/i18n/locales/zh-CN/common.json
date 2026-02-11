@@ -21,5 +21,18 @@
     "zh-CN": "简体中文",
     "label": "语言",
     "select": "选择语言"
+  },
+  "update": {
+    "available": "有新版本可用",
+    "error": "更新出错",
+    "description": "Youwee 有新版本可用，是否立即更新？",
+    "downloading": "正在下载更新...",
+    "ready": "更新已下载完成！重启以应用更改。",
+    "errorGeneric": "更新时发生错误。",
+    "later": "稍后",
+    "updateNow": "立即更新",
+    "restartNow": "立即重启",
+    "dismiss": "忽略",
+    "retry": "重试"
   }
 }
