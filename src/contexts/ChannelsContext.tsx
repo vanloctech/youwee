@@ -82,6 +82,18 @@ interface ChannelsContextType {
   followChannel: (url: string, name: string, thumbnail?: string) => Promise<string>;
   unfollowChannel: (id: string) => Promise<void>;
   refreshFollowedChannelInfo: () => Promise<void>;
+  updateChannelSettings: (settings: {
+    id: string;
+    checkInterval: number;
+    autoDownload: boolean;
+    downloadQuality: string;
+    downloadFormat: string;
+    filterMinDuration?: number | null;
+    filterMaxDuration?: number | null;
+    filterIncludeKeywords?: string | null;
+    filterExcludeKeywords?: string | null;
+    filterMaxVideos?: number | null;
+  }) => Promise<void>;
 
   // Channel browsing
   browseUrl: string;
@@ -342,6 +354,37 @@ export function ChannelsProvider({ children }: { children: ReactNode }) {
       }
     },
     [activeChannel],
+  );
+
+  // Update channel settings (check interval, auto-download, filters)
+  const updateChannelSettings = useCallback(
+    async (settings: {
+      id: string;
+      checkInterval: number;
+      autoDownload: boolean;
+      downloadQuality: string;
+      downloadFormat: string;
+      filterMinDuration?: number | null;
+      filterMaxDuration?: number | null;
+      filterIncludeKeywords?: string | null;
+      filterExcludeKeywords?: string | null;
+      filterMaxVideos?: number | null;
+    }) => {
+      await invoke('update_channel_settings', {
+        id: settings.id,
+        checkInterval: settings.checkInterval,
+        autoDownload: settings.autoDownload,
+        downloadQuality: settings.downloadQuality,
+        downloadFormat: settings.downloadFormat,
+        filterMinDuration: settings.filterMinDuration ?? null,
+        filterMaxDuration: settings.filterMaxDuration ?? null,
+        filterIncludeKeywords: settings.filterIncludeKeywords ?? null,
+        filterExcludeKeywords: settings.filterExcludeKeywords ?? null,
+        filterMaxVideos: settings.filterMaxVideos ?? null,
+      });
+      await refreshChannels();
+    },
+    [refreshChannels],
   );
 
   // Fetch videos from a channel URL (browse mode)
@@ -894,6 +937,7 @@ export function ChannelsProvider({ children }: { children: ReactNode }) {
         followChannel,
         unfollowChannel,
         refreshFollowedChannelInfo,
+        updateChannelSettings,
         browseUrl,
         setBrowseUrl,
         browseVideos,

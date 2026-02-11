@@ -15,17 +15,19 @@ import {
   Play,
   RefreshCw,
   Search,
+  Settings,
   Square,
   Tv,
   X,
   XCircle,
 } from 'lucide-react';
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { FFmpegRequiredDialog } from '@/components/FFmpegRequiredDialog';
 import { ThemePicker } from '@/components/settings/ThemePicker';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import {
   Select,
   SelectContent,
@@ -33,6 +35,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { Switch } from '@/components/ui/switch';
 import type { VideoDownloadState } from '@/contexts/ChannelsContext';
 import { useChannels } from '@/contexts/ChannelsContext';
 import { useDependencies } from '@/contexts/DependenciesContext';
@@ -959,15 +962,13 @@ export function ChannelsPage() {
                           <button
                             type="button"
                             onClick={() => {
-                              setUrlInput(channel.url);
-                              setBrowseUrl(channel.url);
-                              fetchChannelVideos(channel.url);
+                              setActiveChannel(channel);
                             }}
                             className={cn(
                               'w-full flex items-center gap-2.5 p-2.5 rounded-xl transition-all duration-200',
                               'hover:bg-accent/50 cursor-pointer text-left',
                               'border border-transparent',
-                              browseUrl === channel.url &&
+                              activeChannel?.id === channel.id &&
                                 'bg-primary/5 border-primary/20 hover:bg-primary/10',
                             )}
                           >
@@ -1097,6 +1098,7 @@ function ChannelDetailView({ channel, onBack }: { channel: FollowedChannel; onBa
   const { t } = useTranslation('channels');
   const {
     unfollowChannel,
+    updateChannelSettings,
     fetchChannelVideos,
     browseVideos,
     browseLoading,
@@ -1115,6 +1117,79 @@ function ChannelDetailView({ channel, onBack }: { channel: FollowedChannel; onBa
   const { ffmpegStatus } = useDependencies();
 
   const [confirmUnfollow, setConfirmUnfollow] = useState(false);
+
+  // Channel settings panel state
+  const [showSettings, setShowSettings] = useState(false);
+  const [settingsCheckInterval, setSettingsCheckInterval] = useState(channel.check_interval);
+  const [settingsAutoDownload, setSettingsAutoDownload] = useState(channel.auto_download);
+  const [settingsFilterMinDuration, setSettingsFilterMinDuration] = useState<string>(
+    channel.filter_min_duration != null ? String(channel.filter_min_duration) : '',
+  );
+  const [settingsFilterMaxDuration, setSettingsFilterMaxDuration] = useState<string>(
+    channel.filter_max_duration != null ? String(channel.filter_max_duration) : '',
+  );
+  const [settingsFilterIncludeKeywords, setSettingsFilterIncludeKeywords] = useState(
+    channel.filter_include_keywords || '',
+  );
+  const [settingsFilterExcludeKeywords, setSettingsFilterExcludeKeywords] = useState(
+    channel.filter_exclude_keywords || '',
+  );
+  const [settingsFilterMaxVideos, setSettingsFilterMaxVideos] = useState<string>(
+    channel.filter_max_videos != null ? String(channel.filter_max_videos) : '20',
+  );
+  const [savingSettings, setSavingSettings] = useState(false);
+
+  // Reset settings form when channel changes
+  useEffect(() => {
+    setSettingsCheckInterval(channel.check_interval);
+    setSettingsAutoDownload(channel.auto_download);
+    setSettingsFilterMinDuration(
+      channel.filter_min_duration != null ? String(channel.filter_min_duration) : '',
+    );
+    setSettingsFilterMaxDuration(
+      channel.filter_max_duration != null ? String(channel.filter_max_duration) : '',
+    );
+    setSettingsFilterIncludeKeywords(channel.filter_include_keywords || '');
+    setSettingsFilterExcludeKeywords(channel.filter_exclude_keywords || '');
+    setSettingsFilterMaxVideos(
+      channel.filter_max_videos != null ? String(channel.filter_max_videos) : '20',
+    );
+  }, [channel]);
+
+  const handleSaveSettings = useCallback(async () => {
+    setSavingSettings(true);
+    try {
+      await updateChannelSettings({
+        id: channel.id,
+        checkInterval: Math.max(5, settingsCheckInterval),
+        autoDownload: settingsAutoDownload,
+        downloadQuality: channel.download_quality,
+        downloadFormat: channel.download_format,
+        filterMinDuration: settingsFilterMinDuration ? Number(settingsFilterMinDuration) : null,
+        filterMaxDuration: settingsFilterMaxDuration ? Number(settingsFilterMaxDuration) : null,
+        filterIncludeKeywords: settingsFilterIncludeKeywords || null,
+        filterExcludeKeywords: settingsFilterExcludeKeywords || null,
+        filterMaxVideos: settingsFilterMaxVideos ? Number(settingsFilterMaxVideos) : null,
+      });
+      setShowSettings(false);
+    } catch (error) {
+      console.error('Failed to save settings:', error);
+    } finally {
+      setSavingSettings(false);
+    }
+  }, [
+    channel.id,
+    channel.download_quality,
+    channel.download_format,
+    settingsCheckInterval,
+    settingsAutoDownload,
+    settingsFilterMinDuration,
+    settingsFilterMaxDuration,
+    settingsFilterIncludeKeywords,
+    settingsFilterExcludeKeywords,
+    settingsFilterMaxVideos,
+    updateChannelSettings,
+  ]);
 
   // Settings state - initialized from shared localStorage (same as DownloadPage)
   const [initSettings] = useState(loadInitialSettings);
@@ -1229,6 +1304,15 @@ function ChannelDetailView({ channel, onBack }: { channel: FollowedChannel; onBa
             )}
             {t('checkNow')}
           </Button>
+          <Button
+            variant={showSettings ? 'secondary' : 'ghost'}
+            size="icon"
+            className="h-8 w-8"
+            onClick={() => setShowSettings((prev) => !prev)}
+            title={t('settings')}
+          >
+            <Settings className="w-3.5 h-3.5" />
+          </Button>
           {confirmUnfollow ? (
             <div className="flex items-center gap-1">
               <Button variant="destructive" size="sm" onClick={handleUnfollow}>
@@ -1249,6 +1333,129 @@ function ChannelDetailView({ channel, onBack }: { channel: FollowedChannel; onBa
 
       {/* Divider */}
       <div className="mx-4 sm:mx-6 h-px bg-gradient-to-r from-transparent via-border/50 to-transparent" />
+
+      {/* Channel Settings Panel (collapsible) */}
+      {showSettings && (
+        <div className="flex-shrink-0 px-4 sm:px-6 py-4">
+          <div className="bg-card/50 border border-border/50 rounded-xl p-5 space-y-5">
+            {/* Auto Download + Check Interval row */}
+            <div className="flex items-center gap-6">
+              <div className="flex items-center gap-3 flex-1">
+                <Switch checked={settingsAutoDownload} onCheckedChange={setSettingsAutoDownload} />
+                <div>
+                  <Label className="text-sm font-medium">{t('autoDownload')}</Label>
+                  <p className="text-xs text-muted-foreground mt-0.5">
+                    {t('autoDownloadDescription')}
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2 flex-shrink-0">
+                <Label className="text-sm text-muted-foreground">{t('checkInterval')}</Label>
+                <Input
+                  type="number"
+                  min={5}
+                  value={settingsCheckInterval}
+                  onChange={(e) => setSettingsCheckInterval(Math.max(5, Number(e.target.value)))}
+                  className="w-20 h-9 text-sm bg-background/50 border-border/50"
+                />
+                <span className="text-sm text-muted-foreground">{t('minutes')}</span>
+              </div>
+            </div>
+
+            {/* Divider */}
+            <div className="h-px bg-gradient-to-r from-transparent via-border/40 to-transparent" />
+
+            {/* Filters */}
+            <div className="space-y-4">
+              <Label className="text-sm font-medium">{t('filters')}</Label>
+
+              {/* Duration + Max Videos row */}
+              <div className="grid grid-cols-3 gap-4">
+                <div className="space-y-1.5">
+                  <Label className="text-sm text-muted-foreground">{t('minDuration')}</Label>
+                  <Input
+                    type="number"
+                    min={0}
+                    value={settingsFilterMinDuration}
+                    onChange={(e) => setSettingsFilterMinDuration(e.target.value)}
+                    placeholder="0"
+                    className="h-9 text-sm bg-background/50 border-border/50"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-sm text-muted-foreground">{t('maxDuration')}</Label>
+                  <Input
+                    type="number"
+                    min={0}
+                    value={settingsFilterMaxDuration}
+                    onChange={(e) => setSettingsFilterMaxDuration(e.target.value)}
+                    placeholder="0"
+                    className="h-9 text-sm bg-background/50 border-border/50"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-sm text-muted-foreground">{t('maxVideosPerCheck')}</Label>
+                  <Input
+                    type="number"
+                    min={1}
+                    value={settingsFilterMaxVideos}
+                    onChange={(e) => setSettingsFilterMaxVideos(e.target.value)}
+                    placeholder="20"
+                    className="h-9 text-sm bg-background/50 border-border/50"
+                  />
+                </div>
+              </div>
+
+              {/* Keywords row */}
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <Label className="text-sm text-muted-foreground">{t('includeKeywords')}</Label>
+                  <Input
+                    value={settingsFilterIncludeKeywords}
+                    onChange={(e) => setSettingsFilterIncludeKeywords(e.target.value)}
+                    placeholder={t('includeKeywordsPlaceholder')}
+                    className="h-9 text-sm bg-background/50 border-border/50"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-sm text-muted-foreground">{t('excludeKeywords')}</Label>
+                  <Input
+                    value={settingsFilterExcludeKeywords}
+                    onChange={(e) => setSettingsFilterExcludeKeywords(e.target.value)}
+                    placeholder={t('excludeKeywordsPlaceholder')}
+                    className="h-9 text-sm bg-background/50 border-border/50"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Actions */}
+            <div className="flex items-center justify-end gap-2 pt-1">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setShowSettings(false)}
+                className="h-9 text-sm px-4"
+              >
+                {t('cancel')}
+              </Button>
+              <button
+                type="button"
+                onClick={handleSaveSettings}
+                disabled={savingSettings}
+                className={cn(
+                  'h-9 px-4 rounded-md text-sm font-medium',
+                  'btn-gradient flex items-center gap-1.5',
+                  'disabled:opacity-50 disabled:cursor-not-allowed',
+                )}
+              >
+                {savingSettings && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+                {t('save')}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Settings Bar */}
       <div className="flex-shrink-0 p-4 sm:px-6">
