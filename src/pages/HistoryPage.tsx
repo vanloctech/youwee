@@ -1,4 +1,5 @@
 import { FolderDown } from 'lucide-react';
+import { useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { HistoryItem, HistoryToolbar } from '@/components/history';
 import { ThemePicker } from '@/components/settings/ThemePicker';
@@ -7,7 +8,12 @@ import { cn } from '@/lib/utils';
 
 export function HistoryPage() {
   const { t } = useTranslation('pages');
-  const { entries, loading, totalCount } = useHistory();
+  const { entries, loading, totalCount, refreshHistory } = useHistory();
+
+  // Refresh history when navigating to this page
+  useEffect(() => {
+    refreshHistory();
+  }, [refreshHistory]);
 
   return (
     <div className="flex-1 flex flex-col overflow-hidden">

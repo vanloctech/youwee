@@ -5,17 +5,22 @@ All notable changes to Youwee will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.8.1] - 2026-02-09
+## [Unreleased]
 
 ### Added
 - **Video preview for Universal downloads** - Automatically shows thumbnail, title, duration and channel when adding URLs from TikTok, Bilibili, Facebook, Instagram, Twitter and other sites. Thumbnails are also saved to Library history
 - **Smarter platform detection** - Library now correctly identifies and tags all 1800+ sites supported by yt-dlp (Bilibili, Dailymotion, SoundCloud, etc.) instead of showing "Other". Added Bilibili as a dedicated filter tab
 
 ### Fixed
+- **Broken thumbnails in Library** - Fix thumbnails from sites like Bilibili that use HTTP URLs. Thumbnails now gracefully fall back to a placeholder icon if they fail to load
+- **Library not refreshing on page switch** - Library now automatically loads latest downloads when navigating to the page instead of requiring a manual refresh
+
+## [0.8.1] - 2026-02-09
+
+### Fixed
 - **HTTP 416 error on re-download** - Add `--force-overwrites` flag to prevent "Requested range not satisfiable" errors caused by stale `.part` files from interrupted downloads
 - **Settings not applied when adding to queue** - Fix stale closure issue where changing format (Video → Audio) immediately before adding URL would use old settings. Now uses ref to always capture current settings
 - **Library source filter not working** - Fix parameter name mismatch between frontend (`sourceFilter`) and backend (`source`) that caused TikTok, Facebook and other platform filters to show all entries instead of filtered results. Also fix search and count queries to respect active filters
-- **Broken thumbnails in Library** - Fix thumbnails from sites like Bilibili that use HTTP URLs. Thumbnails now gracefully fall back to a placeholder icon if they fail to load
 
 ## [0.8.0] - 2026-02-09
 
