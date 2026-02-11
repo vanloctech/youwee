@@ -54,8 +54,8 @@ const SOURCE_MAP: Record<string, SourceInfo> = {
   },
   bilibili: {
     platform: 'bilibili',
-    faIcon: 'fa-television', // Bilibili not in FA v4
-    color: 'text-pink-400',
+    faIcon: 'fa-play-circle',
+    color: 'text-cyan-500',
     label: 'Bilibili',
   },
   soundcloud: {

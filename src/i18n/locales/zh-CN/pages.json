@@ -185,6 +185,7 @@
       "filterFacebook": "Facebook",
       "filterInstagram": "Instagram",
       "filterTwitter": "Twitter",
+      "filterBilibili": "Bilibili",
       "filterOther": "其他",
       "refresh": "刷新",
       "clear": "清除",
@@ -219,6 +220,7 @@
         "facebook": "Facebook",
         "instagram": "Instagram",
         "twitter": "Twitter",
+        "bilibili": "Bilibili",
         "other": "其他"
       }
     }

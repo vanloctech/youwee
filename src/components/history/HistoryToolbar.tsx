@@ -28,6 +28,7 @@ export function HistoryToolbar() {
     { value: 'facebook', label: t('library.toolbar.filterFacebook') },
     { value: 'instagram', label: t('library.toolbar.filterInstagram') },
     { value: 'twitter', label: t('library.toolbar.filterTwitter') },
+    { value: 'bilibili', label: t('library.toolbar.filterBilibili') },
     { value: 'other', label: t('library.toolbar.filterOther') },
   ];
 

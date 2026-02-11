@@ -255,6 +255,7 @@ export type HistoryFilter =
   | 'facebook'
   | 'instagram'
   | 'twitter'
+  | 'bilibili'
   | 'other';
 export type HistorySort = 'recent' | 'oldest' | 'title' | 'size';
 

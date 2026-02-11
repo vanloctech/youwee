@@ -185,6 +185,7 @@
       "filterFacebook": "Facebook",
       "filterInstagram": "Instagram",
       "filterTwitter": "Twitter",
+      "filterBilibili": "Bilibili",
       "filterOther": "Khác",
       "refresh": "Làm mới",
       "clear": "Xóa",
@@ -219,6 +220,7 @@
         "facebook": "Facebook",
         "instagram": "Instagram",
         "twitter": "Twitter",
+        "bilibili": "Bilibili",
         "other": "Khác"
       }
     }
