@@ -25,7 +25,7 @@
 ## Features
 
 - **Video Downloads** — YouTube, TikTok, Facebook, Instagram, and 1800+ sites
-- **Channel Follow** — Follow YouTube & Bilibili channels, get notified of new videos, auto-download, and manage from system tray
+- **Channel Follow** — Follow YouTube, Bilibili & Youku channels, get notified of new videos, auto-download, and manage from system tray
 - **Metadata Fetcher** — Download video info, descriptions, comments, and thumbnails without the video
 - **Live Stream Support** — Download live streams with dedicated toggle
 - **AI Video Summary** — Summarize videos with Gemini, OpenAI, or Ollama

@@ -14,6 +14,8 @@ use crate::database;
 fn build_fallback_video_url(channel_url: &str, video_id: &str) -> String {
     if channel_url.contains("bilibili.com") || channel_url.contains("b23.tv") {
         format!("https://www.bilibili.com/video/{}", video_id)
+    } else if channel_url.contains("youku.com") {
+        format!("https://v.youku.com/v_show/id_{}.html", video_id)
     } else {
         // Default to YouTube
         format!("https://www.youtube.com/watch?v={}", video_id)

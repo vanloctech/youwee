@@ -1,9 +1,10 @@
 {
   "title": "Kênh",
-  "description": "Theo dõi kênh YouTube & Bilibili và tự động tải video mới",
+  "description": "Theo dõi kênh YouTube, Bilibili & Youku và tự động tải video mới",
   "addChannel": "Thêm kênh",
-  "enterUrl": "Nhập URL kênh (YouTube, Bilibili)",
-  "urlPlaceholder": "https://www.youtube.com/@channel hoặc https://space.bilibili.com/uid",
+  "enterUrl": "Nhập URL kênh (YouTube, Bilibili, Youku)",
+  "urlPlaceholder": "Dán URL kênh vào đây...",
+  "supportedSites": "Hỗ trợ",
   "fetchVideos": "Lấy danh sách video",
   "fetching": "Đang tải...",
   "follow": "Theo dõi",
@@ -61,7 +62,7 @@
   "videoList": "Danh sách video",
   "back": "Quay lại",
   "error": {
-    "invalidUrl": "Vui lòng nhập URL kênh hợp lệ (YouTube hoặc Bilibili)",
+    "invalidUrl": "Vui lòng nhập URL kênh hợp lệ (YouTube, Bilibili hoặc Youku)",
     "fetchFailed": "Không thể tải danh sách video",
     "followFailed": "Không thể theo dõi kênh",
     "alreadyFollowing": "Đã theo dõi kênh này rồi"

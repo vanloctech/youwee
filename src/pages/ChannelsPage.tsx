@@ -88,6 +88,10 @@ function PlatformTag({ platform, size = 'sm' }: { platform: string; size?: 'sm' 
       label: 'Bilibili',
       className: 'bg-sky-500/10 text-sky-500 border-sky-500/20',
     },
+    youku: {
+      label: 'Youku',
+      className: 'bg-blue-500/10 text-blue-500 border-blue-500/20',
+    },
   };
 
   const c = config[platform];
@@ -734,6 +738,14 @@ export function ChannelsPage() {
                 : t('fetchVideos')}
             </span>
           </button>
+        </div>
+
+        {/* Supported platforms hint */}
+        <div className="flex items-center gap-1.5 px-1">
+          <span className="text-[10px] text-muted-foreground/60">{t('supportedSites')}:</span>
+          <PlatformTag platform="youtube" size="xs" />
+          <PlatformTag platform="bilibili" size="xs" />
+          <PlatformTag platform="youku" size="xs" />
         </div>
 
         {/* Settings Bar */}

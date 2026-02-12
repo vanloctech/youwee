@@ -25,7 +25,7 @@
 ## Tính năng
 
 - **Tải Video** — YouTube, TikTok, Facebook, Instagram, và hơn 1800 trang web khác
-- **Theo dõi Kênh** — Theo dõi kênh YouTube & Bilibili, nhận thông báo video mới, tự động tải xuống, và quản lý từ system tray
+- **Theo dõi Kênh** — Theo dõi kênh YouTube, Bilibili & Youku, nhận thông báo video mới, tự động tải xuống, và quản lý từ system tray
 - **Tóm tắt Video bằng AI** — Tóm tắt video với Gemini, OpenAI, hoặc Ollama
 - **Xử lý Video bằng AI** — Chỉnh sửa video bằng ngôn ngữ tự nhiên (cắt, chuyển đổi, thay đổi kích thước, trích xuất âm thanh)
 - **Tải hàng loạt & Playlist** — Tải nhiều video hoặc toàn bộ playlist

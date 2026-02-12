@@ -24,6 +24,7 @@ import { DEFAULT_SPONSORBLOCK_CATEGORIES } from '@/lib/types';
 const SUPPORTED_PLATFORMS = [
   { platform: 'youtube', hosts: ['youtube.com', 'youtu.be'] },
   { platform: 'bilibili', hosts: ['bilibili.com', 'b23.tv'] },
+  { platform: 'youku', hosts: ['youku.com'] },
 ] as const;
 
 export type Platform = (typeof SUPPORTED_PLATFORMS)[number]['platform'] | 'other';
@@ -70,6 +71,16 @@ function extractChannelFromUrl(url: string): string | null {
     if (host === 'space.bilibili.com') {
       const uidMatch = u.pathname.match(/^\/(\d+)/);
       if (uidMatch) return `UID:${uidMatch[1]}`;
+    }
+
+    // Youku patterns: i.youku.com/i/{uid} or youku.com/profile/index/?uid={uid}
+    if (host === 'i.youku.com') {
+      const uidMatch = u.pathname.match(/^\/i\/([^/]+)/);
+      if (uidMatch) return uidMatch[1];
+    }
+    if (host === 'youku.com' && u.pathname.includes('/profile/')) {
+      const uid = u.searchParams.get('uid');
+      if (uid) return uid;
     }
   } catch {
     // not a valid URL

@@ -1,9 +1,10 @@
 {
   "title": "Channels",
-  "description": "Follow YouTube & Bilibili channels and auto-download new videos",
+  "description": "Follow YouTube, Bilibili & Youku channels and auto-download new videos",
   "addChannel": "Add Channel",
-  "enterUrl": "Enter channel URL (YouTube, Bilibili)",
-  "urlPlaceholder": "https://www.youtube.com/@channel or https://space.bilibili.com/uid",
+  "enterUrl": "Enter channel URL (YouTube, Bilibili, Youku)",
+  "urlPlaceholder": "Paste channel URL here...",
+  "supportedSites": "Supported",
   "fetchVideos": "Fetch Videos",
   "fetching": "Fetching videos...",
   "follow": "Follow",
@@ -61,7 +62,7 @@
   "videoList": "Video List",
   "back": "Back",
   "error": {
-    "invalidUrl": "Please enter a valid channel URL (YouTube or Bilibili)",
+    "invalidUrl": "Please enter a valid channel URL (YouTube, Bilibili or Youku)",
     "fetchFailed": "Failed to fetch channel videos",
     "followFailed": "Failed to follow channel",
     "alreadyFollowing": "Already following this channel"
