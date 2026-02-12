@@ -1,3 +1,4 @@
+import { invoke } from '@tauri-apps/api/core';
 import { listen } from '@tauri-apps/api/event';
 import { useEffect, useState } from 'react';
 import { DenoDialog } from '@/components/DenoDialog';
@@ -88,6 +89,12 @@ function AppContent() {
     return () => {
       unlisten.then((fn) => fn());
     };
+  }, []);
+
+  // Sync UI language to system tray on mount
+  useEffect(() => {
+    const lang = localStorage.getItem('i18nextLng') || 'en';
+    invoke('rebuild_tray_menu_cmd', { lang }).catch(() => {});
   }, []);
 
   return (

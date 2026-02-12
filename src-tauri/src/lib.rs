@@ -19,9 +19,13 @@ use tauri::{Manager, Emitter};
 use tauri::tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent};
 use tauri::menu::{MenuBuilder, MenuItemBuilder, SubmenuBuilder};
 use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::Mutex;
 
 /// Whether to hide the dock icon when closing the window (macOS only)
 static HIDE_DOCK_ON_CLOSE: AtomicBool = AtomicBool::new(false);
+
+/// Current UI language for tray menu translations (default: "en")
+static TRAY_LANG: Mutex<String> = Mutex::new(String::new());
 
 /// Show the main window and restore dock icon if needed
 fn show_main_window(app_handle: &tauri::AppHandle) {
@@ -43,7 +47,12 @@ fn set_hide_dock_on_close(hide: bool) {
 
 /// Tauri command: rebuild the system tray menu with current channel info
 #[tauri::command]
-fn rebuild_tray_menu_cmd(app: tauri::AppHandle) {
+fn rebuild_tray_menu_cmd(app: tauri::AppHandle, lang: Option<String>) {
+    if let Some(l) = lang {
+        if let Ok(mut stored) = TRAY_LANG.lock() {
+            *stored = l;
+        }
+    }
     rebuild_tray_menu(&app);
 }
 
@@ -277,16 +286,52 @@ pub fn rebuild_tray_menu(app_handle: &tauri::AppHandle) {
     }
 }
 
+/// Get the stored tray language code
+fn get_tray_lang() -> String {
+    TRAY_LANG.lock().map(|l| l.clone()).unwrap_or_default()
+}
+
+/// Translate a tray menu key based on the current language
+fn tray_text(key: &str) -> &'static str {
+    let lang = get_tray_lang();
+    let lang = if lang.is_empty() || lang.starts_with("en") { "en" } else { lang.as_str() };
+
+    match (lang, key) {
+        // Vietnamese
+        ("vi", "followed_channels") => "Kênh đang theo dõi",
+        ("vi", "no_channels") => "Chưa theo dõi kênh nào",
+        ("vi", "new_suffix") => "mới",
+        ("vi", "check_all") => "Kiểm tra tất cả",
+        ("vi", "open") => "Mở Youwee",
+        ("vi", "quit") => "Thoát",
+        // Chinese
+        ("zh-CN", "followed_channels") => "已关注的频道",
+        ("zh-CN", "no_channels") => "尚未关注任何频道",
+        ("zh-CN", "new_suffix") => "个新视频",
+        ("zh-CN", "check_all") => "立即全部检查",
+        ("zh-CN", "open") => "打开 Youwee",
+        ("zh-CN", "quit") => "退出",
+        // English (default)
+        (_, "followed_channels") => "Followed Channels",
+        (_, "no_channels") => "No channels followed",
+        (_, "new_suffix") => "new",
+        (_, "check_all") => "Check All Now",
+        (_, "open") => "Open Youwee",
+        (_, "quit") => "Quit",
+        _ => "???",
+    }
+}
+
 fn rebuild_tray_menu_inner(app_handle: &tauri::AppHandle) -> Result<(), Box<dyn std::error::Error>> {
     let channels = database::get_followed_channels_db().unwrap_or_default();
     let channel_count = channels.len();
 
     // Build channel submenu
-    let submenu_label = format!("Followed Channels ({})", channel_count);
+    let submenu_label = format!("{} ({})", tray_text("followed_channels"), channel_count);
     let mut submenu = SubmenuBuilder::new(app_handle, &submenu_label);
 
     if channels.is_empty() {
-        let item = MenuItemBuilder::with_id("no_channels", "No channels followed")
+        let item = MenuItemBuilder::with_id("no_channels", tray_text("no_channels"))
             .enabled(false)
             .build(app_handle)?;
         submenu = submenu.item(&item);
@@ -294,7 +339,7 @@ fn rebuild_tray_menu_inner(app_handle: &tauri::AppHandle) -> Result<(), Box<dyn 
         for ch in &channels {
             let count = database::get_new_videos_count_db(Some(ch.id.clone())).unwrap_or(0);
             let label = if count > 0 {
-                format!("{} ({} new)", ch.name, count)
+                format!("{} ({} {})", ch.name, count, tray_text("new_suffix"))
             } else {
                 ch.name.clone()
             };
@@ -307,9 +352,9 @@ fn rebuild_tray_menu_inner(app_handle: &tauri::AppHandle) -> Result<(), Box<dyn 
     let built_submenu = submenu.build()?;
 
     // Build full menu
-    let check_now = MenuItemBuilder::with_id("check_now", "Check All Now").build(app_handle)?;
-    let show = MenuItemBuilder::with_id("show", "Open Youwee").build(app_handle)?;
-    let quit = MenuItemBuilder::with_id("quit", "Quit").build(app_handle)?;
+    let check_now = MenuItemBuilder::with_id("check_now", tray_text("check_all")).build(app_handle)?;
+    let show = MenuItemBuilder::with_id("show", tray_text("open")).build(app_handle)?;
+    let quit = MenuItemBuilder::with_id("quit", tray_text("quit")).build(app_handle)?;
 
     let menu = MenuBuilder::new(app_handle)
         .item(&built_submenu)

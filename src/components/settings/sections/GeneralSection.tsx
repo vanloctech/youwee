@@ -1,3 +1,4 @@
+import { invoke } from '@tauri-apps/api/core';
 import { Check, Database, Moon, Palette, Sun } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import {
@@ -42,6 +43,8 @@ export function GeneralSection({ highlightId }: GeneralSectionProps) {
 
   const handleLanguageChange = (langCode: string) => {
     i18n.changeLanguage(langCode);
+    // Update system tray menu language
+    invoke('rebuild_tray_menu_cmd', { lang: langCode }).catch(() => {});
   };
 
   return (
