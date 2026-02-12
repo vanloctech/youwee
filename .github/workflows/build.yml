@@ -269,14 +269,14 @@ jobs:
           echo "$CHANGELOG_JSON" > CHANGELOG_JSON.txt
           
           # Extract Vietnamese changelog
-          CHANGELOG_VI=$(extract_changelog "CHANGELOG.vi.md")
+          CHANGELOG_VI=$(extract_changelog "docs/CHANGELOG.vi.md")
           if [ -n "$CHANGELOG_VI" ]; then
             CHANGELOG_VI_JSON=$(to_json_safe "$CHANGELOG_VI")
             echo "$CHANGELOG_VI_JSON" > CHANGELOG_VI_JSON.txt
           fi
           
           # Extract Chinese changelog
-          CHANGELOG_ZH=$(extract_changelog "CHANGELOG.zh-CN.md")
+          CHANGELOG_ZH=$(extract_changelog "docs/CHANGELOG.zh-CN.md")
           if [ -n "$CHANGELOG_ZH" ]; then
             CHANGELOG_ZH_JSON=$(to_json_safe "$CHANGELOG_ZH")
             echo "$CHANGELOG_ZH_JSON" > CHANGELOG_ZH_JSON.txt
