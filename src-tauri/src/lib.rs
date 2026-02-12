@@ -205,6 +205,7 @@ pub fn run() {
             match event {
                 // macOS: user clicked dock icon while window is hidden → reopen
                 // (On Windows/Linux this event doesn't fire — users use the system tray instead)
+                #[cfg(target_os = "macos")]
                 tauri::RunEvent::Reopen {
                     has_visible_windows, ..
                 } => {
