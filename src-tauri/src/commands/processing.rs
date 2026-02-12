@@ -1281,7 +1281,10 @@ pub async fn generate_video_preview(
     }
     
     let ffmpeg_path = get_ffmpeg_path(&app).await
-        .ok_or("FFmpeg not found")?;
+        .ok_or_else(|| {
+            log::error!("FFmpeg not found — cannot generate preview for codec '{}'", video_codec);
+            "FFmpeg not found. Please install FFmpeg from the Dependencies tab in Settings.".to_string()
+        })?;
     
     // Create preview directory
     let app_data_dir = app.path().app_data_dir()

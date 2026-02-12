@@ -10,6 +10,9 @@ và dự án tuân theo [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ### Thêm mới
 - **Theo dõi kênh & Tải tự động** - Theo dõi các kênh YouTube, duyệt video, chọn và tải hàng loạt với đầy đủ tùy chọn chất lượng/codec/định dạng. Polling nền phát hiện video mới với thông báo desktop và badge đếm video mới theo kênh. Panel kênh theo dõi thu gọn được, hỗ trợ thu nhỏ xuống system tray
 
+### Sửa lỗi
+- **Trang Xử lý bị trắng màn hình với video 4K VP9/AV1/HEVC (Linux)** - Khi tạo preview thất bại (ví dụ chưa cài FFmpeg), ứng dụng load trực tiếp file video gốc không hỗ trợ vào WebView, khiến WebKitGTK crash. Giờ hiển thị thông báo lỗi thay vì crash, vẫn cho phép xử lý FFmpeg mà không cần xem trước video
+
 ## [0.8.2] - 2026-02-11
 
 ### Thêm mới

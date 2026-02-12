@@ -10,6 +10,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - **Channel Follow & Auto-Download** - Follow YouTube channels, browse their videos, select and batch download with full quality/codec/format controls. Background polling detects new uploads with desktop notifications and per-channel new video badges. Collapsible followed channels panel with system tray close-to-tray support
 
+### Fixed
+- **Processing page white screen on 4K VP9/AV1/HEVC videos (Linux)** - When preview generation failed (e.g. FFmpeg not installed), the app would fall back to loading the raw unsupported video directly into the WebView, crashing WebKitGTK. Now shows an error message instead and still allows FFmpeg command processing without video preview
+
 ## [0.8.2] - 2026-02-11
 
 ### Added

@@ -133,7 +133,7 @@ function loadInitialSettings(): {
         : ['mp4', 'mkv', 'webm'].includes(format)
           ? format
           : 'mp4';
-      const normalizedQuality = isAudioMode ? 'audio' : quality === 'audio' ? 'best' : quality;
+      const normalizedQuality = isAudioMode ? 'audio' : quality;
 
       return {
         quality: normalizedQuality,
@@ -1013,8 +1013,6 @@ export function ChannelsPage() {
                               'w-full flex items-center gap-2.5 p-2.5 rounded-xl transition-all duration-200',
                               'hover:bg-accent/50 cursor-pointer text-left',
                               'border border-transparent',
-                              activeChannel?.id === channel.id &&
-                                'bg-primary/5 border-primary/20 hover:bg-primary/10',
                             )}
                           >
                             <div className="flex-shrink-0 w-9 h-9 rounded-full overflow-hidden bg-muted ring-1 ring-white/[0.08]">

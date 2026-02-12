@@ -214,15 +214,10 @@ export function ProcessingProvider({ children }: { children: ReactNode }) {
   // Helper: load video as blob URL (only used for transcoded preview files)
   const loadVideoAsBlob = useCallback(
     async (filePath: string): Promise<string> => {
-      try {
-        const fileData = await readFile(filePath);
-        const mimeType = getMimeType(filePath);
-        const blob = new Blob([fileData], { type: mimeType });
-        return URL.createObjectURL(blob);
-      } catch (err) {
-        console.error('Failed to load video as blob:', err);
-        return convertFileSrc(filePath);
-      }
+      const fileData = await readFile(filePath);
+      const mimeType = getMimeType(filePath);
+      const blob = new Blob([fileData], { type: mimeType });
+      return URL.createObjectURL(blob);
     },
     [getMimeType],
   );
@@ -318,11 +313,18 @@ export function ProcessingProvider({ children }: { children: ReactNode }) {
               setIsUsingPreview(true);
               addMessage('system', 'Preview ready - output will use original quality');
             } catch (previewErr) {
-              // Fallback: stream the original file directly (no RAM copy)
-              const originalSrc = loadVideoSrc(path);
-              setVideoSrc(originalSrc);
-              setIsUsingPreview(false);
-              addMessage('system', `Preview failed: ${previewErr}`);
+              // Do NOT fall back to the raw file — the original codec is
+              // unsupported and loading it will crash WebKitGTK on Linux
+              // (and possibly cause issues on other platforms too).
+              setVideoError(
+                `Cannot preview this video (${metadata.video_codec} codec). ` +
+                  'Please make sure FFmpeg is installed. ' +
+                  'You can still process the file with FFmpeg commands below.',
+              );
+              addMessage(
+                'system',
+                `Preview generation failed: ${previewErr}. You can still apply FFmpeg commands to this file.`,
+              );
             } finally {
               setIsGeneratingPreview(false);
             }
