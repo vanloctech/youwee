@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.9.0] - 2026-02-12
+
 ### Added
 - **Channel Follow & Auto-Download** - Follow YouTube channels, browse their videos, select and batch download with full quality/codec/format controls. Background polling detects new uploads with desktop notifications and per-channel new video badges. Collapsible followed channels panel with system tray close-to-tray support
 - **Large file preview confirmation** - Configurable file size threshold (default 300MB) that shows a confirmation dialog before loading large videos in Processing. Threshold adjustable in Settings → General → Processing
