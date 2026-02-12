@@ -1,7 +1,9 @@
+mod channels;
 mod connection;
-mod logs;
 mod history;
+mod logs;
 
+pub use channels::*;
 pub use connection::*;
-pub use logs::*;
 pub use history::*;
+pub use logs::*;

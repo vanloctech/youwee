@@ -1281,7 +1281,10 @@ pub async fn generate_video_preview(
     }
     
     let ffmpeg_path = get_ffmpeg_path(&app).await
-        .ok_or("FFmpeg not found")?;
+        .ok_or_else(|| {
+            log::error!("FFmpeg not found — cannot generate preview for codec '{}'", video_codec);
+            "FFmpeg not found. Please install FFmpeg from the Dependencies tab in Settings.".to_string()
+        })?;
     
     // Create preview directory
     let app_data_dir = app.path().app_data_dir()
@@ -1311,7 +1314,9 @@ pub async fn generate_video_preview(
     }));
     
     // Generate preview with FFmpeg
-    // Settings: 720p, H.264, 30fps, fast preset, lower bitrate
+    // Settings: 720p, H.264, 30fps, fast preset, NO AUDIO
+    // Audio is stripped (-an) because GStreamer on some Linux systems cannot
+    // decode AAC audio, flooding avdec_aac errors and crashing the WebProcess.
     let mut cmd = Command::new(&ffmpeg_path);
     cmd.args([
             "-y",
@@ -1321,8 +1326,7 @@ pub async fn generate_video_preview(
             "-preset", "ultrafast",
             "-crf", "28",
             "-r", "30",
-            "-c:a", "aac",
-            "-b:a", "128k",
+            "-an",
             "-movflags", "+faststart",
             preview_path.to_str().unwrap(),
         ])
@@ -1404,4 +1408,127 @@ pub async fn cleanup_previews(app: AppHandle) -> Result<u32, String> {
     }
     
     Ok(count)
+}
+
+/// Generate a static thumbnail image from a video file.
+/// Used as a safe fallback when <video> playback may crash WebKitGTK on Linux.
+#[tauri::command]
+pub async fn generate_video_thumbnail(
+    app: AppHandle,
+    input_path: String,
+) -> Result<String, String> {
+    let ffmpeg_path = get_ffmpeg_path(&app).await
+        .ok_or_else(|| {
+            log::error!("FFmpeg not found — cannot generate thumbnail");
+            "FFmpeg not found. Please install FFmpeg from the Dependencies tab in Settings.".to_string()
+        })?;
+
+    // Create preview directory (reuse the same directory as video previews)
+    let app_data_dir = app.path().app_data_dir()
+        .map_err(|_| "Failed to get app data directory")?;
+    let preview_dir = app_data_dir.join("previews");
+    std::fs::create_dir_all(&preview_dir).ok();
+
+    // Generate unique filename based on input path hash
+    let hash = {
+        use std::collections::hash_map::DefaultHasher;
+        use std::hash::{Hash, Hasher};
+        let mut hasher = DefaultHasher::new();
+        input_path.hash(&mut hasher);
+        hasher.finish()
+    };
+    let thumb_path = preview_dir.join(format!("thumb_{}.jpg", hash));
+
+    // Return cached thumbnail if it exists
+    if thumb_path.exists() {
+        return Ok(thumb_path.to_string_lossy().to_string());
+    }
+
+    // Extract a single frame at 1 second, scale to 720p height, high quality JPEG
+    let mut cmd = Command::new(&ffmpeg_path);
+    cmd.args([
+            "-y",
+            "-ss", "1",
+            "-i", &input_path,
+            "-frames:v", "1",
+            "-vf", "scale=-2:720",
+            "-q:v", "2",
+            thumb_path.to_str().unwrap(),
+        ])
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped());
+    cmd.hide_window();
+    let output = cmd.output().await
+        .map_err(|e| format!("Failed to run FFmpeg: {}", e))?;
+
+    if !output.status.success() {
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        std::fs::remove_file(&thumb_path).ok();
+        return Err(format!("FFmpeg thumbnail failed: {}", stderr));
+    }
+
+    Ok(thumb_path.to_string_lossy().to_string())
+}
+
+/// Generate an audio-only preview from a video file.
+/// Extracts audio as PCM WAV so it can be played via a separate <audio> element
+/// and synced with the silent H.264 <video> preview. WAV/PCM requires no codec
+/// decoding, making it safe on Linux systems where GStreamer AAC decoding crashes.
+#[tauri::command]
+pub async fn generate_audio_preview(
+    app: AppHandle,
+    input_path: String,
+) -> Result<String, String> {
+    let ffmpeg_path = get_ffmpeg_path(&app).await
+        .ok_or_else(|| {
+            log::error!("FFmpeg not found — cannot generate audio preview");
+            "FFmpeg not found. Please install FFmpeg from the Dependencies tab in Settings.".to_string()
+        })?;
+
+    // Create preview directory (reuse the same directory as video/thumbnail previews)
+    let app_data_dir = app.path().app_data_dir()
+        .map_err(|_| "Failed to get app data directory")?;
+    let preview_dir = app_data_dir.join("previews");
+    std::fs::create_dir_all(&preview_dir).ok();
+
+    // Generate unique filename based on input path hash
+    let hash = {
+        use std::collections::hash_map::DefaultHasher;
+        use std::hash::{Hash, Hasher};
+        let mut hasher = DefaultHasher::new();
+        input_path.hash(&mut hasher);
+        hasher.finish()
+    };
+    let audio_path = preview_dir.join(format!("audio_{}.wav", hash));
+
+    // Return cached audio if it exists
+    if audio_path.exists() {
+        return Ok(audio_path.to_string_lossy().to_string());
+    }
+
+    // Extract audio as PCM WAV: mono, 44.1kHz, 16-bit
+    // Mono (-ac 1) halves file size while being fine for preview purposes
+    let mut cmd = Command::new(&ffmpeg_path);
+    cmd.args([
+            "-y",
+            "-i", &input_path,
+            "-vn",
+            "-c:a", "pcm_s16le",
+            "-ar", "44100",
+            "-ac", "1",
+            audio_path.to_str().unwrap(),
+        ])
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped());
+    cmd.hide_window();
+    let output = cmd.output().await
+        .map_err(|e| format!("Failed to run FFmpeg: {}", e))?;
+
+    if !output.status.success() {
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        std::fs::remove_file(&audio_path).ok();
+        return Err(format!("FFmpeg audio preview failed: {}", stderr));
+    }
+
+    Ok(audio_path.to_string_lossy().to_string())
 }

@@ -3,11 +3,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
-import {
-  type SearchableSetting,
-  type SettingsSectionId,
-  searchSettings,
-} from './searchable-settings';
+import { type SearchResult, type SettingsSectionId, searchSettings } from './searchable-settings';
 
 interface SettingsSearchProps {
   onNavigate: (section: SettingsSectionId, settingId: string) => void;
@@ -16,7 +12,7 @@ interface SettingsSearchProps {
 export function SettingsSearch({ onNavigate }: SettingsSearchProps) {
   const { t } = useTranslation('settings');
   const [query, setQuery] = useState('');
-  const [results, setResults] = useState<SearchableSetting[]>([]);
+  const [results, setResults] = useState<SearchResult[]>([]);
   const [isOpen, setIsOpen] = useState(false);
   const [selectedIndex, setSelectedIndex] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -24,7 +20,7 @@ export function SettingsSearch({ onNavigate }: SettingsSearchProps) {
 
   useEffect(() => {
     if (query.trim()) {
-      const searchResults = searchSettings(query);
+      const searchResults = searchSettings(query, t);
       setResults(searchResults);
       setSelectedIndex(0);
       setIsOpen(searchResults.length > 0);
@@ -32,7 +28,7 @@ export function SettingsSearch({ onNavigate }: SettingsSearchProps) {
       setResults([]);
       setIsOpen(false);
     }
-  }, [query]);
+  }, [query, t]);
 
   // Close on click outside
   useEffect(() => {
@@ -46,7 +42,7 @@ export function SettingsSearch({ onNavigate }: SettingsSearchProps) {
   }, []);
 
   const handleSelect = useCallback(
-    (result: SearchableSetting) => {
+    (result: SearchResult) => {
       onNavigate(result.section, result.id);
       setQuery('');
       setIsOpen(false);

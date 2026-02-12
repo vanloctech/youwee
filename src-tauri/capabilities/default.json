@@ -26,6 +26,7 @@
     "fs:allow-app-write-recursive",
     "updater:default",
     "process:allow-restart",
-    "opener:allow-reveal-item-in-dir"
+    "opener:allow-reveal-item-in-dir",
+    "notification:default"
   ]
 }

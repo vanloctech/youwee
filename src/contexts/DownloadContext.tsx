@@ -294,6 +294,24 @@ export function DownloadProvider({ children }: { children: ReactNode }) {
   // Load proxy settings on init
   const [proxySettings, setProxySettings] = useState<ProxySettings>(() => loadProxySettings());
 
+  // Sync cookie/proxy settings to the Rust polling service so background
+  // channel checks can authenticate with Bilibili, YouTube, etc.
+  const syncPollingNetworkConfig = useCallback((cookies: CookieSettings, proxy: ProxySettings) => {
+    const proxyUrl = buildProxyUrl(proxy);
+    invoke('set_polling_network_config', {
+      cookieMode: cookies.mode || null,
+      cookieBrowser: cookies.browser || null,
+      cookieBrowserProfile: cookies.browserProfile || null,
+      cookieFilePath: cookies.filePath || null,
+      proxyUrl: proxyUrl || null,
+    }).catch((e) => console.error('Failed to sync polling network config:', e));
+  }, []);
+
+  // Initial sync on mount
+  useEffect(() => {
+    syncPollingNetworkConfig(loadCookieSettings(), loadProxySettings());
+  }, [syncPollingNetworkConfig]);
+
   const [currentPlaylistInfo, setCurrentPlaylistInfo] = useState<PlaylistInfo | null>(null);
 
   const isDownloadingRef = useRef(false);
@@ -933,21 +951,29 @@ export function DownloadProvider({ children }: { children: ReactNode }) {
     });
   }, []);
 
-  const updateCookieSettings = useCallback((updates: Partial<CookieSettings>) => {
-    setCookieSettings((s) => {
-      const newSettings = { ...s, ...updates };
-      saveCookieSettings(newSettings);
-      return newSettings;
-    });
-  }, []);
+  const updateCookieSettings = useCallback(
+    (updates: Partial<CookieSettings>) => {
+      setCookieSettings((s) => {
+        const newSettings = { ...s, ...updates };
+        saveCookieSettings(newSettings);
+        syncPollingNetworkConfig(newSettings, proxySettings);
+        return newSettings;
+      });
+    },
+    [syncPollingNetworkConfig, proxySettings],
+  );
 
-  const updateProxySettings = useCallback((updates: Partial<ProxySettings>) => {
-    setProxySettings((s) => {
-      const newSettings = { ...s, ...updates };
-      saveProxySettings(newSettings);
-      return newSettings;
-    });
-  }, []);
+  const updateProxySettings = useCallback(
+    (updates: Partial<ProxySettings>) => {
+      setProxySettings((s) => {
+        const newSettings = { ...s, ...updates };
+        saveProxySettings(newSettings);
+        syncPollingNetworkConfig(cookieSettings, newSettings);
+        return newSettings;
+      });
+    },
+    [syncPollingNetworkConfig, cookieSettings],
+  );
 
   const getProxyUrl = useCallback(() => {
     return buildProxyUrl(proxySettings);

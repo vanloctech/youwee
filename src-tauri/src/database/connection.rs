@@ -131,6 +131,77 @@ pub fn init_database(app: &AppHandle) -> Result<(), String> {
     )
     .ok();
 
+    // Create followed_channels table
+    conn.execute(
+        "CREATE TABLE IF NOT EXISTS followed_channels (
+            id TEXT PRIMARY KEY,
+            url TEXT NOT NULL UNIQUE,
+            name TEXT NOT NULL,
+            thumbnail TEXT,
+            platform TEXT NOT NULL DEFAULT 'youtube',
+            last_checked_at TEXT,
+            last_video_id TEXT,
+            check_interval INTEGER NOT NULL DEFAULT 15,
+            auto_download INTEGER NOT NULL DEFAULT 0,
+            download_quality TEXT NOT NULL DEFAULT 'best',
+            download_format TEXT NOT NULL DEFAULT 'mp4',
+            created_at TEXT NOT NULL,
+            filter_min_duration INTEGER,
+            filter_max_duration INTEGER,
+            filter_include_keywords TEXT,
+            filter_exclude_keywords TEXT,
+            filter_max_videos INTEGER,
+            download_threads INTEGER NOT NULL DEFAULT 1
+        )",
+        [],
+    )
+    .map_err(|e| format!("Failed to create followed_channels table: {}", e))?;
+
+    // Create channel_videos table
+    conn.execute(
+        "CREATE TABLE IF NOT EXISTS channel_videos (
+            id TEXT PRIMARY KEY,
+            channel_id TEXT NOT NULL,
+            video_id TEXT NOT NULL,
+            title TEXT NOT NULL,
+            url TEXT NOT NULL,
+            thumbnail TEXT,
+            duration REAL,
+            upload_date TEXT,
+            status TEXT NOT NULL DEFAULT 'new',
+            created_at TEXT NOT NULL,
+            FOREIGN KEY (channel_id) REFERENCES followed_channels(id) ON DELETE CASCADE
+        )",
+        [],
+    )
+    .map_err(|e| format!("Failed to create channel_videos table: {}", e))?;
+
+    // Create channel indexes
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_channel_videos_channel ON channel_videos(channel_id)",
+        [],
+    )
+    .ok();
+
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_channel_videos_status ON channel_videos(status)",
+        [],
+    )
+    .ok();
+
+    conn.execute(
+        "CREATE UNIQUE INDEX IF NOT EXISTS idx_channel_videos_unique ON channel_videos(channel_id, video_id)",
+        [],
+    )
+    .ok();
+
+    // Migration: Add download_threads column if it doesn't exist
+    conn.execute(
+        "ALTER TABLE followed_channels ADD COLUMN download_threads INTEGER NOT NULL DEFAULT 1",
+        [],
+    )
+    .ok();
+
     DB_CONNECTION
         .set(Mutex::new(conn))
         .map_err(|_| "Database already initialized".to_string())?;

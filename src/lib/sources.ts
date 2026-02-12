@@ -58,6 +58,12 @@ const SOURCE_MAP: Record<string, SourceInfo> = {
     color: 'text-cyan-500',
     label: 'Bilibili',
   },
+  youku: {
+    platform: 'other',
+    faIcon: 'fa-play-circle',
+    color: 'text-blue-500',
+    label: 'Youku',
+  },
   soundcloud: {
     platform: 'soundcloud',
     faIcon: 'fa-soundcloud',

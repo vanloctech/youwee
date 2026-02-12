@@ -99,7 +99,17 @@
       "selectVideoHint": "选择一个视频开始编辑",
       "selectVideo": "选择视频",
       "videoError": "视频加载失败",
-      "tryAnother": "尝试其他视频"
+      "tryAnother": "尝试其他视频",
+      "thumbnailFallback": "视频预览失败 — 显示缩略图。请使用 FFmpeg 命令处理。",
+      "thumbnailOnly": "此编解码器无法播放视频 — 请使用 FFmpeg 命令处理"
+    },
+    "previewConfirm": {
+      "title": "大视频文件",
+      "description": "此文件较大。生成视频预览可能需要较长时间并占用额外磁盘空间。",
+      "createPreview": "创建视频预览",
+      "createPreviewHint": "生成可播放预览（耗时更长，占用更多空间）",
+      "thumbnailOnly": "仅显示缩略图",
+      "thumbnailOnlyHint": "更快 — 显示静态帧"
     },
     "historyDialog": {
       "title": "处理历史",

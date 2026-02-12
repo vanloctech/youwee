@@ -9,6 +9,7 @@ import {
   Settings,
   Sparkles,
   Sun,
+  Tv,
   Wand2,
   Youtube,
 } from 'lucide-react';
@@ -21,6 +22,7 @@ import { cn } from '@/lib/utils';
 export type Page =
   | 'youtube'
   | 'universal'
+  | 'channels'
   | 'summary'
   | 'processing'
   | 'metadata'
@@ -49,6 +51,11 @@ const navItems: NavItem[] = [
     id: 'universal',
     labelKey: 'sidebar.universal',
     icon: <Globe className="w-5 h-5" />,
+  },
+  {
+    id: 'channels',
+    labelKey: 'sidebar.channels',
+    icon: <Tv className="w-5 h-5" />,
   },
   {
     id: 'summary',
@@ -157,7 +164,7 @@ export function Sidebar({ currentPage, onPageChange }: SidebarProps) {
                 >
                   <span
                     className={cn(
-                      'flex-shrink-0 transition-all duration-200',
+                      'flex-shrink-0 transition-all duration-200 relative',
                       'group-hover:scale-110',
                       currentPage === item.id && 'drop-shadow-[0_0_8px_hsl(var(--primary)/0.4)]',
                     )}

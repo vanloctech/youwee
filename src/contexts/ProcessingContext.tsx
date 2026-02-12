@@ -25,16 +25,35 @@ import type {
   VideoMetadata,
 } from '@/lib/types';
 
+const PREVIEW_THRESHOLD_KEY = 'youwee-preview-size-threshold';
+const DEFAULT_PREVIEW_THRESHOLD_MB = 300;
+
+export interface PreviewConfirmInfo {
+  filename: string;
+  fileSizeMB: number;
+  codec: string;
+}
+
 interface ProcessingContextValue {
   // Video state
   videoPath: string | null;
   videoSrc: string | null;
+  audioSrc: string | null;
+  thumbnailSrc: string | null;
   videoMetadata: VideoMetadata | null;
   isLoadingVideo: boolean;
   isGeneratingPreview: boolean;
   isUsingPreview: boolean;
   videoError: string | null;
   duration: number;
+
+  // Preview confirm dialog
+  pendingPreviewConfirm: PreviewConfirmInfo | null;
+  confirmPreview: (createPreview: boolean) => void;
+
+  // Settings
+  previewSizeThreshold: number;
+  setPreviewSizeThreshold: (mb: number) => void;
 
   // Timeline
   currentTime: number;
@@ -121,6 +140,8 @@ export function ProcessingProvider({ children }: { children: ReactNode }) {
   // Video state
   const [videoPath, setVideoPath] = useState<string | null>(null);
   const [videoSrc, setVideoSrc] = useState<string | null>(null);
+  const [audioSrc, setAudioSrc] = useState<string | null>(null);
+  const [thumbnailSrc, setThumbnailSrc] = useState<string | null>(null);
   const [videoMetadata, setVideoMetadata] = useState<VideoMetadata | null>(null);
   const [isLoadingVideo, setIsLoadingVideo] = useState(false);
   const [isGeneratingPreview, setIsGeneratingPreview] = useState(false);
@@ -155,6 +176,43 @@ export function ProcessingProvider({ children }: { children: ReactNode }) {
   // Batch
   const [batchFiles, setBatchFiles] = useState<string[]>([]);
 
+  // Preview confirm dialog
+  const [pendingPreviewConfirm, setPendingPreviewConfirm] = useState<PreviewConfirmInfo | null>(
+    null,
+  );
+  const previewConfirmResolverRef = useRef<((createPreview: boolean) => void) | null>(null);
+
+  // Settings
+  const [previewSizeThreshold, setPreviewSizeThresholdState] = useState<number>(() => {
+    try {
+      const saved = localStorage.getItem(PREVIEW_THRESHOLD_KEY);
+      if (saved) return Number(saved);
+    } catch (_e) {
+      // ignore
+    }
+    return DEFAULT_PREVIEW_THRESHOLD_MB;
+  });
+
+  const setPreviewSizeThreshold = useCallback((mb: number) => {
+    setPreviewSizeThresholdState(mb);
+    localStorage.setItem(PREVIEW_THRESHOLD_KEY, String(mb));
+  }, []);
+
+  // Confirm preview dialog: called by dialog buttons to resolve the pending promise
+  const confirmPreview = useCallback((createPreview: boolean) => {
+    previewConfirmResolverRef.current?.(createPreview);
+    previewConfirmResolverRef.current = null;
+    setPendingPreviewConfirm(null);
+  }, []);
+
+  // Helper: ask user whether to create preview for large files
+  const requestPreviewConfirm = useCallback((info: PreviewConfirmInfo): Promise<boolean> => {
+    return new Promise<boolean>((resolve) => {
+      previewConfirmResolverRef.current = resolve;
+      setPendingPreviewConfirm(info);
+    });
+  }, []);
+
   // Refs
   const unlistenRef = useRef<UnlistenFn | null>(null);
 
@@ -177,55 +235,11 @@ export function ProcessingProvider({ children }: { children: ReactNode }) {
     };
   }, []);
 
-  // Helper: get MIME type from file extension
-  const getMimeType = useCallback((filePath: string): string => {
-    const ext = filePath.split('.').pop()?.toLowerCase();
-    switch (ext) {
-      case 'mp4':
-      case 'm4v':
-        return 'video/mp4';
-      case 'webm':
-        return 'video/webm';
-      case 'mkv':
-        return 'video/x-matroska';
-      case 'avi':
-        return 'video/x-msvideo';
-      case 'mov':
-        return 'video/quicktime';
-      case 'wmv':
-        return 'video/x-ms-wmv';
-      case 'flv':
-        return 'video/x-flv';
-      case 'ts':
-      case 'mts':
-        return 'video/mp2t';
-      default:
-        return 'video/mp4';
-    }
-  }, []);
-
   // Helper: load video source URL
-  // Uses convertFileSrc (streaming via asset protocol) as primary approach
-  // Falls back to blob URL only for transcoded preview files
+  // Uses convertFileSrc (streaming via asset protocol) for standard codecs
   const loadVideoSrc = useCallback((filePath: string): string => {
     return convertFileSrc(filePath);
   }, []);
-
-  // Helper: load video as blob URL (only used for transcoded preview files)
-  const loadVideoAsBlob = useCallback(
-    async (filePath: string): Promise<string> => {
-      try {
-        const fileData = await readFile(filePath);
-        const mimeType = getMimeType(filePath);
-        const blob = new Blob([fileData], { type: mimeType });
-        return URL.createObjectURL(blob);
-      } catch (err) {
-        console.error('Failed to load video as blob:', err);
-        return convertFileSrc(filePath);
-      }
-    },
-    [getMimeType],
-  );
 
   // Helper: revoke previous blob URL to prevent memory leak
   const revokePreviousVideoSrc = useCallback((src: string | null) => {
@@ -273,7 +287,10 @@ export function ProcessingProvider({ children }: { children: ReactNode }) {
       setVideoPath(path);
       // Revoke previous blob URL before clearing
       revokePreviousVideoSrc(videoSrc);
+      revokePreviousVideoSrc(thumbnailSrc);
       setVideoSrc(null);
+      setAudioSrc(null);
+      setThumbnailSrc(null);
       setVideoError(null);
       setSelection(null);
       setCurrentTime(0);
@@ -293,36 +310,108 @@ export function ProcessingProvider({ children }: { children: ReactNode }) {
         );
 
         if (hasProblematicCodec) {
-          addMessage('system', `${metadata.filename} - Generating preview...`);
+          // Problematic codecs (VP9, AV1, HEVC, etc.) can crash WebKitGTK on Linux
+          // when loaded into a <video> element due to GStreamer AAC decoding errors.
+          // Strategy: generate H.264 preview WITHOUT audio (-an) + separate WAV audio
+          // + thumbnail as fallback. Video and audio are played via separate elements
+          // and synced with JavaScript. If <video> still crashes, VideoPlayer
+          // auto-falls back to the static thumbnail.
 
-          // Check if preview already exists
-          const existingPreview = await invoke<string | null>('check_preview_exists', {
-            inputPath: path,
-          });
+          // For large files, ask user whether to generate preview (costly in time/space)
+          const fileSizeMB = metadata.file_size / 1_000_000;
+          let shouldGeneratePreview = true;
 
-          if (existingPreview) {
-            // Preview files are small transcoded mp4s, safe to load as blob
-            const previewSrc = await loadVideoAsBlob(existingPreview);
-            setVideoSrc(previewSrc);
-            setIsUsingPreview(true);
-            addMessage('system', 'Preview ready - output will use original quality');
-          } else {
+          if (previewSizeThreshold > 0 && fileSizeMB > previewSizeThreshold) {
+            // Stop showing loading spinner while waiting for user input
+            setIsLoadingVideo(false);
+            shouldGeneratePreview = await requestPreviewConfirm({
+              filename: metadata.filename,
+              fileSizeMB,
+              codec: metadata.video_codec,
+            });
+            setIsLoadingVideo(true);
+          }
+
+          if (shouldGeneratePreview) {
+            addMessage('system', `${metadata.filename} - Generating preview...`);
             setIsGeneratingPreview(true);
             try {
-              const previewPath = await invoke<string>('generate_video_preview', {
-                inputPath: path,
-                videoCodec: metadata.video_codec,
-              });
-              const previewSrc = await loadVideoAsBlob(previewPath);
-              setVideoSrc(previewSrc);
+              // Generate video preview (H.264 no audio), audio preview (WAV),
+              // and thumbnail (JPEG) in parallel
+              const [previewPath, audioPath, thumbPath] = await Promise.all([
+                invoke<string>('generate_video_preview', {
+                  inputPath: path,
+                  videoCodec: metadata.video_codec,
+                }),
+                metadata.has_audio
+                  ? invoke<string>('generate_audio_preview', { inputPath: path })
+                  : Promise.resolve(null),
+                invoke<string>('generate_video_thumbnail', {
+                  inputPath: path,
+                }),
+              ]);
+
+              // Load thumbnail as blob URL (fallback for when <video> fails)
+              const fileData = await readFile(thumbPath);
+              const blob = new Blob([fileData], { type: 'image/jpeg' });
+              const thumbUrl = URL.createObjectURL(blob);
+              setThumbnailSrc(thumbUrl);
+
+              // Load audio preview via asset protocol (streaming, no RAM copy)
+              if (audioPath) {
+                const audioSrcUrl = loadVideoSrc(audioPath);
+                setAudioSrc(audioSrcUrl);
+              }
+
+              // Load H.264 no-audio preview via asset protocol
+              const previewSrcUrl = loadVideoSrc(previewPath);
+              setVideoSrc(previewSrcUrl);
               setIsUsingPreview(true);
-              addMessage('system', 'Preview ready - output will use original quality');
+              addMessage(
+                'system',
+                `${metadata.filename} loaded (preview mode — output will use original quality)`,
+              );
             } catch (previewErr) {
-              // Fallback: stream the original file directly (no RAM copy)
-              const originalSrc = loadVideoSrc(path);
-              setVideoSrc(originalSrc);
-              setIsUsingPreview(false);
-              addMessage('system', `Preview failed: ${previewErr}`);
+              // All generation failed — show error but allow FFmpeg usage
+              setVideoError(
+                `Cannot preview this video (${metadata.video_codec} codec). ` +
+                  'Please make sure FFmpeg is installed. ' +
+                  'You can still process the file with FFmpeg commands below.',
+              );
+              addMessage(
+                'system',
+                `Preview generation failed: ${previewErr}. You can still apply FFmpeg commands to this file.`,
+              );
+            } finally {
+              setIsGeneratingPreview(false);
+            }
+          } else {
+            // User chose thumbnail-only mode for large file
+            addMessage('system', `${metadata.filename} - Generating thumbnail...`);
+            setIsGeneratingPreview(true);
+            try {
+              const thumbPath = await invoke<string>('generate_video_thumbnail', {
+                inputPath: path,
+              });
+              const fileData = await readFile(thumbPath);
+              const blob = new Blob([fileData], { type: 'image/jpeg' });
+              const thumbUrl = URL.createObjectURL(blob);
+              setThumbnailSrc(thumbUrl);
+              setIsUsingPreview(true);
+              addMessage(
+                'system',
+                `${metadata.filename} loaded (thumbnail only — output will use original quality)`,
+              );
+            } catch (thumbErr) {
+              setVideoError(
+                `Cannot preview this video (${metadata.video_codec} codec). ` +
+                  'Please make sure FFmpeg is installed. ' +
+                  'You can still process the file with FFmpeg commands below.',
+              );
+              addMessage(
+                'system',
+                `Thumbnail generation failed: ${thumbErr}. You can still apply FFmpeg commands to this file.`,
+              );
             } finally {
               setIsGeneratingPreview(false);
             }
@@ -342,7 +431,15 @@ export function ProcessingProvider({ children }: { children: ReactNode }) {
         setIsLoadingVideo(false);
       }
     },
-    [addMessage, loadVideoAsBlob, loadVideoSrc, revokePreviousVideoSrc, videoSrc],
+    [
+      addMessage,
+      loadVideoSrc,
+      revokePreviousVideoSrc,
+      videoSrc,
+      thumbnailSrc,
+      previewSizeThreshold,
+      requestPreviewConfirm,
+    ],
   );
 
   // Select video file
@@ -804,6 +901,8 @@ export function ProcessingProvider({ children }: { children: ReactNode }) {
   const reset = useCallback(() => {
     setVideoPath(null);
     setVideoSrc(null);
+    setAudioSrc(null);
+    setThumbnailSrc(null);
     setVideoMetadata(null);
     setVideoError(null);
     setDuration(0);
@@ -825,12 +924,18 @@ export function ProcessingProvider({ children }: { children: ReactNode }) {
       value={{
         videoPath,
         videoSrc,
+        audioSrc,
+        thumbnailSrc,
         videoMetadata,
         isLoadingVideo,
         isGeneratingPreview,
         isUsingPreview,
         videoError,
         duration,
+        pendingPreviewConfirm,
+        confirmPreview,
+        previewSizeThreshold,
+        setPreviewSizeThreshold,
         currentTime,
         selection,
         status,

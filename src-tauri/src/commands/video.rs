@@ -652,7 +652,11 @@ pub async fn get_playlist_entries(
             }
             
             let title = json.get("title").and_then(|v| v.as_str()).unwrap_or("Unknown").to_string();
-            let video_url = format!("https://www.youtube.com/watch?v={}", id);
+            let video_url = json.get("url")
+                .or_else(|| json.get("webpage_url"))
+                .and_then(|v| v.as_str())
+                .map(|s| s.to_string())
+                .unwrap_or_else(|| format!("https://www.youtube.com/watch?v={}", id));
             
             let thumbnail = json.get("thumbnail")
                 .or_else(|| json.get("thumbnails").and_then(|t| t.as_array()).and_then(|arr| arr.first()))
@@ -670,6 +674,10 @@ pub async fn get_playlist_entries(
                 .and_then(|v| v.as_str())
                 .map(|s| s.to_string());
             
+            let upload_date = json.get("upload_date")
+                .and_then(|v| v.as_str())
+                .map(|s| s.to_string());
+            
             entries.push(PlaylistVideoEntry {
                 id,
                 title,
@@ -677,6 +685,7 @@ pub async fn get_playlist_entries(
                 thumbnail,
                 duration,
                 channel,
+                upload_date,
             });
         }
     }

@@ -99,7 +99,17 @@
       "selectVideoHint": "Chọn video để bắt đầu chỉnh sửa",
       "selectVideo": "Chọn Video",
       "videoError": "Không thể tải video",
-      "tryAnother": "Thử video khác"
+      "tryAnother": "Thử video khác",
+      "thumbnailFallback": "Xem trước video thất bại — hiển thị ảnh thu nhỏ. Dùng lệnh FFmpeg để xử lý.",
+      "thumbnailOnly": "Không thể phát video với codec này — dùng lệnh FFmpeg để xử lý"
+    },
+    "previewConfirm": {
+      "title": "File video lớn",
+      "description": "File này khá lớn. Tạo xem trước video có thể mất thời gian và dung lượng.",
+      "createPreview": "Tạo xem trước video",
+      "createPreviewHint": "Tạo video xem trước (lâu hơn, tốn dung lượng hơn)",
+      "thumbnailOnly": "Chỉ hiển thị ảnh thu nhỏ",
+      "thumbnailOnlyHint": "Nhanh hơn — hiển thị một khung hình tĩnh"
     },
     "historyDialog": {
       "title": "Lịch sử xử lý",

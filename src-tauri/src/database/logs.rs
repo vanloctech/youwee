@@ -1,7 +1,7 @@
-use rusqlite::params;
-use chrono::Utc;
-use crate::types::LogEntry;
 use super::{get_db, MAX_LOG_ENTRIES};
+use crate::types::LogEntry;
+use chrono::Utc;
+use rusqlite::params;
 
 /// Add a log entry to the database (internal use)
 pub fn add_log_internal(
@@ -11,24 +11,23 @@ pub fn add_log_internal(
     url: Option<&str>,
 ) -> Result<LogEntry, String> {
     let conn = get_db()?;
-    
+
     let id = uuid::Uuid::new_v4().to_string();
     let timestamp = Utc::now().to_rfc3339();
     let created_at = Utc::now().timestamp();
-    
+
     conn.execute(
         "INSERT INTO logs (id, timestamp, log_type, message, details, url, created_at)
          VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)",
         params![id, timestamp, log_type, message, details, url, created_at],
-    ).map_err(|e| format!("Failed to insert log: {}", e))?;
-    
+    )
+    .map_err(|e| format!("Failed to insert log: {}", e))?;
+
     // Prune old entries if exceeding limit
-    let count: i64 = conn.query_row(
-        "SELECT COUNT(*) FROM logs",
-        [],
-        |row| row.get(0),
-    ).unwrap_or(0);
-    
+    let count: i64 = conn
+        .query_row("SELECT COUNT(*) FROM logs", [], |row| row.get(0))
+        .unwrap_or(0);
+
     if count > MAX_LOG_ENTRIES {
         let to_delete = count - MAX_LOG_ENTRIES;
         conn.execute(
@@ -36,9 +35,10 @@ pub fn add_log_internal(
                 SELECT id FROM logs ORDER BY created_at ASC LIMIT ?1
             )",
             params![to_delete],
-        ).ok();
+        )
+        .ok();
     }
-    
+
     Ok(LogEntry {
         id,
         timestamp,
@@ -56,21 +56,23 @@ pub fn get_logs_from_db(
     limit: Option<i64>,
 ) -> Result<Vec<LogEntry>, String> {
     let conn = get_db()?;
-    
+
     let limit = limit.unwrap_or(100).min(500);
-    
+
     // Build query dynamically
-    let filter_active = filter.as_ref().map(|f| f != "all" && !f.is_empty()).unwrap_or(false);
+    let filter_active = filter
+        .as_ref()
+        .map(|f| f != "all" && !f.is_empty())
+        .unwrap_or(false);
     let search_active = search.as_ref().map(|s| !s.is_empty()).unwrap_or(false);
-    
-    let mut query = String::from(
-        "SELECT id, timestamp, log_type, message, details, url FROM logs WHERE 1=1"
-    );
-    
+
+    let mut query =
+        String::from("SELECT id, timestamp, log_type, message, details, url FROM logs WHERE 1=1");
+
     if filter_active {
         query.push_str(" AND log_type = ?1");
     }
-    
+
     if search_active {
         if filter_active {
             query.push_str(" AND (message LIKE ?2 OR details LIKE ?2 OR url LIKE ?2)");
@@ -78,7 +80,7 @@ pub fn get_logs_from_db(
             query.push_str(" AND (message LIKE ?1 OR details LIKE ?1 OR url LIKE ?1)");
         }
     }
-    
+
     query.push_str(" ORDER BY created_at DESC LIMIT ?");
     // Append correct limit param number
     if filter_active && search_active {
@@ -88,10 +90,11 @@ pub fn get_logs_from_db(
     } else {
         query = query.replace("LIMIT ?", "LIMIT ?1");
     }
-    
-    let mut stmt = conn.prepare(&query)
+
+    let mut stmt = conn
+        .prepare(&query)
         .map_err(|e| format!("Failed to prepare query: {}", e))?;
-    
+
     // Helper to parse row into LogEntry
     fn parse_row(row: &rusqlite::Row) -> rusqlite::Result<LogEntry> {
         Ok(LogEntry {
@@ -103,7 +106,7 @@ pub fn get_logs_from_db(
             url: row.get(5)?,
         })
     }
-    
+
     let logs: Vec<LogEntry> = match (filter_active, search_active) {
         (true, true) => {
             let f = filter.as_ref().unwrap();
@@ -127,14 +130,13 @@ pub fn get_logs_from_db(
                 .filter_map(|r| r.ok())
                 .collect()
         }
-        (false, false) => {
-            stmt.query_map(params![limit], parse_row)
-                .map_err(|e| format!("Query failed: {}", e))?
-                .filter_map(|r| r.ok())
-                .collect()
-        }
+        (false, false) => stmt
+            .query_map(params![limit], parse_row)
+            .map_err(|e| format!("Query failed: {}", e))?
+            .filter_map(|r| r.ok())
+            .collect(),
     };
-    
+
     Ok(logs)
 }
 
@@ -149,6 +151,5 @@ pub fn clear_logs_from_db() -> Result<(), String> {
 /// Export logs as JSON
 pub fn export_logs_from_db() -> Result<String, String> {
     let logs = get_logs_from_db(None, None, Some(MAX_LOG_ENTRIES))?;
-    serde_json::to_string_pretty(&logs)
-        .map_err(|e| format!("Failed to serialize logs: {}", e))
+    serde_json::to_string_pretty(&logs).map_err(|e| format!("Failed to serialize logs: {}", e))
 }

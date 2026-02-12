@@ -99,7 +99,17 @@
       "selectVideoHint": "Select a video to start editing",
       "selectVideo": "Select Video",
       "videoError": "Failed to load video",
-      "tryAnother": "Try another video"
+      "tryAnother": "Try another video",
+      "thumbnailFallback": "Video preview failed — showing thumbnail instead. Use FFmpeg commands to process.",
+      "thumbnailOnly": "Video playback unavailable for this codec — use FFmpeg commands to process"
+    },
+    "previewConfirm": {
+      "title": "Large Video File",
+      "description": "This file is large. Generating a video preview may take a while and use extra disk space.",
+      "createPreview": "Create Video Preview",
+      "createPreviewHint": "Generate playable preview (takes longer, uses more space)",
+      "thumbnailOnly": "Show Thumbnail Only",
+      "thumbnailOnlyHint": "Faster — show a static frame instead"
     },
     "historyDialog": {
       "title": "Processing History",

@@ -236,7 +236,12 @@ export function VideoPreview({ url, onClose, onFormatSelect, className }: VideoP
         {/* Thumbnail */}
         {info.thumbnail && (
           <div className="relative flex-shrink-0 w-40 h-24 rounded-lg overflow-hidden bg-muted">
-            <img src={info.thumbnail} alt={info.title} className="w-full h-full object-cover" />
+            <img
+              src={info.thumbnail}
+              alt={info.title}
+              className="w-full h-full object-cover"
+              referrerPolicy="no-referrer"
+            />
             {info.duration && (
               <div className="absolute bottom-1 right-1 px-1.5 py-0.5 rounded bg-black/80 text-white text-xs font-medium">
                 {formatDuration(info.duration)}

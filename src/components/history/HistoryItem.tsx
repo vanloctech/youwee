@@ -170,6 +170,7 @@ export function HistoryItem({ entry }: HistoryItemProps) {
               className="w-full h-full object-cover"
               loading="lazy"
               onError={() => setThumbError(true)}
+              referrerPolicy="no-referrer"
             />
           ) : (
             <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-muted to-muted/50">

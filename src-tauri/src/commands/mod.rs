@@ -7,6 +7,7 @@ mod ai;
 mod processing;
 mod whisper;
 mod metadata;
+mod channels;
 
 pub use logs::*;
 pub use history::*;
@@ -17,3 +18,4 @@ pub use ai::*;
 pub use processing::*;
 pub use whisper::*;
 pub use metadata::*;
+pub use channels::*;

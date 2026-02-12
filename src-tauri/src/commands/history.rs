@@ -148,12 +148,9 @@ pub async fn open_macos_privacy_settings() -> Result<(), String> {
             .arg("x-apple.systempreferences:com.apple.preference.security?Privacy_AllFiles")
             .spawn()
             .map_err(|e| format!("Failed to open Privacy Settings: {}", e))?;
+        return Ok(());
     }
     
     #[cfg(not(target_os = "macos"))]
-    {
-        return Err("This command is only available on macOS".to_string());
-    }
-    
-    Ok(())
+    Err("This command is only available on macOS".to_string())
 }

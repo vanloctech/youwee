@@ -7,6 +7,7 @@
     "download": "下载",
     "ai": "AI 功能",
     "network": "网络与认证",
+    "system": "系统",
     "about": "关于"
   },
   "search": {
@@ -23,7 +24,12 @@
     "storage": "存储",
     "storageDesc": "管理下载历史",
     "maxHistory": "最大历史记录数",
-    "currentlyStoring": "当前存储 {{count}} 个下载"
+    "currentlyStoring": "当前存储 {{count}} 个下载",
+    "processing": "视频处理",
+    "processingDesc": "视频处理和预览设置",
+    "previewThreshold": "预览大小阈值",
+    "previewThresholdDesc": "对大于此大小的文件生成预览前进行确认",
+    "previewAlways": "始终生成"
   },
   "download": {
     "postProcessing": "后处理",
@@ -209,7 +215,7 @@
   "about": {
     "title": "关于",
     "description": "应用信息",
-    "appDesc": "带有 AI 摘要的现代视频下载器",
+    "appDesc": "全能视频工具箱 — 下载、编辑、频道关注与 AI 摘要",
     "checkingUpdates": "检查更新中...",
     "versionAvailable": "v{{version}} 可用",
     "upToDate": "已是最新",
@@ -223,5 +229,12 @@
     "by": "制作",
     "autoUpdate": "自动检查更新",
     "autoUpdateDesc": "应用启动时检查更新"
+  },
+  "system": {
+    "title": "系统",
+    "titleDesc": "平台相关设置",
+    "hideDockOnClose": "关闭时隐藏 Dock 图标",
+    "hideDockOnCloseDesc": "关闭窗口时从 Dock 中移除应用。使用系统托盘图标重新打开。",
+    "noSettingsForPlatform": "当前平台没有可用的系统设置。"
   }
 }

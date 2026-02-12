@@ -336,6 +336,7 @@ export function ChatPanel({
                               src={att.previewUrl}
                               alt={att.name}
                               className="h-16 w-auto max-w-[100px] object-cover rounded-lg"
+                              referrerPolicy="no-referrer"
                             />
                             <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/60 to-transparent p-1">
                               <span className="text-[10px] text-white/80 truncate block">
@@ -502,6 +503,7 @@ export function ChatPanel({
                     src={img.previewUrl}
                     alt={img.name}
                     className="h-12 w-auto max-w-[80px] object-cover"
+                    referrerPolicy="no-referrer"
                   />
                   <button
                     type="button"

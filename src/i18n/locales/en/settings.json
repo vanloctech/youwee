@@ -7,6 +7,7 @@
     "download": "Download",
     "ai": "AI Features",
     "network": "Network & Auth",
+    "system": "System",
     "about": "About"
   },
   "search": {
@@ -23,7 +24,12 @@
     "storage": "Storage",
     "storageDesc": "Manage download history",
     "maxHistory": "Max history entries",
-    "currentlyStoring": "Currently storing {{count}} downloads"
+    "currentlyStoring": "Currently storing {{count}} downloads",
+    "processing": "Processing",
+    "processingDesc": "Video processing and preview settings",
+    "previewThreshold": "Preview size threshold",
+    "previewThresholdDesc": "Ask before generating video preview for files larger than this size",
+    "previewAlways": "Always"
   },
   "download": {
     "postProcessing": "Post-processing",
@@ -209,7 +215,7 @@
   "about": {
     "title": "About",
     "description": "Application information",
-    "appDesc": "Modern video downloader with AI summaries",
+    "appDesc": "All-in-one video toolkit — download, edit, follow channels & AI summarize",
     "checkingUpdates": "Checking for updates...",
     "versionAvailable": "v{{version}} available",
     "upToDate": "Up to date",
@@ -223,5 +229,12 @@
     "by": "by",
     "autoUpdate": "Auto-check for updates",
     "autoUpdateDesc": "Check for updates when app opens"
+  },
+  "system": {
+    "title": "System",
+    "titleDesc": "Platform-specific settings",
+    "hideDockOnClose": "Hide Dock icon on close",
+    "hideDockOnCloseDesc": "Remove app from Dock when the window is closed. Use the system tray icon to reopen.",
+    "noSettingsForPlatform": "No system settings available for this platform."
   }
 }

@@ -1,3 +1,5 @@
+import { invoke } from '@tauri-apps/api/core';
+import { listen } from '@tauri-apps/api/event';
 import { useEffect, useState } from 'react';
 import { DenoDialog } from '@/components/DenoDialog';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
@@ -7,6 +9,7 @@ import type { Page } from '@/components/layout';
 import { MainLayout } from '@/components/layout';
 import { UpdateDialog } from '@/components/UpdateDialog';
 import { AIProvider } from '@/contexts/AIContext';
+import { ChannelsProvider } from '@/contexts/ChannelsContext';
 import { DependenciesProvider, useDependencies } from '@/contexts/DependenciesContext';
 import { DownloadProvider, useDownload } from '@/contexts/DownloadContext';
 import { HistoryProvider } from '@/contexts/HistoryContext';
@@ -17,6 +20,7 @@ import { ThemeProvider, useTheme } from '@/contexts/ThemeContext';
 import { UniversalProvider } from '@/contexts/UniversalContext';
 import { UpdaterProvider, useUpdater } from '@/contexts/UpdaterContext';
 import {
+  ChannelsPage,
   DownloadPage,
   HistoryPage,
   LogsPage,
@@ -76,6 +80,23 @@ function AppContent() {
     }
   }, [denoStatus, denoSuccess, showDenoDialog]);
 
+  // Navigate to Channels page when a channel is clicked from the system tray
+  useEffect(() => {
+    const unlisten = listen<string>('tray-open-channel', () => {
+      setCurrentPage('channels');
+    });
+
+    return () => {
+      unlisten.then((fn) => fn());
+    };
+  }, []);
+
+  // Sync UI language to system tray on mount
+  useEffect(() => {
+    const lang = localStorage.getItem('i18nextLng') || 'en';
+    invoke('rebuild_tray_menu_cmd', { lang }).catch(() => {});
+  }, []);
+
   return (
     <>
       <MainLayout currentPage={currentPage} onPageChange={setCurrentPage}>
@@ -85,6 +106,7 @@ function AppContent() {
         {currentPage === 'universal' && (
           <UniversalPage onNavigateToSettings={() => setCurrentPage('settings')} />
         )}
+        {currentPage === 'channels' && <ChannelsPage />}
         {currentPage === 'summary' && <SummaryPage />}
         {currentPage === 'processing' && (
           <ErrorBoundary
@@ -138,19 +160,21 @@ export function App() {
       <DependenciesProvider>
         <DownloadProvider>
           <UniversalProvider>
-            <LogProvider>
-              <HistoryProvider>
-                <AIProvider>
-                  <ProcessingProvider>
-                    <MetadataProvider>
-                      <UpdaterWrapper>
-                        <AppContent />
-                      </UpdaterWrapper>
-                    </MetadataProvider>
-                  </ProcessingProvider>
-                </AIProvider>
-              </HistoryProvider>
-            </LogProvider>
+            <ChannelsProvider>
+              <LogProvider>
+                <HistoryProvider>
+                  <AIProvider>
+                    <ProcessingProvider>
+                      <MetadataProvider>
+                        <UpdaterWrapper>
+                          <AppContent />
+                        </UpdaterWrapper>
+                      </MetadataProvider>
+                    </ProcessingProvider>
+                  </AIProvider>
+                </HistoryProvider>
+              </LogProvider>
+            </ChannelsProvider>
           </UniversalProvider>
         </DownloadProvider>
       </DependenciesProvider>

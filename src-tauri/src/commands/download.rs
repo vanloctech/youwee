@@ -888,6 +888,8 @@ fn detect_source(url: &str) -> Option<String> {
         Some("twitter".to_string())
     } else if url.contains("bilibili.com") || url.contains("b23.tv") {
         Some("bilibili".to_string())
+    } else if url.contains("youku.com") {
+        Some("youku".to_string())
     } else {
         Some("other".to_string())
     }

@@ -509,6 +509,7 @@ export function SummaryPage() {
                   src={result.videoInfo.thumbnail}
                   alt=""
                   className="w-28 h-16 object-cover rounded-lg flex-shrink-0"
+                  referrerPolicy="no-referrer"
                 />
               )}
               <div className="flex-1 min-w-0">

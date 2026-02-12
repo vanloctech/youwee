@@ -17,9 +17,9 @@ pub struct VideoInfo {
     pub extractor: Option<String>,
     pub extractor_key: Option<String>,
     // Live stream fields
-    pub is_live: Option<bool>,           // true if currently live streaming
-    pub was_live: Option<bool>,          // true if was a live stream (now ended)
-    pub live_status: Option<String>,     // "is_live", "was_live", "not_live", "is_upcoming"
+    pub is_live: Option<bool>,       // true if currently live streaming
+    pub was_live: Option<bool>,      // true if was a live stream (now ended)
+    pub live_status: Option<String>, // "is_live", "was_live", "not_live", "is_upcoming"
 }
 
 /// Format option from yt-dlp
@@ -56,6 +56,7 @@ pub struct PlaylistVideoEntry {
     pub thumbnail: Option<String>,
     pub duration: Option<f64>,
     pub channel: Option<String>,
+    pub upload_date: Option<String>,
 }
 
 /// Subtitle information

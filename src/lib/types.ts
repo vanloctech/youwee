@@ -215,6 +215,7 @@ export interface PlaylistVideoEntry {
   thumbnail?: string;
   duration?: number;
   channel?: string;
+  upload_date?: string;
 }
 
 // Log types
@@ -568,4 +569,48 @@ export interface YtdlpChannelUpdateInfo {
   current_version: string | null;
   latest_version: string;
   update_available: boolean;
+}
+
+// ============================================
+// Channel Follow & Auto-Download Types
+// ============================================
+
+export interface ChannelInfo {
+  name: string;
+  avatar_url: string | null;
+}
+
+export interface FollowedChannel {
+  id: string;
+  url: string;
+  name: string;
+  thumbnail?: string;
+  platform: string;
+  last_checked_at?: string;
+  last_video_id?: string;
+  check_interval: number; // minutes
+  auto_download: boolean;
+  download_quality: string;
+  download_format: string;
+  created_at: string;
+  // Auto-download filter settings
+  filter_min_duration?: number; // seconds
+  filter_max_duration?: number; // seconds
+  filter_include_keywords?: string; // comma-separated
+  filter_exclude_keywords?: string; // comma-separated
+  filter_max_videos?: number;
+  download_threads: number; // concurrent download threads (default 1)
+}
+
+export interface ChannelVideo {
+  id: string;
+  channel_id: string;
+  video_id: string;
+  title: string;
+  url: string;
+  thumbnail?: string;
+  duration?: number;
+  upload_date?: string;
+  status: 'new' | 'downloaded' | 'skipped' | 'downloading';
+  created_at: string;
 }

@@ -8,22 +8,31 @@ export type SettingsSectionId =
 
 export interface SearchableSetting {
   id: string;
-  label: string;
-  description: string;
+  /** i18n key for the setting label (resolved at search time) */
+  labelKey: string;
+  /** i18n key for the setting description (resolved at search time) */
+  descriptionKey: string;
+  /** English keywords — always searchable regardless of language */
   keywords: string[];
   section: SettingsSectionId;
+}
+
+/** Search result with resolved translated strings */
+export interface SearchResult extends SearchableSetting {
+  label: string;
+  description: string;
 }
 
 export const SEARCHABLE_SETTINGS: SearchableSetting[] = [
   // General Section
   {
     id: 'theme',
-    label: 'Theme',
-    description: 'Choose your preferred color theme',
+    labelKey: 'general.colorTheme',
+    descriptionKey: 'general.appearanceDesc',
     keywords: [
       'color',
       'appearance',
-      'style',
+      'theme',
       'midnight',
       'aurora',
       'sunset',
@@ -35,59 +44,66 @@ export const SEARCHABLE_SETTINGS: SearchableSetting[] = [
   },
   {
     id: 'mode',
-    label: 'Dark/Light Mode',
-    description: 'Switch between dark and light mode',
-    keywords: ['dark', 'light', 'night', 'day', 'appearance'],
+    labelKey: 'general.colorMode',
+    descriptionKey: 'general.colorModeDesc',
+    keywords: ['dark', 'light', 'night', 'day', 'appearance', 'mode'],
     section: 'general',
   },
   {
     id: 'language',
-    label: 'Language',
-    description: 'Change app language',
-    keywords: ['language', 'ngôn ngữ', 'english', 'vietnamese', 'tiếng việt', 'locale', 'i18n'],
+    labelKey: 'common:language.label',
+    descriptionKey: 'common:language.select',
+    keywords: ['language', 'english', 'vietnamese', 'locale', 'i18n'],
     section: 'general',
   },
   {
     id: 'max-history',
-    label: 'Max History Entries',
-    description: 'Limit number of download history entries',
+    labelKey: 'general.maxHistory',
+    descriptionKey: 'general.storageDesc',
     keywords: ['history', 'storage', 'limit', 'entries', 'database'],
+    section: 'general',
+  },
+  {
+    id: 'preview-threshold',
+    labelKey: 'general.previewThreshold',
+    descriptionKey: 'general.previewThresholdDesc',
+    keywords: ['preview', 'threshold', 'size', 'large', 'file', 'processing', 'video', 'confirm'],
     section: 'general',
   },
 
   // Download Section
   {
     id: 'embed-metadata',
-    label: 'Embed Metadata',
-    description: 'Add title, artist, description to files',
+    labelKey: 'download.embedMetadata',
+    descriptionKey: 'download.embedMetadataDesc',
     keywords: ['metadata', 'title', 'artist', 'tags', 'post-processing'],
     section: 'download',
   },
   {
     id: 'embed-thumbnail',
-    label: 'Embed Thumbnail',
-    description: 'Embed video thumbnail as cover art',
+    labelKey: 'download.embedThumbnail',
+    descriptionKey: 'download.embedThumbnailDesc',
     keywords: ['thumbnail', 'cover', 'art', 'image', 'post-processing'],
     section: 'download',
   },
   {
     id: 'live-from-start',
-    label: 'Live From Start',
-    description: 'Download live streams from the beginning',
+    labelKey: 'download.liveFromStart',
+    descriptionKey: 'download.liveFromStartDesc',
     keywords: ['live', 'stream', 'start', 'beginning', 'broadcast'],
     section: 'download',
   },
   {
     id: 'speed-limit',
-    label: 'Speed Limit',
-    description: 'Limit download bandwidth',
+    labelKey: 'download.speedLimit',
+    descriptionKey: 'download.speedLimitDesc',
     keywords: ['speed', 'limit', 'bandwidth', 'rate', 'throttle', 'slow'],
     section: 'download',
   },
   {
     id: 'sponsorblock',
-    label: 'SponsorBlock',
-    description: 'Auto-skip sponsors and promotions',
+    labelKey: 'download.sponsorBlockToggle',
+    descriptionKey: 'download.sponsorBlockToggleDesc',
     keywords: [
       'sponsorblock',
       'sponsor',
@@ -105,29 +121,29 @@ export const SEARCHABLE_SETTINGS: SearchableSetting[] = [
   // Dependencies Section
   {
     id: 'ytdlp',
-    label: 'yt-dlp',
-    description: 'Video download engine',
+    labelKey: 'dependencies.ytdlp',
+    descriptionKey: 'dependencies.videoDownloadEngine',
     keywords: ['ytdlp', 'yt-dlp', 'download', 'engine', 'update', 'version'],
     section: 'dependencies',
   },
   {
     id: 'ffmpeg',
-    label: 'FFmpeg',
-    description: 'Audio/video processing',
+    labelKey: 'dependencies.ffmpeg',
+    descriptionKey: 'dependencies.audioVideoProcessing',
     keywords: ['ffmpeg', 'video', 'audio', 'processing', 'convert', '4k', '8k'],
     section: 'dependencies',
   },
   {
     id: 'bun',
-    label: 'Bun Runtime',
-    description: 'JavaScript runtime for advanced features',
-    keywords: ['bun', 'runtime', 'javascript', 'node', 'speed'],
+    labelKey: 'dependencies.denoRuntime',
+    descriptionKey: 'dependencies.jsRuntimeForYoutube',
+    keywords: ['deno', 'runtime', 'javascript', 'node', 'speed'],
     section: 'dependencies',
   },
   {
     id: 'youtube-troubleshooting',
-    label: 'YouTube Troubleshooting',
-    description: 'Fix YouTube download issues',
+    labelKey: 'dependencies.youtubeTroubleshooting',
+    descriptionKey: 'dependencies.optionsToFixIssues',
     keywords: ['youtube', 'troubleshoot', 'fix', 'error', 'player', 'nsig'],
     section: 'dependencies',
   },
@@ -135,64 +151,64 @@ export const SEARCHABLE_SETTINGS: SearchableSetting[] = [
   // AI Section
   {
     id: 'ai-enabled',
-    label: 'AI Features',
-    description: 'Enable AI-powered video summarization',
+    labelKey: 'ai.enabled',
+    descriptionKey: 'ai.enabledDesc',
     keywords: ['ai', 'artificial', 'intelligence', 'summary', 'smart'],
     section: 'ai',
   },
   {
     id: 'ai-provider',
-    label: 'AI Provider',
-    description: 'Choose AI service provider',
+    labelKey: 'ai.provider',
+    descriptionKey: 'ai.providerDesc',
     keywords: ['provider', 'gemini', 'openai', 'ollama', 'deepseek', 'qwen', 'gpt', 'claude'],
     section: 'ai',
   },
   {
     id: 'ai-api-key',
-    label: 'API Key',
-    description: 'Configure your AI provider API key',
+    labelKey: 'ai.apiKey',
+    descriptionKey: 'ai.enabledDesc',
     keywords: ['api', 'key', 'token', 'secret', 'authentication'],
     section: 'ai',
   },
   {
     id: 'ai-model',
-    label: 'AI Model',
-    description: 'Select AI model for summarization',
+    labelKey: 'ai.model',
+    descriptionKey: 'ai.modelDesc',
     keywords: ['model', 'gpt-4', 'gemini', 'llama', 'mistral'],
     section: 'ai',
   },
   {
     id: 'summary-style',
-    label: 'Summary Style',
-    description: 'Choose summary detail level',
+    labelKey: 'ai.summaryStyle',
+    descriptionKey: 'ai.summaryStyleDesc',
     keywords: ['summary', 'style', 'short', 'concise', 'detailed'],
     section: 'ai',
   },
   {
     id: 'summary-language',
-    label: 'Summary Language',
-    description: 'Language for generated summaries',
+    labelKey: 'ai.summaryLanguage',
+    descriptionKey: 'ai.summaryLanguageDesc',
     keywords: ['language', 'english', 'vietnamese', 'japanese', 'chinese'],
     section: 'ai',
   },
   {
     id: 'transcript-languages',
-    label: 'Transcript Languages',
-    description: 'Preferred languages for video transcripts',
+    labelKey: 'ai.transcriptLanguages',
+    descriptionKey: 'ai.transcriptLanguagesDesc',
     keywords: ['transcript', 'subtitle', 'caption', 'language'],
     section: 'ai',
   },
   {
     id: 'whisper',
-    label: 'Whisper Transcription',
-    description: 'Use OpenAI Whisper for videos without captions',
+    labelKey: 'ai.whisper',
+    descriptionKey: 'ai.whisperDesc',
     keywords: ['whisper', 'transcribe', 'speech', 'audio', 'openai'],
     section: 'ai',
   },
   {
     id: 'ai-timeout',
-    label: 'Generation Timeout',
-    description: 'Maximum time for AI response',
+    labelKey: 'ai.timeout',
+    descriptionKey: 'ai.timeoutDesc',
     keywords: ['timeout', 'time', 'limit', 'seconds', 'minutes'],
     section: 'ai',
   },
@@ -200,22 +216,22 @@ export const SEARCHABLE_SETTINGS: SearchableSetting[] = [
   // Network Section
   {
     id: 'cookie-mode',
-    label: 'Cookie Mode',
-    description: 'Authentication for age-restricted videos',
+    labelKey: 'network.cookieSource',
+    descriptionKey: 'network.cookieSourceDesc',
     keywords: ['cookie', 'auth', 'login', 'age', 'restricted', 'browser'],
     section: 'network',
   },
   {
     id: 'cookie-browser',
-    label: 'Browser for Cookies',
-    description: 'Select browser to extract cookies from',
+    labelKey: 'network.browser',
+    descriptionKey: 'network.videoAuthDesc',
     keywords: ['browser', 'chrome', 'firefox', 'safari', 'edge', 'brave'],
     section: 'network',
   },
   {
     id: 'proxy',
-    label: 'Network Proxy',
-    description: 'Configure proxy for downloads',
+    labelKey: 'network.networkProxy',
+    descriptionKey: 'network.networkProxyDesc',
     keywords: ['proxy', 'http', 'https', 'socks', 'vpn', 'network'],
     section: 'network',
   },
@@ -223,40 +239,63 @@ export const SEARCHABLE_SETTINGS: SearchableSetting[] = [
   // About Section
   {
     id: 'app-version',
-    label: 'App Version',
-    description: 'Current application version',
+    labelKey: 'about.title',
+    descriptionKey: 'about.description',
     keywords: ['version', 'app', 'about', 'info'],
     section: 'about',
   },
   {
     id: 'auto-update',
-    label: 'Auto Check Updates',
-    description: 'Automatically check for app updates',
+    labelKey: 'about.autoUpdate',
+    descriptionKey: 'about.autoUpdateDesc',
     keywords: ['update', 'auto', 'check', 'new', 'version'],
     section: 'about',
   },
   {
     id: 'github',
-    label: 'GitHub Repository',
-    description: 'View source code on GitHub',
+    labelKey: 'about.reportIssue',
+    descriptionKey: 'about.license',
     keywords: ['github', 'source', 'code', 'repository', 'open source'],
     section: 'about',
   },
+
+  // System (in General)
+  {
+    id: 'hide-dock',
+    labelKey: 'system.hideDockOnClose',
+    descriptionKey: 'system.hideDockOnCloseDesc',
+    keywords: ['dock', 'hide', 'close', 'tray', 'macos', 'taskbar', 'system'],
+    section: 'general',
+  },
 ];
 
-export function searchSettings(query: string): SearchableSetting[] {
+/**
+ * Search settings with i18n support.
+ * Matches against translated label/description AND English keywords.
+ * @param query - user search input
+ * @param t - i18next translation function (settings namespace, with cross-namespace support)
+ */
+export function searchSettings(query: string, t: (key: string) => string): SearchResult[] {
   if (!query.trim()) return [];
 
   const lowerQuery = query.toLowerCase();
   const terms = lowerQuery.split(/\s+/).filter(Boolean);
 
-  return SEARCHABLE_SETTINGS.filter((setting) => {
-    const searchText = [setting.label, setting.description, ...setting.keywords]
-      .join(' ')
-      .toLowerCase();
+  const results: SearchResult[] = [];
 
-    return terms.every((term) => searchText.includes(term));
-  });
+  for (const setting of SEARCHABLE_SETTINGS) {
+    const label = t(setting.labelKey);
+    const description = t(setting.descriptionKey);
+
+    // Search against: translated label + translated description + English keywords
+    const searchText = [label, description, ...setting.keywords].join(' ').toLowerCase();
+
+    if (terms.every((term) => searchText.includes(term))) {
+      results.push({ ...setting, label, description });
+    }
+  }
+
+  return results;
 }
 
 export const SECTION_INFO: Record<SettingsSectionId, { label: string; icon: string }> = {

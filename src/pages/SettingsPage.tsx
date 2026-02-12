@@ -847,9 +847,14 @@ function AboutSettingsContent({
             <span className="text-xs text-muted-foreground">{t('about.madeWith')}</span>
             <Heart className="w-3.5 h-3.5 text-red-500 fill-red-500" />
             <span className="text-xs text-muted-foreground">{t('about.by')}</span>
-            <span className="text-xs font-medium bg-gradient-to-r from-red-500 via-yellow-500 to-red-500 bg-clip-text text-transparent">
-              Vietnam
-            </span>
+            <a
+              href="https://github.com/vanloctech"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-sm font-semibold bg-gradient-to-r from-red-500 via-yellow-500 to-red-500 bg-clip-text text-transparent hover:opacity-80 transition-opacity"
+            >
+              vanloctech
+            </a>
           </div>
         </SettingsCard>
 

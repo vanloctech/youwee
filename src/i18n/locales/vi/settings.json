@@ -7,6 +7,7 @@
     "download": "Tải xuống",
     "ai": "Tính năng AI",
     "network": "Mạng & Xác thực",
+    "system": "Hệ thống",
     "about": "Giới thiệu"
   },
   "search": {
@@ -23,7 +24,12 @@
     "storage": "Lưu trữ",
     "storageDesc": "Quản lý lịch sử tải xuống",
     "maxHistory": "Số lượng lịch sử tối đa",
-    "currentlyStoring": "Đang lưu {{count}} bản tải"
+    "currentlyStoring": "Đang lưu {{count}} bản tải",
+    "processing": "Xử lý video",
+    "processingDesc": "Cài đặt xử lý video và xem trước",
+    "previewThreshold": "Ngưỡng kích thước xem trước",
+    "previewThresholdDesc": "Hỏi trước khi tạo xem trước cho file lớn hơn kích thước này",
+    "previewAlways": "Luôn tạo"
   },
   "download": {
     "postProcessing": "Hậu xử lý",
@@ -209,7 +215,7 @@
   "about": {
     "title": "Giới thiệu",
     "description": "Thông tin ứng dụng",
-    "appDesc": "Trình tải video hiện đại với tóm tắt AI",
+    "appDesc": "Bộ công cụ video toàn diện — tải, chỉnh sửa, theo dõi kênh & tóm tắt AI",
     "checkingUpdates": "Đang kiểm tra cập nhật...",
     "versionAvailable": "v{{version}} có sẵn",
     "upToDate": "Đã cập nhật",
@@ -223,5 +229,12 @@
     "by": "bởi",
     "autoUpdate": "Tự động kiểm tra cập nhật",
     "autoUpdateDesc": "Kiểm tra cập nhật khi mở ứng dụng"
+  },
+  "system": {
+    "title": "Hệ thống",
+    "titleDesc": "Cài đặt theo nền tảng",
+    "hideDockOnClose": "Ẩn biểu tượng Dock khi đóng",
+    "hideDockOnCloseDesc": "Xóa ứng dụng khỏi Dock khi đóng cửa sổ. Dùng biểu tượng system tray để mở lại.",
+    "noSettingsForPlatform": "Không có cài đặt hệ thống nào cho nền tảng này."
   }
 }

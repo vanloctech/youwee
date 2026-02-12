@@ -1,4 +1,6 @@
-import { Check, Database, Moon, Palette, Sun } from 'lucide-react';
+import { invoke } from '@tauri-apps/api/core';
+import { Check, Database, Film, Monitor, Moon, Palette, Sun } from 'lucide-react';
+import { useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   Select,
@@ -7,7 +9,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { Switch } from '@/components/ui/switch';
 import { useHistory } from '@/contexts/HistoryContext';
+import { useProcessing } from '@/contexts/ProcessingContext';
 import { useTheme } from '@/contexts/ThemeContext';
 import type { ThemeName } from '@/lib/themes';
 import { themes } from '@/lib/themes';
@@ -19,6 +23,8 @@ const SUPPORTED_LANGUAGES = [
   { code: 'vi', name: 'Tiếng Việt' },
   { code: 'zh-CN', name: '简体中文' },
 ];
+
+const isMacOS = navigator.platform.includes('Mac');
 
 // Gradient backgrounds for theme preview
 const themeGradients: Record<ThemeName, string> = {
@@ -39,9 +45,22 @@ export function GeneralSection({ highlightId }: GeneralSectionProps) {
   const { t } = useTranslation('settings');
   const { theme, setTheme, mode, setMode } = useTheme();
   const { maxEntries, setMaxEntries, totalCount } = useHistory();
+  const { previewSizeThreshold, setPreviewSizeThreshold } = useProcessing();
+
+  const [hideDockOnClose, setHideDockOnClose] = useState(() => {
+    return localStorage.getItem('youwee_hide_dock_on_close') === 'true';
+  });
+
+  const handleToggleHideDock = useCallback((checked: boolean) => {
+    setHideDockOnClose(checked);
+    localStorage.setItem('youwee_hide_dock_on_close', String(checked));
+    invoke('set_hide_dock_on_close', { hide: checked }).catch(() => {});
+  }, []);
 
   const handleLanguageChange = (langCode: string) => {
     i18n.changeLanguage(langCode);
+    // Update system tray menu language
+    invoke('rebuild_tray_menu_cmd', { lang: langCode }).catch(() => {});
   };
 
   return (
@@ -186,6 +205,63 @@ export function GeneralSection({ highlightId }: GeneralSectionProps) {
           </Select>
         </SettingsRow>
       </SettingsSection>
+
+      <SettingsDivider />
+
+      {/* Processing */}
+      <SettingsSection
+        title={t('general.processing')}
+        description={t('general.processingDesc')}
+        icon={<Film className="w-5 h-5 text-white" />}
+        iconClassName="bg-gradient-to-br from-amber-500 to-orange-600 shadow-amber-500/20"
+      >
+        <SettingsRow
+          id="preview-threshold"
+          label={t('general.previewThreshold')}
+          description={t('general.previewThresholdDesc')}
+          highlight={highlightId === 'preview-threshold'}
+        >
+          <Select
+            value={String(previewSizeThreshold)}
+            onValueChange={(v) => setPreviewSizeThreshold(Number.parseInt(v, 10))}
+          >
+            <SelectTrigger className="w-[120px] h-9">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="0">{t('general.previewAlways')}</SelectItem>
+              <SelectItem value="100">100 MB</SelectItem>
+              <SelectItem value="200">200 MB</SelectItem>
+              <SelectItem value="300">300 MB</SelectItem>
+              <SelectItem value="500">500 MB</SelectItem>
+              <SelectItem value="1000">1 GB</SelectItem>
+              <SelectItem value="2000">2 GB</SelectItem>
+            </SelectContent>
+          </Select>
+        </SettingsRow>
+      </SettingsSection>
+
+      {/* System (macOS only) */}
+      {isMacOS && (
+        <>
+          <SettingsDivider />
+          <SettingsSection
+            title={t('system.title')}
+            description={t('system.titleDesc')}
+            icon={<Monitor className="w-5 h-5 text-white" />}
+            iconClassName="bg-gradient-to-br from-slate-500 to-gray-600 shadow-slate-500/20"
+          >
+            <SettingsRow
+              id="hide-dock"
+              label={t('system.hideDockOnClose')}
+              description={t('system.hideDockOnCloseDesc')}
+              highlight={highlightId === 'hide-dock'}
+            >
+              <Switch checked={hideDockOnClose} onCheckedChange={handleToggleHideDock} />
+            </SettingsRow>
+          </SettingsSection>
+        </>
+      )}
     </div>
   );
 }

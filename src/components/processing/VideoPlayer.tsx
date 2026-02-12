@@ -20,6 +20,8 @@ import { cn } from '@/lib/utils';
 
 export interface VideoPlayerProps {
   videoSrc: string | null;
+  audioSrc: string | null;
+  thumbnailSrc: string | null;
   videoPath: string | null;
   metadata: VideoMetadata | null;
   videoError: string | null;
@@ -33,6 +35,8 @@ export interface VideoPlayerProps {
 
 export const VideoPlayer = memo(function VideoPlayer({
   videoSrc,
+  audioSrc,
+  thumbnailSrc,
   videoPath,
   metadata,
   videoError,
@@ -45,13 +49,23 @@ export const VideoPlayer = memo(function VideoPlayer({
 }: VideoPlayerProps) {
   const { t } = useTranslation('pages');
   const videoRef = useRef<HTMLVideoElement>(null);
+  const audioRef = useRef<HTMLAudioElement>(null);
   const hideTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const driftIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const prevVideoSrcRef = useRef<string | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
   const [volume, setVolume] = useState(1);
   const [isMuted, setIsMuted] = useState(false);
   const [showControls, setShowControls] = useState(true);
+  const [videoFailed, setVideoFailed] = useState(false);
+
+  // Reset videoFailed when a new video source is loaded
+  if (videoSrc !== prevVideoSrcRef.current) {
+    prevVideoSrcRef.current = videoSrc;
+    if (videoFailed) setVideoFailed(false);
+  }
 
   // Auto-hide controls after 2.5 seconds of no interaction
   const resetHideTimer = useCallback(() => {
@@ -72,8 +86,73 @@ export const VideoPlayer = memo(function VideoPlayer({
       if (hideTimeoutRef.current) {
         clearTimeout(hideTimeoutRef.current);
       }
+      if (driftIntervalRef.current) {
+        clearInterval(driftIntervalRef.current);
+      }
     };
   }, []);
+
+  // Sync audio element with video element to correct drift
+  // Runs every 500ms while playing, corrects if drift exceeds 0.15s
+  useEffect(() => {
+    if (isPlaying && audioSrc && audioRef.current && videoRef.current) {
+      driftIntervalRef.current = setInterval(() => {
+        const video = videoRef.current;
+        const audio = audioRef.current;
+        if (video && audio && !video.paused && !audio.paused) {
+          const drift = Math.abs(video.currentTime - audio.currentTime);
+          if (drift > 0.15) {
+            audio.currentTime = video.currentTime;
+          }
+        }
+      }, 500);
+    } else {
+      if (driftIntervalRef.current) {
+        clearInterval(driftIntervalRef.current);
+        driftIntervalRef.current = null;
+      }
+    }
+
+    return () => {
+      if (driftIntervalRef.current) {
+        clearInterval(driftIntervalRef.current);
+        driftIntervalRef.current = null;
+      }
+    };
+  }, [isPlaying, audioSrc]);
+
+  // Helper: sync audio to video state (play/pause/seek/volume)
+  const syncAudio = useCallback(
+    (action: 'play' | 'pause' | 'seek' | 'volume' | 'mute', value?: number) => {
+      const audio = audioRef.current;
+      if (!audio || !audioSrc) return;
+
+      switch (action) {
+        case 'play':
+          audio.play().catch(() => {
+            // Autoplay may be blocked; ignore silently
+          });
+          break;
+        case 'pause':
+          audio.pause();
+          break;
+        case 'seek':
+          if (value !== undefined) {
+            audio.currentTime = value;
+          }
+          break;
+        case 'volume':
+          if (value !== undefined) {
+            audio.volume = value;
+          }
+          break;
+        case 'mute':
+          audio.muted = !audio.muted;
+          break;
+      }
+    },
+    [audioSrc],
+  );
 
   // Show controls when paused
   useEffect(() => {
@@ -99,33 +178,45 @@ export const VideoPlayer = memo(function VideoPlayer({
     if (videoRef.current) {
       if (videoRef.current.paused) {
         videoRef.current.play();
+        syncAudio('play');
       } else {
         videoRef.current.pause();
+        syncAudio('pause');
       }
     }
-  }, []);
+  }, [syncAudio]);
 
-  const handleSeek = useCallback((value: number[]) => {
-    if (videoRef.current) {
-      videoRef.current.currentTime = value[0];
-      setCurrentTime(value[0]);
-    }
-  }, []);
+  const handleSeek = useCallback(
+    (value: number[]) => {
+      if (videoRef.current) {
+        videoRef.current.currentTime = value[0];
+        setCurrentTime(value[0]);
+        syncAudio('seek', value[0]);
+      }
+    },
+    [syncAudio],
+  );
 
-  const handleVolumeChange = useCallback((value: number[]) => {
-    if (videoRef.current) {
-      videoRef.current.volume = value[0];
-      setVolume(value[0]);
-      setIsMuted(value[0] === 0);
-    }
-  }, []);
+  const handleVolumeChange = useCallback(
+    (value: number[]) => {
+      const vol = value[0];
+      if (videoRef.current) {
+        videoRef.current.volume = vol;
+      }
+      setVolume(vol);
+      setIsMuted(vol === 0);
+      syncAudio('volume', vol);
+    },
+    [syncAudio],
+  );
 
   const handleToggleMute = useCallback(() => {
     if (videoRef.current) {
       videoRef.current.muted = !videoRef.current.muted;
       setIsMuted(videoRef.current.muted);
     }
-  }, []);
+    syncAudio('mute');
+  }, [syncAudio]);
 
   const formatTime = (seconds: number): string => {
     if (!seconds || !Number.isFinite(seconds)) return '0:00';
@@ -154,21 +245,30 @@ export const VideoPlayer = memo(function VideoPlayer({
           break;
       }
     }
+
+    // If a thumbnail fallback is available, switch to it silently
+    // instead of showing an error (common on Linux with GStreamer issues)
+    if (thumbnailSrc) {
+      setVideoFailed(true);
+      return;
+    }
+
     onVideoError(errorMsg);
-  }, [onVideoError]);
+  }, [onVideoError, thumbnailSrc]);
 
   const videoAspectRatio = metadata ? metadata.width / metadata.height : 16 / 9;
+  const hasMedia = videoSrc || thumbnailSrc;
 
   return (
     <section
       className={cn(
         'relative rounded-xl overflow-hidden w-full',
         'bg-black',
-        !videoSrc && 'aspect-video flex items-center justify-center border border-white/10',
+        !hasMedia && 'aspect-video flex items-center justify-center border border-white/10',
         videoSrc && !showControls && 'cursor-none',
       )}
       style={
-        videoSrc
+        hasMedia
           ? {
               aspectRatio: videoAspectRatio,
               maxHeight: '70vh',
@@ -189,7 +289,7 @@ export const VideoPlayer = memo(function VideoPlayer({
               : t('processing.player.loading')}
           </p>
         </div>
-      ) : videoSrc && !videoError ? (
+      ) : videoSrc && !videoError && !videoFailed ? (
         <>
           <video
             ref={videoRef}
@@ -197,13 +297,30 @@ export const VideoPlayer = memo(function VideoPlayer({
             className="absolute inset-0 w-full h-full object-contain"
             onTimeUpdate={handleTimeUpdate}
             onLoadedMetadata={handleLoadedMetadata}
-            onPlay={() => setIsPlaying(true)}
-            onPause={() => setIsPlaying(false)}
+            onPlay={() => {
+              setIsPlaying(true);
+              syncAudio('play');
+            }}
+            onPause={() => {
+              setIsPlaying(false);
+              syncAudio('pause');
+            }}
+            onEnded={() => {
+              setIsPlaying(false);
+              syncAudio('pause');
+            }}
             onError={handleVideoError}
             onClick={handlePlayPause}
           >
             <track kind="captions" src="data:text/vtt,WEBVTT" srcLang="en" label="English" />
           </video>
+
+          {/* Hidden audio element for synced playback (used when video preview has no audio track) */}
+          {audioSrc && (
+            <audio ref={audioRef} src={audioSrc} preload="auto">
+              <track kind="captions" />
+            </audio>
+          )}
 
           {/* Top bar with video title */}
           <div
@@ -339,6 +456,39 @@ export const VideoPlayer = memo(function VideoPlayer({
             </div>
           </div>
         </>
+      ) : thumbnailSrc && !videoError ? (
+        /* Thumbnail-only mode: static image preview for codecs that crash WebKitGTK */
+        <div className="relative w-full h-full flex items-center justify-center">
+          <img
+            src={thumbnailSrc}
+            alt={videoPath || 'Video thumbnail'}
+            className="absolute inset-0 w-full h-full object-contain"
+          />
+          {/* Overlay with info badge */}
+          <div className="absolute inset-x-0 top-0 p-3 pb-8 bg-gradient-to-b from-black/70 to-transparent">
+            <div className="flex items-center gap-2">
+              {videoPath && (
+                <p className="text-xs text-white/80 font-medium truncate flex-1">
+                  {videoPath.split('/').pop()?.split('\\').pop()}
+                </p>
+              )}
+              {isUsingPreview && (
+                <span className="flex items-center gap-1 px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 text-[10px] font-medium shrink-0">
+                  <Eye className="w-3 h-3" />
+                  Thumbnail
+                </span>
+              )}
+            </div>
+          </div>
+          {/* Bottom info: no playback controls for thumbnail mode */}
+          <div className="absolute inset-x-0 bottom-0 p-3 pt-8 bg-gradient-to-t from-black/70 to-transparent">
+            <p className="text-xs text-white/60 text-center">
+              {videoFailed
+                ? t('processing.player.thumbnailFallback')
+                : t('processing.player.thumbnailOnly')}
+            </p>
+          </div>
+        </div>
       ) : videoError ? (
         <div className="flex flex-col items-center gap-4 text-muted-foreground p-8">
           <div className="w-16 h-16 rounded-full bg-destructive/10 flex items-center justify-center">

@@ -1,7 +1,12 @@
 import { Clock, FileDown, Film, History, Maximize2, Music, Wand2, Zap } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ChatPanel, HistoryDialog, VideoPlayer } from '@/components/processing';
+import {
+  ChatPanel,
+  HistoryDialog,
+  PreviewConfirmDialog,
+  VideoPlayer,
+} from '@/components/processing';
 import { ThemePicker } from '@/components/settings/ThemePicker';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -14,6 +19,8 @@ export function ProcessingPage() {
   const {
     videoPath,
     videoSrc,
+    audioSrc,
+    thumbnailSrc,
     videoMetadata: metadata,
     videoError,
     isLoadingVideo,
@@ -36,6 +43,8 @@ export function ProcessingPage() {
     attachImages,
     removeAttachment,
     clearAttachments,
+    pendingPreviewConfirm,
+    confirmPreview,
   } = useProcessing();
 
   // History dialog
@@ -92,6 +101,8 @@ export function ProcessingPage() {
               {/* Memoized Video Player - no longer receives processing state */}
               <VideoPlayer
                 videoSrc={videoSrc}
+                audioSrc={audioSrc}
+                thumbnailSrc={thumbnailSrc}
                 videoPath={videoPath}
                 metadata={metadata}
                 videoError={videoError}
@@ -181,6 +192,9 @@ export function ProcessingPage() {
           onDelete={deleteJob}
           onClearAll={clearHistory}
         />
+
+        {/* Preview Confirm Dialog for large files */}
+        <PreviewConfirmDialog info={pendingPreviewConfirm} onConfirm={confirmPreview} />
       </div>
     </TooltipProvider>
   );

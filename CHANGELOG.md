@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.9.0] - 2026-02-12
+
+### Added
+- **Channel Follow & Auto-Download** - Follow YouTube channels, browse their videos, select and batch download with full quality/codec/format controls. Background polling detects new uploads with desktop notifications and per-channel new video badges. Collapsible followed channels panel with system tray close-to-tray support
+- **Large file preview confirmation** - Configurable file size threshold (default 300MB) that shows a confirmation dialog before loading large videos in Processing. Threshold adjustable in Settings → General → Processing
+- **i18n-aware Settings search** - Settings search now works in all languages. Searching in Vietnamese (e.g. "giao diện") or Chinese returns matching results. English keywords still work as fallback regardless of language
+
+### Fixed
+- **Processing page white screen on 4K VP9/AV1/HEVC videos (Linux)** - GStreamer's AAC audio decoder crashes WebKitGTK when playing VP9/AV1/HEVC videos. Preview now uses dual-element approach: silent H.264 video + separate WAV audio synced via JavaScript, completely bypassing the broken AAC path. If video playback still fails, auto-falls back to a static JPEG thumbnail. Works across macOS, Windows, and Linux
+
 ## [0.8.2] - 2026-02-11
 
 ### Added
