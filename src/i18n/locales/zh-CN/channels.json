@@ -1,9 +1,9 @@
 {
   "title": "频道",
-  "description": "关注 YouTube 频道并自动下载新视频",
+  "description": "关注 YouTube 和 Bilibili 频道并自动下载新视频",
   "addChannel": "添加频道",
-  "enterUrl": "输入 YouTube 频道 URL",
-  "urlPlaceholder": "https://www.youtube.com/@channel 或频道 URL",
+  "enterUrl": "输入频道 URL（YouTube、Bilibili）",
+  "urlPlaceholder": "https://www.youtube.com/@channel 或 https://space.bilibili.com/uid",
   "fetchVideos": "获取视频",
   "fetching": "正在获取...",
   "follow": "关注",
@@ -11,7 +11,7 @@
   "following": "已关注",
   "followedChannels": "已关注的频道",
   "noChannels": "尚未关注任何频道",
-  "noChannelsDescription": "在上方添加 YouTube 频道 URL 开始使用",
+  "noChannelsDescription": "在上方添加频道 URL 开始使用",
   "videos": "视频",
   "videoCount": "{{count}} 个视频",
   "newVideos": "{{count}} 个新视频",
@@ -61,7 +61,7 @@
   "videoList": "视频列表",
   "back": "返回",
   "error": {
-    "invalidUrl": "请输入有效的 YouTube 频道 URL",
+    "invalidUrl": "请输入有效的频道 URL（YouTube 或 Bilibili）",
     "fetchFailed": "获取频道视频失败",
     "followFailed": "关注频道失败",
     "alreadyFollowing": "已经关注了此频道"

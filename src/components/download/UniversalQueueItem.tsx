@@ -127,6 +127,7 @@ export function UniversalQueueItem({ item, disabled, onRemove }: UniversalQueueI
             )}
             loading="lazy"
             onError={handleThumbError}
+            referrerPolicy="no-referrer"
           />
         ) : isFetchingMeta ? (
           <div className="w-full h-full bg-muted animate-pulse" />

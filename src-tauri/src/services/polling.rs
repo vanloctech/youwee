@@ -1,4 +1,5 @@
 use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
+use std::sync::Mutex;
 use std::process::Stdio;
 use tauri::{AppHandle, Emitter};
 use tauri_plugin_shell::ShellExt;
@@ -6,9 +7,53 @@ use tauri_plugin_shell::process::CommandEvent;
 use tokio::process::Command;
 
 use crate::database;
-use crate::services::get_deno_path;
+use crate::services::{build_cookie_args, get_deno_path};
 use crate::types::{FollowedChannel, ChannelVideo};
 use crate::utils::CommandExt;
+
+/// Cookie/proxy configuration synced from the frontend for background polling.
+#[derive(Clone, Default)]
+pub struct PollingNetworkConfig {
+    pub cookie_mode: Option<String>,
+    pub cookie_browser: Option<String>,
+    pub cookie_browser_profile: Option<String>,
+    pub cookie_file_path: Option<String>,
+    pub proxy_url: Option<String>,
+}
+
+static POLLING_NETWORK_CONFIG: Mutex<PollingNetworkConfig> =
+    Mutex::new(PollingNetworkConfig {
+        cookie_mode: None,
+        cookie_browser: None,
+        cookie_browser_profile: None,
+        cookie_file_path: None,
+        proxy_url: None,
+    });
+
+/// Update the cookie/proxy config used by the background polling loop.
+/// Called from the frontend whenever settings change.
+pub fn set_network_config(config: PollingNetworkConfig) {
+    if let Ok(mut guard) = POLLING_NETWORK_CONFIG.lock() {
+        *guard = config;
+    }
+}
+
+/// Read a snapshot of the current network config.
+fn get_network_config() -> PollingNetworkConfig {
+    POLLING_NETWORK_CONFIG
+        .lock()
+        .map(|g| g.clone())
+        .unwrap_or_default()
+}
+
+/// Build a fallback video URL based on the channel's platform.
+fn build_fallback_video_url(channel_url: &str, video_id: &str) -> String {
+    if channel_url.contains("bilibili.com") || channel_url.contains("b23.tv") {
+        format!("https://www.bilibili.com/video/{}", video_id)
+    } else {
+        format!("https://www.youtube.com/watch?v={}", video_id)
+    }
+}
 
 /// Flag to control polling (stop on app exit)
 pub static POLLING_ACTIVE: AtomicBool = AtomicBool::new(false);
@@ -167,14 +212,20 @@ async fn check_channel_for_new_videos(
     channel: &FollowedChannel,
 ) -> Result<usize, String> {
     let limit = channel.filter_max_videos.unwrap_or(20) as u32;
+    let is_youtube = channel.url.contains("youtube.com") || channel.url.contains("youtu.be");
 
     let mut args = vec![
-        "--flat-playlist".to_string(),
         "--dump-json".to_string(),
         "--no-warnings".to_string(),
         "--socket-timeout".to_string(), "30".to_string(),
         "--playlist-end".to_string(), limit.to_string(),
     ];
+
+    // Only use --flat-playlist for YouTube; other platforms (Bilibili, etc.)
+    // return minimal data in flat mode (no title, thumbnail, duration)
+    if is_youtube {
+        args.push("--flat-playlist".to_string());
+    }
 
     // If we have a last known video, use --break-on-existing for fast incremental check
     if channel.last_video_id.is_some() {
@@ -182,15 +233,30 @@ async fn check_channel_for_new_videos(
     }
 
     // Add Deno runtime for YouTube
-    if channel.url.contains("youtube.com") || channel.url.contains("youtu.be") {
+    if is_youtube {
         if let Some(deno_path) = get_deno_path(app).await {
             args.push("--js-runtimes".to_string());
             args.push(format!("deno:{}", deno_path.to_string_lossy()));
         }
     }
 
-    // Load cookie settings from stored config (we use defaults for background polling)
-    // In the future, per-channel cookie settings could be added
+    // Load cookie/proxy settings synced from the frontend
+    let net = get_network_config();
+    let cookie_args = build_cookie_args(
+        net.cookie_mode.as_deref(),
+        net.cookie_browser.as_deref(),
+        net.cookie_browser_profile.as_deref(),
+        net.cookie_file_path.as_deref(),
+    );
+    args.extend(cookie_args);
+
+    if let Some(proxy) = net.proxy_url.as_ref() {
+        if !proxy.is_empty() {
+            args.push("--proxy".to_string());
+            args.push(proxy.clone());
+        }
+    }
+
     args.push(channel.url.clone());
 
     let args_ref: Vec<&str> = args.iter().map(|s| s.as_str()).collect();
@@ -266,7 +332,7 @@ async fn check_channel_for_new_videos(
                 .or_else(|| json.get("webpage_url"))
                 .and_then(|v| v.as_str())
                 .map(|s| s.to_string())
-                .unwrap_or_else(|| format!("https://www.youtube.com/watch?v={}", id));
+                .unwrap_or_else(|| build_fallback_video_url(&channel.url, &id));
 
             let thumbnail = json.get("thumbnail")
                 .or_else(|| json.get("thumbnails").and_then(|t| t.as_array()).and_then(|arr| arr.first()))
@@ -276,7 +342,9 @@ async fn check_channel_for_new_videos(
                     } else {
                         v.get("url").and_then(|u| u.as_str()).map(|s| s.to_string())
                     }
-                });
+                })
+                // Bilibili thumbnails use http:// which gets blocked as mixed content
+                .map(|u| u.replace("http://", "https://"));
 
             let duration = json.get("duration").and_then(|v| v.as_f64());
             let upload_date = json.get("upload_date")

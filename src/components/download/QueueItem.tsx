@@ -133,6 +133,7 @@ export function QueueItem({ item, showPlaylistBadge, disabled, onRemove }: Queue
               isCompleted && 'opacity-60',
             )}
             loading="lazy"
+            referrerPolicy="no-referrer"
           />
         ) : (
           <div className="w-full h-full flex items-center justify-center bg-muted">

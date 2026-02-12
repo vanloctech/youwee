@@ -37,7 +37,7 @@ import {
 } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
 import type { VideoDownloadState } from '@/contexts/ChannelsContext';
-import { useChannels } from '@/contexts/ChannelsContext';
+import { detectPlatform, isSupportedPlatform, useChannels } from '@/contexts/ChannelsContext';
 import { useDependencies } from '@/contexts/DependenciesContext';
 import type { FollowedChannel, Format, PlaylistVideoEntry, Quality, VideoCodec } from '@/lib/types';
 import { cn } from '@/lib/utils';
@@ -76,6 +76,37 @@ const videoCodecOptions: { value: VideoCodec; label: string }[] = [
 
 // Qualities that require FFmpeg for video+audio merging
 const FFMPEG_REQUIRED_QUALITIES: Quality[] = ['best', '8k', '4k', '2k'];
+
+/** Platform tag to distinguish YouTube / Bilibili channels */
+function PlatformTag({ platform, size = 'sm' }: { platform: string; size?: 'sm' | 'xs' }) {
+  const config: Record<string, { label: string; className: string }> = {
+    youtube: {
+      label: 'YouTube',
+      className: 'bg-red-500/10 text-red-500 border-red-500/20',
+    },
+    bilibili: {
+      label: 'Bilibili',
+      className: 'bg-sky-500/10 text-sky-500 border-sky-500/20',
+    },
+  };
+
+  const c = config[platform];
+  if (!c) return null;
+
+  const sizeClass = size === 'xs' ? 'text-[9px] px-1 py-px' : 'text-[10px] px-1.5 py-0.5';
+
+  return (
+    <span
+      className={cn(
+        'flex-shrink-0 rounded border font-medium leading-none',
+        sizeClass,
+        c.className,
+      )}
+    >
+      {c.label}
+    </span>
+  );
+}
 
 /** Load initial download settings from localStorage (same source as DownloadPage) */
 function loadInitialSettings(): {
@@ -336,6 +367,7 @@ function VideoListItem({
               isCompleted && 'opacity-60',
             )}
             loading="lazy"
+            referrerPolicy="no-referrer"
           />
         ) : (
           <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-muted to-muted/50">
@@ -495,6 +527,7 @@ export function ChannelsPage() {
     setActiveChannel,
     channelNewCounts,
     browseChannelAvatar,
+    browseFetchProgress,
   } = useChannels();
 
   const { ffmpegStatus } = useDependencies();
@@ -557,7 +590,7 @@ export function ChannelsPage() {
   const handleFetch = useCallback(() => {
     const url = urlInput.trim();
     if (!url) return;
-    if (!url.includes('youtube.com') && !url.includes('youtu.be')) {
+    if (!isSupportedPlatform(url)) {
       return;
     }
     setBrowseUrl(url);
@@ -694,7 +727,11 @@ export function ChannelsPage() {
               <Search className="w-4 h-4" />
             )}
             <span className="hidden sm:inline">
-              {browseLoading ? t('fetching') : t('fetchVideos')}
+              {browseLoading
+                ? browseFetchProgress
+                  ? `${browseFetchProgress.fetched}/${browseFetchProgress.limit}`
+                  : t('fetching')
+                : t('fetchVideos')}
             </span>
           </button>
         </div>
@@ -733,13 +770,17 @@ export function ChannelsPage() {
                         src={browseChannelAvatar}
                         alt=""
                         className="w-full h-full object-cover"
+                        referrerPolicy="no-referrer"
                       />
                     ) : (
                       <Tv className="w-5 h-5 text-primary" />
                     )}
                   </div>
                   <div>
-                    <h2 className="font-semibold text-sm leading-tight">{browseChannelName}</h2>
+                    <div className="flex items-center gap-1.5">
+                      <h2 className="font-semibold text-sm leading-tight">{browseChannelName}</h2>
+                      <PlatformTag platform={detectPlatform(browseUrl)} />
+                    </div>
                     <p className="text-xs text-muted-foreground mt-0.5">
                       {t('videoCount', { count: browseVideos.length })}
                     </p>
@@ -862,7 +903,11 @@ export function ChannelsPage() {
             {browseLoading && (
               <div className="flex flex-col items-center justify-center py-16">
                 <Loader2 className="w-8 h-8 animate-spin text-primary mb-3" />
-                <p className="text-sm text-muted-foreground">{t('fetching')}</p>
+                <p className="text-sm text-muted-foreground">
+                  {t('fetching')}
+                  {browseFetchProgress &&
+                    ` (${browseFetchProgress.fetched}/${browseFetchProgress.limit})`}
+                </p>
               </div>
             )}
 
@@ -978,6 +1023,7 @@ export function ChannelsPage() {
                                   src={channel.thumbnail}
                                   alt=""
                                   className="w-full h-full object-cover"
+                                  referrerPolicy="no-referrer"
                                 />
                               ) : (
                                 <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-muted to-muted/50">
@@ -988,6 +1034,7 @@ export function ChannelsPage() {
                             <div className="flex-1 min-w-0">
                               <div className="flex items-center gap-1.5">
                                 <p className="text-xs font-medium truncate">{channel.name}</p>
+                                <PlatformTag platform={channel.platform} size="xs" />
                                 {(channelNewCounts[channel.id] || 0) > 0 && (
                                   <span className="flex-shrink-0 min-w-[18px] h-[18px] px-1 flex items-center justify-center rounded-full bg-primary text-[10px] font-bold text-primary-foreground leading-none">
                                     {channelNewCounts[channel.id] > 99
@@ -1100,8 +1147,10 @@ function ChannelDetailView({ channel, onBack }: { channel: FollowedChannel; onBa
     unfollowChannel,
     updateChannelSettings,
     fetchChannelVideos,
+    clearBrowse,
     browseVideos,
     browseLoading,
+    browseFetchProgress,
     selectedVideoIds,
     toggleVideoSelection,
     selectAllVideos,
@@ -1270,10 +1319,13 @@ function ChannelDetailView({ channel, onBack }: { channel: FollowedChannel; onBa
 
   const pendingCount = selectedVideoIds.size;
 
-  // Auto-fetch on mount
-  useState(() => {
+  // Auto-fetch on mount, clear browse state on unmount (back navigation)
+  useEffect(() => {
     fetchChannelVideos(channel.url);
-  });
+    return () => {
+      clearBrowse();
+    };
+  }, [channel.url, fetchChannelVideos, clearBrowse]);
 
   return (
     <div className="flex-1 flex flex-col overflow-hidden">
@@ -1286,7 +1338,12 @@ function ChannelDetailView({ channel, onBack }: { channel: FollowedChannel; onBa
           <div className="flex items-center gap-2.5">
             <div className="w-8 h-8 rounded-full overflow-hidden bg-muted ring-1 ring-white/[0.08]">
               {channel.thumbnail ? (
-                <img src={channel.thumbnail} alt="" className="w-full h-full object-cover" />
+                <img
+                  src={channel.thumbnail}
+                  alt=""
+                  className="w-full h-full object-cover"
+                  referrerPolicy="no-referrer"
+                />
               ) : (
                 <div className="w-full h-full flex items-center justify-center">
                   <Tv className="w-4 h-4 text-muted-foreground/40" />
@@ -1294,6 +1351,7 @@ function ChannelDetailView({ channel, onBack }: { channel: FollowedChannel; onBa
               )}
             </div>
             <h1 className="text-base sm:text-lg font-semibold">{channel.name}</h1>
+            <PlatformTag platform={channel.platform} />
           </div>
         </div>
         <div className="flex items-center gap-2">
@@ -1528,7 +1586,11 @@ function ChannelDetailView({ channel, onBack }: { channel: FollowedChannel; onBa
         {browseLoading && (
           <div className="flex flex-col items-center justify-center py-16">
             <Loader2 className="w-8 h-8 animate-spin text-primary mb-3" />
-            <p className="text-sm text-muted-foreground">{t('fetching')}</p>
+            <p className="text-sm text-muted-foreground">
+              {t('fetching')}
+              {browseFetchProgress &&
+                ` (${browseFetchProgress.fetched}/${browseFetchProgress.limit})`}
+            </p>
           </div>
         )}
 

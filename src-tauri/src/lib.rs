@@ -194,6 +194,7 @@ pub fn run() {
             commands::get_new_videos_count,
             commands::update_channel_last_checked,
             commands::update_channel_info,
+            commands::set_polling_network_config,
             // System commands
             set_hide_dock_on_close,
             rebuild_tray_menu_cmd,

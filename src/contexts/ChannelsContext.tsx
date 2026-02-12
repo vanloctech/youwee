@@ -19,18 +19,58 @@ import type {
 } from '@/lib/types';
 import { DEFAULT_SPONSORBLOCK_CATEGORIES } from '@/lib/types';
 
-/** Extract a readable channel name from a YouTube URL */
+/** Supported platform definitions for channel detection.
+ *  Easily extensible — add a new entry to support more platforms. */
+const SUPPORTED_PLATFORMS = [
+  { platform: 'youtube', hosts: ['youtube.com', 'youtu.be'] },
+  { platform: 'bilibili', hosts: ['bilibili.com', 'b23.tv'] },
+] as const;
+
+export type Platform = (typeof SUPPORTED_PLATFORMS)[number]['platform'] | 'other';
+
+/** Detect which platform a URL belongs to */
+export function detectPlatform(url: string): Platform {
+  try {
+    const hostname = new URL(url).hostname.replace(/^www\./, '');
+    for (const { platform, hosts } of SUPPORTED_PLATFORMS) {
+      if (hosts.some((h) => hostname === h || hostname.endsWith(`.${h}`))) {
+        return platform;
+      }
+    }
+  } catch {
+    // invalid URL
+  }
+  return 'other';
+}
+
+/** Check if a URL is a supported channel platform */
+function isSupportedPlatform(url: string): boolean {
+  return detectPlatform(url) !== 'other';
+}
+
+/** Extract a readable channel name from a URL */
 function extractChannelFromUrl(url: string): string | null {
   try {
     const u = new URL(url);
-    const atMatch = u.pathname.match(/^\/@([^/]+)/);
-    if (atMatch) return `@${atMatch[1]}`;
-    const channelMatch = u.pathname.match(/^\/channel\/([^/]+)/);
-    if (channelMatch) return channelMatch[1];
-    const cMatch = u.pathname.match(/^\/c\/([^/]+)/);
-    if (cMatch) return cMatch[1];
-    const userMatch = u.pathname.match(/^\/user\/([^/]+)/);
-    if (userMatch) return userMatch[1];
+    const host = u.hostname.replace(/^www\./, '');
+
+    // YouTube patterns: /@handle, /channel/ID, /c/name, /user/name
+    if (host === 'youtube.com' || host === 'youtu.be') {
+      const atMatch = u.pathname.match(/^\/@([^/]+)/);
+      if (atMatch) return `@${atMatch[1]}`;
+      const channelMatch = u.pathname.match(/^\/channel\/([^/]+)/);
+      if (channelMatch) return channelMatch[1];
+      const cMatch = u.pathname.match(/^\/c\/([^/]+)/);
+      if (cMatch) return cMatch[1];
+      const userMatch = u.pathname.match(/^\/user\/([^/]+)/);
+      if (userMatch) return userMatch[1];
+    }
+
+    // Bilibili patterns: space.bilibili.com/{uid}
+    if (host === 'space.bilibili.com') {
+      const uidMatch = u.pathname.match(/^\/(\d+)/);
+      if (uidMatch) return `UID:${uidMatch[1]}`;
+    }
   } catch {
     // not a valid URL
   }
@@ -125,6 +165,7 @@ interface ChannelsContextType {
   browseError: string | null;
   browseChannelName: string | null;
   browseChannelAvatar: string | null;
+  browseFetchProgress: { fetched: number; limit: number } | null;
   fetchChannelVideos: (url: string, limit?: number) => Promise<void>;
   clearBrowse: () => void;
 
@@ -171,6 +212,12 @@ export function ChannelsProvider({ children }: { children: ReactNode }) {
   const [browseError, setBrowseError] = useState<string | null>(null);
   const [browseChannelName, setBrowseChannelName] = useState<string | null>(null);
   const [browseChannelAvatar, setBrowseChannelAvatar] = useState<string | null>(null);
+
+  // Fetch progress (for non-flat-playlist platforms like Bilibili)
+  const [browseFetchProgress, setBrowseFetchProgress] = useState<{
+    fetched: number;
+    limit: number;
+  } | null>(null);
 
   // Selection state
   const [selectedVideoIds, setSelectedVideoIds] = useState<Set<string>>(new Set());
@@ -350,7 +397,7 @@ export function ChannelsProvider({ children }: { children: ReactNode }) {
         url,
         name,
         thumbnail: thumbnail || null,
-        platform: 'youtube',
+        platform: detectPlatform(url),
       });
       await refreshChannels();
 
@@ -417,13 +464,19 @@ export function ChannelsProvider({ children }: { children: ReactNode }) {
   );
 
   // Fetch videos from a channel URL (browse mode)
+  // Request ID ref to detect stale responses from concurrent/cancelled fetches
+  const fetchRequestIdRef = useRef(0);
+
   const fetchChannelVideos = useCallback(
     async (url: string, limit = 50) => {
+      const requestId = ++fetchRequestIdRef.current;
+
       setBrowseLoading(true);
       setBrowseError(null);
       setBrowseVideos([]);
       setBrowseChannelName(null);
       setBrowseChannelAvatar(null);
+      setBrowseFetchProgress(null);
       setSelectedVideoIds(new Set());
       setVideoStates(new Map());
 
@@ -453,15 +506,28 @@ export function ChannelsProvider({ children }: { children: ReactNode }) {
           }).catch(() => null), // Don't fail if channel info fetch fails
         ]);
 
+        // Discard stale response if a newer fetch was triggered
+        if (requestId !== fetchRequestIdRef.current) return;
+
         setBrowseVideos(videos);
 
         // Use channel info from dedicated command, fallback to video metadata
-        if (channelInfo) {
+        // Treat "Channel" (the Rust default) as a failure so we can use better fallbacks
+        const hasValidChannelInfo = channelInfo?.name && channelInfo.name !== 'Channel';
+
+        if (hasValidChannelInfo) {
           setBrowseChannelName(channelInfo.name);
           setBrowseChannelAvatar(channelInfo.avatar_url);
-        } else if (videos.length > 0) {
-          const name = videos[0].channel || extractChannelFromUrl(url) || 'Channel';
-          setBrowseChannelName(name);
+        } else {
+          // Fallback: use video metadata or URL-based extraction
+          if (videos.length > 0) {
+            const name = videos[0].channel || extractChannelFromUrl(url) || 'Channel';
+            setBrowseChannelName(name);
+          }
+          // Use channelInfo avatar if available (even when name was bad)
+          if (channelInfo?.avatar_url) {
+            setBrowseChannelAvatar(channelInfo.avatar_url);
+          }
         }
 
         // If this channel is already followed, sync videos to DB and load statuses
@@ -484,6 +550,9 @@ export function ChannelsProvider({ children }: { children: ReactNode }) {
               statusMap.set(sv.video_id, sv.status);
             }
 
+            // Discard if stale (another fetch started while syncing)
+            if (requestId !== fetchRequestIdRef.current) return;
+
             // Apply DB statuses to videoStates
             setVideoStates((prev) => {
               const next = new Map(prev);
@@ -500,10 +569,16 @@ export function ChannelsProvider({ children }: { children: ReactNode }) {
           }
         }
       } catch (error) {
+        // Discard stale error
+        if (requestId !== fetchRequestIdRef.current) return;
         const msg = error instanceof Error ? error.message : String(error);
         setBrowseError(msg);
       } finally {
-        setBrowseLoading(false);
+        // Only update loading state if this is still the current request
+        if (requestId === fetchRequestIdRef.current) {
+          setBrowseLoading(false);
+          setBrowseFetchProgress(null);
+        }
       }
     },
     [getCookieSettings, getProxyUrl, syncVideosToDb, refreshChannelNewCounts],
@@ -671,7 +746,7 @@ export function ChannelsProvider({ children }: { children: ReactNode }) {
             historyId: null,
             title: video.title || null,
             thumbnail: video.thumbnail || null,
-            source: 'youtube',
+            source: detectPlatform(browseUrl) || 'youtube',
           });
         } catch (error) {
           const msg = error instanceof Error ? error.message : String(error);
@@ -839,15 +914,28 @@ export function ChannelsProvider({ children }: { children: ReactNode }) {
             },
           );
 
-          // Update if name or avatar changed
-          const avatarChanged = (info.avatar_url || null) !== (ch.thumbnail || null);
-          const nameChanged = info.name !== ch.name;
+          // Update if name or avatar changed, but guard against overwriting
+          // good values with bad fallback defaults (e.g. "Channel" / null)
+          const fetchedNameIsBad = !info.name || info.name === 'Channel';
+          const storedNameIsGood = ch.name && ch.name !== 'Channel';
+
+          // Don't overwrite a good name with the generic fallback
+          if (fetchedNameIsBad && storedNameIsGood) {
+            continue;
+          }
+
+          const newName = fetchedNameIsBad ? ch.name : info.name;
+          // Keep existing avatar if the new one is null
+          const newAvatar = info.avatar_url || ch.thumbnail || null;
+
+          const nameChanged = newName !== ch.name;
+          const avatarChanged = (newAvatar || null) !== (ch.thumbnail || null);
 
           if (nameChanged || avatarChanged) {
             await invoke('update_channel_info', {
               id: ch.id,
-              name: info.name,
-              thumbnail: info.avatar_url || null,
+              name: newName,
+              thumbnail: newAvatar,
             });
             updated = true;
           }
@@ -892,6 +980,20 @@ export function ChannelsProvider({ children }: { children: ReactNode }) {
       unlisten.then((fn) => fn());
     };
   }, [refreshChannels]);
+
+  // Listen for fetch progress events (non-flat-playlist platforms)
+  useEffect(() => {
+    const unlisten = listen<{ fetched: number; limit: number }>(
+      'channel-fetch-progress',
+      (event) => {
+        setBrowseFetchProgress(event.payload);
+      },
+    );
+
+    return () => {
+      unlisten.then((fn) => fn());
+    };
+  }, []);
 
   // Listen for tray menu channel clicks — navigate to the clicked channel
   useEffect(() => {
@@ -1050,6 +1152,7 @@ export function ChannelsProvider({ children }: { children: ReactNode }) {
         browseError,
         browseChannelName,
         browseChannelAvatar,
+        browseFetchProgress,
         fetchChannelVideos,
         clearBrowse,
         selectedVideoIds,
@@ -1084,3 +1187,5 @@ export function useChannels() {
   }
   return context;
 }
+
+export { isSupportedPlatform };
