@@ -158,7 +158,7 @@ pub async fn transcribe_url_with_whisper(
         &url,
     ];
     
-    let result = run_ytdlp_with_stderr_and_cookies(
+    let _result = run_ytdlp_with_stderr_and_cookies(
         &app,
         &download_args,
         cookie_mode.as_deref(),
@@ -170,8 +170,8 @@ pub async fn transcribe_url_with_whisper(
     
     #[cfg(debug_assertions)]
     {
-        if !result.stderr.is_empty() {
-            println!("[WHISPER] yt-dlp stderr: {}", result.stderr);
+        if !_result.stderr.is_empty() {
+            println!("[WHISPER] yt-dlp stderr: {}", _result.stderr);
         }
     }
     

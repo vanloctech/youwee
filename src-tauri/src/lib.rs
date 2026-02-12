@@ -201,7 +201,7 @@ pub fn run() {
         ])
         .build(tauri::generate_context!())
         .expect("error while building tauri application")
-        .run(|app_handle, event| {
+        .run(|_app_handle, event| {
             match event {
                 // macOS: user clicked dock icon while window is hidden → reopen
                 // (On Windows/Linux this event doesn't fire — users use the system tray instead)
@@ -210,7 +210,7 @@ pub fn run() {
                     has_visible_windows, ..
                 } => {
                     if !has_visible_windows {
-                        show_main_window(app_handle);
+                        show_main_window(_app_handle);
                     }
                 }
                 tauri::RunEvent::ExitRequested { .. } => {
