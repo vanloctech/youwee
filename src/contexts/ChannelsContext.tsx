@@ -151,7 +151,17 @@ interface ChannelsContextType {
   followedChannels: FollowedChannel[];
   loadingChannels: boolean;
   refreshChannels: () => Promise<void>;
-  followChannel: (url: string, name: string, thumbnail?: string) => Promise<string>;
+  followChannel: (
+    url: string,
+    name: string,
+    thumbnail?: string,
+    downloadSettings?: {
+      quality: string;
+      format: string;
+      videoCodec: string;
+      audioBitrate: string;
+    },
+  ) => Promise<string>;
   unfollowChannel: (id: string) => Promise<void>;
   refreshFollowedChannelInfo: () => Promise<void>;
   updateChannelSettings: (settings: {
@@ -160,6 +170,8 @@ interface ChannelsContextType {
     autoDownload: boolean;
     downloadQuality: string;
     downloadFormat: string;
+    downloadVideoCodec?: string;
+    downloadAudioBitrate?: string;
     filterMinDuration?: number | null;
     filterMaxDuration?: number | null;
     filterIncludeKeywords?: string | null;
@@ -403,12 +415,26 @@ export function ChannelsProvider({ children }: { children: ReactNode }) {
 
   // Follow a channel
   const followChannel = useCallback(
-    async (url: string, name: string, thumbnail?: string) => {
+    async (
+      url: string,
+      name: string,
+      thumbnail?: string,
+      downloadSettings?: {
+        quality: string;
+        format: string;
+        videoCodec: string;
+        audioBitrate: string;
+      },
+    ) => {
       const id = await invoke<string>('follow_channel', {
         url,
         name,
         thumbnail: thumbnail || null,
         platform: detectPlatform(url),
+        downloadQuality: downloadSettings?.quality || 'best',
+        downloadFormat: downloadSettings?.format || 'mp4',
+        downloadVideoCodec: downloadSettings?.videoCodec || 'h264',
+        downloadAudioBitrate: downloadSettings?.audioBitrate || '192',
       });
       await refreshChannels();
 
@@ -449,6 +475,8 @@ export function ChannelsProvider({ children }: { children: ReactNode }) {
       autoDownload: boolean;
       downloadQuality: string;
       downloadFormat: string;
+      downloadVideoCodec?: string;
+      downloadAudioBitrate?: string;
       filterMinDuration?: number | null;
       filterMaxDuration?: number | null;
       filterIncludeKeywords?: string | null;
@@ -462,6 +490,8 @@ export function ChannelsProvider({ children }: { children: ReactNode }) {
         autoDownload: settings.autoDownload,
         downloadQuality: settings.downloadQuality,
         downloadFormat: settings.downloadFormat,
+        downloadVideoCodec: settings.downloadVideoCodec ?? 'h264',
+        downloadAudioBitrate: settings.downloadAudioBitrate ?? '192',
         filterMinDuration: settings.filterMinDuration ?? null,
         filterMaxDuration: settings.filterMaxDuration ?? null,
         filterIncludeKeywords: settings.filterIncludeKeywords ?? null,
@@ -1028,9 +1058,19 @@ export function ChannelsProvider({ children }: { children: ReactNode }) {
       channel_name: string;
       quality: string;
       format: string;
+      video_codec: string;
+      audio_bitrate: string;
       download_threads: number;
     }>('channel-auto-download', async (event) => {
-      const { channel_id, channel_name, quality, format, download_threads } = event.payload;
+      const {
+        channel_id,
+        channel_name,
+        quality,
+        format,
+        video_codec,
+        audio_bitrate,
+        download_threads,
+      } = event.payload;
 
       try {
         const newVideos = await invoke<ChannelVideo[]>('get_saved_channel_videos', {
@@ -1084,8 +1124,8 @@ export function ChannelsProvider({ children }: { children: ReactNode }) {
               quality,
               format,
               downloadPlaylist: false,
-              videoCodec: 'h264',
-              audioBitrate: '192',
+              videoCodec: video_codec,
+              audioBitrate: audio_bitrate,
               playlistLimit: null,
               subtitleMode: 'off',
               subtitleLangs: '',

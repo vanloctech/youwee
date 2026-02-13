@@ -29,6 +29,8 @@ pub struct FollowedChannel {
     pub filter_exclude_keywords: Option<String>, // comma-separated
     pub filter_max_videos: Option<i64>,          // max videos per check
     pub download_threads: i64,                   // concurrent download threads (default 1)
+    pub download_video_codec: String,            // video codec (h264, vp9, av1, auto)
+    pub download_audio_bitrate: String,          // audio bitrate (128, 192, 256, 320, auto)
 }
 
 /// A video belonging to a followed channel

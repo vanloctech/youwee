@@ -631,13 +631,28 @@ export function ChannelsPage() {
     try {
       const thumbnail =
         browseChannelAvatar || (browseVideos.length > 0 ? browseVideos[0].thumbnail : undefined);
-      await followChannel(browseUrl, browseChannelName, thumbnail ?? undefined);
+      await followChannel(browseUrl, browseChannelName, thumbnail ?? undefined, {
+        quality: isAudioMode ? 'audio' : quality,
+        format,
+        videoCodec,
+        audioBitrate: '192',
+      });
     } catch (error) {
       console.error('Follow failed:', error);
     } finally {
       setFollowingUrl(false);
     }
-  }, [browseUrl, browseChannelName, browseChannelAvatar, browseVideos, followChannel]);
+  }, [
+    browseUrl,
+    browseChannelName,
+    browseChannelAvatar,
+    browseVideos,
+    followChannel,
+    quality,
+    format,
+    videoCodec,
+    isAudioMode,
+  ]);
 
   const isAlreadyFollowing = followedChannels.some(
     (c) => c.url === browseUrl || c.url === urlInput.trim(),
@@ -1199,6 +1214,22 @@ function ChannelDetailView({ channel, onBack }: { channel: FollowedChannel; onBa
   const [settingsDownloadThreads, setSettingsDownloadThreads] = useState(
     channel.download_threads || 1,
   );
+  const [settingsDownloadQuality, setSettingsDownloadQuality] = useState(
+    channel.download_quality || 'best',
+  );
+  const [settingsDownloadFormat, setSettingsDownloadFormat] = useState(
+    channel.download_format || 'mp4',
+  );
+  const [settingsDownloadVideoCodec, setSettingsDownloadVideoCodec] = useState(
+    channel.download_video_codec || 'h264',
+  );
+  const [settingsDownloadAudioBitrate, setSettingsDownloadAudioBitrate] = useState(
+    channel.download_audio_bitrate || '192',
+  );
+  const [settingsIsAudioMode, setSettingsIsAudioMode] = useState(
+    channel.download_quality === 'audio' ||
+      ['mp3', 'm4a', 'opus'].includes(channel.download_format),
+  );
   const [savingSettings, setSavingSettings] = useState(false);
 
   // Reset settings form when channel changes
@@ -1217,6 +1248,14 @@ function ChannelDetailView({ channel, onBack }: { channel: FollowedChannel; onBa
       channel.filter_max_videos != null ? String(channel.filter_max_videos) : '20',
     );
     setSettingsDownloadThreads(channel.download_threads || 1);
+    setSettingsDownloadQuality(channel.download_quality || 'best');
+    setSettingsDownloadFormat(channel.download_format || 'mp4');
+    setSettingsDownloadVideoCodec(channel.download_video_codec || 'h264');
+    setSettingsDownloadAudioBitrate(channel.download_audio_bitrate || '192');
+    setSettingsIsAudioMode(
+      channel.download_quality === 'audio' ||
+        ['mp3', 'm4a', 'opus'].includes(channel.download_format),
+    );
   }, [channel]);
 
   const handleSaveSettings = useCallback(async () => {
@@ -1226,8 +1265,10 @@ function ChannelDetailView({ channel, onBack }: { channel: FollowedChannel; onBa
         id: channel.id,
         checkInterval: Math.max(5, settingsCheckInterval),
         autoDownload: settingsAutoDownload,
-        downloadQuality: channel.download_quality,
-        downloadFormat: channel.download_format,
+        downloadQuality: settingsIsAudioMode ? 'audio' : settingsDownloadQuality,
+        downloadFormat: settingsDownloadFormat,
+        downloadVideoCodec: settingsDownloadVideoCodec,
+        downloadAudioBitrate: settingsDownloadAudioBitrate,
         filterMinDuration: settingsFilterMinDuration ? Number(settingsFilterMinDuration) : null,
         filterMaxDuration: settingsFilterMaxDuration ? Number(settingsFilterMaxDuration) : null,
         filterIncludeKeywords: settingsFilterIncludeKeywords || null,
@@ -1243,10 +1284,13 @@ function ChannelDetailView({ channel, onBack }: { channel: FollowedChannel; onBa
     }
   }, [
     channel.id,
-    channel.download_quality,
-    channel.download_format,
     settingsCheckInterval,
     settingsAutoDownload,
+    settingsDownloadQuality,
+    settingsDownloadFormat,
+    settingsDownloadVideoCodec,
+    settingsDownloadAudioBitrate,
+    settingsIsAudioMode,
     settingsFilterMinDuration,
     settingsFilterMaxDuration,
     settingsFilterIncludeKeywords,
@@ -1446,6 +1490,129 @@ function ChannelDetailView({ channel, onBack }: { channel: FollowedChannel; onBa
                   }
                   className="w-16 h-9 text-sm bg-background/50 border-border/50"
                 />
+              </div>
+            </div>
+
+            {/* Divider */}
+            <div className="h-px bg-gradient-to-r from-transparent via-border/40 to-transparent" />
+
+            {/* Download Settings */}
+            <div className="space-y-3">
+              <Label className="text-sm font-medium">{t('downloadSettings')}</Label>
+              <div className="flex items-center gap-4 flex-wrap">
+                {/* Video / Audio toggle */}
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSettingsIsAudioMode(false);
+                      setSettingsDownloadQuality('best');
+                      setSettingsDownloadFormat('mp4');
+                    }}
+                    className={cn(
+                      'px-3 h-8 rounded-md text-xs font-medium transition-colors',
+                      !settingsIsAudioMode
+                        ? 'bg-primary text-primary-foreground'
+                        : 'bg-muted/50 text-muted-foreground hover:text-foreground',
+                    )}
+                  >
+                    {t('videoMode')}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSettingsIsAudioMode(true);
+                      setSettingsDownloadQuality('audio');
+                      setSettingsDownloadFormat('mp3');
+                    }}
+                    className={cn(
+                      'px-3 h-8 rounded-md text-xs font-medium transition-colors',
+                      settingsIsAudioMode
+                        ? 'bg-primary text-primary-foreground'
+                        : 'bg-muted/50 text-muted-foreground hover:text-foreground',
+                    )}
+                  >
+                    {t('audioMode')}
+                  </button>
+                </div>
+
+                {/* Quality */}
+                {!settingsIsAudioMode && (
+                  <div className="flex items-center gap-1.5">
+                    <Label className="text-xs text-muted-foreground">{t('quality')}</Label>
+                    <select
+                      value={settingsDownloadQuality}
+                      onChange={(e) => setSettingsDownloadQuality(e.target.value)}
+                      className="h-8 px-2 rounded-md text-xs bg-background/50 border border-border/50"
+                    >
+                      <option value="best">Best</option>
+                      <option value="4k">4K</option>
+                      <option value="2k">2K</option>
+                      <option value="1080">1080p</option>
+                      <option value="720">720p</option>
+                      <option value="480">480p</option>
+                    </select>
+                  </div>
+                )}
+
+                {/* Format */}
+                <div className="flex items-center gap-1.5">
+                  <Label className="text-xs text-muted-foreground">{t('format')}</Label>
+                  <select
+                    value={settingsDownloadFormat}
+                    onChange={(e) => setSettingsDownloadFormat(e.target.value)}
+                    className="h-8 px-2 rounded-md text-xs bg-background/50 border border-border/50"
+                  >
+                    {settingsIsAudioMode ? (
+                      <>
+                        <option value="mp3">MP3</option>
+                        <option value="m4a">M4A</option>
+                        <option value="opus">Opus</option>
+                      </>
+                    ) : (
+                      <>
+                        <option value="mp4">MP4</option>
+                        <option value="mkv">MKV</option>
+                        <option value="webm">WebM</option>
+                      </>
+                    )}
+                  </select>
+                </div>
+
+                {/* Video Codec (video mode only) */}
+                {!settingsIsAudioMode && (
+                  <div className="flex items-center gap-1.5">
+                    <Label className="text-xs text-muted-foreground">{t('codec')}</Label>
+                    <select
+                      value={settingsDownloadVideoCodec}
+                      onChange={(e) => setSettingsDownloadVideoCodec(e.target.value)}
+                      className="h-8 px-2 rounded-md text-xs bg-background/50 border border-border/50"
+                    >
+                      <option value="h264">H.264</option>
+                      <option value="vp9">VP9</option>
+                      <option value="av1">AV1</option>
+                      <option value="auto">Auto</option>
+                    </select>
+                  </div>
+                )}
+
+                {/* Audio Bitrate (audio mode only) */}
+                {settingsIsAudioMode && (
+                  <div className="flex items-center gap-1.5">
+                    <Label className="text-xs text-muted-foreground">{t('audioBitrate')}</Label>
+                    <select
+                      value={settingsDownloadAudioBitrate}
+                      onChange={(e) => setSettingsDownloadAudioBitrate(e.target.value)}
+                      className="h-8 px-2 rounded-md text-xs bg-background/50 border border-border/50"
+                    >
+                      <option value="128">128 kbps</option>
+                      <option value="192">192 kbps</option>
+                      <option value="256">256 kbps</option>
+                      <option value="320">320 kbps</option>
+                      <option value="auto">Auto</option>
+                    </select>
+                  </div>
+                )}
               </div>
             </div>
 

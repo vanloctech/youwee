@@ -536,9 +536,17 @@ pub async fn follow_channel(
     name: String,
     thumbnail: Option<String>,
     platform: Option<String>,
+    download_quality: Option<String>,
+    download_format: Option<String>,
+    download_video_codec: Option<String>,
+    download_audio_bitrate: Option<String>,
 ) -> Result<String, String> {
     let platform = platform.unwrap_or_else(|| "youtube".to_string());
-    database::follow_channel_db(url, name, thumbnail, platform)
+    let download_quality = download_quality.unwrap_or_else(|| "best".to_string());
+    let download_format = download_format.unwrap_or_else(|| "mp4".to_string());
+    let download_video_codec = download_video_codec.unwrap_or_else(|| "h264".to_string());
+    let download_audio_bitrate = download_audio_bitrate.unwrap_or_else(|| "192".to_string());
+    database::follow_channel_db(url, name, thumbnail, platform, download_quality, download_format, download_video_codec, download_audio_bitrate)
 }
 
 /// Unfollow a channel
@@ -561,6 +569,8 @@ pub async fn update_channel_settings(
     auto_download: bool,
     download_quality: String,
     download_format: String,
+    download_video_codec: Option<String>,
+    download_audio_bitrate: Option<String>,
     filter_min_duration: Option<i64>,
     filter_max_duration: Option<i64>,
     filter_include_keywords: Option<String>,
@@ -574,6 +584,8 @@ pub async fn update_channel_settings(
         auto_download,
         download_quality,
         download_format,
+        download_video_codec.unwrap_or_else(|| "h264".to_string()),
+        download_audio_bitrate.unwrap_or_else(|| "192".to_string()),
         filter_min_duration,
         filter_max_duration,
         filter_include_keywords,

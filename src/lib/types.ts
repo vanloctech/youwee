@@ -600,6 +600,8 @@ export interface FollowedChannel {
   filter_exclude_keywords?: string; // comma-separated
   filter_max_videos?: number;
   download_threads: number; // concurrent download threads (default 1)
+  download_video_codec: string; // video codec (h264, vp9, av1, auto)
+  download_audio_bitrate: string; // audio bitrate (128, 192, 256, 320, auto)
 }
 
 export interface ChannelVideo {
