@@ -1327,28 +1327,57 @@ fn format_time(seconds: f64) -> String {
     format!("{:02}:{:02}:{:02}.{:03}", hrs, mins, secs, ms)
 }
 
-/// Check if a codec requires preview transcoding
-fn needs_preview_transcode(codec: &str) -> bool {
-    let unsupported_codecs = ["vp9", "vp8", "av1", "hevc", "h265", "theora"];
+/// Check if a video needs preview transcoding based on codec and container format.
+/// WebKit (macOS WKWebView, Linux WebKitGTK) only supports a limited set of
+/// container formats (MP4, MOV, M4V) and codecs natively.
+fn needs_preview_transcode(codec: &str, container_format: &str) -> bool {
     let codec_lower = codec.to_lowercase();
-    unsupported_codecs.iter().any(|c| codec_lower.contains(c))
+    let format_lower = container_format.to_lowercase();
+    
+    // Step 1: Check container format.
+    // WebKit only supports MP4/MOV/M4V containers reliably.
+    // ffprobe returns format_name like "mov,mp4,m4a,3gp,3g2,mj2" for MP4 files.
+    let has_supported_container = format_lower.contains("mp4")
+        || format_lower.contains("mov")
+        || format_lower.contains("m4v")
+        || format_lower.contains("m4a")
+        || format_lower.contains("3gp");
+    
+    if !has_supported_container {
+        log::info!("[PREVIEW] Container '{}' not natively supported by WebKit — preview needed", container_format);
+        return true;
+    }
+    
+    // Step 2: Check codec within a supported container.
+    // HEVC: natively supported on macOS (AVFoundation), but NOT on Linux (WebKitGTK/GStreamer).
+    #[cfg(target_os = "macos")]
+    let problematic_codecs = ["vp9", "vp8", "av1", "theora"];
+    #[cfg(not(target_os = "macos"))]
+    let problematic_codecs = ["vp9", "vp8", "av1", "hevc", "h265", "theora"];
+    
+    let has_problematic_codec = problematic_codecs.iter().any(|c| codec_lower.contains(c));
+    if has_problematic_codec {
+        log::info!("[PREVIEW] Codec '{}' not natively supported — preview needed", codec);
+    }
+    has_problematic_codec
 }
 
-/// Generate a preview video file for unsupported codecs
+/// Generate a preview video file for unsupported codecs/containers
 #[tauri::command]
 pub async fn generate_video_preview(
     app: AppHandle,
     input_path: String,
     video_codec: String,
+    container_format: String,
 ) -> Result<String, String> {
     // Check if preview is needed
-    if !needs_preview_transcode(&video_codec) {
-        return Err("Preview not needed for this codec".to_string());
+    if !needs_preview_transcode(&video_codec, &container_format) {
+        return Err("Preview not needed for this codec/container".to_string());
     }
     
     let ffmpeg_path = get_ffmpeg_path(&app).await
         .ok_or_else(|| {
-            log::error!("FFmpeg not found — cannot generate preview for codec '{}'", video_codec);
+            log::error!("[PREVIEW] FFmpeg not found — cannot generate preview for codec '{}' in '{}'", video_codec, container_format);
             "FFmpeg not found. Please install FFmpeg from the Dependencies tab in Settings.".to_string()
         })?;
     
@@ -1370,8 +1399,11 @@ pub async fn generate_video_preview(
     
     // Check if preview already exists
     if preview_path.exists() {
+        log::info!("[PREVIEW] Cache hit: {}", preview_path.display());
         return Ok(preview_path.to_string_lossy().to_string());
     }
+    
+    log::info!("[PREVIEW] Generating preview for '{}' (codec={}, container={})", input_path, video_codec, container_format);
     
     // Emit progress start
     let _ = app.emit("preview-progress", serde_json::json!({
@@ -1406,8 +1438,11 @@ pub async fn generate_video_preview(
         let stderr = String::from_utf8_lossy(&output.stderr);
         // Clean up failed preview
         std::fs::remove_file(&preview_path).ok();
+        log::error!("[PREVIEW] FFmpeg failed for '{}': {}", input_path, stderr);
         return Err(format!("FFmpeg failed: {}", stderr));
     }
+    
+    log::info!("[PREVIEW] Preview generated: {}", preview_path.display());
     
     // Emit progress complete
     let _ = app.emit("preview-progress", serde_json::json!({
@@ -1507,8 +1542,11 @@ pub async fn generate_video_thumbnail(
 
     // Return cached thumbnail if it exists
     if thumb_path.exists() {
+        log::info!("[THUMBNAIL] Cache hit: {}", thumb_path.display());
         return Ok(thumb_path.to_string_lossy().to_string());
     }
+
+    log::info!("[THUMBNAIL] Generating thumbnail for '{}'", input_path);
 
     // Extract a single frame at 1 second, scale to 720p height, high quality JPEG
     let mut cmd = Command::new(&ffmpeg_path);
@@ -1530,9 +1568,11 @@ pub async fn generate_video_thumbnail(
     if !output.status.success() {
         let stderr = String::from_utf8_lossy(&output.stderr);
         std::fs::remove_file(&thumb_path).ok();
+        log::error!("[THUMBNAIL] FFmpeg failed for '{}': {}", input_path, stderr);
         return Err(format!("FFmpeg thumbnail failed: {}", stderr));
     }
 
+    log::info!("[THUMBNAIL] Generated: {}", thumb_path.display());
     Ok(thumb_path.to_string_lossy().to_string())
 }
 
@@ -1569,8 +1609,11 @@ pub async fn generate_audio_preview(
 
     // Return cached audio if it exists
     if audio_path.exists() {
+        log::info!("[AUDIO_PREVIEW] Cache hit: {}", audio_path.display());
         return Ok(audio_path.to_string_lossy().to_string());
     }
+
+    log::info!("[AUDIO_PREVIEW] Generating audio preview for '{}'", input_path);
 
     // Extract audio as PCM WAV: mono, 44.1kHz, 16-bit
     // Mono (-ac 1) halves file size while being fine for preview purposes
@@ -1593,8 +1636,10 @@ pub async fn generate_audio_preview(
     if !output.status.success() {
         let stderr = String::from_utf8_lossy(&output.stderr);
         std::fs::remove_file(&audio_path).ok();
+        log::error!("[AUDIO_PREVIEW] FFmpeg failed for '{}': {}", input_path, stderr);
         return Err(format!("FFmpeg audio preview failed: {}", stderr));
     }
 
+    log::info!("[AUDIO_PREVIEW] Generated: {}", audio_path.display());
     Ok(audio_path.to_string_lossy().to_string())
 }

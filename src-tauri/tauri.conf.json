@@ -24,7 +24,11 @@
       }
     ],
     "security": {
-      "csp": "default-src 'self' asset: https://asset.localhost; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src * data: blob:; media-src * data: blob:; connect-src 'self' ipc: tauri: http://ipc.localhost https: http:; font-src 'self' data:"
+      "csp": "default-src 'self' asset: https://asset.localhost; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src * asset: data: blob:; media-src * asset: data: blob:; connect-src 'self' ipc: tauri: http://ipc.localhost https: http:; font-src 'self' data:",
+      "assetProtocol": {
+        "enable": true,
+        "scope": ["$HOME/**", "$APPDATA/**", "$TEMP/**"]
+      }
     }
   },
   "bundle": {

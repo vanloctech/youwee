@@ -303,15 +303,31 @@ export function ProcessingProvider({ children }: { children: ReactNode }) {
         const metadata = await invoke<VideoMetadata>('get_video_metadata', { path });
         setVideoMetadata(metadata);
 
-        // Check if video has problematic codec that needs preview
-        const problematicCodecs = ['vp9', 'vp8', 'av1', 'hevc', 'h265', 'theora'];
-        const hasProblematicCodec = problematicCodecs.some((c) =>
-          metadata.video_codec.toLowerCase().includes(c),
-        );
+        // Determine if the video needs preview transcoding.
+        // WebKit (macOS WKWebView, Linux WebKitGTK) only supports MP4/MOV/M4V
+        // containers and a limited set of codecs natively.
+        const codec = metadata.video_codec.toLowerCase();
+        const format = metadata.format.toLowerCase();
 
-        if (hasProblematicCodec) {
-          // Problematic codecs (VP9, AV1, HEVC, etc.) can crash WebKitGTK on Linux
-          // when loaded into a <video> element due to GStreamer AAC decoding errors.
+        // Check container: ffprobe returns e.g. "mov,mp4,m4a,3gp,3g2,mj2" for MP4
+        const supportedContainers = ['mp4', 'mov', 'm4v', 'm4a', '3gp'];
+        const hasUnsupportedContainer = !supportedContainers.some((c) => format.includes(c));
+
+        // Check codec: HEVC works natively on macOS (AVFoundation) but NOT on Linux (WebKitGTK)
+        const isMacOS = /Mac/.test(navigator.platform);
+        const problematicCodecs = isMacOS
+          ? ['vp9', 'vp8', 'av1', 'theora']
+          : ['vp9', 'vp8', 'av1', 'hevc', 'h265', 'theora'];
+        const hasProblematicCodec = problematicCodecs.some((c) => codec.includes(c));
+
+        const needsPreview = hasUnsupportedContainer || hasProblematicCodec;
+
+        const diagInfo = `codec=${metadata.video_codec}, container=${metadata.format}, needsPreview=${needsPreview}, platform=${isMacOS ? 'macOS' : 'other'}`;
+        console.warn(`[PROCESSING] ${diagInfo}`);
+        addMessage('system', `[DEV] ${diagInfo}`);
+
+        if (needsPreview) {
+          // Video cannot play natively in the webview — generate H.264 preview.
           // Strategy: generate H.264 preview WITHOUT audio (-an) + separate WAV audio
           // + thumbnail as fallback. Video and audio are played via separate elements
           // and synced with JavaScript. If <video> still crashes, VideoPlayer
@@ -342,6 +358,7 @@ export function ProcessingProvider({ children }: { children: ReactNode }) {
                 invoke<string>('generate_video_preview', {
                   inputPath: path,
                   videoCodec: metadata.video_codec,
+                  containerFormat: metadata.format,
                 }),
                 metadata.has_audio
                   ? invoke<string>('generate_audio_preview', { inputPath: path })
@@ -367,12 +384,16 @@ export function ProcessingProvider({ children }: { children: ReactNode }) {
               const previewSrcUrl = loadVideoSrc(previewPath);
               setVideoSrc(previewSrcUrl);
               setIsUsingPreview(true);
+              console.warn(
+                `[PROCESSING] Preview loaded: video=${previewSrcUrl}, audio=${audioPath ? 'yes' : 'no'}`,
+              );
               addMessage(
                 'system',
                 `${metadata.filename} loaded (preview mode — output will use original quality)`,
               );
             } catch (previewErr) {
               // All generation failed — show error but allow FFmpeg usage
+              console.error('[PROCESSING] Preview generation failed:', previewErr);
               setVideoError(
                 `Cannot preview this video (${metadata.video_codec} codec). ` +
                   'Please make sure FFmpeg is installed. ' +
@@ -417,9 +438,10 @@ export function ProcessingProvider({ children }: { children: ReactNode }) {
             }
           }
         } else {
-          // Standard codec: stream directly via asset protocol (no RAM copy)
+          // Standard codec in supported container: stream directly via asset protocol
           const videoSrcUrl = loadVideoSrc(path);
           setVideoSrc(videoSrcUrl);
+          console.warn(`[PROCESSING] Direct streaming: ${videoSrcUrl}`);
           addMessage('system', `${metadata.filename} loaded`);
         }
       } catch (error) {

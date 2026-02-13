@@ -11,6 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **App crash on macOS without Homebrew** - Fixed startup crash caused by missing `liblzma` dynamic library. The `xz2` crate now uses static linking, making the app fully self-contained without requiring Homebrew or system libraries
 - **Auto-download ignores user settings** - Channel auto-download now respects per-channel download preferences (Video/Audio mode, quality, format, codec, bitrate) instead of using hardcoded values. Each channel has its own download settings configurable in the channel settings panel
 - **Security hardening** - FFmpeg commands now use structured argument arrays instead of shell string parsing, preventing command injection. Added URL scheme validation and `--` separator for all yt-dlp calls to block option injection. Enabled Content Security Policy, removed overly broad shell permissions, and added `isSafeUrl` validation for rendered links
+- **Video preview fails for MKV/AVI/FLV/TS containers** - Preview detection now checks both container format and codec. Videos in unsupported containers (MKV, AVI, FLV, WMV, TS, WebM, OGG) are correctly transcoded to H.264 preview. HEVC in MP4/MOV no longer unnecessarily transcoded on macOS
 
 ## [0.9.0] - 2026-02-12
 

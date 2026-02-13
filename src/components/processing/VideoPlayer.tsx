@@ -246,15 +246,27 @@ export const VideoPlayer = memo(function VideoPlayer({
       }
     }
 
+    // Build diagnostic info for debugging
+    const diag = [
+      `error=${mediaError?.code}`,
+      `codec=${metadata?.video_codec ?? '?'}`,
+      `format=${metadata?.format ?? '?'}`,
+      `src=${video?.src?.slice(0, 80) ?? '?'}`,
+      `platform=${navigator.platform}`,
+    ].join(', ');
+    console.warn(`[VIDEO_PLAYER] ${errorMsg} | ${diag}`);
+
     // If a thumbnail fallback is available, switch to it silently
     // instead of showing an error (common on Linux with GStreamer issues)
     if (thumbnailSrc) {
+      console.warn('[VIDEO_PLAYER] Falling back to thumbnail (silent fallback)');
       setVideoFailed(true);
       return;
     }
 
-    onVideoError(errorMsg);
-  }, [onVideoError, thumbnailSrc]);
+    // Append diagnostic info so user can copy-paste for bug reports
+    onVideoError(`${errorMsg}\n[${diag}]`);
+  }, [onVideoError, thumbnailSrc, metadata]);
 
   const videoAspectRatio = metadata ? metadata.width / metadata.height : 16 / 9;
   const hasMedia = videoSrc || thumbnailSrc;
