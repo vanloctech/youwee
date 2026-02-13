@@ -17,7 +17,7 @@ pub fn add_history(
     format: Option<String>,
     source: Option<String>,
 ) -> Result<String, String> {
-    add_history_internal(url, title, thumbnail, filepath, filesize, duration, quality, format, source)
+    add_history_internal(url, title, thumbnail, filepath, filesize, duration, quality, format, source, None)
 }
 
 #[tauri::command]

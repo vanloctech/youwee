@@ -12,6 +12,7 @@ import {
   HardDrive,
   Loader2,
   RefreshCw,
+  Scissors,
   Sparkles,
   Trash2,
 } from 'lucide-react';
@@ -225,6 +226,12 @@ export function HistoryItem({ entry }: HistoryItemProps) {
               {entry.format && (
                 <span className="uppercase font-medium px-1.5 py-0.5 rounded bg-muted">
                   {entry.format}
+                </span>
+              )}
+              {entry.time_range && (
+                <span className="inline-flex items-center gap-1 font-medium px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-600 dark:text-amber-400">
+                  <Scissors className="w-3 h-3" />
+                  {entry.time_range}
                 </span>
               )}
               <span className="flex items-center gap-1">

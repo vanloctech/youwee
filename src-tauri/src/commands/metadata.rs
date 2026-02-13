@@ -406,6 +406,7 @@ pub async fn fetch_metadata(
                 Some("metadata".to_string()),    // quality field used for type
                 Some(files_saved.join(", ")),    // format field used for what was saved
                 Some("metadata".to_string()),    // source
+                None,                             // time_range
             )
             .ok();
 

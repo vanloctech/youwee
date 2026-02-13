@@ -14,6 +14,7 @@ pub fn add_history_internal(
     quality: Option<String>,
     format: Option<String>,
     source: Option<String>,
+    time_range: Option<String>,
 ) -> Result<String, String> {
     let conn = get_db()?;
     let id = uuid::Uuid::new_v4().to_string();
@@ -23,9 +24,9 @@ pub fn add_history_internal(
     let max_entries: i64 = 500;
 
     conn.execute(
-        "INSERT OR REPLACE INTO history (id, url, title, thumbnail, filepath, filesize, duration, quality, format, source, downloaded_at)
-         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11)",
-        params![id, url, title, thumbnail, filepath, filesize, duration, quality, format, source, now],
+        "INSERT OR REPLACE INTO history (id, url, title, thumbnail, filepath, filesize, duration, quality, format, source, downloaded_at, time_range)
+         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12)",
+        params![id, url, title, thumbnail, filepath, filesize, duration, quality, format, source, now, time_range],
     ).map_err(|e| format!("Failed to add history: {}", e))?;
 
     // Prune old entries
@@ -55,12 +56,13 @@ pub fn update_history_download(
     filesize: Option<u64>,
     quality: Option<String>,
     format: Option<String>,
+    time_range: Option<String>,
 ) -> Result<(), String> {
     let conn = get_db()?;
     let now = Utc::now().timestamp();
     conn.execute(
-        "UPDATE history SET filepath = ?1, filesize = ?2, quality = ?3, format = ?4, downloaded_at = ?5 WHERE id = ?6",
-        params![filepath, filesize, quality, format, now, id],
+        "UPDATE history SET filepath = ?1, filesize = ?2, quality = ?3, format = ?4, downloaded_at = ?5, time_range = ?6 WHERE id = ?7",
+        params![filepath, filesize, quality, format, now, time_range, id],
     )
     .map_err(|e| format!("Failed to update history: {}", e))?;
     Ok(())
@@ -119,7 +121,7 @@ pub fn get_history_from_db(
         .unwrap_or_default();
 
     let mut query = String::from(
-        "SELECT id, url, title, thumbnail, filepath, filesize, duration, quality, format, source, downloaded_at, summary 
+        "SELECT id, url, title, thumbnail, filepath, filesize, duration, quality, format, source, downloaded_at, summary, time_range 
          FROM history WHERE 1=1"
     );
 
@@ -157,6 +159,7 @@ pub fn get_history_from_db(
             downloaded_at: dt,
             file_exists,
             summary: row.get(11)?,
+            time_range: row.get(12)?,
         })
     }
 

@@ -15,5 +15,6 @@ pub struct HistoryEntry {
     pub source: Option<String>, // "youtube", "tiktok", etc.
     pub downloaded_at: String,
     pub file_exists: bool,
-    pub summary: Option<String>, // AI-generated summary
+    pub summary: Option<String>,    // AI-generated summary
+    pub time_range: Option<String>, // Time range cut (e.g. "00:10-01:00")
 }

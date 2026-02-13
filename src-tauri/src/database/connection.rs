@@ -77,6 +77,10 @@ pub fn init_database(app: &AppHandle) -> Result<(), String> {
     conn.execute("ALTER TABLE history ADD COLUMN summary TEXT", [])
         .ok(); // Ignore error if column already exists
 
+    // Migration: Add time_range column if it doesn't exist
+    conn.execute("ALTER TABLE history ADD COLUMN time_range TEXT", [])
+        .ok(); // Ignore error if column already exists
+
     // Create history indexes
     conn.execute(
         "CREATE INDEX IF NOT EXISTS idx_history_downloaded ON history(downloaded_at DESC)",

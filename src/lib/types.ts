@@ -251,6 +251,7 @@ export interface HistoryEntry {
   downloaded_at: string; // ISO 8601
   file_exists: boolean;
   summary?: string; // AI-generated summary
+  time_range?: string; // Time range cut (e.g. "00:10-01:00")
 }
 
 export type HistoryFilter =

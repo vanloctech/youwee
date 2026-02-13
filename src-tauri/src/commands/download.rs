@@ -310,7 +310,7 @@ pub async fn download_video(
         let process = cmd.spawn()
             .map_err(|e| format!("Failed to start yt-dlp: {}", e))?;
         
-        return handle_tokio_download(app, id, process, quality, format, url, should_log_stderr, title, thumbnail, source).await;
+        return handle_tokio_download(app, id, process, quality, format, url, should_log_stderr, title, thumbnail, source, download_sections).await;
     }
     
     // Fallback to sidecar
@@ -521,6 +521,12 @@ pub async fn download_video(
                             
                             // Save to history (update existing or create new)
                             if let Some(ref filepath) = final_filepath {
+                                // Extract time range from download_sections (strip "*" prefix)
+                                let time_range = download_sections.as_ref().and_then(|s| {
+                                    let stripped = s.strip_prefix('*').unwrap_or(s);
+                                    if stripped.is_empty() { None } else { Some(stripped.to_string()) }
+                                });
+                                
                                 if let Some(ref hist_id) = history_id {
                                     // Update existing history entry (re-download)
                                     update_history_download(
@@ -529,6 +535,7 @@ pub async fn download_video(
                                         reported_filesize,
                                         quality_display.clone(),
                                         Some(format.clone()),
+                                        time_range,
                                     ).ok();
                                 } else {
                                     // Create new history entry
@@ -545,6 +552,7 @@ pub async fn download_video(
                                         quality_display.clone(),
                                         Some(format.clone()),
                                         src,
+                                        time_range,
                                     ).ok();
                                 }
                             }
@@ -609,7 +617,7 @@ pub async fn download_video(
             let process = cmd.spawn()
                 .map_err(|e| format!("Failed to start yt-dlp: {}", e))?;
             
-            handle_tokio_download(app, id, process, quality, format, url, should_log_stderr, title, thumbnail, source).await
+            handle_tokio_download(app, id, process, quality, format, url, should_log_stderr, title, thumbnail, source, download_sections).await
         }
     }
 }
@@ -625,6 +633,7 @@ async fn handle_tokio_download(
     title: Option<String>,
     thumbnail: Option<String>,
     source: Option<String>,
+    download_sections: Option<String>,
 ) -> Result<(), String> {
     let stdout = process.stdout.take().ok_or("Failed to get stdout")?;
     let stderr = process.stderr.take();
@@ -822,6 +831,12 @@ async fn handle_tokio_download(
             let src = source.clone().or_else(|| detect_source(&url));
             let thumb = thumbnail.clone().or_else(|| generate_thumbnail_url(&url));
             
+            // Extract time range from download_sections (strip "*" prefix)
+            let time_range = download_sections.as_ref().and_then(|s| {
+                let stripped = s.strip_prefix('*').unwrap_or(s);
+                if stripped.is_empty() { None } else { Some(stripped.to_string()) }
+            });
+            
             add_history_internal(
                 url.clone(),
                 display_title.clone().unwrap_or_else(|| "Unknown".to_string()),
@@ -832,6 +847,7 @@ async fn handle_tokio_download(
                 quality_display.clone(),
                 Some(format.clone()),
                 src,
+                time_range,
             ).ok();
         }
         
