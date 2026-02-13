@@ -383,7 +383,13 @@ export function DependenciesProvider({ children }: { children: ReactNode }) {
     if (!initialized) {
       setInitialized(true);
       refreshYtdlpVersion();
-      checkFfmpeg();
+      checkFfmpeg().then(() => {
+        // Auto-check for FFmpeg updates after status check completes
+        // The backend skips if FFmpeg is not installed or is a system install
+        checkFfmpegUpdate().catch(() => {
+          // Silently fail - update check is non-critical
+        });
+      });
 
       // Load channel info and auto-download stable if needed
       refreshAllYtdlpVersions().then(async (versions) => {
@@ -442,7 +448,14 @@ export function DependenciesProvider({ children }: { children: ReactNode }) {
         }
       });
     }
-  }, [initialized, refreshYtdlpVersion, refreshAllYtdlpVersions, checkFfmpeg, checkDeno]);
+  }, [
+    initialized,
+    refreshYtdlpVersion,
+    refreshAllYtdlpVersions,
+    checkFfmpeg,
+    checkFfmpegUpdate,
+    checkDeno,
+  ]);
 
   // Listen to download progress events
   useEffect(() => {
