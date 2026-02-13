@@ -8,6 +8,7 @@ use tokio::time::timeout;
 use uuid::Uuid;
 use crate::types::{VideoInfo, FormatOption, VideoInfoResponse, PlaylistVideoEntry, SubtitleInfo};
 use crate::services::{parse_ytdlp_error, run_ytdlp_json_with_cookies, run_ytdlp_with_stderr_and_cookies, build_cookie_args, get_deno_path};
+use crate::utils::validate_url;
 use crate::utils::CommandExt;
 use crate::database::add_log_internal;
 
@@ -26,6 +27,8 @@ pub async fn get_video_transcript(
     // Log the URL being processed
     #[cfg(debug_assertions)]
     println!("[TRANSCRIPT] Fetching transcript for URL: {}", &url);
+    
+    validate_url(&url)?;
     
     add_log_internal("info", &format!("Fetching transcript for AI summary"), None, Some(&url)).ok();
     
@@ -90,6 +93,7 @@ pub async fn get_video_transcript(
             "--socket-timeout".to_string(), "30".to_string(),
         ];
         subtitle_args.extend(deno_args.clone());
+        subtitle_args.push("--".to_string());
         subtitle_args.push(url_for_subs.clone());
         
         let subtitle_args_ref: Vec<&str> = subtitle_args.iter().map(|s| s.as_str()).collect();
@@ -232,6 +236,7 @@ pub async fn get_video_transcript(
         "--no-warnings",
         "--no-cache-dir",
         "--socket-timeout", "30",
+        "--",
         &url_for_info,
     ];
     
@@ -444,6 +449,8 @@ pub async fn get_video_info(
     cookie_file_path: Option<String>,
     proxy_url: Option<String>,
 ) -> Result<VideoInfoResponse, String> {
+    validate_url(&url)?;
+    
     let mut args = vec![
         "--dump-json".to_string(),
         "--no-download".to_string(),
@@ -460,6 +467,7 @@ pub async fn get_video_info(
         }
     }
     
+    args.push("--".to_string());
     args.push(url.clone());
     
     let args_ref: Vec<&str> = args.iter().map(|s| s.as_str()).collect();
@@ -549,6 +557,8 @@ pub async fn get_playlist_entries(
     cookie_file_path: Option<String>,
     proxy_url: Option<String>,
 ) -> Result<Vec<PlaylistVideoEntry>, String> {
+    validate_url(&url)?;
+    
     let mut args = vec![
         "--flat-playlist".to_string(),
         "--dump-json".to_string(),
@@ -588,6 +598,7 @@ pub async fn get_playlist_entries(
         }
     }
     
+    args.push("--".to_string());
     args.push(url.clone());
     
     let args_ref: Vec<&str> = args.iter().map(|s| s.as_str()).collect();
@@ -707,6 +718,8 @@ pub async fn get_available_subtitles(
     cookie_file_path: Option<String>,
     proxy_url: Option<String>,
 ) -> Result<Vec<SubtitleInfo>, String> {
+    validate_url(&url)?;
+    
     let mut args = vec![
         "--list-subs".to_string(),
         "--skip-download".to_string(),
@@ -721,6 +734,7 @@ pub async fn get_available_subtitles(
         }
     }
     
+    args.push("--".to_string());
     args.push(url.clone());
     
     let args_ref: Vec<&str> = args.iter().map(|s| s.as_str()).collect();

@@ -8,6 +8,8 @@
 
 use std::process::Stdio;
 use std::sync::atomic::{AtomicBool, Ordering};
+
+use crate::utils::validate_url;
 use tauri::{AppHandle, Emitter};
 use tauri_plugin_shell::ShellExt;
 use tauri_plugin_shell::process::CommandEvent;
@@ -92,6 +94,7 @@ pub async fn download_video(
     source: Option<String>,
 ) -> Result<(), String> {
     CANCEL_FLAG.store(false, Ordering::SeqCst);
+    validate_url(&url)?;
     
     let should_log_stderr = log_stderr.unwrap_or(true);
     let sanitized_path = sanitize_output_path(&output_path)?;
@@ -263,6 +266,7 @@ pub async fn download_video(
         }
     }
     
+    args.push("--".to_string());
     args.push(url.clone());
     
     // Get binary info for logging

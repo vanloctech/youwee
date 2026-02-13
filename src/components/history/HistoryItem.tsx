@@ -22,7 +22,7 @@ import { useAI } from '@/contexts/AIContext';
 import { useHistory } from '@/contexts/HistoryContext';
 import { detectSource } from '@/lib/sources';
 import type { HistoryEntry } from '@/lib/types';
-import { cn } from '@/lib/utils';
+import { cn, isSafeUrl } from '@/lib/utils';
 
 interface HistoryItemProps {
   entry: HistoryEntry;
@@ -394,7 +394,7 @@ export function HistoryItem({ entry }: HistoryItemProps) {
             )}
 
             <a
-              href={entry.url}
+              href={isSafeUrl(entry.url) ? entry.url : '#'}
               target="_blank"
               rel="noopener noreferrer"
               className={cn(

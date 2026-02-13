@@ -11,7 +11,7 @@ use rusqlite::params;
 
 use crate::database::get_db;
 use crate::services::{get_ffmpeg_path, generate_raw, AIConfig};
-use crate::utils::CommandExt;
+use crate::utils::{CommandExt, validate_ffmpeg_args, args_to_display_command};
 
 // Store for active processing jobs
 static ACTIVE_JOBS: LazyLock<Mutex<HashMap<String, tokio::sync::oneshot::Sender<()>>>> = 
@@ -77,6 +77,7 @@ pub struct VideoMetadata {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct FFmpegCommandResult {
     pub command: String,
+    pub command_args: Vec<String>,
     pub explanation: String,
     pub estimated_size_mb: f64,
     pub estimated_time_seconds: f64,
@@ -479,6 +480,18 @@ For valid video requests:
         .ok_or("No command in response")?
         .replace("{input}", &input_path);
     
+    // Parse command into args for safe execution
+    let all_args = parse_shell_command(&command);
+    // Skip "ffmpeg" prefix if present
+    let command_args: Vec<String> = if all_args.first().map(|s| s.as_str()) == Some("ffmpeg") {
+        all_args[1..].to_vec()
+    } else {
+        all_args
+    };
+    
+    // Validate args to block dangerous patterns
+    validate_ffmpeg_args(&command_args)?;
+    
     // Generate timestamp for unique output names
     let timestamp = chrono::Local::now().format("%Y%m%d_%H%M%S").to_string();
     let input_stem = Path::new(&input_path)
@@ -527,14 +540,17 @@ For valid video requests:
         });
     
     // Update command with the new timestamped output path
-    let command = if let Some(ai_output) = parsed.get("output_path").and_then(|p| p.as_str()) {
-        command.replace(ai_output, &output_path)
+    let (command, command_args) = if let Some(ai_output) = parsed.get("output_path").and_then(|p| p.as_str()) {
+        let updated_cmd = command.replace(ai_output, &output_path);
+        let updated_args: Vec<String> = command_args.iter().map(|a| a.replace(ai_output, &output_path)).collect();
+        (updated_cmd, updated_args)
     } else {
-        command
+        (command, command_args)
     };
     
     Ok(FFmpegCommandResult {
         command,
+        command_args,
         explanation: parsed.get("explanation")
             .and_then(|e| e.as_str())
             .unwrap_or("Processing video...")
@@ -572,19 +588,24 @@ pub async fn generate_quick_action_command(
     // Generate timestamp suffix for unique output names
     let timestamp = chrono::Local::now().format("%Y%m%d_%H%M%S").to_string();
     
-    let (command, output_path, explanation) = match task_type.as_str() {
+    let (command_args, output_path, explanation) = match task_type.as_str() {
         "cut" => {
             let start = timeline_start.ok_or("No start time selected")?;
             let end = timeline_end.ok_or("No end time selected")?;
             let duration = end - start;
             let output = input_dir.join(format!("{}_cut_{}.mp4", input_stem, timestamp));
             
-            let cmd = format!(
-                "ffmpeg -y -ss {} -i \"{}\" -t {} -c copy -progress pipe:2 \"{}\"",
-                format_time(start), input_path, duration, output.display()
-            );
+            let args = vec![
+                "-y".to_string(),
+                "-ss".to_string(), format_time(start),
+                "-i".to_string(), input_path.clone(),
+                "-t".to_string(), duration.to_string(),
+                "-c".to_string(), "copy".to_string(),
+                "-progress".to_string(), "pipe:2".to_string(),
+                output.to_string_lossy().to_string(),
+            ];
             
-            (cmd, output.to_string_lossy().to_string(), 
+            (args, output.to_string_lossy().to_string(), 
              format!("Cut video from {} to {} (duration: {})", 
                 format_time(start), format_time(end), format_time(duration)))
         }
@@ -594,22 +615,28 @@ pub async fn generate_quick_action_command(
                 .and_then(|f| f.as_str())
                 .unwrap_or("mp3");
             
-            let (ext, codec) = match format {
-                "m4a" => ("m4a", "-c:a copy"),
-                "flac" => ("flac", "-c:a flac"),
-                "wav" => ("wav", "-c:a pcm_s16le"),
-                "mp3" => ("m4a", "-c:a aac -b:a 192k"), // MP3 not available, use M4A/AAC instead
-                _ => ("m4a", "-c:a aac -b:a 192k"),
+            let (ext, codec_args) = match format {
+                "m4a" => ("m4a", vec!["-c:a".to_string(), "copy".to_string()]),
+                "flac" => ("flac", vec!["-c:a".to_string(), "flac".to_string()]),
+                "wav" => ("wav", vec!["-c:a".to_string(), "pcm_s16le".to_string()]),
+                "mp3" => ("m4a", vec!["-c:a".to_string(), "aac".to_string(), "-b:a".to_string(), "192k".to_string()]),
+                _ => ("m4a", vec!["-c:a".to_string(), "aac".to_string(), "-b:a".to_string(), "192k".to_string()]),
             };
             
             let output = input_dir.join(format!("{}_{}.{}", input_stem, timestamp, ext));
             
-            let cmd = format!(
-                "ffmpeg -y -i \"{}\" -vn {} -progress pipe:2 \"{}\"",
-                input_path, codec, output.display()
-            );
+            let mut args = vec![
+                "-y".to_string(),
+                "-i".to_string(), input_path.clone(),
+                "-vn".to_string(),
+            ];
+            args.extend(codec_args);
+            args.extend([
+                "-progress".to_string(), "pipe:2".to_string(),
+                output.to_string_lossy().to_string(),
+            ]);
             
-            (cmd, output.to_string_lossy().to_string(),
+            (args, output.to_string_lossy().to_string(),
              format!("Extract audio as {}", ext.to_uppercase()))
         }
         
@@ -618,14 +645,26 @@ pub async fn generate_quick_action_command(
                 .and_then(|r| r.as_str())
                 .unwrap_or("720");
             
+            // Validate resolution is numeric
+            if !resolution.chars().all(|c| c.is_ascii_digit()) {
+                return Err("Invalid resolution value".to_string());
+            }
+            
             let output = input_dir.join(format!("{}_{}p_{}.mp4", input_stem, resolution, timestamp));
             
-            let cmd = format!(
-                "ffmpeg -y -i \"{}\" -vf scale=-1:{} -c:v libx264 -preset medium -crf 23 -c:a copy -progress pipe:2 \"{}\"",
-                input_path, resolution, output.display()
-            );
+            let args = vec![
+                "-y".to_string(),
+                "-i".to_string(), input_path.clone(),
+                "-vf".to_string(), format!("scale=-1:{}", resolution),
+                "-c:v".to_string(), "libx264".to_string(),
+                "-preset".to_string(), "medium".to_string(),
+                "-crf".to_string(), "23".to_string(),
+                "-c:a".to_string(), "copy".to_string(),
+                "-progress".to_string(), "pipe:2".to_string(),
+                output.to_string_lossy().to_string(),
+            ];
             
-            (cmd, output.to_string_lossy().to_string(),
+            (args, output.to_string_lossy().to_string(),
              format!("Resize video to {}p", resolution))
         }
         
@@ -634,22 +673,32 @@ pub async fn generate_quick_action_command(
                 .and_then(|f| f.as_str())
                 .unwrap_or("mp4");
             
+            // Validate format is alphanumeric
+            if !format.chars().all(|c| c.is_ascii_alphanumeric()) {
+                return Err("Invalid format value".to_string());
+            }
+            
             let output = input_dir.join(format!("{}_{}.{}", input_stem, timestamp, format));
             
-            let codec_args = match format {
-                "webm" => "-c:v libvpx-vp9 -c:a libopus",
-                "mkv" => "-c:v copy -c:a copy",
-                "avi" => "-c:v libxvid -c:a mp3",
-                "mov" => "-c:v libx264 -c:a aac",
-                _ => "-c:v libx264 -c:a aac",
+            let codec_args: Vec<String> = match format {
+                "webm" => vec!["-c:v".to_string(), "libvpx-vp9".to_string(), "-c:a".to_string(), "libopus".to_string()],
+                "mkv" => vec!["-c:v".to_string(), "copy".to_string(), "-c:a".to_string(), "copy".to_string()],
+                "avi" => vec!["-c:v".to_string(), "libxvid".to_string(), "-c:a".to_string(), "mp3".to_string()],
+                "mov" => vec!["-c:v".to_string(), "libx264".to_string(), "-c:a".to_string(), "aac".to_string()],
+                _ => vec!["-c:v".to_string(), "libx264".to_string(), "-c:a".to_string(), "aac".to_string()],
             };
             
-            let cmd = format!(
-                "ffmpeg -y -i \"{}\" {} -progress pipe:2 \"{}\"",
-                input_path, codec_args, output.display()
-            );
+            let mut args = vec![
+                "-y".to_string(),
+                "-i".to_string(), input_path.clone(),
+            ];
+            args.extend(codec_args);
+            args.extend([
+                "-progress".to_string(), "pipe:2".to_string(),
+                output.to_string_lossy().to_string(),
+            ]);
             
-            (cmd, output.to_string_lossy().to_string(),
+            (args, output.to_string_lossy().to_string(),
              format!("Convert to {}", format.to_uppercase()))
         }
         
@@ -660,38 +709,55 @@ pub async fn generate_quick_action_command(
             
             let output = input_dir.join(format!("{}_{}x_{}.mp4", input_stem, speed, timestamp));
             let pts = 1.0 / speed;
-            let atempo = speed.min(2.0).max(0.5); // atempo only supports 0.5-2.0
+            let atempo = speed.min(2.0).max(0.5);
             
-            let cmd = format!(
-                "ffmpeg -y -i \"{}\" -filter_complex \"[0:v]setpts={}*PTS[v];[0:a]atempo={}[a]\" -map \"[v]\" -map \"[a]\" -progress pipe:2 \"{}\"",
-                input_path, pts, atempo, output.display()
-            );
+            let args = vec![
+                "-y".to_string(),
+                "-i".to_string(), input_path.clone(),
+                "-filter_complex".to_string(),
+                format!("[0:v]setpts={}*PTS[v];[0:a]atempo={}[a]", pts, atempo),
+                "-map".to_string(), "[v]".to_string(),
+                "-map".to_string(), "[a]".to_string(),
+                "-progress".to_string(), "pipe:2".to_string(),
+                output.to_string_lossy().to_string(),
+            ];
             
-            (cmd, output.to_string_lossy().to_string(),
+            (args, output.to_string_lossy().to_string(),
              format!("Change speed to {}x", speed))
         }
         
         "compress" => {
             let output = input_dir.join(format!("{}_compressed_{}.mp4", input_stem, timestamp));
             
-            let cmd = format!(
-                "ffmpeg -y -i \"{}\" -c:v libx264 -preset slow -crf 28 -c:a aac -b:a 128k -progress pipe:2 \"{}\"",
-                input_path, output.display()
-            );
+            let args = vec![
+                "-y".to_string(),
+                "-i".to_string(), input_path.clone(),
+                "-c:v".to_string(), "libx264".to_string(),
+                "-preset".to_string(), "slow".to_string(),
+                "-crf".to_string(), "28".to_string(),
+                "-c:a".to_string(), "aac".to_string(),
+                "-b:a".to_string(), "128k".to_string(),
+                "-progress".to_string(), "pipe:2".to_string(),
+                output.to_string_lossy().to_string(),
+            ];
             
-            (cmd, output.to_string_lossy().to_string(),
+            (args, output.to_string_lossy().to_string(),
              "Compress video to reduce file size".to_string())
         }
         
         "remove_audio" => {
             let output = input_dir.join(format!("{}_noaudio_{}.mp4", input_stem, timestamp));
             
-            let cmd = format!(
-                "ffmpeg -y -i \"{}\" -c:v copy -an -progress pipe:2 \"{}\"",
-                input_path, output.display()
-            );
+            let args = vec![
+                "-y".to_string(),
+                "-i".to_string(), input_path.clone(),
+                "-c:v".to_string(), "copy".to_string(),
+                "-an".to_string(),
+                "-progress".to_string(), "pipe:2".to_string(),
+                output.to_string_lossy().to_string(),
+            ];
             
-            (cmd, output.to_string_lossy().to_string(),
+            (args, output.to_string_lossy().to_string(),
              "Remove audio track".to_string())
         }
         
@@ -699,12 +765,16 @@ pub async fn generate_quick_action_command(
             let time = timeline_start.unwrap_or(0.0);
             let output = input_dir.join(format!("{}_thumb_{}.jpg", input_stem, timestamp));
             
-            let cmd = format!(
-                "ffmpeg -y -ss {} -i \"{}\" -vframes 1 -q:v 2 \"{}\"",
-                format_time(time), input_path, output.display()
-            );
+            let args = vec![
+                "-y".to_string(),
+                "-ss".to_string(), format_time(time),
+                "-i".to_string(), input_path.clone(),
+                "-vframes".to_string(), "1".to_string(),
+                "-q:v".to_string(), "2".to_string(),
+                output.to_string_lossy().to_string(),
+            ];
             
-            (cmd, output.to_string_lossy().to_string(),
+            (args, output.to_string_lossy().to_string(),
              format!("Extract thumbnail at {}", format_time(time)))
         }
         
@@ -714,12 +784,17 @@ pub async fn generate_quick_action_command(
             let duration = end - start;
             let output = input_dir.join(format!("{}_{}.gif", input_stem, timestamp));
             
-            let cmd = format!(
-                "ffmpeg -y -ss {} -t {} -i \"{}\" -vf \"fps=15,scale=480:-1:flags=lanczos\" -progress pipe:2 \"{}\"",
-                format_time(start), duration, input_path, output.display()
-            );
+            let args = vec![
+                "-y".to_string(),
+                "-ss".to_string(), format_time(start),
+                "-t".to_string(), duration.to_string(),
+                "-i".to_string(), input_path.clone(),
+                "-vf".to_string(), "fps=15,scale=480:-1:flags=lanczos".to_string(),
+                "-progress".to_string(), "pipe:2".to_string(),
+                output.to_string_lossy().to_string(),
+            ];
             
-            (cmd, output.to_string_lossy().to_string(),
+            (args, output.to_string_lossy().to_string(),
              format!("Create GIF from {} to {}", format_time(start), format_time(end)))
         }
         
@@ -737,12 +812,16 @@ pub async fn generate_quick_action_command(
             
             let output = input_dir.join(format!("{}_rotated_{}.mp4", input_stem, timestamp));
             
-            let cmd = format!(
-                "ffmpeg -y -i \"{}\" -vf {} -c:a copy -progress pipe:2 \"{}\"",
-                input_path, transpose, output.display()
-            );
+            let args = vec![
+                "-y".to_string(),
+                "-i".to_string(), input_path.clone(),
+                "-vf".to_string(), transpose.to_string(),
+                "-c:a".to_string(), "copy".to_string(),
+                "-progress".to_string(), "pipe:2".to_string(),
+                output.to_string_lossy().to_string(),
+            ];
             
-            (cmd, output.to_string_lossy().to_string(),
+            (args, output.to_string_lossy().to_string(),
              format!("Rotate video {}°", degrees))
         }
         
@@ -751,13 +830,17 @@ pub async fn generate_quick_action_command(
         }
     };
     
+    // Generate display command from args
+    let command = args_to_display_command(&command_args);
+    
     // Estimate processing time (rough: 1 second per 10 seconds of video)
     let estimated_time = metadata.duration / 10.0;
     
     Ok(FFmpegCommandResult {
         command,
+        command_args,
         explanation,
-        estimated_size_mb: (metadata.file_size as f64 / 1_000_000.0) * 0.8, // Rough estimate
+        estimated_size_mb: (metadata.file_size as f64 / 1_000_000.0) * 0.8,
         estimated_time_seconds: estimated_time,
         output_path,
         warnings: vec![],
@@ -769,15 +852,18 @@ pub async fn generate_quick_action_command(
 pub async fn execute_ffmpeg_command(
     app: AppHandle,
     job_id: String,
-    command: String,
+    command_args: Vec<String>,
     input_path: String,
     output_path: String,
 ) -> Result<(), String> {
     println!("[FFMPEG] Starting execute_ffmpeg_command");
     println!("[FFMPEG] Job ID: {}", job_id);
-    println!("[FFMPEG] Command: {}", command);
+    println!("[FFMPEG] Args: {:?}", command_args);
     println!("[FFMPEG] Input: {}", input_path);
     println!("[FFMPEG] Output: {}", output_path);
+    
+    // Validate args to block dangerous patterns
+    validate_ffmpeg_args(&command_args)?;
     
     let ffmpeg_path = get_ffmpeg_path(&app).await
         .ok_or("FFmpeg not found")?;
@@ -789,39 +875,19 @@ pub async fn execute_ffmpeg_command(
     let total_frames = (metadata.duration * metadata.fps) as i64;
     println!("[FFMPEG] Total duration: {} secs, Total frames: {}", total_duration_secs, total_frames);
     
-    // Ensure -progress pipe:2 is in the command for progress tracking
-    let command_with_progress = if !command.contains("-progress") {
-        // Find the last argument (output path) and insert -progress before it
-        if let Some(last_quote) = command.rfind('"') {
-            let before_output = &command[..last_quote];
-            if let Some(second_last_quote) = before_output.rfind('"') {
-                format!(
-                    "{} -progress pipe:2 {}",
-                    &command[..second_last_quote],
-                    &command[second_last_quote..]
-                )
-            } else {
-                command.clone()
-            }
-        } else {
-            command.clone()
-        }
-    } else {
-        command.clone()
-    };
-    println!("[FFMPEG] Command with progress: {}", command_with_progress);
-    
-    // Parse command into args (properly handling quoted paths)
-    let all_args = parse_shell_command(&command_with_progress);
-    println!("[FFMPEG] Parsed args count: {}", all_args.len());
-    for (i, arg) in all_args.iter().enumerate() {
-        println!("[FFMPEG]   arg[{}]: '{}'", i, arg);
+    // Ensure -progress pipe:2 is in the args for progress tracking
+    let mut args = command_args;
+    if !args.iter().any(|a| a == "-progress") {
+        // Insert before the last arg (output path)
+        let insert_pos = args.len().saturating_sub(1);
+        args.insert(insert_pos, "-progress".to_string());
+        args.insert(insert_pos + 1, "pipe:2".to_string());
     }
     
-    let args: Vec<&str> = all_args.iter()
-        .skip(1) // Skip "ffmpeg"
-        .map(|s| s.as_str())
-        .collect();
+    println!("[FFMPEG] Final args count: {}", args.len());
+    for (i, arg) in args.iter().enumerate() {
+        println!("[FFMPEG]   arg[{}]: '{}'", i, arg);
+    }
     
     // Create cancellation channel
     let (cancel_tx, mut cancel_rx) = tokio::sync::oneshot::channel::<()>();

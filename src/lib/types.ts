@@ -404,6 +404,7 @@ export interface TimelineSelection {
 
 export interface FFmpegCommandResult {
   command: string;
+  command_args: string[];
   explanation: string;
   estimated_size_mb: number;
   estimated_time_seconds: number;

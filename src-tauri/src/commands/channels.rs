@@ -6,7 +6,7 @@ use tokio::process::Command;
 
 use crate::types::{ChannelInfo, FollowedChannel, ChannelVideo, PlaylistVideoEntry};
 use crate::services::{build_cookie_args, get_deno_path};
-use crate::utils::CommandExt;
+use crate::utils::{validate_url, CommandExt};
 use crate::database;
 
 /// Build a fallback video URL based on the channel's platform.
@@ -34,6 +34,8 @@ pub async fn get_channel_videos(
     cookie_file_path: Option<String>,
     proxy_url: Option<String>,
 ) -> Result<Vec<PlaylistVideoEntry>, String> {
+    validate_url(&url)?;
+    
     let is_youtube = url.contains("youtube.com") || url.contains("youtu.be");
     let max_attempts = if is_youtube { 1 } else { 2 };
 
@@ -117,6 +119,7 @@ async fn fetch_channel_videos_once(
         }
     }
 
+    args.push("--".to_string());
     args.push(url.to_string());
 
     let args_ref: Vec<&str> = args.iter().map(|s| s.as_str()).collect();
@@ -325,6 +328,8 @@ pub async fn get_channel_info(
     cookie_file_path: Option<String>,
     proxy_url: Option<String>,
 ) -> Result<ChannelInfo, String> {
+    validate_url(&url)?;
+    
     // For Bilibili URLs, try the native API first (accurate name + avatar).
     // This avoids spawning a second yt-dlp process that could trigger rate-limiting.
     let is_bilibili = url.contains("bilibili.com") || url.contains("b23.tv");
@@ -377,6 +382,7 @@ pub async fn get_channel_info(
         }
     }
 
+    args.push("--".to_string());
     args.push(url.clone());
 
     let args_ref: Vec<&str> = args.iter().map(|s| s.as_str()).collect();

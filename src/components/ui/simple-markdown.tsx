@@ -1,4 +1,4 @@
-import { cn } from '@/lib/utils';
+import { cn, isSafeUrl } from '@/lib/utils';
 
 interface SimpleMarkdownProps {
   content: string;
@@ -144,16 +144,23 @@ function parseInline(text: string): React.ReactNode {
     // Link: [text](url)
     const linkMatch = remaining.match(/^\[([^\]]+)\]\(([^)]+)\)/);
     if (linkMatch) {
+      const linkUrl = linkMatch[2];
       parts.push(
-        <a
-          key={key++}
-          href={linkMatch[2]}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="text-primary hover:underline"
-        >
-          {linkMatch[1]}
-        </a>,
+        isSafeUrl(linkUrl) ? (
+          <a
+            key={key++}
+            href={linkUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-primary hover:underline"
+          >
+            {linkMatch[1]}
+          </a>
+        ) : (
+          <span key={key++} className="text-primary">
+            {linkMatch[1]}
+          </span>
+        ),
       );
       remaining = remaining.slice(linkMatch[0].length);
       continue;

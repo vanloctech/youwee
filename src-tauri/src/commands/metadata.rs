@@ -11,7 +11,7 @@ use tokio::process::Command;
 
 use crate::database::{add_history_internal, add_log_internal};
 use crate::services::{get_deno_path, get_ffmpeg_path, get_ytdlp_path};
-use crate::utils::{sanitize_output_path, CommandExt};
+use crate::utils::{sanitize_output_path, validate_url, CommandExt};
 
 pub static METADATA_CANCEL_FLAG: AtomicBool = AtomicBool::new(false);
 
@@ -116,6 +116,7 @@ pub async fn fetch_metadata(
     proxy_url: Option<String>,
 ) -> Result<(), String> {
     METADATA_CANCEL_FLAG.store(false, Ordering::SeqCst);
+    validate_url(&url)?;
 
     let sanitized_path = sanitize_output_path(&output_path)?;
     // Use title only without extension - yt-dlp will add .info.json, .description, .jpg etc
@@ -217,6 +218,7 @@ pub async fn fetch_metadata(
     args.push("--print".to_string());
     args.push("%(title)s|||%(thumbnail)s|||%(duration)s".to_string());
 
+    args.push("--".to_string());
     args.push(url.clone());
 
     // Emit initial progress

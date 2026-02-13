@@ -11,7 +11,7 @@ import {
 import { useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { LogEntry as LogEntryType } from '@/lib/types';
-import { cn } from '@/lib/utils';
+import { cn, isSafeUrl } from '@/lib/utils';
 
 interface LogEntryProps {
   log: LogEntryType;
@@ -240,7 +240,7 @@ export function LogEntry({ log }: LogEntryProps) {
           <p className="text-xs text-muted-foreground truncate">
             <span className="opacity-60">{t('logs.entry.url')}:</span>{' '}
             <a
-              href={log.url}
+              href={isSafeUrl(log.url) ? log.url : '#'}
               target="_blank"
               rel="noopener noreferrer"
               className="text-primary hover:underline"

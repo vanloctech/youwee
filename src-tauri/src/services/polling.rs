@@ -263,6 +263,7 @@ async fn check_channel_for_new_videos(
         }
     }
 
+    args.push("--".to_string());
     args.push(channel.url.clone());
 
     let args_ref: Vec<&str> = args.iter().map(|s| s.as_str()).collect();

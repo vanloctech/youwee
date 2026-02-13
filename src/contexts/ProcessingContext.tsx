@@ -609,7 +609,7 @@ export function ProcessingProvider({ children }: { children: ReactNode }) {
 
         await invoke('execute_ffmpeg_command', {
           jobId,
-          command: result.command,
+          commandArgs: result.command_args,
           inputPath: videoPath,
           outputPath: result.output_path,
         });
@@ -712,7 +712,7 @@ export function ProcessingProvider({ children }: { children: ReactNode }) {
 
         await invoke('execute_ffmpeg_command', {
           jobId,
-          command: cmdToExecute.command,
+          commandArgs: cmdToExecute.command_args,
           inputPath: videoPath,
           outputPath: cmdToExecute.output_path,
         });
@@ -886,7 +886,7 @@ export function ProcessingProvider({ children }: { children: ReactNode }) {
     for (const file of batchFiles) {
       try {
         await invoke('execute_ffmpeg_batch', {
-          command: generatedCommand.command,
+          commandArgs: generatedCommand.command_args,
           inputPath: file,
         });
       } catch (error) {
