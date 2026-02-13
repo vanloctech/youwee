@@ -130,7 +130,16 @@
         "completed": "Completed",
         "failed": "Failed",
         "cancelled": "Cancelled"
-      }
+      },
+      "searchPlaceholder": "Search by filename or prompt...",
+      "filterAll": "All",
+      "dateRange": "Date range",
+      "dateFrom": "From",
+      "dateTo": "To",
+      "clearFilters": "Clear",
+      "clearDates": "Clear dates",
+      "filterCount": "{{count}} of {{total}} results",
+      "noResults": "No matching results"
     },
     "overlay": {
       "cancel": "Cancel"

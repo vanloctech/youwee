@@ -9,14 +9,19 @@ import {
   FolderOpen,
   History,
   MessageSquare,
+  Search,
+  SlidersHorizontal,
   Terminal,
   Trash2,
+  X,
 } from 'lucide-react';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import type { ProcessingJob } from '@/lib/types';
 import { cn } from '@/lib/utils';
@@ -29,6 +34,8 @@ export interface HistoryDialogProps {
   onClearAll: () => void;
 }
 
+type StatusFilter = 'all' | 'completed' | 'failed' | 'cancelled';
+
 export function HistoryDialog({
   open,
   onOpenChange,
@@ -40,15 +47,80 @@ export function HistoryDialog({
   const [selectedJob, setSelectedJob] = useState<ProcessingJob | null>(null);
   const [copied, setCopied] = useState(false);
 
+  // Filters
+  const [searchQuery, setSearchQuery] = useState('');
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
+  const [dateFrom, setDateFrom] = useState('');
+  const [dateTo, setDateTo] = useState('');
+
+  const statusOptions: { value: StatusFilter; label: string }[] = [
+    { value: 'all', label: t('processing.historyDialog.filterAll') },
+    { value: 'completed', label: t('processing.historyDialog.status.completed') },
+    { value: 'failed', label: t('processing.historyDialog.status.failed') },
+    { value: 'cancelled', label: t('processing.historyDialog.status.cancelled') },
+  ];
+
+  // Filtered history
+  const filteredHistory = useMemo(() => {
+    let result = history;
+
+    // Status filter
+    if (statusFilter !== 'all') {
+      result = result.filter((job) => job.status === statusFilter);
+    }
+
+    // Text search: match filename or user prompt
+    if (searchQuery.trim()) {
+      const q = searchQuery.trim().toLowerCase();
+      result = result.filter((job) => {
+        const filename = job.input_path.split('/').pop()?.toLowerCase() ?? '';
+        const prompt = job.user_prompt?.toLowerCase() ?? '';
+        return filename.includes(q) || prompt.includes(q);
+      });
+    }
+
+    // Date range filter
+    if (dateFrom) {
+      const from = new Date(dateFrom);
+      from.setHours(0, 0, 0, 0);
+      result = result.filter((job) => new Date(job.created_at) >= from);
+    }
+    if (dateTo) {
+      const to = new Date(dateTo);
+      to.setHours(23, 59, 59, 999);
+      result = result.filter((job) => new Date(job.created_at) <= to);
+    }
+
+    return result;
+  }, [history, searchQuery, statusFilter, dateFrom, dateTo]);
+
+  const hasDateFilter = dateFrom !== '' || dateTo !== '';
+  const hasActiveFilters = searchQuery.trim() !== '' || statusFilter !== 'all' || hasDateFilter;
+
+  const clearFilters = useCallback(() => {
+    setSearchQuery('');
+    setStatusFilter('all');
+    setDateFrom('');
+    setDateTo('');
+  }, []);
+
   // Auto-select first item when dialog opens
   useEffect(() => {
-    if (open && history.length > 0 && !selectedJob) {
-      setSelectedJob(history[0]);
+    if (open && filteredHistory.length > 0 && !selectedJob) {
+      setSelectedJob(filteredHistory[0]);
     }
     if (!open) {
       setSelectedJob(null);
+      clearFilters();
     }
-  }, [open, history, selectedJob]);
+  }, [open, filteredHistory, selectedJob, clearFilters]);
+
+  // When filters change, ensure selectedJob is still in the filtered list
+  useEffect(() => {
+    if (selectedJob && !filteredHistory.find((j) => j.id === selectedJob.id)) {
+      setSelectedJob(filteredHistory[0] ?? null);
+    }
+  }, [filteredHistory, selectedJob]);
 
   const copyCommand = useCallback(async (command: string) => {
     try {
@@ -76,25 +148,41 @@ export function HistoryDialog({
     switch (status) {
       case 'completed':
         return (
-          <Badge className="bg-green-500/10 text-green-500 border-green-500/20">
+          <Badge variant="outline" className="bg-green-500/10 text-green-500 border-green-500/20">
             {t('processing.historyDialog.status.completed')}
           </Badge>
         );
       case 'failed':
         return (
-          <Badge className="bg-red-500/10 text-red-500 border-red-500/20">
+          <Badge variant="outline" className="bg-red-500/10 text-red-500 border-red-500/20">
             {t('processing.historyDialog.status.failed')}
           </Badge>
         );
       case 'cancelled':
         return (
-          <Badge className="bg-yellow-500/10 text-yellow-500 border-yellow-500/20">
+          <Badge
+            variant="outline"
+            className="bg-yellow-500/10 text-yellow-500 border-yellow-500/20"
+          >
             {t('processing.historyDialog.status.cancelled')}
           </Badge>
         );
       default:
-        return <Badge variant="secondary">{status}</Badge>;
+        return <Badge variant="outline">{status}</Badge>;
     }
+  };
+
+  /** Small colored dot for job status in the list */
+  const getStatusDot = (status: string) => {
+    const color =
+      status === 'completed'
+        ? 'bg-green-500'
+        : status === 'failed'
+          ? 'bg-red-500'
+          : status === 'cancelled'
+            ? 'bg-yellow-500'
+            : 'bg-muted-foreground';
+    return <span className={cn('w-1.5 h-1.5 rounded-full flex-shrink-0', color)} />;
   };
 
   return (
@@ -126,19 +214,159 @@ export function HistoryDialog({
         <div className="flex flex-1 min-h-0 overflow-hidden">
           {/* Left: Job List */}
           <div className="w-80 border-r flex flex-col min-h-0 overflow-hidden">
+            {/* Filters */}
+            <div className="p-3 space-y-2.5 border-b flex-shrink-0">
+              {/* Search + Date filter button */}
+              <div className="flex items-center gap-1.5">
+                <div className="relative flex-1">
+                  <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
+                  <Input
+                    placeholder={t('processing.historyDialog.searchPlaceholder')}
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className={cn(
+                      'h-8 pl-8 text-xs',
+                      'bg-background/50 border-border/50',
+                      'focus:bg-background transition-colors',
+                      'placeholder:text-muted-foreground/50',
+                      searchQuery ? 'pr-7' : 'pr-3',
+                    )}
+                  />
+                  {searchQuery && (
+                    <button
+                      type="button"
+                      onClick={() => setSearchQuery('')}
+                      className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                    >
+                      <X className="w-3 h-3" />
+                    </button>
+                  )}
+                </div>
+
+                {/* Date range popover */}
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <button
+                      type="button"
+                      className={cn(
+                        'flex items-center justify-center w-8 h-8 rounded-md border transition-colors',
+                        hasDateFilter
+                          ? 'border-primary/50 bg-primary/10 text-primary'
+                          : 'border-border/50 bg-background/50 text-muted-foreground hover:text-foreground hover:bg-muted/50',
+                      )}
+                      title={t('processing.historyDialog.dateRange')}
+                    >
+                      <Calendar className="w-3.5 h-3.5" />
+                    </button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-64 p-3 space-y-3" align="end" sideOffset={8}>
+                    <p className="text-xs font-medium text-foreground">
+                      {t('processing.historyDialog.dateRange')}
+                    </p>
+                    <div className="space-y-2">
+                      <div className="space-y-1">
+                        <label htmlFor="date-from" className="text-[11px] text-muted-foreground">
+                          {t('processing.historyDialog.dateFrom')}
+                        </label>
+                        <Input
+                          id="date-from"
+                          type="date"
+                          value={dateFrom}
+                          onChange={(e) => setDateFrom(e.target.value)}
+                          className="h-8 text-xs"
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <label htmlFor="date-to" className="text-[11px] text-muted-foreground">
+                          {t('processing.historyDialog.dateTo')}
+                        </label>
+                        <Input
+                          id="date-to"
+                          type="date"
+                          value={dateTo}
+                          onChange={(e) => setDateTo(e.target.value)}
+                          className="h-8 text-xs"
+                        />
+                      </div>
+                    </div>
+                    {hasDateFilter && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setDateFrom('');
+                          setDateTo('');
+                        }}
+                        className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
+                      >
+                        <X className="w-3 h-3" />
+                        {t('processing.historyDialog.clearDates')}
+                      </button>
+                    )}
+                  </PopoverContent>
+                </Popover>
+              </div>
+
+              {/* Status filter tabs */}
+              <div className="flex items-center gap-1">
+                <div className="inline-flex items-center rounded-lg bg-muted/50 p-0.5 flex-1">
+                  {statusOptions.map((option) => (
+                    <button
+                      type="button"
+                      key={option.value}
+                      onClick={() => setStatusFilter(option.value)}
+                      className={cn(
+                        'flex-1 px-2 py-1 text-[11px] font-medium rounded-md transition-all text-center',
+                        statusFilter === option.value
+                          ? 'bg-background shadow-sm text-foreground'
+                          : 'text-muted-foreground hover:text-foreground',
+                      )}
+                    >
+                      {option.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Active filter indicator */}
+              {hasActiveFilters && (
+                <div className="flex items-center justify-between">
+                  <p className="text-[11px] text-muted-foreground">
+                    {t('processing.historyDialog.filterCount', {
+                      count: filteredHistory.length,
+                      total: history.length,
+                    })}
+                  </p>
+                  <button
+                    type="button"
+                    onClick={clearFilters}
+                    className="flex items-center gap-1 text-[11px] text-muted-foreground hover:text-foreground transition-colors"
+                  >
+                    <X className="w-3 h-3" />
+                    {t('processing.historyDialog.clearFilters')}
+                  </button>
+                </div>
+              )}
+            </div>
+
             <ScrollArea className="flex-1">
               <div className="p-3 space-y-1">
-                {history.length === 0 ? (
+                {filteredHistory.length === 0 ? (
                   <div className="flex flex-col items-center justify-center py-12 text-center">
                     <div className="w-12 h-12 rounded-full bg-muted/50 flex items-center justify-center mb-3">
-                      <History className="w-6 h-6 text-muted-foreground/50" />
+                      {hasActiveFilters ? (
+                        <SlidersHorizontal className="w-6 h-6 text-muted-foreground/50" />
+                      ) : (
+                        <History className="w-6 h-6 text-muted-foreground/50" />
+                      )}
                     </div>
                     <p className="text-sm text-muted-foreground">
-                      {t('processing.historyDialog.noHistory')}
+                      {hasActiveFilters
+                        ? t('processing.historyDialog.noResults')
+                        : t('processing.historyDialog.noHistory')}
                     </p>
                   </div>
                 ) : (
-                  history.map((job) => (
+                  filteredHistory.map((job) => (
                     <button
                       type="button"
                       key={job.id}
@@ -150,14 +378,17 @@ export function HistoryDialog({
                       )}
                     >
                       <div className="flex-1 min-w-0 overflow-hidden">
-                        <p className="text-sm font-medium break-all">
-                          {job.input_path.split('/').pop()}
-                        </p>
-                        <p className="text-xs text-muted-foreground mt-0.5">
+                        <div className="flex items-start gap-2">
+                          <span className="mt-1.5 flex-shrink-0">{getStatusDot(job.status)}</span>
+                          <p className="text-sm font-medium break-all">
+                            {job.input_path.split('/').pop()}
+                          </p>
+                        </div>
+                        <p className="text-xs text-muted-foreground mt-0.5 ml-3.5">
                           {formatDate(job.created_at)}
                         </p>
                         {job.user_prompt && (
-                          <p className="text-xs text-muted-foreground/70 mt-1 break-all line-clamp-3">
+                          <p className="text-xs text-muted-foreground/70 mt-1 ml-3.5 break-all line-clamp-2">
                             "{job.user_prompt}"
                           </p>
                         )}

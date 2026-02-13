@@ -130,7 +130,16 @@
         "completed": "Hoàn thành",
         "failed": "Thất bại",
         "cancelled": "Đã hủy"
-      }
+      },
+      "searchPlaceholder": "Tìm theo tên file hoặc yêu cầu...",
+      "filterAll": "Tất cả",
+      "dateRange": "Khoảng thời gian",
+      "dateFrom": "Từ",
+      "dateTo": "Đến",
+      "clearFilters": "Xóa",
+      "clearDates": "Xóa ngày",
+      "filterCount": "{{count}} / {{total}} kết quả",
+      "noResults": "Không tìm thấy kết quả"
     },
     "overlay": {
       "cancel": "Hủy"

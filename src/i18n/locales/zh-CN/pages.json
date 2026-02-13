@@ -130,7 +130,16 @@
         "completed": "已完成",
         "failed": "失败",
         "cancelled": "已取消"
-      }
+      },
+      "searchPlaceholder": "按文件名或提示搜索...",
+      "filterAll": "全部",
+      "dateRange": "日期范围",
+      "dateFrom": "开始",
+      "dateTo": "结束",
+      "clearFilters": "清除",
+      "clearDates": "清除日期",
+      "filterCount": "{{count}} / {{total}} 条结果",
+      "noResults": "未找到匹配结果"
     },
     "overlay": {
       "cancel": "取消"
