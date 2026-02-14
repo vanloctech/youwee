@@ -37,6 +37,8 @@
   },
   "toolbar": {
     "open": "Open",
+    "new": "New",
+    "close": "Close",
     "save": "Save",
     "saveAs": "Save As",
     "undo": "Undo",
@@ -61,6 +63,13 @@
     "batchConvert": "Batch Convert",
     "format": "Format",
     "exportAs": "Export As"
+  },
+  "unsavedDialog": {
+    "title": "Unsaved changes",
+    "description": "You have unsaved subtitle changes. Save before continuing?",
+    "save": "Save",
+    "discard": "Discard",
+    "cancel": "Cancel"
   },
   "editor": {
     "index": "#",

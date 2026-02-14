@@ -23,6 +23,7 @@ const MAX_UNDO_HISTORY = 50;
 
 interface SubtitleContextValue {
   // State
+  isWorkspaceOpen: boolean;
   entries: SubtitleEntry[];
   format: SubtitleFormat;
   assHeader: string | undefined;
@@ -52,6 +53,7 @@ interface SubtitleContextValue {
     assHeader?: string,
   ) => void;
   createNew: () => void;
+  closeFile: () => void;
   getSerializedContent: () => string;
   setFormat: (format: SubtitleFormat) => void;
   setFilePath: (path: string | null) => void;
@@ -89,6 +91,7 @@ const SubtitleContext = createContext<SubtitleContextValue | null>(null);
 
 export function SubtitleProvider({ children }: { children: ReactNode }) {
   // Core state
+  const [isWorkspaceOpen, setIsWorkspaceOpen] = useState(false);
   const [entries, setEntries] = useState<SubtitleEntry[]>([]);
   const [format, setFormatState] = useState<SubtitleFormat>('srt');
   const [assHeader, setAssHeader] = useState<string | undefined>(undefined);
@@ -145,6 +148,7 @@ export function SubtitleProvider({ children }: { children: ReactNode }) {
   // File operations
   const loadFromContent = useCallback((content: string, filename: string, fmt?: SubtitleFormat) => {
     const result = parseSubtitles(content, fmt);
+    setIsWorkspaceOpen(true);
     setEntries(result.entries);
     setFormatState(result.format);
     setAssHeader(result.assHeader);
@@ -161,6 +165,7 @@ export function SubtitleProvider({ children }: { children: ReactNode }) {
 
   const loadFromFile = useCallback(
     (newEntries: SubtitleEntry[], fmt: SubtitleFormat, path: string, header?: string) => {
+      setIsWorkspaceOpen(true);
       setEntries(newEntries);
       setFormatState(fmt);
       setAssHeader(header);
@@ -179,6 +184,27 @@ export function SubtitleProvider({ children }: { children: ReactNode }) {
   );
 
   const createNew = useCallback(() => {
+    const firstEntry = createEmptyEntry(0, 2000, 1);
+    setIsWorkspaceOpen(true);
+    setEntries([firstEntry]);
+    setFormatState('srt');
+    setAssHeader(undefined);
+    setFilePathState(null);
+    setFileName(null);
+    setIsDirty(false);
+    setSelectedIds(new Set([firstEntry.id]));
+    setActiveEntryId(firstEntry.id);
+    setVideoPath(null);
+    setVideoCurrentTime(0);
+    setIsVideoPlaying(false);
+    undoStack.current = [];
+    redoStack.current = [];
+    setCanUndo(false);
+    setCanRedo(false);
+  }, []);
+
+  const closeFile = useCallback(() => {
+    setIsWorkspaceOpen(false);
     setEntries([]);
     setFormatState('srt');
     setAssHeader(undefined);
@@ -187,6 +213,9 @@ export function SubtitleProvider({ children }: { children: ReactNode }) {
     setIsDirty(false);
     setSelectedIds(new Set());
     setActiveEntryId(null);
+    setVideoPath(null);
+    setVideoCurrentTime(0);
+    setIsVideoPlaying(false);
     undoStack.current = [];
     redoStack.current = [];
     setCanUndo(false);
@@ -464,6 +493,7 @@ export function SubtitleProvider({ children }: { children: ReactNode }) {
   );
 
   const value: SubtitleContextValue = {
+    isWorkspaceOpen,
     entries,
     format,
     assHeader,
@@ -482,6 +512,7 @@ export function SubtitleProvider({ children }: { children: ReactNode }) {
     loadFromContent,
     loadFromFile,
     createNew,
+    closeFile,
     getSerializedContent,
     setFormat,
     setFilePath,

@@ -61,7 +61,9 @@ export function SubtitlesPage() {
     subtitle.createNew();
   }, [subtitle]);
 
-  const hasEntries = subtitle.entries.length > 0 || subtitle.fileName !== null;
+  const handleCloseFile = useCallback(() => {
+    subtitle.closeFile();
+  }, [subtitle]);
 
   const pageHeader = (
     <>
@@ -73,7 +75,7 @@ export function SubtitlesPage() {
     </>
   );
 
-  if (!hasEntries) {
+  if (!subtitle.isWorkspaceOpen) {
     return (
       <div className="flex-1 flex flex-col overflow-hidden">
         {pageHeader}
@@ -124,6 +126,8 @@ export function SubtitlesPage() {
       <div className="px-4 sm:px-6 pb-2 flex-shrink-0">
         <SubtitleToolbar
           onOpenFile={handleOpenFile}
+          onCreateNew={handleCreateNew}
+          onCloseFile={handleCloseFile}
           onShowDownloadDialog={() => setShowDownloadDialog(true)}
           onShowTimingDialog={() => setShowTimingDialog(true)}
           onShowFindReplace={() => setShowFindReplace((v) => !v)}

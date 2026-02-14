@@ -95,13 +95,13 @@ export function WhisperGenerateDialog({ open: isOpen, onClose }: WhisperGenerate
     const isCancelled = () => activeRunIdRef.current !== runId;
 
     try {
-      const content = await invoke<string>('generate_subtitles_with_whisper', {
-        filePath,
+      const content = await invoke<string>('transcribe_video_with_whisper', {
+        videoPath: filePath,
+        responseFormat: outputFormat,
+        openaiApiKey: whisperApiKey,
         language: language || undefined,
-        format: outputFormat,
-        apiKey: whisperApiKey,
-        endpointUrl: ai.config.whisper_endpoint_url || undefined,
-        model: ai.config.whisper_model || 'whisper-1',
+        whisperEndpointUrl: ai.config.whisper_endpoint_url || undefined,
+        whisperModel: ai.config.whisper_model || 'whisper-1',
       });
       if (isCancelled()) {
         return;

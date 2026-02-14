@@ -37,6 +37,8 @@
   },
   "toolbar": {
     "open": "打开",
+    "new": "新建",
+    "close": "关闭文件",
     "save": "保存",
     "saveAs": "另存为",
     "undo": "撤销",
@@ -61,6 +63,13 @@
     "batchConvert": "批量转换",
     "format": "格式",
     "exportAs": "导出为"
+  },
+  "unsavedDialog": {
+    "title": "有未保存的更改",
+    "description": "字幕有未保存的更改。继续前是否先保存？",
+    "save": "保存",
+    "discard": "放弃更改",
+    "cancel": "取消"
   },
   "editor": {
     "index": "#",

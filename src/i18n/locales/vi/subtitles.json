@@ -37,6 +37,8 @@
   },
   "toolbar": {
     "open": "Mở",
+    "new": "Tạo mới",
+    "close": "Đóng file",
     "save": "Lưu",
     "saveAs": "Lưu thành",
     "undo": "Hoàn tác",
@@ -61,6 +63,13 @@
     "batchConvert": "Chuyển đổi hàng loạt",
     "format": "Định dạng",
     "exportAs": "Xuất ra"
+  },
+  "unsavedDialog": {
+    "title": "Có thay đổi chưa lưu",
+    "description": "Bạn có thay đổi phụ đề chưa lưu. Lưu trước khi tiếp tục?",
+    "save": "Lưu",
+    "discard": "Bỏ thay đổi",
+    "cancel": "Hủy"
   },
   "editor": {
     "index": "#",
