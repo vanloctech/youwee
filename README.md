@@ -30,10 +30,11 @@
 - **Live Stream Support** — Download live streams with dedicated toggle
 - **AI Video Summary** — Summarize videos with Gemini, OpenAI, or Ollama
 - **AI Video Processing** — Edit videos using natural language (cut, convert, resize, extract audio)
+- **Time Range Download (Cut Video)** — Download only the segment you need by setting start/end time (powered by yt-dlp `--download-sections`)
 - **Batch & Playlist** — Download multiple videos or entire playlists
 - **Audio Extraction** — Extract audio in MP3, M4A, or Opus formats
 - **Subtitle Support** — Download or embed subtitles
-- **Post-Processing** — Auto-embed metadata and thumbnails into files
+- **Post-Processing** — Auto-embed metadata, thumbnail, and subtitles (when enabled) into output files
 - **Speed Limit** — Control download bandwidth (KB/s, MB/s, GB/s)
 - **Download Library** — Track and manage all your downloads
 - **6 Beautiful Themes** — Midnight, Aurora, Sunset, Ocean, Forest, Candy
@@ -51,6 +52,14 @@
 ![Youwee - Settings](docs/screenshots/youwee-5.png)
 ![Youwee - Themes](docs/screenshots/youwee-6.png)
 ![Youwee - About](docs/screenshots/youwee-7.png)
+![Youwee - Download](docs/screenshots/youwee-8.png)
+![Youwee - Universal](docs/screenshots/youwee-9.png)
+![Youwee - Metadata](docs/screenshots/youwee-10.png)
+![Youwee - History](docs/screenshots/youwee-11.png)
+![Youwee - Channel Follow](docs/screenshots/youwee-12.png)
+![Youwee - Channel Polling](docs/screenshots/youwee-13.png)
+![Youwee - Queue & Processing](docs/screenshots/youwee-14.png)
+![Youwee - Language Vote](docs/screenshots/youwee-15.png)
 
 </details>
 

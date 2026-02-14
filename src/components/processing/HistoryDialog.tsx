@@ -3,6 +3,9 @@ import {
   AlertCircle,
   Calendar,
   Check,
+  ChevronDown,
+  ChevronLeft,
+  ChevronRight,
   Copy,
   FileDown,
   FileVideo,
@@ -52,6 +55,11 @@ export function HistoryDialog({
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
+  const [activeDateField, setActiveDateField] = useState<'from' | 'to'>('from');
+  const [calendarMonth, setCalendarMonth] = useState(() => {
+    const now = new Date();
+    return new Date(now.getFullYear(), now.getMonth(), 1);
+  });
 
   const statusOptions: { value: StatusFilter; label: string }[] = [
     { value: 'all', label: t('processing.historyDialog.filterAll') },
@@ -95,7 +103,71 @@ export function HistoryDialog({
   }, [history, searchQuery, statusFilter, dateFrom, dateTo]);
 
   const hasDateFilter = dateFrom !== '' || dateTo !== '';
+  const isDateRangeInvalid =
+    dateFrom !== '' && dateTo !== '' && new Date(dateFrom) > new Date(dateTo);
   const hasActiveFilters = searchQuery.trim() !== '' || statusFilter !== 'all' || hasDateFilter;
+
+  const formatDateKey = useCallback((date: Date) => {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  }, []);
+
+  const formatDateInput = useCallback(
+    (value: string) => {
+      if (!value) return '';
+      const date = new Date(value);
+      if (Number.isNaN(date.getTime())) return value;
+      const locale = i18n.language === 'vi' ? 'vi-VN' : 'en-US';
+      return date.toLocaleDateString(locale, {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric',
+      });
+    },
+    [i18n.language],
+  );
+
+  const dateRangeLabel = useMemo(() => {
+    if (!hasDateFilter) return t('processing.historyDialog.dateRange');
+    const from = dateFrom ? formatDateInput(dateFrom) : '...';
+    const to = dateTo ? formatDateInput(dateTo) : '...';
+    return `${from} - ${to}`;
+  }, [hasDateFilter, dateFrom, dateTo, formatDateInput, t]);
+
+  const calendarTitle = useMemo(() => {
+    const locale = i18n.language === 'vi' ? 'vi-VN' : 'en-US';
+    return calendarMonth.toLocaleDateString(locale, {
+      month: 'long',
+      year: 'numeric',
+    });
+  }, [calendarMonth, i18n.language]);
+
+  const calendarCells = useMemo(() => {
+    const year = calendarMonth.getFullYear();
+    const month = calendarMonth.getMonth();
+    const firstOfMonth = new Date(year, month, 1);
+    const offset = (firstOfMonth.getDay() + 6) % 7; // Monday-first
+    const gridStart = new Date(year, month, 1 - offset);
+    return Array.from({ length: 42 }, (_, i) => {
+      const date = new Date(gridStart);
+      date.setDate(gridStart.getDate() + i);
+      return date;
+    });
+  }, [calendarMonth]);
+
+  const onSelectCalendarDate = useCallback(
+    (date: Date) => {
+      const value = formatDateKey(date);
+      if (activeDateField === 'from') {
+        setDateFrom(value);
+      } else {
+        setDateTo(value);
+      }
+    },
+    [activeDateField, formatDateKey],
+  );
 
   const clearFilters = useCallback(() => {
     setSearchQuery('');
@@ -216,7 +288,7 @@ export function HistoryDialog({
           <div className="w-80 border-r flex flex-col min-h-0 overflow-hidden">
             {/* Filters */}
             <div className="p-3 space-y-2.5 border-b flex-shrink-0">
-              {/* Search + Date filter button */}
+              {/* Search + Date range */}
               <div className="flex items-center gap-1.5">
                 <div className="relative flex-1">
                   <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
@@ -246,62 +318,180 @@ export function HistoryDialog({
                 {/* Date range popover */}
                 <Popover>
                   <PopoverTrigger asChild>
-                    <button
-                      type="button"
+                    <Button
+                      variant="outline"
                       className={cn(
-                        'flex items-center justify-center w-8 h-8 rounded-md border transition-colors',
+                        'h-8 px-2.5 gap-1.5 text-[11px] font-medium justify-start min-w-0 max-w-[175px]',
+                        'border-border/60 bg-background/70 backdrop-blur-sm',
+                        'hover:bg-muted/60 transition-colors',
                         hasDateFilter
-                          ? 'border-primary/50 bg-primary/10 text-primary'
-                          : 'border-border/50 bg-background/50 text-muted-foreground hover:text-foreground hover:bg-muted/50',
+                          ? 'border-primary/40 bg-primary/10 text-primary'
+                          : 'text-muted-foreground',
+                        isDateRangeInvalid &&
+                          'border-destructive/50 bg-destructive/10 text-destructive',
                       )}
                       title={t('processing.historyDialog.dateRange')}
                     >
-                      <Calendar className="w-3.5 h-3.5" />
-                    </button>
+                      <Calendar className="w-3.5 h-3.5 shrink-0" />
+                      <span className="truncate">{dateRangeLabel}</span>
+                      <ChevronDown className="w-3 h-3 ml-auto shrink-0 opacity-70" />
+                    </Button>
                   </PopoverTrigger>
-                  <PopoverContent className="w-64 p-3 space-y-3" align="end" sideOffset={8}>
-                    <p className="text-xs font-medium text-foreground">
-                      {t('processing.historyDialog.dateRange')}
-                    </p>
-                    <div className="space-y-2">
-                      <div className="space-y-1">
-                        <label htmlFor="date-from" className="text-[11px] text-muted-foreground">
-                          {t('processing.historyDialog.dateFrom')}
-                        </label>
-                        <Input
-                          id="date-from"
-                          type="date"
-                          value={dateFrom}
-                          onChange={(e) => setDateFrom(e.target.value)}
-                          className="h-8 text-xs"
-                        />
-                      </div>
-                      <div className="space-y-1">
-                        <label htmlFor="date-to" className="text-[11px] text-muted-foreground">
-                          {t('processing.historyDialog.dateTo')}
-                        </label>
-                        <Input
-                          id="date-to"
-                          type="date"
-                          value={dateTo}
-                          onChange={(e) => setDateTo(e.target.value)}
-                          className="h-8 text-xs"
-                        />
-                      </div>
+                  <PopoverContent
+                    className="w-80 p-0 overflow-hidden border-border/60 shadow-xl"
+                    align="end"
+                    sideOffset={8}
+                  >
+                    <div className="px-4 py-3 border-b bg-gradient-to-r from-muted/70 via-muted/40 to-background">
+                      <p className="text-xs font-semibold text-foreground">
+                        {t('processing.historyDialog.dateRange')}
+                      </p>
+                      <p className="text-[11px] text-muted-foreground mt-0.5">{dateRangeLabel}</p>
                     </div>
-                    {hasDateFilter && (
-                      <button
+
+                    <div className="p-4 space-y-3">
+                      <div className="grid grid-cols-2 gap-2">
+                        <button
+                          type="button"
+                          onClick={() => setActiveDateField('from')}
+                          className={cn(
+                            'text-left rounded-md border px-2.5 py-2 transition-colors',
+                            activeDateField === 'from'
+                              ? 'border-primary/40 bg-primary/10'
+                              : 'border-border/60 bg-background/70 hover:bg-muted/40',
+                          )}
+                        >
+                          <p className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide">
+                            {t('processing.historyDialog.dateFrom')}
+                          </p>
+                          <p className="text-xs mt-0.5 font-medium">
+                            {dateFrom ? formatDateInput(dateFrom) : '...'}
+                          </p>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setActiveDateField('to')}
+                          className={cn(
+                            'text-left rounded-md border px-2.5 py-2 transition-colors',
+                            activeDateField === 'to'
+                              ? 'border-primary/40 bg-primary/10'
+                              : 'border-border/60 bg-background/70 hover:bg-muted/40',
+                          )}
+                        >
+                          <p className="text-[10px] font-medium text-muted-foreground uppercase tracking-wide">
+                            {t('processing.historyDialog.dateTo')}
+                          </p>
+                          <p className="text-xs mt-0.5 font-medium">
+                            {dateTo ? formatDateInput(dateTo) : '...'}
+                          </p>
+                        </button>
+                      </div>
+
+                      <div className="rounded-lg border border-border/60 bg-background/80 p-2.5 space-y-2">
+                        <div className="flex items-center justify-between">
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            className="h-7 w-7"
+                            onClick={() =>
+                              setCalendarMonth(
+                                (prev) => new Date(prev.getFullYear(), prev.getMonth() - 1, 1),
+                              )
+                            }
+                          >
+                            <ChevronLeft className="w-4 h-4" />
+                          </Button>
+                          <span className="text-xs font-medium capitalize">{calendarTitle}</span>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            className="h-7 w-7"
+                            onClick={() =>
+                              setCalendarMonth(
+                                (prev) => new Date(prev.getFullYear(), prev.getMonth() + 1, 1),
+                              )
+                            }
+                          >
+                            <ChevronRight className="w-4 h-4" />
+                          </Button>
+                        </div>
+
+                        <div className="grid grid-cols-7 gap-1">
+                          {['Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa', 'Su'].map((day) => (
+                            <div
+                              key={day}
+                              className="h-6 flex items-center justify-center text-[10px] text-muted-foreground font-medium"
+                            >
+                              {day}
+                            </div>
+                          ))}
+
+                          {calendarCells.map((date) => {
+                            const key = formatDateKey(date);
+                            const isCurrentMonth = date.getMonth() === calendarMonth.getMonth();
+                            const isFrom = dateFrom === key;
+                            const isTo = dateTo === key;
+                            const isInRange =
+                              dateFrom &&
+                              dateTo &&
+                              !isDateRangeInvalid &&
+                              key >= dateFrom &&
+                              key <= dateTo;
+
+                            return (
+                              <button
+                                key={key}
+                                type="button"
+                                onClick={() => onSelectCalendarDate(date)}
+                                className={cn(
+                                  'h-8 rounded-md text-xs transition-colors',
+                                  isCurrentMonth
+                                    ? 'text-foreground hover:bg-muted'
+                                    : 'text-muted-foreground/45 hover:bg-muted/50',
+                                  isInRange && 'bg-primary/10 text-primary',
+                                  (isFrom || isTo) &&
+                                    'bg-primary text-primary-foreground hover:bg-primary/90',
+                                )}
+                              >
+                                {date.getDate()}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+
+                      {isDateRangeInvalid && (
+                        <div className="flex items-center gap-1.5 text-[11px] text-destructive bg-destructive/10 border border-destructive/20 rounded-md px-2.5 py-2">
+                          <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                          <span>
+                            {t('processing.historyDialog.dateFrom')} &gt;{' '}
+                            {t('processing.historyDialog.dateTo')}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="px-4 py-3 border-t bg-muted/30 flex items-center justify-between">
+                      <span className="text-[11px] text-muted-foreground">
+                        {hasDateFilter ? dateRangeLabel : t('processing.historyDialog.dateRange')}
+                      </span>
+                      <Button
                         type="button"
+                        variant="ghost"
+                        size="sm"
                         onClick={() => {
                           setDateFrom('');
                           setDateTo('');
                         }}
-                        className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
+                        className="h-7 px-2 text-[11px]"
+                        disabled={!hasDateFilter}
                       >
-                        <X className="w-3 h-3" />
+                        <X className="w-3 h-3 mr-1" />
                         {t('processing.historyDialog.clearDates')}
-                      </button>
-                    )}
+                      </Button>
+                    </div>
                   </PopoverContent>
                 </Popover>
               </div>

@@ -28,10 +28,11 @@
 - **Theo dõi Kênh** — Theo dõi kênh YouTube, Bilibili & Youku, nhận thông báo video mới, tự động tải xuống, và quản lý từ system tray
 - **Tóm tắt Video bằng AI** — Tóm tắt video với Gemini, OpenAI, hoặc Ollama
 - **Xử lý Video bằng AI** — Chỉnh sửa video bằng ngôn ngữ tự nhiên (cắt, chuyển đổi, thay đổi kích thước, trích xuất âm thanh)
+- **Tải theo khoảng thời gian (Cắt video)** — Chỉ tải đoạn cần thiết bằng cách đặt thời gian bắt đầu/kết thúc (dùng yt-dlp `--download-sections`)
 - **Tải hàng loạt & Playlist** — Tải nhiều video hoặc toàn bộ playlist
 - **Trích xuất Âm thanh** — Trích xuất âm thanh định dạng MP3, M4A, hoặc Opus
 - **Hỗ trợ Phụ đề** — Tải hoặc nhúng phụ đề
-- **Hậu xử lý** — Tự động nhúng metadata và thumbnail vào file
+- **Hậu xử lý** — Tự động nhúng metadata, thumbnail và phụ đề (khi bật) vào file đầu ra
 - **Thư viện Tải xuống** — Theo dõi và quản lý tất cả các bản tải
 - **6 Giao diện Đẹp** — Midnight, Aurora, Sunset, Ocean, Forest, Candy
 - **Nhanh & Nhẹ** — Xây dựng với Tauri cho hiệu suất tối ưu
@@ -49,6 +50,14 @@
 ![Youwee - Cài đặt](screenshots/youwee-5.png)
 ![Youwee - Giao diện](screenshots/youwee-6.png)
 ![Youwee - Giới thiệu](screenshots/youwee-7.png)
+![Youwee - Tải xuống](screenshots/youwee-8.png)
+![Youwee - Universal](screenshots/youwee-9.png)
+![Youwee - Metadata](screenshots/youwee-10.png)
+![Youwee - Lịch sử](screenshots/youwee-11.png)
+![Youwee - Theo dõi kênh](screenshots/youwee-12.png)
+![Youwee - Polling kênh](screenshots/youwee-13.png)
+![Youwee - Hàng đợi & Xử lý](screenshots/youwee-14.png)
+![Youwee - Bình chọn ngôn ngữ](screenshots/youwee-15.png)
 
 </details>
 

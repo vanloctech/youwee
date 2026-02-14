@@ -2,13 +2,17 @@ import { open } from '@tauri-apps/plugin-dialog';
 import { revealItemInDir } from '@tauri-apps/plugin-opener';
 import {
   Check,
+  FileText,
+  Film,
   FolderOpen,
+  ImageIcon,
   ImagePlus,
   Lightbulb,
   Loader2,
   Paperclip,
   Send,
   Square,
+  Subtitles,
   Wand2,
   X,
 } from 'lucide-react';
@@ -20,6 +24,9 @@ import type { ChatAttachment, ChatMessage, ProcessingProgress } from '@/lib/type
 import { cn } from '@/lib/utils';
 
 const IMAGE_EXTENSIONS = ['png', 'jpg', 'jpeg', 'webp', 'gif', 'bmp', 'svg', 'tiff', 'tif'];
+const VIDEO_EXTENSIONS = ['mp4', 'mkv', 'webm', 'avi', 'mov', 'wmv', 'flv', 'm4v', 'ts', 'mts'];
+const SUBTITLE_EXTENSIONS = ['srt', 'ass', 'ssa', 'vtt', 'sub'];
+const ATTACH_EXTENSIONS = [...IMAGE_EXTENSIONS, ...VIDEO_EXTENSIONS, ...SUBTITLE_EXTENSIONS];
 
 export interface ChatPanelProps {
   messages: ChatMessage[];
@@ -27,8 +34,10 @@ export interface ChatPanelProps {
   isProcessing: boolean;
   progress: ProcessingProgress | null;
   hasVideo: boolean;
+  outputDirectory: string;
   attachedImages: ChatAttachment[];
   onSendMessage: (message: string) => Promise<void>;
+  onSelectOutputDirectory: () => Promise<void>;
   onCancelProcessing: () => void;
   onAttachImages: (paths: string[]) => Promise<void>;
   onRemoveAttachment: (id: string) => void;
@@ -41,8 +50,10 @@ export function ChatPanel({
   isProcessing,
   progress,
   hasVideo,
+  outputDirectory,
   attachedImages,
   onSendMessage,
+  onSelectOutputDirectory,
   onCancelProcessing,
   onAttachImages,
   onRemoveAttachment,
@@ -54,6 +65,7 @@ export function ChatPanel({
   const [isDragOver, setIsDragOver] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const dragCounterRef = useRef(0);
+  const suggestionsRef = useRef<HTMLDivElement>(null);
 
   // Prompt suggestions for chat
   const promptSuggestions = [
@@ -122,6 +134,21 @@ export function ChatPanel({
       label: t('processing.chat.prompts.intro'),
       prompt: t('processing.chat.prompts.introPrompt'),
     },
+    {
+      id: 'outro',
+      label: t('processing.chat.prompts.outro'),
+      prompt: t('processing.chat.prompts.outroPrompt'),
+    },
+    {
+      id: 'subtitle',
+      label: t('processing.chat.prompts.subtitle'),
+      prompt: t('processing.chat.prompts.subtitlePrompt'),
+    },
+    {
+      id: 'mergeVideos',
+      label: t('processing.chat.prompts.mergeVideos'),
+      prompt: t('processing.chat.prompts.mergeVideosPrompt'),
+    },
   ];
 
   // Auto-scroll to bottom when messages change
@@ -130,6 +157,58 @@ export function ChatPanel({
       messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
     }
   }, [messages]);
+
+  useEffect(() => {
+    if (!showSuggestions) return;
+
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as Node | null;
+      if (target && suggestionsRef.current && !suggestionsRef.current.contains(target)) {
+        setShowSuggestions(false);
+      }
+    };
+
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setShowSuggestions(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    document.addEventListener('keydown', handleEscape);
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('keydown', handleEscape);
+    };
+  }, [showSuggestions]);
+
+  const formatFileSize = (bytes: number): string => {
+    if (bytes < 1024) return `${bytes} B`;
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+    if (bytes < 1024 * 1024 * 1024) return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+    return `${(bytes / (1024 * 1024 * 1024)).toFixed(2)} GB`;
+  };
+
+  const getAttachmentIcon = (kind: ChatAttachment['kind']) => {
+    switch (kind) {
+      case 'image':
+        return <ImageIcon className="w-3.5 h-3.5" />;
+      case 'video':
+        return <Film className="w-3.5 h-3.5" />;
+      case 'subtitle':
+        return <Subtitles className="w-3.5 h-3.5" />;
+      default:
+        return <FileText className="w-3.5 h-3.5" />;
+    }
+  };
+
+  const getFolderName = (path: string): string => {
+    if (!path) return '';
+    const normalized = path.replace(/\\/g, '/');
+    const parts = normalized.split('/').filter(Boolean);
+    return parts.at(-1) ?? path;
+  };
 
   const handleSelectSuggestion = (prompt: string) => {
     setInputMessage(prompt);
@@ -151,8 +230,8 @@ export function ChatPanel({
         multiple: true,
         filters: [
           {
-            name: 'Image',
-            extensions: IMAGE_EXTENSIONS,
+            name: 'Media',
+            extensions: ATTACH_EXTENSIONS,
           },
         ],
       });
@@ -201,15 +280,15 @@ export function ChatPanel({
       setIsDragOver(false);
 
       const files = Array.from(e.dataTransfer.files);
-      const imageFiles = files.filter((f) => {
+      const acceptedFiles = files.filter((f) => {
         const ext = f.name.split('.').pop()?.toLowerCase() || '';
-        return IMAGE_EXTENSIONS.includes(ext);
+        return ATTACH_EXTENSIONS.includes(ext);
       });
 
-      if (imageFiles.length > 0) {
+      if (acceptedFiles.length > 0) {
         // For Tauri, we need absolute paths. dataTransfer.files gives us File objects
         // but in Tauri webview, dropped files have a path property
-        const paths = imageFiles
+        const paths = acceptedFiles
           .map((f) => (f as File & { path?: string }).path)
           .filter((p): p is string => !!p);
 
@@ -236,7 +315,7 @@ export function ChatPanel({
         <div className="absolute inset-0 z-50 flex items-center justify-center bg-primary/10 backdrop-blur-sm border-2 border-dashed border-primary/50 rounded-lg m-2">
           <div className="flex flex-col items-center gap-2 text-primary">
             <ImagePlus className="w-8 h-8" />
-            <span className="text-sm font-medium">{t('processing.chat.dropImages')}</span>
+            <span className="text-sm font-medium">{t('processing.chat.dropFiles')}</span>
           </div>
         </div>
       )}
@@ -253,7 +332,31 @@ export function ChatPanel({
               <p className="text-xs text-muted-foreground">{t('processing.chat.subtitle')}</p>
             </div>
           </div>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <button
+                type="button"
+                onClick={onSelectOutputDirectory}
+                disabled={!hasVideo}
+                className={cn(
+                  'h-8 max-w-[170px] px-2.5 rounded-lg border border-dashed border-border/70',
+                  'inline-flex items-center gap-1.5 text-xs text-muted-foreground',
+                  'hover:text-foreground hover:border-primary/50 hover:bg-primary/5 transition-colors',
+                  'disabled:opacity-50 disabled:cursor-not-allowed',
+                )}
+              >
+                <FolderOpen className="w-3.5 h-3.5 flex-shrink-0" />
+                <span className="truncate">
+                  {getFolderName(outputDirectory) || t('processing.chat.outputFolder')}
+                </span>
+              </button>
+            </TooltipTrigger>
+            <TooltipContent>{t('processing.chat.selectOutputFolder')}</TooltipContent>
+          </Tooltip>
         </div>
+        <p className="mt-2 text-[11px] text-muted-foreground truncate">
+          {t('processing.chat.outputFolder')}: {outputDirectory || '-'}
+        </p>
       </div>
 
       {/* Messages */}
@@ -327,24 +430,39 @@ export function ChatPanel({
                     {/* Attachment thumbnails */}
                     {msg.attachments && msg.attachments.length > 0 && (
                       <div className="flex flex-wrap gap-1.5 mb-2">
-                        {msg.attachments.map((att) => (
-                          <div
-                            key={att.id}
-                            className="relative group/att rounded-lg overflow-hidden bg-black/20"
-                          >
-                            <img
-                              src={att.previewUrl}
-                              alt={att.name}
-                              className="h-16 w-auto max-w-[100px] object-cover rounded-lg"
-                              referrerPolicy="no-referrer"
-                            />
-                            <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/60 to-transparent p-1">
-                              <span className="text-[10px] text-white/80 truncate block">
-                                {att.name}
+                        {msg.attachments.map((att) =>
+                          att.kind === 'image' && att.previewUrl ? (
+                            <div
+                              key={att.id}
+                              className="relative group/att rounded-lg overflow-hidden bg-black/20"
+                            >
+                              <img
+                                src={att.previewUrl}
+                                alt={att.name}
+                                className="h-16 w-auto max-w-[100px] object-cover rounded-lg"
+                                referrerPolicy="no-referrer"
+                              />
+                              <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/60 to-transparent p-1">
+                                <span className="text-[10px] text-white/80 truncate block">
+                                  {att.name}
+                                </span>
+                              </div>
+                            </div>
+                          ) : (
+                            <div
+                              key={att.id}
+                              className="inline-flex items-center gap-1.5 max-w-[180px] rounded-lg border border-border/50 bg-background/70 px-2 py-1"
+                            >
+                              <span className="text-muted-foreground">
+                                {getAttachmentIcon(att.kind)}
+                              </span>
+                              <span className="text-[11px] truncate">{att.name}</span>
+                              <span className="text-[10px] text-muted-foreground">
+                                {formatFileSize(att.size)}
                               </span>
                             </div>
-                          </div>
-                        ))}
+                          ),
+                        )}
                       </div>
                     )}
                     <p
@@ -497,14 +615,31 @@ export function ChatPanel({
               {attachedImages.map((img) => (
                 <div
                   key={img.id}
-                  className="relative group/preview flex-shrink-0 rounded-lg overflow-hidden bg-muted/50 border border-border/30"
+                  className={cn(
+                    'relative group/preview flex-shrink-0 rounded-lg border border-border/30',
+                    img.kind === 'image' && img.previewUrl
+                      ? 'overflow-hidden bg-muted/50'
+                      : 'bg-background/70 px-2 py-1.5',
+                  )}
                 >
-                  <img
-                    src={img.previewUrl}
-                    alt={img.name}
-                    className="h-12 w-auto max-w-[80px] object-cover"
-                    referrerPolicy="no-referrer"
-                  />
+                  {img.kind === 'image' && img.previewUrl ? (
+                    <img
+                      src={img.previewUrl}
+                      alt={img.name}
+                      className="h-12 w-auto max-w-[80px] object-cover"
+                      referrerPolicy="no-referrer"
+                    />
+                  ) : (
+                    <div className="flex items-center gap-1.5 max-w-[180px]">
+                      <span className="text-muted-foreground">{getAttachmentIcon(img.kind)}</span>
+                      <div className="min-w-0">
+                        <p className="text-[11px] truncate leading-tight">{img.name}</p>
+                        <p className="text-[10px] text-muted-foreground leading-tight">
+                          {formatFileSize(img.size)}
+                        </p>
+                      </div>
+                    </div>
+                  )}
                   <button
                     type="button"
                     onClick={() => onRemoveAttachment(img.id)}
@@ -512,11 +647,13 @@ export function ChatPanel({
                   >
                     <X className="w-2.5 h-2.5" />
                   </button>
-                  <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/50 to-transparent px-1 py-0.5">
-                    <span className="text-[9px] text-white/80 truncate block max-w-[70px]">
-                      {img.name}
-                    </span>
-                  </div>
+                  {img.kind === 'image' && img.previewUrl && (
+                    <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/50 to-transparent px-1 py-0.5">
+                      <span className="text-[9px] text-white/80 truncate block max-w-[70px]">
+                        {img.name}
+                      </span>
+                    </div>
+                  )}
                 </div>
               ))}
             </div>
@@ -526,7 +663,7 @@ export function ChatPanel({
           <div className="relative flex items-center justify-between mt-1 px-1">
             <div className="flex items-center gap-0.5">
               {/* Prompt Templates Button */}
-              <div className="relative">
+              <div ref={suggestionsRef} className="relative">
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <button
@@ -601,7 +738,7 @@ export function ChatPanel({
                     <Paperclip className="w-4 h-4" />
                   </button>
                 </TooltipTrigger>
-                <TooltipContent>{t('processing.chat.attachImage')}</TooltipContent>
+                <TooltipContent>{t('processing.chat.attachFile')}</TooltipContent>
               </Tooltip>
 
               {/* Attachment count badge */}

@@ -108,10 +108,7 @@ export function MetadataPage() {
     <div className="flex-1 flex flex-col overflow-hidden">
       {/* Header */}
       <header className="flex-shrink-0 flex items-center justify-between h-12 sm:h-14 px-4 sm:px-6">
-        <div className="flex items-center gap-2">
-          <FileJson className="w-5 h-5 text-primary" />
-          <h1 className="text-base sm:text-lg font-semibold">{t('title')}</h1>
-        </div>
+        <h1 className="text-base sm:text-lg font-semibold">{t('title')}</h1>
         <ThemePicker />
       </header>
 

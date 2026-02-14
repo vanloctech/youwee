@@ -195,6 +195,50 @@ pub async fn get_all_ytdlp_versions_cmd(app: AppHandle) -> Result<YtdlpAllVersio
     Ok(get_all_ytdlp_versions(&app).await)
 }
 
+async fn get_installed_channel_version(app: &AppHandle, channel: &YtdlpChannel) -> Option<String> {
+    if matches!(channel, YtdlpChannel::Bundled) {
+        return None;
+    }
+
+    let app_data_dir = app.path().app_data_dir().ok()?;
+
+    #[cfg(windows)]
+    let binary_name = match channel {
+        YtdlpChannel::Bundled => return None,
+        YtdlpChannel::Stable => "yt-dlp-stable.exe",
+        YtdlpChannel::Nightly => "yt-dlp-nightly.exe",
+    };
+    #[cfg(not(windows))]
+    let binary_name = match channel {
+        YtdlpChannel::Bundled => return None,
+        YtdlpChannel::Stable => "yt-dlp-stable",
+        YtdlpChannel::Nightly => "yt-dlp-nightly",
+    };
+
+    let binary_path = app_data_dir.join("bin").join(binary_name);
+    if !binary_path.exists() {
+        return None;
+    }
+
+    let mut cmd = Command::new(&binary_path);
+    cmd.args(["--version"])
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped());
+    cmd.hide_window();
+
+    let output = cmd.output().await.ok()?;
+    if !output.status.success() {
+        return None;
+    }
+
+    let version = String::from_utf8_lossy(&output.stdout).trim().to_string();
+    if version.is_empty() {
+        None
+    } else {
+        Some(version)
+    }
+}
+
 #[tauri::command]
 pub async fn check_ytdlp_channel_update(app: AppHandle, channel: String) -> Result<YtdlpChannelUpdateInfo, String> {
     let channel_enum = YtdlpChannel::from_str(&channel);
@@ -203,13 +247,9 @@ pub async fn check_ytdlp_channel_update(app: AppHandle, channel: String) -> Resu
     let api_url = get_channel_api_url(&channel_enum)
         .ok_or("Cannot check updates for bundled channel")?;
     
-    // Get current installed version
-    let all_versions = get_all_ytdlp_versions(&app).await;
-    let current_version = match channel_enum {
-        YtdlpChannel::Bundled => all_versions.bundled.version,
-        YtdlpChannel::Stable => all_versions.stable.version,
-        YtdlpChannel::Nightly => all_versions.nightly.version,
-    };
+    // Get current installed version from the channel binary itself.
+    // get_all_ytdlp_versions only checks file existence and does not include versions.
+    let current_version = get_installed_channel_version(&app, &channel_enum).await;
     
     // Fetch latest version from GitHub
     let client = reqwest::Client::builder()
@@ -248,8 +288,9 @@ pub async fn check_ytdlp_channel_update(app: AppHandle, channel: String) -> Resu
         .map_err(|e| format!("Failed to parse release info: {}", e))?;
     
     let latest_version = release.tag_name;
+    let normalize_version = |v: &str| v.trim().trim_start_matches('v').to_string();
     let update_available = current_version.as_ref()
-        .map(|cv| cv != &latest_version)
+        .map(|cv| normalize_version(cv) != normalize_version(&latest_version))
         .unwrap_or(true); // If not installed, update is available
     
     Ok(YtdlpChannelUpdateInfo {

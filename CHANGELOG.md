@@ -7,6 +7,33 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+### Changed
+
+### Fixed
+
+## [0.9.4] - 2026-02-14
+
+### Added
+- **Processing output folder picker** - Added a selectable output directory in Processing chat. Default stays the main video folder, and generated outputs now honor the selected folder for AI commands and quick actions
+- **Multi-file attachments in Processing AI chat** - Processing chat now supports image/video/subtitle attachments (picker + drag/drop) with contextual previews and metadata
+- **Language request shortcut in Settings** - Added a quick link in Settings → General for users to vote/request next language support on GitHub Discussions
+- **System tray app update action** - Added a new tray menu action to check for Youwee updates directly from tray
+
+### Changed
+- **Deterministic subtitle/merge command generation** - Processing command generation now handles subtitle burn-in and multi-video merge (including intro/outro ordering hints) before AI fallback for more reliable results
+- **Clearer system tray channel check label** - Renamed "Check All Now" to "Check Followed Channels Now" to better reflect checking followed channels
+- **Simplified page headers** - Removed leading title icons from Metadata, Processing, and AI Summary pages for a cleaner look
+
+### Fixed
+- **Video info fetch fails with authentication/proxy** - Fixed yt-dlp argument ordering so cookie and proxy flags are inserted before the `--` URL separator, preventing `Failed to fetch video info` errors while keeping downloads working
+- **Stable channel update check always shows available** - Fixed yt-dlp stable/nightly update check to read the installed channel binary version (`--version`) instead of file-existence metadata, so "Up to date" is shown correctly after update
+- **Bundled update status and binary source mismatch** - Fixed bundled update flow to show latest available version in Settings and prefer the user-updated `app_data/bin/yt-dlp` binary when present, so updating bundled actually takes effect
+- **Processing page video info redesign** - Refreshed the section below player with a YouTube-style title + modern metadata chips, and removed hover color shift/shadow on codec badges for cleaner visuals
+- **Prompt Templates dropdown close behavior** - Fixed Processing Prompt Templates dropdown to auto-close on outside click and Escape key
+- **Duplicate URL count in Universal input** - Fixed the URL count badge showing duplicated number (e.g. `1 1 URL`) in Universal URL input
+
 ## [0.9.3] - 2026-02-14
 
 ### Added

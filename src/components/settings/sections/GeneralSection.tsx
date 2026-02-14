@@ -1,5 +1,5 @@
 import { invoke } from '@tauri-apps/api/core';
-import { Check, Database, Film, Monitor, Moon, Palette, Sun } from 'lucide-react';
+import { Check, Database, ExternalLink, Film, Monitor, Moon, Palette, Sun } from 'lucide-react';
 import { useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
@@ -25,6 +25,7 @@ const SUPPORTED_LANGUAGES = [
 ];
 
 const isMacOS = navigator.platform.includes('Mac');
+const LANGUAGE_REQUEST_DISCUSSION_URL = 'https://github.com/vanloctech/youwee/discussions/18';
 
 // Gradient backgrounds for theme preview
 const themeGradients: Record<ThemeName, string> = {
@@ -133,6 +134,28 @@ export function GeneralSection({ highlightId }: GeneralSectionProps) {
               </button>
             ))}
           </div>
+        </SettingsRow>
+
+        <SettingsRow
+          id="language-request"
+          label={t('general.languageRequest')}
+          description={t('general.languageRequestDesc')}
+          highlight={highlightId === 'language-request'}
+        >
+          <a
+            href={LANGUAGE_REQUEST_DISCUSSION_URL}
+            target="_blank"
+            rel="noopener noreferrer"
+            className={cn(
+              'h-9 px-3 rounded-md border border-dashed border-border/70',
+              'inline-flex items-center gap-1.5 text-sm font-medium',
+              'text-muted-foreground hover:text-foreground',
+              'hover:border-primary/50 hover:bg-primary/5 transition-colors',
+            )}
+          >
+            <span>{t('general.languageRequestButton')}</span>
+            <ExternalLink className="w-3.5 h-3.5" />
+          </a>
         </SettingsRow>
 
         {/* Theme Colors */}

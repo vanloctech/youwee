@@ -1,4 +1,4 @@
-import { Clock, FileDown, Film, History, Maximize2, Music, Wand2, Zap } from 'lucide-react';
+import { Clock, FileDown, Film, History, Maximize2, Music, Zap } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
@@ -31,8 +31,10 @@ export function ProcessingPage() {
     progress,
     messages,
     isGenerating,
+    outputDirectory,
     history,
     selectVideo,
+    selectOutputDirectory,
     setVideoError,
     sendMessage,
     cancelProcessing,
@@ -62,15 +64,26 @@ export function ProcessingPage() {
     return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
 
+  const formatFileSize = (bytes: number): string => {
+    if (!bytes || bytes <= 0) return '0 MB';
+    const gb = bytes / (1024 * 1024 * 1024);
+    if (gb >= 1) return `${gb.toFixed(2)} GB`;
+    const mb = bytes / (1024 * 1024);
+    return `${mb.toFixed(1)} MB`;
+  };
+
+  const getDisplayTitle = (filename: string): string => {
+    const dotIndex = filename.lastIndexOf('.');
+    if (dotIndex <= 0) return filename;
+    return filename.slice(0, dotIndex);
+  };
+
   return (
     <TooltipProvider>
       <div className="flex-1 flex flex-col overflow-hidden">
         {/* Header */}
         <header className="flex-shrink-0 flex items-center justify-between h-12 sm:h-14 px-4 sm:px-6">
-          <div className="flex items-center gap-2">
-            <Wand2 className="w-5 h-5 text-primary" />
-            <h1 className="text-base sm:text-lg font-semibold">{t('processing.title')}</h1>
-          </div>
+          <h1 className="text-base sm:text-lg font-semibold">{t('processing.title')}</h1>
           <div className="flex items-center gap-2">
             <Button
               variant="ghost"
@@ -115,54 +128,50 @@ export function ProcessingPage() {
               />
             </div>
 
-            {/* Metadata Bar */}
+            {/* Video Info (YouTube-style below player) */}
             {metadata && (
-              <div className="flex items-center gap-4 px-1">
-                <div className="flex items-center gap-3 flex-wrap">
-                  <div className="flex items-center gap-1.5 text-xs">
-                    <div className="w-5 h-5 rounded bg-muted/50 flex items-center justify-center">
-                      <Maximize2 className="w-3 h-3 text-muted-foreground" />
-                    </div>
-                    <span className="text-muted-foreground">
+              <div className="px-1">
+                <div className="rounded-2xl border border-border/60 bg-gradient-to-b from-background to-muted/20 px-4 py-3.5 sm:px-5 sm:py-4">
+                  <h2 className="text-sm sm:text-base font-semibold leading-snug line-clamp-2">
+                    {getDisplayTitle(metadata.filename)}
+                  </h2>
+
+                  <div className="mt-2.5 flex flex-wrap items-center gap-1.5 text-xs text-muted-foreground">
+                    <span className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 bg-muted/60">
+                      <Clock className="w-3 h-3" />
+                      {formatTime(metadata.duration)}
+                    </span>
+                    <span className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 bg-muted/60">
+                      <Maximize2 className="w-3 h-3" />
                       {metadata.width}×{metadata.height}
                     </span>
-                  </div>
-                  <div className="flex items-center gap-1.5 text-xs">
-                    <div className="w-5 h-5 rounded bg-muted/50 flex items-center justify-center">
-                      <Film className="w-3 h-3 text-muted-foreground" />
-                    </div>
-                    <span className="text-muted-foreground">{metadata.video_codec}</span>
-                  </div>
-                  {metadata.audio_codec && (
-                    <div className="flex items-center gap-1.5 text-xs">
-                      <div className="w-5 h-5 rounded bg-muted/50 flex items-center justify-center">
-                        <Music className="w-3 h-3 text-muted-foreground" />
-                      </div>
-                      <span className="text-muted-foreground">{metadata.audio_codec}</span>
-                    </div>
-                  )}
-                  <div className="flex items-center gap-1.5 text-xs">
-                    <div className="w-5 h-5 rounded bg-muted/50 flex items-center justify-center">
-                      <Clock className="w-3 h-3 text-muted-foreground" />
-                    </div>
-                    <span className="text-muted-foreground">{formatTime(metadata.duration)}</span>
-                  </div>
-                  <div className="flex items-center gap-1.5 text-xs">
-                    <div className="w-5 h-5 rounded bg-muted/50 flex items-center justify-center">
-                      <FileDown className="w-3 h-3 text-muted-foreground" />
-                    </div>
-                    <span className="text-muted-foreground">
-                      {(metadata.file_size / 1_000_000).toFixed(1)} MB
+                    <span className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 bg-muted/60">
+                      <FileDown className="w-3 h-3" />
+                      {formatFileSize(metadata.file_size)}
                     </span>
+                    {metadata.fps > 0 && (
+                      <span className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 bg-muted/60">
+                        <Zap className="w-3 h-3" />
+                        {metadata.fps.toFixed(0)} fps
+                      </span>
+                    )}
                   </div>
-                  {metadata.fps && (
-                    <div className="flex items-center gap-1.5 text-xs">
-                      <div className="w-5 h-5 rounded bg-muted/50 flex items-center justify-center">
-                        <Zap className="w-3 h-3 text-muted-foreground" />
-                      </div>
-                      <span className="text-muted-foreground">{metadata.fps.toFixed(0)} fps</span>
-                    </div>
-                  )}
+
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    <Badge className="rounded-full border-0 shadow-none bg-blue-500/10 text-blue-600 hover:bg-blue-500/10 hover:text-blue-600 dark:text-blue-400 dark:hover:text-blue-400">
+                      <Film className="w-3 h-3 mr-1.5" />
+                      {metadata.video_codec}
+                    </Badge>
+                    {metadata.audio_codec && (
+                      <Badge className="rounded-full border-0 shadow-none bg-teal-500/10 text-teal-600 hover:bg-teal-500/10 hover:text-teal-600 dark:text-teal-400 dark:hover:text-teal-400">
+                        <Music className="w-3 h-3 mr-1.5" />
+                        {metadata.audio_codec}
+                      </Badge>
+                    )}
+                    <Badge className="rounded-full border-0 shadow-none bg-amber-500/10 text-amber-600 hover:bg-amber-500/10 hover:text-amber-600 dark:text-amber-400 dark:hover:text-amber-400">
+                      {metadata.format.toUpperCase()}
+                    </Badge>
+                  </div>
                 </div>
               </div>
             )}
@@ -175,8 +184,10 @@ export function ProcessingPage() {
             isProcessing={isProcessing}
             progress={progress}
             hasVideo={!!metadata && !!videoPath}
+            outputDirectory={outputDirectory}
             attachedImages={attachedImages}
             onSendMessage={sendMessage}
+            onSelectOutputDirectory={selectOutputDirectory}
             onCancelProcessing={cancelProcessing}
             onAttachImages={attachImages}
             onRemoveAttachment={removeAttachment}

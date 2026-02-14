@@ -55,11 +55,15 @@
       "generating": "Generating...",
       "processing": "Processing...",
       "complete": "Complete",
+      "outputFolder": "Output folder",
+      "selectOutputFolder": "Select output folder",
       "openInFolder": "Open in Folder",
       "cancel": "Cancel",
       "inputPlaceholder": "Describe your edit...",
       "attachImage": "Attach Image",
+      "attachFile": "Attach File",
       "dropImages": "Drop images here",
+      "dropFiles": "Drop files here",
       "prompts": {
         "cut": "Cut",
         "cutPrompt": "Cut video from [start_time] to [end_time]",
@@ -86,7 +90,13 @@
         "watermark": "Watermark",
         "watermarkPrompt": "Add attached image as watermark at bottom-right corner with 50% opacity",
         "intro": "Image Intro",
-        "introPrompt": "Create a [3] second intro slide from the attached image before the video"
+        "introPrompt": "Create a [3] second intro slide from the attached image before the video",
+        "outro": "Video Outro",
+        "outroPrompt": "Append attached video(s) as outro after the main video",
+        "subtitle": "Burn Subtitle",
+        "subtitlePrompt": "Burn attached subtitle file into the video",
+        "mergeVideos": "Merge Videos",
+        "mergeVideosPrompt": "Merge the main video with attached videos in order"
       }
     },
     "player": {

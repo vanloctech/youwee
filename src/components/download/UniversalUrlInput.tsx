@@ -214,7 +214,6 @@ export function UniversalUrlInput({
               />
               {urlCount > 0 && (
                 <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground bg-muted px-2 py-0.5 rounded">
-                  {urlCount}{' '}
                   {urlCount !== 1
                     ? t('urlInput.urlCount_plural', { count: urlCount })
                     : t('urlInput.urlCount', { count: urlCount })}
@@ -255,7 +254,6 @@ export function UniversalUrlInput({
             {urlCount > 0 && (
               <div className="absolute bottom-2 right-2">
                 <span className="text-xs text-muted-foreground bg-background/80 px-2 py-1 rounded">
-                  {urlCount}{' '}
                   {urlCount !== 1
                     ? t('urlInput.urlCount_plural', { count: urlCount })
                     : t('urlInput.urlCount', { count: urlCount })}

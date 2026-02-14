@@ -1,5 +1,5 @@
 use std::collections::HashMap;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::process::Stdio;
 use std::sync::LazyLock;
 use serde::{Deserialize, Serialize};
@@ -131,6 +131,85 @@ pub struct ImageInfo {
     pub height: u32,
     pub size: u64,
     pub format: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ProcessingAttachment {
+    pub path: String,
+    pub filename: String,
+    pub kind: String, // image | video | subtitle | other
+    pub width: Option<u32>,
+    pub height: Option<u32>,
+    pub size: u64,
+    pub format: String,
+}
+
+fn detect_attachment_kind(ext: &str) -> &'static str {
+    let image_exts = ["png", "jpg", "jpeg", "webp", "gif", "bmp", "svg", "tiff", "tif"];
+    let video_exts = ["mp4", "mkv", "webm", "avi", "mov", "wmv", "flv", "m4v", "ts", "mts"];
+    let subtitle_exts = ["srt", "ass", "ssa", "vtt", "sub"];
+
+    if image_exts.contains(&ext) {
+        "image"
+    } else if video_exts.contains(&ext) {
+        "video"
+    } else if subtitle_exts.contains(&ext) {
+        "subtitle"
+    } else {
+        "other"
+    }
+}
+
+/// Get attachment metadata for processing chat (image/video/subtitle)
+#[tauri::command]
+pub async fn get_processing_attachment_info(path: String) -> Result<ProcessingAttachment, String> {
+    let file_path = std::path::Path::new(&path);
+
+    if !file_path.exists() {
+        return Err(format!("File not found: {}", path));
+    }
+
+    let metadata = std::fs::metadata(&path)
+        .map_err(|e| format!("Failed to read file metadata: {}", e))?;
+
+    let filename = file_path
+        .file_name()
+        .map(|n| n.to_string_lossy().to_string())
+        .unwrap_or_else(|| "unknown".to_string());
+
+    let ext = file_path
+        .extension()
+        .map(|e| e.to_string_lossy().to_lowercase())
+        .unwrap_or_default();
+
+    let kind = detect_attachment_kind(&ext).to_string();
+    let mut width = None;
+    let mut height = None;
+    let mut format = if ext.is_empty() { "unknown".to_string() } else { ext };
+
+    if kind == "image" {
+        if let Ok(reader) = image::ImageReader::open(&path)
+            .and_then(|r| r.with_guessed_format())
+        {
+            if let Some(detected) = reader.format() {
+                format = format!("{:?}", detected).to_lowercase();
+            }
+            if let Ok((w, h)) = reader.into_dimensions() {
+                width = Some(w);
+                height = Some(h);
+            }
+        }
+    }
+
+    Ok(ProcessingAttachment {
+        path,
+        filename,
+        kind,
+        width,
+        height,
+        size: metadata.len(),
+        format,
+    })
 }
 
 /// Get image metadata (dimensions, format, size)
@@ -287,6 +366,331 @@ pub async fn get_video_metadata(app: AppHandle, path: String) -> Result<VideoMet
     })
 }
 
+fn contains_any(haystack: &str, needles: &[&str]) -> bool {
+    needles.iter().any(|k| haystack.contains(k))
+}
+
+fn is_subtitle_request(prompt: &str) -> bool {
+    let lower = prompt.to_lowercase();
+    contains_any(
+        &lower,
+        &[
+            "subtitle",
+            "subtitles",
+            "caption",
+            "captions",
+            "burn subtitle",
+            "phụ đề",
+            "thêm phụ đề",
+            "chèn phụ đề",
+            "vietsub",
+            "字幕",
+            "sub",
+        ],
+    )
+}
+
+fn is_merge_request(prompt: &str) -> bool {
+    let lower = prompt.to_lowercase();
+    contains_any(
+        &lower,
+        &[
+            "merge",
+            "join",
+            "concat",
+            "combine",
+            "stitch",
+            "intro",
+            "outro",
+            "ghép",
+            "nối",
+            "gộp",
+            "mở đầu",
+            "kết thúc",
+            "合并",
+            "片头",
+            "片尾",
+        ],
+    )
+}
+
+fn has_intro_hint(prompt: &str) -> bool {
+    let lower = prompt.to_lowercase();
+    contains_any(&lower, &["intro", "mở đầu", "opening", "片头"])
+}
+
+fn has_outro_hint(prompt: &str) -> bool {
+    let lower = prompt.to_lowercase();
+    contains_any(&lower, &["outro", "kết thúc", "ending", "片尾"])
+}
+
+fn escape_subtitles_filter_path(path: &str) -> String {
+    let mut escaped = path.replace('\\', "/");
+    escaped = escaped.replace(':', "\\:");
+    escaped = escaped.replace('\'', "\\'");
+    escaped = escaped.replace(',', "\\,");
+    escaped = escaped.replace('[', "\\[");
+    escaped = escaped.replace(']', "\\]");
+    escaped
+}
+
+fn resolve_output_dir(input_path: &str, output_dir: Option<&str>) -> PathBuf {
+    if let Some(dir) = output_dir {
+        let trimmed = dir.trim();
+        if !trimmed.is_empty() {
+            let path = Path::new(trimmed);
+            if path.is_dir() {
+                return path.to_path_buf();
+            }
+        }
+    }
+
+    Path::new(input_path)
+        .parent()
+        .unwrap_or(Path::new("."))
+        .to_path_buf()
+}
+
+fn try_build_subtitle_command(
+    user_prompt: &str,
+    input_path: &str,
+    metadata: &VideoMetadata,
+    subtitle_attachments: &[ProcessingAttachment],
+    output_dir: Option<&str>,
+) -> Result<Option<FFmpegCommandResult>, String> {
+    if !is_subtitle_request(user_prompt) || subtitle_attachments.is_empty() {
+        return Ok(None);
+    }
+
+    let subtitle = &subtitle_attachments[0];
+    let output_base_dir = resolve_output_dir(input_path, output_dir);
+    let input_stem = Path::new(input_path)
+        .file_stem()
+        .map(|s| s.to_string_lossy().to_string())
+        .unwrap_or("output".to_string());
+    let timestamp = chrono::Local::now().format("%Y%m%d_%H%M%S").to_string();
+    let output_path = output_base_dir
+        .join(format!("{}_subtitled_{}.mp4", input_stem, timestamp))
+        .to_string_lossy()
+        .to_string();
+
+    let mut args = vec![
+        "-y".to_string(),
+        "-i".to_string(),
+        input_path.to_string(),
+        "-vf".to_string(),
+        format!("subtitles='{}'", escape_subtitles_filter_path(&subtitle.path)),
+        "-c:v".to_string(),
+        "libx264".to_string(),
+        "-preset".to_string(),
+        "medium".to_string(),
+        "-crf".to_string(),
+        "20".to_string(),
+    ];
+    if metadata.has_audio {
+        args.extend(["-c:a".to_string(), "copy".to_string()]);
+    } else {
+        args.push("-an".to_string());
+    }
+    args.extend([
+        "-progress".to_string(),
+        "pipe:2".to_string(),
+        output_path.clone(),
+    ]);
+
+    let mut warnings = Vec::new();
+    if subtitle_attachments.len() > 1 {
+        warnings.push(format!(
+            "Multiple subtitle files attached. Using: {}",
+            subtitle.filename
+        ));
+    }
+
+    Ok(Some(FFmpegCommandResult {
+        command: args_to_display_command(&args),
+        command_args: args,
+        explanation: format!(
+            "Burn subtitles from '{}' into the video",
+            subtitle.filename
+        ),
+        estimated_size_mb: (metadata.file_size as f64 / 1_000_000.0) * 1.05,
+        estimated_time_seconds: (metadata.duration / 2.0).max(5.0),
+        output_path,
+        warnings,
+    }))
+}
+
+async fn try_build_merge_command(
+    app: &AppHandle,
+    user_prompt: &str,
+    input_path: &str,
+    metadata: &VideoMetadata,
+    video_attachments: &[ProcessingAttachment],
+    output_dir: Option<&str>,
+) -> Result<Option<FFmpegCommandResult>, String> {
+    if !is_merge_request(user_prompt) || video_attachments.is_empty() {
+        return Ok(None);
+    }
+
+    let intro_hint = has_intro_hint(user_prompt);
+    let outro_hint = has_outro_hint(user_prompt);
+
+    let mut ordered_paths: Vec<String> = Vec::new();
+    let mut warnings = Vec::new();
+
+    if intro_hint && outro_hint && video_attachments.len() >= 2 {
+        ordered_paths.push(video_attachments[0].path.clone());
+        ordered_paths.push(input_path.to_string());
+        for file in video_attachments.iter().skip(1).take(video_attachments.len().saturating_sub(2))
+        {
+            ordered_paths.push(file.path.clone());
+        }
+        ordered_paths.push(video_attachments.last().map(|a| a.path.clone()).unwrap_or_default());
+        warnings.push(
+            "Interpreted first attached video as intro and last attached video as outro."
+                .to_string(),
+        );
+    } else if intro_hint {
+        ordered_paths.push(video_attachments[0].path.clone());
+        ordered_paths.push(input_path.to_string());
+        for file in video_attachments.iter().skip(1) {
+            ordered_paths.push(file.path.clone());
+        }
+        warnings.push("Interpreted first attached video as intro.".to_string());
+    } else {
+        ordered_paths.push(input_path.to_string());
+        for file in video_attachments {
+            ordered_paths.push(file.path.clone());
+        }
+        if outro_hint {
+            warnings.push("Appended attached videos after main video as outro sequence.".to_string());
+        }
+    }
+
+    let mut ordered_meta = Vec::new();
+    for path in &ordered_paths {
+        let info = get_video_metadata(app.clone(), path.clone()).await?;
+        ordered_meta.push(info);
+    }
+
+    let target_width = if metadata.width > 0 {
+        metadata.width
+    } else {
+        ordered_meta.first().map(|m| m.width).unwrap_or(1920).max(1)
+    };
+    let target_height = if metadata.height > 0 {
+        metadata.height
+    } else {
+        ordered_meta.first().map(|m| m.height).unwrap_or(1080).max(1)
+    };
+    let target_fps = if metadata.fps > 0.0 {
+        metadata.fps
+    } else {
+        ordered_meta
+            .first()
+            .map(|m| if m.fps > 0.0 { m.fps } else { 30.0 })
+            .unwrap_or(30.0)
+    };
+
+    let mut filter_parts: Vec<String> = Vec::new();
+    let mut concat_inputs = String::new();
+
+    for (idx, info) in ordered_meta.iter().enumerate() {
+        filter_parts.push(format!(
+            "[{}:v]scale={}:{}:force_original_aspect_ratio=decrease,pad={}:{}:(ow-iw)/2:(oh-ih)/2:color=black,fps={:.3},format=yuv420p[v{}]",
+            idx, target_width, target_height, target_width, target_height, target_fps, idx
+        ));
+
+        if info.has_audio {
+            filter_parts.push(format!(
+                "[{}:a]aformat=sample_fmts=fltp:sample_rates=48000:channel_layouts=stereo,aresample=async=1:first_pts=0[a{}]",
+                idx, idx
+            ));
+        } else {
+            let silent_duration = info.duration.max(0.1);
+            filter_parts.push(format!("aevalsrc=0:d={:.3}[sil{}]", silent_duration, idx));
+            filter_parts.push(format!(
+                "[sil{}]aformat=sample_fmts=fltp:sample_rates=48000:channel_layouts=stereo[a{}]",
+                idx, idx
+            ));
+        }
+        concat_inputs.push_str(&format!("[v{}][a{}]", idx, idx));
+    }
+
+    filter_parts.push(format!(
+        "{}concat=n={}:v=1:a=1[v][a]",
+        concat_inputs,
+        ordered_meta.len()
+    ));
+    let filter_complex = filter_parts.join(";");
+
+    let output_base_dir = resolve_output_dir(input_path, output_dir);
+    let input_stem = Path::new(input_path)
+        .file_stem()
+        .map(|s| s.to_string_lossy().to_string())
+        .unwrap_or("output".to_string());
+    let timestamp = chrono::Local::now().format("%Y%m%d_%H%M%S").to_string();
+    let output_path = output_base_dir
+        .join(format!("{}_merged_{}.mp4", input_stem, timestamp))
+        .to_string_lossy()
+        .to_string();
+
+    let mut args = vec!["-y".to_string()];
+    for path in &ordered_paths {
+        args.push("-i".to_string());
+        args.push(path.clone());
+    }
+    args.extend([
+        "-filter_complex".to_string(),
+        filter_complex,
+        "-map".to_string(),
+        "[v]".to_string(),
+        "-map".to_string(),
+        "[a]".to_string(),
+        "-c:v".to_string(),
+        "libx264".to_string(),
+        "-preset".to_string(),
+        "medium".to_string(),
+        "-crf".to_string(),
+        "20".to_string(),
+        "-c:a".to_string(),
+        "aac".to_string(),
+        "-b:a".to_string(),
+        "192k".to_string(),
+        "-movflags".to_string(),
+        "+faststart".to_string(),
+        "-progress".to_string(),
+        "pipe:2".to_string(),
+        output_path.clone(),
+    ]);
+
+    let ordered_names: Vec<String> = ordered_paths
+        .iter()
+        .map(|p| {
+            Path::new(p)
+                .file_name()
+                .map(|n| n.to_string_lossy().to_string())
+                .unwrap_or_else(|| p.clone())
+        })
+        .collect();
+
+    let total_size_mb: f64 = ordered_meta
+        .iter()
+        .map(|m| m.file_size.max(0) as f64 / 1_000_000.0)
+        .sum();
+    let total_duration: f64 = ordered_meta.iter().map(|m| m.duration.max(0.0)).sum();
+
+    Ok(Some(FFmpegCommandResult {
+        command: args_to_display_command(&args),
+        command_args: args,
+        explanation: format!("Merge videos in order: {}", ordered_names.join(" -> ")),
+        estimated_size_mb: total_size_mb,
+        estimated_time_seconds: (total_duration / 3.0).max(8.0),
+        output_path,
+        warnings,
+    }))
+}
+
 /// Generate FFmpeg command using AI
 #[tauri::command]
 pub async fn generate_processing_command(
@@ -296,7 +700,8 @@ pub async fn generate_processing_command(
     timeline_start: Option<f64>,
     timeline_end: Option<f64>,
     metadata: VideoMetadata,
-    image_paths: Option<Vec<ImageInfo>>,
+    attachments: Option<Vec<ProcessingAttachment>>,
+    output_dir: Option<String>,
 ) -> Result<FFmpegCommandResult, String> {
     // Build context for AI
     let selection_info = if let (Some(start), Some(end)) = (timeline_start, timeline_end) {
@@ -305,40 +710,68 @@ pub async fn generate_processing_command(
     } else {
         "No timeline selection".to_string()
     };
-    
-    // Build image context if images are attached
-    let image_section = if let Some(ref images) = image_paths {
-        if !images.is_empty() {
-            let mut section = String::from("\n## Attached Images\n");
-            for (i, img) in images.iter().enumerate() {
-                section.push_str(&format!(
-                    "{}. \"{}\" ({}x{}, {}, {} KB)\n   Full path: {}\n",
-                    i + 1,
-                    img.filename,
-                    img.width,
-                    img.height,
-                    img.format.to_uppercase(),
-                    img.size / 1024,
-                    img.path,
-                ));
-            }
-            section.push_str(r#"
-## FFmpeg Image Operations Available
-- Overlay image: `-i "image.png" -filter_complex "[0:v][1:v]overlay=x:y"`
-- Multiple images: Add each as `-i "image1.png" -i "image2.png"`, then reference as [1:v], [2:v], etc.
-- Position overlay: `overlay=10:10` (top-left), `overlay=W-w-10:H-h-10` (bottom-right), `overlay=(W-w)/2:(H-h)/2` (center)
-- Overlay with opacity: `overlay=x:y:format=auto` with `colorchannelmixer=aa=0.5` or `format=rgba,colorchannelmixer=aa=0.5`
-- Scale image before overlay: `[1:v]scale=200:-1[img];[0:v][img]overlay=...`
-- Image as intro/outro: `-loop 1 -t 3 -i "image.png" -i "video.mp4" -filter_complex "[0:v]scale=W:H[img];[img][1:v]concat=n=2:v=1:a=0"`
-- Image as background (PiP): `-i "bg.png" -i "video.mp4" -filter_complex "[0:v]scale=1920:1080[bg];[1:v]scale=960:-1[vid];[bg][vid]overlay=(W-w)/2:(H-h)/2"`
-- Timed overlay: `overlay=x:y:enable='between(t,5,10)'` (show from 5s to 10s)
-- IMPORTANT: The video input is always -i index 0. Image inputs start from index 1.
-- IMPORTANT: Always use the exact full paths provided above for image files.
-"#);
-            section
-        } else {
-            String::new()
+
+    let attachments = attachments.unwrap_or_default();
+    let video_attachments: Vec<ProcessingAttachment> = attachments
+        .iter()
+        .filter(|a| a.kind == "video")
+        .cloned()
+        .collect();
+    let subtitle_attachments: Vec<ProcessingAttachment> = attachments
+        .iter()
+        .filter(|a| a.kind == "subtitle")
+        .cloned()
+        .collect();
+
+    if let Some(result) = try_build_subtitle_command(
+        &user_prompt,
+        &input_path,
+        &metadata,
+        &subtitle_attachments,
+        output_dir.as_deref(),
+    )? {
+        return Ok(result);
+    }
+    if let Some(result) = try_build_merge_command(
+        &app,
+        &user_prompt,
+        &input_path,
+        &metadata,
+        &video_attachments,
+        output_dir.as_deref(),
+    )
+    .await?
+    {
+        return Ok(result);
+    }
+
+    let attachment_section = if !attachments.is_empty() {
+        let mut section = String::from("\n## Attached Files\n");
+        for (i, file) in attachments.iter().enumerate() {
+            let dims = match (file.width, file.height) {
+                (Some(w), Some(h)) => format!(", {}x{}", w, h),
+                _ => String::new(),
+            };
+            section.push_str(&format!(
+                "{}. [{}] \"{}\" ({}{}, {} KB)\n   Full path: {}\n",
+                i + 1,
+                file.kind,
+                file.filename,
+                file.format.to_uppercase(),
+                dims,
+                file.size / 1024,
+                file.path,
+            ));
         }
+        section.push_str(r#"
+## FFmpeg Attachment Operations Available
+- Image overlay/watermark: `-i "image.png" -filter_complex "[0:v][1:v]overlay=x:y"`
+- Burn subtitle from file: `-vf "subtitles='path/to/subtitle.srt'"`
+- Merge multiple videos: `-i intro.mp4 -i main.mp4 -i outro.mp4 -filter_complex "concat=..."`
+- IMPORTANT: The main loaded video is always `input_path`.
+- IMPORTANT: Always use the exact full paths provided above for attached files.
+"#);
+        section
     } else {
         String::new()
     };
@@ -418,7 +851,7 @@ For valid video requests:
         metadata.bitrate,
         metadata.file_size / 1_000_000,
         selection_info,
-        image_section,
+        attachment_section,
         user_prompt,
     );
     
@@ -498,7 +931,7 @@ For valid video requests:
         .file_stem()
         .map(|s| s.to_string_lossy().to_string())
         .unwrap_or("output".to_string());
-    let input_dir = Path::new(&input_path).parent().unwrap_or(Path::new("."));
+    let output_base_dir = resolve_output_dir(&input_path, output_dir.as_deref());
     
     let output_path = parsed.get("output_path")
         .and_then(|p| p.as_str())
@@ -531,11 +964,11 @@ For valid video requests:
             };
             
             // Build output path with timestamp
-            input_dir.join(format!("{}{}_{}.{}", input_stem, suffix, timestamp, ext))
+            output_base_dir.join(format!("{}{}_{}.{}", input_stem, suffix, timestamp, ext))
                 .to_string_lossy().to_string()
         })
         .unwrap_or_else(|| {
-            input_dir.join(format!("{}_processed_{}.mp4", input_stem, timestamp))
+            output_base_dir.join(format!("{}_processed_{}.mp4", input_stem, timestamp))
                 .to_string_lossy().to_string()
         });
     
@@ -578,8 +1011,9 @@ pub async fn generate_quick_action_command(
     timeline_start: Option<f64>,
     timeline_end: Option<f64>,
     metadata: VideoMetadata,
+    output_dir: Option<String>,
 ) -> Result<FFmpegCommandResult, String> {
-    let input_dir = Path::new(&input_path).parent().unwrap_or(Path::new("."));
+    let output_base_dir = resolve_output_dir(&input_path, output_dir.as_deref());
     let input_stem = Path::new(&input_path)
         .file_stem()
         .map(|s| s.to_string_lossy().to_string())
@@ -593,7 +1027,7 @@ pub async fn generate_quick_action_command(
             let start = timeline_start.ok_or("No start time selected")?;
             let end = timeline_end.ok_or("No end time selected")?;
             let duration = end - start;
-            let output = input_dir.join(format!("{}_cut_{}.mp4", input_stem, timestamp));
+            let output = output_base_dir.join(format!("{}_cut_{}.mp4", input_stem, timestamp));
             
             let args = vec![
                 "-y".to_string(),
@@ -623,7 +1057,7 @@ pub async fn generate_quick_action_command(
                 _ => ("m4a", vec!["-c:a".to_string(), "aac".to_string(), "-b:a".to_string(), "192k".to_string()]),
             };
             
-            let output = input_dir.join(format!("{}_{}.{}", input_stem, timestamp, ext));
+            let output = output_base_dir.join(format!("{}_{}.{}", input_stem, timestamp, ext));
             
             let mut args = vec![
                 "-y".to_string(),
@@ -650,7 +1084,8 @@ pub async fn generate_quick_action_command(
                 return Err("Invalid resolution value".to_string());
             }
             
-            let output = input_dir.join(format!("{}_{}p_{}.mp4", input_stem, resolution, timestamp));
+            let output =
+                output_base_dir.join(format!("{}_{}p_{}.mp4", input_stem, resolution, timestamp));
             
             let args = vec![
                 "-y".to_string(),
@@ -678,7 +1113,7 @@ pub async fn generate_quick_action_command(
                 return Err("Invalid format value".to_string());
             }
             
-            let output = input_dir.join(format!("{}_{}.{}", input_stem, timestamp, format));
+            let output = output_base_dir.join(format!("{}_{}.{}", input_stem, timestamp, format));
             
             let codec_args: Vec<String> = match format {
                 "webm" => vec!["-c:v".to_string(), "libvpx-vp9".to_string(), "-c:a".to_string(), "libopus".to_string()],
@@ -707,7 +1142,7 @@ pub async fn generate_quick_action_command(
                 .and_then(|s| s.as_f64())
                 .unwrap_or(2.0);
             
-            let output = input_dir.join(format!("{}_{}x_{}.mp4", input_stem, speed, timestamp));
+            let output = output_base_dir.join(format!("{}_{}x_{}.mp4", input_stem, speed, timestamp));
             let pts = 1.0 / speed;
             let atempo = speed.min(2.0).max(0.5);
             
@@ -727,7 +1162,7 @@ pub async fn generate_quick_action_command(
         }
         
         "compress" => {
-            let output = input_dir.join(format!("{}_compressed_{}.mp4", input_stem, timestamp));
+            let output = output_base_dir.join(format!("{}_compressed_{}.mp4", input_stem, timestamp));
             
             let args = vec![
                 "-y".to_string(),
@@ -746,7 +1181,7 @@ pub async fn generate_quick_action_command(
         }
         
         "remove_audio" => {
-            let output = input_dir.join(format!("{}_noaudio_{}.mp4", input_stem, timestamp));
+            let output = output_base_dir.join(format!("{}_noaudio_{}.mp4", input_stem, timestamp));
             
             let args = vec![
                 "-y".to_string(),
@@ -763,7 +1198,7 @@ pub async fn generate_quick_action_command(
         
         "thumbnail" => {
             let time = timeline_start.unwrap_or(0.0);
-            let output = input_dir.join(format!("{}_thumb_{}.jpg", input_stem, timestamp));
+            let output = output_base_dir.join(format!("{}_thumb_{}.jpg", input_stem, timestamp));
             
             let args = vec![
                 "-y".to_string(),
@@ -782,7 +1217,7 @@ pub async fn generate_quick_action_command(
             let start = timeline_start.unwrap_or(0.0);
             let end = timeline_end.unwrap_or(start + 5.0);
             let duration = end - start;
-            let output = input_dir.join(format!("{}_{}.gif", input_stem, timestamp));
+            let output = output_base_dir.join(format!("{}_{}.gif", input_stem, timestamp));
             
             let args = vec![
                 "-y".to_string(),
@@ -810,7 +1245,7 @@ pub async fn generate_quick_action_command(
                 _ => "transpose=1",
             };
             
-            let output = input_dir.join(format!("{}_rotated_{}.mp4", input_stem, timestamp));
+            let output = output_base_dir.join(format!("{}_rotated_{}.mp4", input_stem, timestamp));
             
             let args = vec![
                 "-y".to_string(),

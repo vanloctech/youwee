@@ -170,6 +170,7 @@ pub fn run() {
             // Processing commands
             commands::get_video_metadata,
             commands::get_image_metadata,
+            commands::get_processing_attachment_info,
             commands::generate_processing_command,
             commands::generate_quick_action_command,
             commands::execute_ffmpeg_command,
@@ -270,6 +271,10 @@ fn setup_tray(app: &tauri::App) -> Result<(), Box<dyn std::error::Error>> {
                         services::polling::stop_polling();
                         services::polling::start_polling(app_handle_menu.clone());
                     }
+                    "check_update" => {
+                        show_main_window(&app_handle_menu);
+                        let _ = app_handle_menu.emit("tray-check-update", ());
+                    }
                     "show" => {
                         show_main_window(&app_handle_menu);
                     }
@@ -318,21 +323,24 @@ fn tray_text(key: &str) -> &'static str {
         ("vi", "followed_channels") => "Kênh đang theo dõi",
         ("vi", "no_channels") => "Chưa theo dõi kênh nào",
         ("vi", "new_suffix") => "mới",
-        ("vi", "check_all") => "Kiểm tra tất cả",
+        ("vi", "check_all") => "Kiểm tra kênh theo dõi ngay",
+        ("vi", "check_update") => "Kiểm tra cập nhật ứng dụng",
         ("vi", "open") => "Mở Youwee",
         ("vi", "quit") => "Thoát",
         // Chinese
         ("zh-CN", "followed_channels") => "已关注的频道",
         ("zh-CN", "no_channels") => "尚未关注任何频道",
         ("zh-CN", "new_suffix") => "个新视频",
-        ("zh-CN", "check_all") => "立即全部检查",
+        ("zh-CN", "check_all") => "立即检查已关注频道",
+        ("zh-CN", "check_update") => "检查应用更新",
         ("zh-CN", "open") => "打开 Youwee",
         ("zh-CN", "quit") => "退出",
         // English (default)
         (_, "followed_channels") => "Followed Channels",
         (_, "no_channels") => "No channels followed",
         (_, "new_suffix") => "new",
-        (_, "check_all") => "Check All Now",
+        (_, "check_all") => "Check Followed Channels Now",
+        (_, "check_update") => "Check App Updates",
         (_, "open") => "Open Youwee",
         (_, "quit") => "Quit",
         _ => "???",
@@ -370,6 +378,7 @@ fn rebuild_tray_menu_inner(app_handle: &tauri::AppHandle) -> Result<(), Box<dyn 
 
     // Build full menu
     let check_now = MenuItemBuilder::with_id("check_now", tray_text("check_all")).build(app_handle)?;
+    let check_update = MenuItemBuilder::with_id("check_update", tray_text("check_update")).build(app_handle)?;
     let show = MenuItemBuilder::with_id("show", tray_text("open")).build(app_handle)?;
     let quit = MenuItemBuilder::with_id("quit", tray_text("quit")).build(app_handle)?;
 
@@ -389,6 +398,7 @@ fn rebuild_tray_menu_inner(app_handle: &tauri::AppHandle) -> Result<(), Box<dyn 
 
     let menu = menu
         .item(&check_now)
+        .item(&check_update)
         .item(&show)
         .separator()
         .item(&quit)

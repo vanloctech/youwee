@@ -57,6 +57,13 @@ export const SEARCHABLE_SETTINGS: SearchableSetting[] = [
     section: 'general',
   },
   {
+    id: 'language-request',
+    labelKey: 'general.languageRequest',
+    descriptionKey: 'general.languageRequestDesc',
+    keywords: ['language', 'request', 'vote', 'discussion', 'github', 'locale', 'translation'],
+    section: 'general',
+  },
+  {
     id: 'max-history',
     labelKey: 'general.maxHistory',
     descriptionKey: 'general.storageDesc',

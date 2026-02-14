@@ -62,6 +62,23 @@ fn get_channel_binary_path(app: &AppHandle, channel: &YtdlpChannel) -> Option<Pa
     app.path().app_data_dir().ok().map(|p| p.join("bin").join(get_channel_binary_name(channel)))
 }
 
+/// Legacy user-updated binary location in app_data_dir/bin/yt-dlp
+fn get_legacy_ytdlp_path(app: &AppHandle) -> Option<PathBuf> {
+    #[cfg(windows)]
+    let binary_name = "yt-dlp.exe";
+    #[cfg(not(windows))]
+    let binary_name = "yt-dlp";
+
+    app.path().app_data_dir().ok().and_then(|app_data_dir| {
+        let legacy_binary = app_data_dir.join("bin").join(binary_name);
+        if legacy_binary.exists() {
+            Some(legacy_binary)
+        } else {
+            None
+        }
+    })
+}
+
 /// Get the bundled yt-dlp path
 fn get_bundled_ytdlp_path() -> Option<PathBuf> {
     #[cfg(windows)]
@@ -174,6 +191,10 @@ pub async fn get_ytdlp_path(app: &AppHandle) -> Option<(PathBuf, bool)> {
     
     match channel {
         YtdlpChannel::Bundled => {
+            // Prefer user-updated legacy binary so bundled update actually takes effect.
+            if let Some(legacy_binary) = get_legacy_ytdlp_path(app) {
+                return Some((legacy_binary, false));
+            }
             // Use bundled version
             if let Some(bundled) = get_bundled_ytdlp_path() {
                 return Some((bundled, true));
@@ -194,16 +215,8 @@ pub async fn get_ytdlp_path(app: &AppHandle) -> Option<(PathBuf, bool)> {
     }
     
     // Final fallback: check app_data_dir/bin/yt-dlp (legacy location)
-    #[cfg(windows)]
-    let binary_name = "yt-dlp.exe";
-    #[cfg(not(windows))]
-    let binary_name = "yt-dlp";
-    
-    if let Ok(app_data_dir) = app.path().app_data_dir() {
-        let legacy_binary = app_data_dir.join("bin").join(binary_name);
-        if legacy_binary.exists() {
-            return Some((legacy_binary, false));
-        }
+    if let Some(legacy_binary) = get_legacy_ytdlp_path(app) {
+        return Some((legacy_binary, false));
     }
     
     None
@@ -593,6 +606,23 @@ pub fn build_proxy_args(proxy_url: Option<&str>) -> Vec<String> {
     args
 }
 
+/// Merge extra yt-dlp arguments while preserving `-- <url>` ordering.
+/// If `base_args` contains `--`, all extra options must be inserted before it.
+fn merge_ytdlp_args(base_args: &[&str], extra_args: &[String]) -> Vec<String> {
+    let mut merged: Vec<String> = base_args.iter().map(|s| s.to_string()).collect();
+    if extra_args.is_empty() {
+        return merged;
+    }
+
+    if let Some(separator_index) = merged.iter().position(|arg| arg == "--") {
+        merged.splice(separator_index..separator_index, extra_args.iter().cloned());
+    } else {
+        merged.extend(extra_args.iter().cloned());
+    }
+
+    merged
+}
+
 /// Helper to run yt-dlp command with cookie and proxy support and get JSON output
 pub async fn run_ytdlp_json_with_cookies(
     app: &AppHandle,
@@ -606,9 +636,10 @@ pub async fn run_ytdlp_json_with_cookies(
     // Build full args with cookies and proxy
     let cookie_args = build_cookie_args(cookie_mode, cookie_browser, cookie_browser_profile, cookie_file_path);
     let proxy_args = build_proxy_args(proxy_url);
-    let mut args: Vec<String> = base_args.iter().map(|s| s.to_string()).collect();
-    args.extend(cookie_args);
-    args.extend(proxy_args);
+    let mut extra_args = Vec::new();
+    extra_args.extend(cookie_args);
+    extra_args.extend(proxy_args);
+    let args = merge_ytdlp_args(base_args, &extra_args);
     
     let args_ref: Vec<&str> = args.iter().map(|s| s.as_str()).collect();
     
@@ -628,9 +659,10 @@ pub async fn run_ytdlp_with_stderr_and_cookies(
     // Build full args with cookies and proxy
     let cookie_args = build_cookie_args(cookie_mode, cookie_browser, cookie_browser_profile, cookie_file_path);
     let proxy_args = build_proxy_args(proxy_url);
-    let mut args: Vec<String> = base_args.iter().map(|s| s.to_string()).collect();
-    args.extend(cookie_args);
-    args.extend(proxy_args);
+    let mut extra_args = Vec::new();
+    extra_args.extend(cookie_args);
+    extra_args.extend(proxy_args);
+    let args = merge_ytdlp_args(base_args, &extra_args);
     
     let args_ref: Vec<&str> = args.iter().map(|s| s.as_str()).collect();
     

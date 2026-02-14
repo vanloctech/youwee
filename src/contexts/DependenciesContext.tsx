@@ -511,6 +511,8 @@ export function DependenciesProvider({ children }: { children: ReactNode }) {
       setYtdlpInfo((prev) => (prev ? { ...prev, version: newVersion } : null));
       // Keep latestVersion same as newVersion to show "Up to date"
       setLatestVersion(newVersion);
+      // Refresh to ensure binary path/channel source is reflected correctly
+      await refreshYtdlpVersion();
       setUpdateSuccess(true);
       // Hide success message after 3 seconds
       setTimeout(() => setUpdateSuccess(false), 3000);
@@ -519,7 +521,7 @@ export function DependenciesProvider({ children }: { children: ReactNode }) {
     } finally {
       setIsUpdating(false);
     }
-  }, []);
+  }, [refreshYtdlpVersion]);
 
   return (
     <DependenciesContext.Provider

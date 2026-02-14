@@ -460,11 +460,12 @@ export interface ChatAttachment {
   id: string;
   path: string; // absolute path on disk
   name: string; // filename
-  width: number;
-  height: number;
+  kind: 'image' | 'video' | 'subtitle' | 'other';
+  width?: number;
+  height?: number;
   size: number; // file size in bytes
-  format: string; // png, jpg, webp, etc.
-  previewUrl: string; // blob URL for preview in chat
+  format: string; // extension or detected format
+  previewUrl?: string; // blob URL for preview in chat (image only)
 }
 
 export interface ChatMessage {

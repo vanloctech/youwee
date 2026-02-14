@@ -71,6 +71,7 @@ interface ProcessingContextValue {
   // Chat
   messages: ChatMessage[];
   isGenerating: boolean;
+  outputDirectory: string;
 
   // Image attachments
   attachedImages: ChatAttachment[];
@@ -97,6 +98,7 @@ interface ProcessingContextValue {
 
   // AI Actions
   sendMessage: (content: string) => Promise<void>;
+  selectOutputDirectory: () => Promise<void>;
   generateCommand: (
     taskType: ProcessingTaskType,
     options?: Record<string, unknown>,
@@ -165,6 +167,7 @@ export function ProcessingProvider({ children }: { children: ReactNode }) {
   // Chat
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [isGenerating, setIsGenerating] = useState(false);
+  const [outputDirectory, setOutputDirectory] = useState('');
 
   // Image attachments
   const [attachedImages, setAttachedImages] = useState<ChatAttachment[]>([]);
@@ -241,6 +244,13 @@ export function ProcessingProvider({ children }: { children: ReactNode }) {
     return convertFileSrc(filePath);
   }, []);
 
+  const getDirectoryFromPath = useCallback((filePath: string): string => {
+    const normalized = filePath.replace(/\\/g, '/');
+    const lastSlash = normalized.lastIndexOf('/');
+    if (lastSlash <= 0) return '';
+    return normalized.slice(0, lastSlash);
+  }, []);
+
   // Helper: revoke previous blob URL to prevent memory leak
   const revokePreviousVideoSrc = useCallback((src: string | null) => {
     if (src?.startsWith('blob:')) {
@@ -285,6 +295,7 @@ export function ProcessingProvider({ children }: { children: ReactNode }) {
     async (path: string) => {
       setIsLoadingVideo(true);
       setVideoPath(path);
+      setOutputDirectory(getDirectoryFromPath(path));
       // Revoke previous blob URL before clearing
       revokePreviousVideoSrc(videoSrc);
       revokePreviousVideoSrc(thumbnailSrc);
@@ -455,6 +466,7 @@ export function ProcessingProvider({ children }: { children: ReactNode }) {
     },
     [
       addMessage,
+      getDirectoryFromPath,
       loadVideoSrc,
       revokePreviousVideoSrc,
       videoSrc,
@@ -485,32 +497,54 @@ export function ProcessingProvider({ children }: { children: ReactNode }) {
     }
   }, [loadVideo]);
 
-  // Image attachment interface from Rust
-  interface ImageInfoResult {
+  // Select output directory for processed files
+  const selectOutputDirectory = useCallback(async () => {
+    try {
+      const selected = await open({
+        directory: true,
+        multiple: false,
+        defaultPath: outputDirectory || (videoPath ? getDirectoryFromPath(videoPath) : undefined),
+      });
+
+      if (selected && typeof selected === 'string') {
+        setOutputDirectory(selected);
+      }
+    } catch (error) {
+      console.error('Failed to select output directory:', error);
+    }
+  }, [outputDirectory, videoPath, getDirectoryFromPath]);
+
+  // Media attachment interface from Rust
+  interface AttachmentInfoResult {
     path: string;
     filename: string;
-    width: number;
-    height: number;
+    kind: 'image' | 'video' | 'subtitle' | 'other';
+    width?: number;
+    height?: number;
     size: number;
     format: string;
   }
 
-  // Attach images by file paths
+  // Attach files (image/video/subtitle) by file paths
   const attachImages = useCallback(async (paths: string[]) => {
     const newAttachments: ChatAttachment[] = [];
 
     for (const path of paths) {
       try {
-        const info = await invoke<ImageInfoResult>('get_image_metadata', { path });
+        const info = await invoke<AttachmentInfoResult>('get_processing_attachment_info', { path });
+        let previewUrl: string | undefined;
 
-        // Read file as blob for preview
-        const fileData = await readFile(path);
-        const blob = new Blob([fileData]);
-        const previewUrl = URL.createObjectURL(blob);
+        if (info.kind === 'image') {
+          // Read image as blob for preview
+          const fileData = await readFile(path);
+          const blob = new Blob([fileData]);
+          previewUrl = URL.createObjectURL(blob);
+        }
 
         newAttachments.push({
           id: crypto.randomUUID(),
           path: info.path,
+          kind: info.kind,
           name: info.filename,
           width: info.width,
           height: info.height,
@@ -519,7 +553,7 @@ export function ProcessingProvider({ children }: { children: ReactNode }) {
           previewUrl,
         });
       } catch (error) {
-        console.error(`Failed to load image ${path}:`, error);
+        console.error(`Failed to attach file ${path}:`, error);
       }
     }
 
@@ -532,7 +566,7 @@ export function ProcessingProvider({ children }: { children: ReactNode }) {
   const removeAttachment = useCallback((id: string) => {
     setAttachedImages((prev) => {
       const removed = prev.find((a) => a.id === id);
-      if (removed) {
+      if (removed?.previewUrl) {
         URL.revokeObjectURL(removed.previewUrl);
       }
       return prev.filter((a) => a.id !== id);
@@ -543,7 +577,9 @@ export function ProcessingProvider({ children }: { children: ReactNode }) {
   const clearAttachments = useCallback(() => {
     setAttachedImages((prev) => {
       for (const a of prev) {
-        URL.revokeObjectURL(a.previewUrl);
+        if (a.previewUrl) {
+          URL.revokeObjectURL(a.previewUrl);
+        }
       }
       return [];
     });
@@ -575,14 +611,15 @@ export function ProcessingProvider({ children }: { children: ReactNode }) {
       }
 
       try {
-        // Build image info for backend
-        const imageInfos =
+        // Build attachment info for backend
+        const attachmentInfos =
           currentAttachments.length > 0
             ? currentAttachments.map((a) => ({
                 path: a.path,
                 filename: a.name,
-                width: a.width,
-                height: a.height,
+                kind: a.kind,
+                width: a.width ?? null,
+                height: a.height ?? null,
                 size: a.size,
                 format: a.format,
               }))
@@ -594,7 +631,8 @@ export function ProcessingProvider({ children }: { children: ReactNode }) {
           timelineStart: selection?.start ?? null,
           timelineEnd: selection?.end ?? null,
           metadata: videoMetadata,
-          imagePaths: imageInfos,
+          attachments: attachmentInfos,
+          outputDir: outputDirectory || null,
         });
 
         // Add assistant message with explanation
@@ -663,7 +701,16 @@ export function ProcessingProvider({ children }: { children: ReactNode }) {
         setCurrentJobId(null);
       }
     },
-    [videoPath, videoMetadata, selection, isGenerating, attachedImages, addMessage, loadHistory],
+    [
+      videoPath,
+      videoMetadata,
+      selection,
+      isGenerating,
+      attachedImages,
+      addMessage,
+      loadHistory,
+      outputDirectory,
+    ],
   );
 
   // Generate command from quick action
@@ -682,6 +729,7 @@ export function ProcessingProvider({ children }: { children: ReactNode }) {
           timelineStart: selection?.start ?? null,
           timelineEnd: selection?.end ?? null,
           metadata: videoMetadata,
+          outputDir: outputDirectory || null,
         });
 
         setGeneratedCommand(result);
@@ -704,7 +752,7 @@ export function ProcessingProvider({ children }: { children: ReactNode }) {
         setIsGenerating(false);
       }
     },
-    [videoPath, videoMetadata, selection],
+    [videoPath, videoMetadata, selection, outputDirectory],
   );
 
   // Execute FFmpeg command
@@ -938,6 +986,7 @@ export function ProcessingProvider({ children }: { children: ReactNode }) {
     setGeneratedCommand(null);
     setCompletedOutputPath(null);
     setMessages([]);
+    setOutputDirectory('');
     setBatchFiles([]);
   }, []);
 
@@ -969,6 +1018,7 @@ export function ProcessingProvider({ children }: { children: ReactNode }) {
         completedOutputPath,
         messages,
         isGenerating,
+        outputDirectory,
         attachedImages,
         history,
         presets,
@@ -981,6 +1031,7 @@ export function ProcessingProvider({ children }: { children: ReactNode }) {
         setSelection,
         addMessage,
         sendMessage,
+        selectOutputDirectory,
         generateCommand,
         attachImages,
         removeAttachment,

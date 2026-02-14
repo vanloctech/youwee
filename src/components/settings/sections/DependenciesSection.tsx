@@ -75,9 +75,12 @@ export function DependenciesSection({ highlightId }: DependenciesSectionProps) {
     downloadDeno,
   } = useDependencies();
 
-  // Compare versions: update available if latestVersion exists and differs from current
+  // Compare versions with normalization to avoid false positives (e.g. "v2026.02.04")
+  const normalizeVersion = (v: string) => v.trim().replace(/^v/i, '');
   const isUpdateAvailable =
-    latestVersion && ytdlpInfo?.version ? latestVersion !== ytdlpInfo.version : false;
+    latestVersion && ytdlpInfo?.version
+      ? normalizeVersion(latestVersion) !== normalizeVersion(ytdlpInfo.version)
+      : false;
 
   // Check if current channel needs download (not installed)
   const needsDownload = () => {
@@ -149,6 +152,12 @@ export function DependenciesSection({ highlightId }: DependenciesSectionProps) {
                   ) : ytdlpAllVersions?.using_fallback ? (
                     <span className="text-amber-500">
                       {t('dependencies.usingBundledTemporarily')}
+                    </span>
+                  ) : ytdlpChannel === 'bundled' && isUpdateAvailable && latestVersion ? (
+                    <span className="text-primary">
+                      {t('dependencies.available', {
+                        version: latestVersion,
+                      })}
                     </span>
                   ) : ytdlpChannelUpdateInfo?.update_available ? (
                     <span className="text-primary">

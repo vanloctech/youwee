@@ -55,11 +55,15 @@
       "generating": "Đang tạo...",
       "processing": "Đang xử lý...",
       "complete": "Hoàn thành",
+      "outputFolder": "Thư mục xuất",
+      "selectOutputFolder": "Chọn thư mục xuất",
       "openInFolder": "Mở thư mục",
       "cancel": "Hủy",
       "inputPlaceholder": "Mô tả chỉnh sửa của bạn...",
       "attachImage": "Đính kèm ảnh",
+      "attachFile": "Đính kèm tệp",
       "dropImages": "Thả ảnh vào đây",
+      "dropFiles": "Thả tệp vào đây",
       "prompts": {
         "cut": "Cắt",
         "cutPrompt": "Cắt video từ [thời_gian_bắt_đầu] đến [thời_gian_kết_thúc]",
@@ -86,7 +90,13 @@
         "watermark": "Watermark",
         "watermarkPrompt": "Thêm ảnh đính kèm làm watermark ở góc dưới-phải với độ mờ 50%",
         "intro": "Ảnh mở đầu",
-        "introPrompt": "Tạo slide mở đầu [3] giây từ ảnh đính kèm trước video"
+        "introPrompt": "Tạo slide mở đầu [3] giây từ ảnh đính kèm trước video",
+        "outro": "Video kết thúc",
+        "outroPrompt": "Nối video đính kèm vào cuối video chính",
+        "subtitle": "Chèn phụ đề",
+        "subtitlePrompt": "Chèn file phụ đề đính kèm vào video",
+        "mergeVideos": "Ghép video",
+        "mergeVideosPrompt": "Ghép video chính với các video đính kèm theo thứ tự"
       }
     },
     "player": {

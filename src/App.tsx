@@ -91,6 +91,18 @@ function AppContent() {
     };
   }, []);
 
+  // Check app updates from system tray action
+  useEffect(() => {
+    const unlisten = listen('tray-check-update', () => {
+      setCurrentPage('settings');
+      void updater.checkForUpdate();
+    });
+
+    return () => {
+      unlisten.then((fn) => fn());
+    };
+  }, [updater.checkForUpdate]);
+
   // Sync UI language to system tray on mount
   useEffect(() => {
     const lang = localStorage.getItem('i18nextLng') || 'en';

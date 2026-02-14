@@ -28,10 +28,11 @@
 - **频道关注** — 关注 YouTube、Bilibili 和优酷频道，接收新视频通知，自动下载，通过系统托盘管理
 - **AI 视频摘要** — 使用 Gemini、OpenAI 或 Ollama 进行视频摘要
 - **AI 视频处理** — 使用自然语言编辑视频（剪切、转换、调整大小、提取音频）
+- **时间范围下载（视频裁剪）** — 通过设置开始/结束时间只下载所需片段（基于 yt-dlp `--download-sections`）
 - **批量下载与播放列表** — 下载多个视频或整个播放列表
 - **音频提取** — 提取 MP3、M4A 或 Opus 格式的音频
 - **字幕支持** — 下载或嵌入字幕
-- **后处理** — 自动将元数据和缩略图嵌入文件
+- **后处理** — 自动将元数据、缩略图和字幕（启用时）嵌入输出文件
 - **下载库** — 跟踪和管理所有下载
 - **6 款精美主题** — Midnight、Aurora、Sunset、Ocean、Forest、Candy
 - **快速轻量** — 使用 Tauri 构建，资源占用最小
@@ -49,6 +50,14 @@
 ![Youwee - 设置](screenshots/youwee-5.png)
 ![Youwee - 主题](screenshots/youwee-6.png)
 ![Youwee - 关于](screenshots/youwee-7.png)
+![Youwee - 下载](screenshots/youwee-8.png)
+![Youwee - Universal](screenshots/youwee-9.png)
+![Youwee - 元数据](screenshots/youwee-10.png)
+![Youwee - 历史记录](screenshots/youwee-11.png)
+![Youwee - 频道关注](screenshots/youwee-12.png)
+![Youwee - 频道轮询](screenshots/youwee-13.png)
+![Youwee - 队列与处理](screenshots/youwee-14.png)
+![Youwee - 语言投票](screenshots/youwee-15.png)
 
 </details>
 

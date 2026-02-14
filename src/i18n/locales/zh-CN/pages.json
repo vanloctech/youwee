@@ -55,11 +55,15 @@
       "generating": "生成中...",
       "processing": "处理中...",
       "complete": "完成",
+      "outputFolder": "输出文件夹",
+      "selectOutputFolder": "选择输出文件夹",
       "openInFolder": "在文件夹中打开",
       "cancel": "取消",
       "inputPlaceholder": "描述您的编辑需求...",
       "attachImage": "附加图片",
+      "attachFile": "附加文件",
       "dropImages": "将图片拖放到此处",
+      "dropFiles": "将文件拖放到此处",
       "prompts": {
         "cut": "剪切",
         "cutPrompt": "从 [开始时间] 剪切到 [结束时间]",
@@ -86,7 +90,13 @@
         "watermark": "水印",
         "watermarkPrompt": "将附加图片作为水印添加到右下角，透明度 50%",
         "intro": "图片片头",
-        "introPrompt": "用附加图片创建 [3] 秒的片头幻灯片"
+        "introPrompt": "用附加图片创建 [3] 秒的片头幻灯片",
+        "outro": "视频片尾",
+        "outroPrompt": "将附加视频追加到主视频结尾",
+        "subtitle": "烧录字幕",
+        "subtitlePrompt": "将附加字幕文件烧录到视频中",
+        "mergeVideos": "合并视频",
+        "mergeVideosPrompt": "按顺序合并主视频与附加视频"
       }
     },
     "player": {
