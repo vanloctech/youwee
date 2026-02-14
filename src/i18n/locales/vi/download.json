@@ -89,7 +89,8 @@
     "timeRange": {
       "title": "Tải theo phân đoạn",
       "apply": "Áp dụng",
-      "clear": "Xóa"
+      "clear": "Xóa",
+      "duration": "Thời lượng: {{duration}}"
     },
     "regenerateSummary": "Tạo lại tóm tắt",
     "empty": {

@@ -89,7 +89,8 @@
     "timeRange": {
       "title": "Download time range",
       "apply": "Apply",
-      "clear": "Clear"
+      "clear": "Clear",
+      "duration": "Duration: {{duration}}"
     },
     "regenerateSummary": "Regenerate summary",
     "empty": {

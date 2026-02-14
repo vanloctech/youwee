@@ -89,7 +89,8 @@
     "timeRange": {
       "title": "下载时间范围",
       "apply": "应用",
-      "clear": "清除"
+      "clear": "清除",
+      "duration": "时长: {{duration}}"
     },
     "regenerateSummary": "重新生成摘要",
     "empty": {

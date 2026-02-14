@@ -66,7 +66,8 @@
     "timeRange": {
       "title": "下载时间范围",
       "apply": "应用",
-      "clear": "清除"
+      "clear": "清除",
+      "duration": "时长: {{duration}}"
     },
     "videosInQueue": "队列中 {{count}} 个视频",
     "videosInQueue_plural": "队列中 {{count}} 个视频",

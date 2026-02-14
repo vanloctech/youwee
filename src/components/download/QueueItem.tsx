@@ -15,12 +15,52 @@ import {
   X,
   XCircle,
 } from 'lucide-react';
-import { useCallback, useState } from 'react';
+import { type ChangeEvent, useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { SimpleMarkdown } from '@/components/ui/simple-markdown';
 import { useAI } from '@/contexts/AIContext';
 import type { DownloadItem, ItemDownloadSettings } from '@/lib/types';
 import { cn } from '@/lib/utils';
+
+// Parse a duration string like "5:30" or "1:05:30" to total seconds
+function parseDurationString(dur: string): number {
+  const parts = dur.split(':').map(Number);
+  if (parts.some(Number.isNaN)) return 0;
+  if (parts.length === 3) return parts[0] * 3600 + parts[1] * 60 + parts[2];
+  if (parts.length === 2) return parts[0] * 60 + parts[1];
+  return parts[0] || 0;
+}
+
+// Auto-format digits into M:SS or H:MM:SS
+function autoFormatTimeInput(raw: string): string {
+  const digits = raw.replace(/\D/g, '');
+  if (digits.length === 0) return '';
+  if (digits.length <= 2) return digits;
+  if (digits.length === 3) return `${digits[0]}:${digits.slice(1)}`;
+  if (digits.length === 4) return `${digits.slice(0, 2)}:${digits.slice(2)}`;
+  if (digits.length === 5) return `${digits[0]}:${digits.slice(1, 3)}:${digits.slice(3)}`;
+  return `${digits.slice(0, 2)}:${digits.slice(2, 4)}:${digits.slice(4, 6)}`;
+}
+
+// Validate time string format (M:SS or H:MM:SS) and return seconds, or -1 if invalid
+function parseTimeToSeconds(val: string): number {
+  if (!val) return -1;
+  const match = val.match(/^(\d{1,2}):(\d{2})(?::(\d{2}))?$/);
+  if (!match) return -1;
+  if (match[3] !== undefined) {
+    // H:MM:SS
+    const h = Number(match[1]);
+    const m = Number(match[2]);
+    const s = Number(match[3]);
+    if (m >= 60 || s >= 60) return -1;
+    return h * 3600 + m * 60 + s;
+  }
+  // M:SS
+  const m = Number(match[1]);
+  const s = Number(match[2]);
+  if (s >= 60) return -1;
+  return m * 60 + s;
+}
 
 // Helper to format file size
 function formatFileSize(bytes: number): string {
@@ -71,7 +111,6 @@ export function QueueItem({
   const [showTimeRange, setShowTimeRange] = useState(false);
   const [timeStart, setTimeStart] = useState('');
   const [timeEnd, setTimeEnd] = useState('');
-
   // Use background task for summary - taskId is based on item.id
   const taskId = `queue-${item.id}`;
   const task = ai.getSummaryTask(taskId);
@@ -130,7 +169,7 @@ export function QueueItem({
       onUpdateTimeRange(item.id, timeStart, timeEnd);
       setShowTimeRange(false);
     }
-  }, [item.id, timeStart, timeEnd, onUpdateTimeRange]);
+  }, [item.id, onUpdateTimeRange, timeStart, timeEnd]);
 
   const handleClearTimeRange = useCallback(() => {
     onUpdateTimeRange(item.id, undefined, undefined);
@@ -140,12 +179,39 @@ export function QueueItem({
   }, [item.id, onUpdateTimeRange]);
 
   const handleToggleTimeRange = useCallback(() => {
-    if (!showTimeRange && hasTimeRange) {
-      setTimeStart(itemSettings?.timeRangeStart || '');
-      setTimeEnd(itemSettings?.timeRangeEnd || '');
-    }
-    setShowTimeRange((v) => !v);
-  }, [showTimeRange, hasTimeRange, itemSettings?.timeRangeStart, itemSettings?.timeRangeEnd]);
+    setShowTimeRange((v) => {
+      if (!v) {
+        // Restore saved values when opening
+        setTimeStart(itemSettings?.timeRangeStart ?? '');
+        setTimeEnd(itemSettings?.timeRangeEnd ?? '');
+      }
+      return !v;
+    });
+  }, [itemSettings?.timeRangeStart, itemSettings?.timeRangeEnd]);
+
+  const handleTimeStartChange = useCallback((e: ChangeEvent<HTMLInputElement>) => {
+    setTimeStart(autoFormatTimeInput(e.target.value));
+  }, []);
+
+  const handleTimeEndChange = useCallback((e: ChangeEvent<HTMLInputElement>) => {
+    setTimeEnd(autoFormatTimeInput(e.target.value));
+  }, []);
+
+  // Compute duration info and validation
+  const durationSeconds = useMemo(
+    () => (item.duration ? parseDurationString(item.duration) : 0),
+    [item.duration],
+  );
+  const isLongVideo = durationSeconds >= 3600;
+  const timePlaceholder = isLongVideo ? 'H:MM:SS' : 'M:SS';
+
+  const startSeconds = useMemo(() => parseTimeToSeconds(timeStart), [timeStart]);
+  const endSeconds = useMemo(() => parseTimeToSeconds(timeEnd), [timeEnd]);
+  const isStartValid = timeStart === '' || startSeconds >= 0;
+  const isEndValid = timeEnd === '' || endSeconds >= 0;
+  const isRangeValid =
+    !timeStart || !timeEnd || (startSeconds >= 0 && endSeconds >= 0 && startSeconds < endSeconds);
+  const canApply = timeStart !== '' && timeEnd !== '' && isStartValid && isEndValid && isRangeValid;
 
   return (
     <div
@@ -493,28 +559,49 @@ export function QueueItem({
 
         {/* Time Range Inline Panel */}
         {showTimeRange && isPending && (
-          <div className="flex items-center gap-2 mt-2 p-2 rounded-lg bg-muted/30 border border-border/30">
-            <Scissors className="w-3.5 h-3.5 text-muted-foreground flex-shrink-0" />
+          <div className="flex items-center gap-2 mt-2 p-2 rounded-lg bg-amber-500/5 border border-amber-500/10">
+            <Scissors className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400 flex-shrink-0" />
             <input
               type="text"
-              placeholder="00:00"
+              placeholder={timePlaceholder}
               value={timeStart}
-              onChange={(e) => setTimeStart(e.target.value)}
-              className="w-16 text-xs px-2 py-1 rounded bg-background border border-border/50 text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-1 focus:ring-primary/50"
+              onChange={handleTimeStartChange}
+              maxLength={8}
+              className={cn(
+                'w-[5.5rem] text-xs px-2 py-1 rounded bg-background border border-border/50 text-center font-mono',
+                'focus:outline-none focus:ring-1 focus:ring-amber-500/50 focus:border-amber-500/50',
+                'placeholder:text-muted-foreground/40',
+                timeStart &&
+                  (!isStartValid || !isRangeValid) &&
+                  'border-red-500/60 focus:ring-red-500/50 focus:border-red-500/50',
+              )}
             />
             <span className="text-xs text-muted-foreground">-</span>
             <input
               type="text"
-              placeholder="00:00"
+              placeholder={timePlaceholder}
               value={timeEnd}
-              onChange={(e) => setTimeEnd(e.target.value)}
-              className="w-16 text-xs px-2 py-1 rounded bg-background border border-border/50 text-foreground placeholder:text-muted-foreground/50 focus:outline-none focus:ring-1 focus:ring-primary/50"
+              onChange={handleTimeEndChange}
+              maxLength={8}
+              className={cn(
+                'w-[5.5rem] text-xs px-2 py-1 rounded bg-background border border-border/50 text-center font-mono',
+                'focus:outline-none focus:ring-1 focus:ring-amber-500/50 focus:border-amber-500/50',
+                'placeholder:text-muted-foreground/40',
+                timeEnd &&
+                  (!isEndValid || !isRangeValid) &&
+                  'border-red-500/60 focus:ring-red-500/50 focus:border-red-500/50',
+              )}
             />
+            {durationSeconds > 0 && (
+              <span className="text-[10px] text-muted-foreground/70 flex-shrink-0">
+                {t('queue.timeRange.duration', { duration: item.duration })}
+              </span>
+            )}
             <button
               type="button"
               onClick={handleApplyTimeRange}
-              disabled={!timeStart || !timeEnd}
-              className="text-[11px] px-2 py-1 rounded bg-primary/10 text-primary font-medium hover:bg-primary/20 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+              disabled={!canApply}
+              className="text-[11px] px-2 py-0.5 rounded-md bg-amber-500/10 text-amber-600 dark:text-amber-400 hover:bg-amber-500/20 font-medium transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
             >
               {t('queue.timeRange.apply')}
             </button>
@@ -522,7 +609,7 @@ export function QueueItem({
               <button
                 type="button"
                 onClick={handleClearTimeRange}
-                className="text-[11px] px-2 py-1 rounded bg-red-500/10 text-red-500 font-medium hover:bg-red-500/20 transition-colors"
+                className="text-[11px] px-2 py-0.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted/50 font-medium transition-colors"
               >
                 {t('queue.timeRange.clear')}
               </button>
