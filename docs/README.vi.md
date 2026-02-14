@@ -5,19 +5,17 @@
   [![English](https://img.shields.io/badge/lang-English-blue)](../README.md)
   [![Tiếng Việt](https://img.shields.io/badge/lang-Tiếng_Việt-red)](README.vi.md)
   [![简体中文](https://img.shields.io/badge/lang-简体中文-green)](README.zh-CN.md)
+  [![Vote for next language](https://img.shields.io/badge/Vote-Ngôn_ngữ_tiếp_theo-orange?logo=github)](https://github.com/vanloctech/youwee/discussions/18)
 
   <img src="../src-tauri/icons/icon.png" alt="Youwee Logo" width="128" height="128">
   
   **Ứng dụng tải video YouTube hiện đại, đẹp mắt được xây dựng với Tauri và React**
 
-  [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
   [![Downloads](https://img.shields.io/github/downloads/vanloctech/youwee/total?label=Downloads)](https://github.com/vanloctech/youwee/releases)
+  [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
+  [![Reddit](https://img.shields.io/badge/Reddit-r%2Fyouwee-FF4500?logo=reddit&logoColor=white)](https://www.reddit.com/r/youwee)
   [![Tauri](https://img.shields.io/badge/Tauri-2.0-FFC131?logo=tauri&logoColor=white)](https://tauri.app/)
   [![React](https://img.shields.io/badge/React-19-61DAFB?logo=react&logoColor=white)](https://react.dev/)
-  [![TypeScript](https://img.shields.io/badge/TypeScript-5.0-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
-  [![FFmpeg](https://img.shields.io/badge/FFmpeg-007808?logo=ffmpeg&logoColor=white)](https://ffmpeg.org/)
-  [![Reddit](https://img.shields.io/badge/Reddit-r%2Fyouwee-FF4500?logo=reddit&logoColor=white)](https://www.reddit.com/r/youwee)
-  [![Vote for next language](https://img.shields.io/badge/Vote-Ngôn_ngữ_tiếp_theo-orange?logo=github)](https://github.com/vanloctech/youwee/discussions/18)
 </div>
 
 ---
@@ -28,11 +26,12 @@
 - **Theo dõi Kênh** — Theo dõi kênh YouTube, Bilibili & Youku, nhận thông báo video mới, tự động tải xuống, và quản lý từ system tray
 - **Tóm tắt Video bằng AI** — Tóm tắt video với Gemini, OpenAI, hoặc Ollama
 - **Xử lý Video bằng AI** — Chỉnh sửa video bằng ngôn ngữ tự nhiên (cắt, chuyển đổi, thay đổi kích thước, trích xuất âm thanh)
-- **Tải theo khoảng thời gian (Cắt video)** — Chỉ tải đoạn cần thiết bằng cách đặt thời gian bắt đầu/kết thúc (dùng yt-dlp `--download-sections`)
+- **Tải theo khoảng thời gian (Cắt video)** — Chỉ tải đoạn cần thiết bằng cách đặt thời gian bắt đầu/kết thúc
 - **Tải hàng loạt & Playlist** — Tải nhiều video hoặc toàn bộ playlist
 - **Trích xuất Âm thanh** — Trích xuất âm thanh định dạng MP3, M4A, hoặc Opus
 - **Hỗ trợ Phụ đề** — Tải hoặc nhúng phụ đề
 - **Hậu xử lý** — Tự động nhúng metadata, thumbnail và phụ đề (khi bật) vào file đầu ra
+- **SponsorBlock** — Tự động bỏ qua sponsor, intro, outro và đoạn tự quảng bá với các chế độ xóa/đánh dấu/tùy chỉnh
 - **Thư viện Tải xuống** — Theo dõi và quản lý tất cả các bản tải
 - **6 Giao diện Đẹp** — Midnight, Aurora, Sunset, Ocean, Forest, Candy
 - **Nhanh & Nhẹ** — Xây dựng với Tauri cho hiệu suất tối ưu

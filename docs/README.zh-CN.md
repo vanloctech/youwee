@@ -5,19 +5,17 @@
   [![English](https://img.shields.io/badge/lang-English-blue)](../README.md)
   [![Tiếng Việt](https://img.shields.io/badge/lang-Tiếng_Việt-red)](README.vi.md)
   [![简体中文](https://img.shields.io/badge/lang-简体中文-green)](README.zh-CN.md)
+  [![Vote for next language](https://img.shields.io/badge/Vote-下一个语言-orange?logo=github)](https://github.com/vanloctech/youwee/discussions/18)
 
   <img src="../src-tauri/icons/icon.png" alt="Youwee Logo" width="128" height="128">
   
   **一款现代、美观的 YouTube 视频下载器，使用 Tauri 和 React 构建**
 
-  [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
   [![Downloads](https://img.shields.io/github/downloads/vanloctech/youwee/total?label=Downloads)](https://github.com/vanloctech/youwee/releases)
+  [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
+  [![Reddit](https://img.shields.io/badge/Reddit-r%2Fyouwee-FF4500?logo=reddit&logoColor=white)](https://www.reddit.com/r/youwee)
   [![Tauri](https://img.shields.io/badge/Tauri-2.0-FFC131?logo=tauri&logoColor=white)](https://tauri.app/)
   [![React](https://img.shields.io/badge/React-19-61DAFB?logo=react&logoColor=white)](https://react.dev/)
-  [![TypeScript](https://img.shields.io/badge/TypeScript-5.0-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
-  [![FFmpeg](https://img.shields.io/badge/FFmpeg-007808?logo=ffmpeg&logoColor=white)](https://ffmpeg.org/)
-  [![Reddit](https://img.shields.io/badge/Reddit-r%2Fyouwee-FF4500?logo=reddit&logoColor=white)](https://www.reddit.com/r/youwee)
-  [![Vote for next language](https://img.shields.io/badge/Vote-下一个语言-orange?logo=github)](https://github.com/vanloctech/youwee/discussions/18)
 </div>
 
 ---
@@ -28,11 +26,12 @@
 - **频道关注** — 关注 YouTube、Bilibili 和优酷频道，接收新视频通知，自动下载，通过系统托盘管理
 - **AI 视频摘要** — 使用 Gemini、OpenAI 或 Ollama 进行视频摘要
 - **AI 视频处理** — 使用自然语言编辑视频（剪切、转换、调整大小、提取音频）
-- **时间范围下载（视频裁剪）** — 通过设置开始/结束时间只下载所需片段（基于 yt-dlp `--download-sections`）
+- **时间范围下载（视频裁剪）** — 通过设置开始/结束时间只下载所需片段
 - **批量下载与播放列表** — 下载多个视频或整个播放列表
 - **音频提取** — 提取 MP3、M4A 或 Opus 格式的音频
 - **字幕支持** — 下载或嵌入字幕
 - **后处理** — 自动将元数据、缩略图和字幕（启用时）嵌入输出文件
+- **SponsorBlock** — 自动跳过赞助段、片头片尾和自我推广片段，支持移除/标记/自定义模式
 - **下载库** — 跟踪和管理所有下载
 - **6 款精美主题** — Midnight、Aurora、Sunset、Ocean、Forest、Candy
 - **快速轻量** — 使用 Tauri 构建，资源占用最小

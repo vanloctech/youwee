@@ -5,19 +5,17 @@
   [![English](https://img.shields.io/badge/lang-English-blue)](README.md)
   [![Tiếng Việt](https://img.shields.io/badge/lang-Tiếng_Việt-red)](docs/README.vi.md)
   [![简体中文](https://img.shields.io/badge/lang-简体中文-green)](docs/README.zh-CN.md)
+  [![Vote for next language](https://img.shields.io/badge/Vote-Next_Language-orange?logo=github)](https://github.com/vanloctech/youwee/discussions/18)
 
   <img src="src-tauri/icons/icon.png" alt="Youwee Logo" width="128" height="128">
   
   **A modern, beautiful YouTube video downloader built with Tauri and React**
 
-  [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
   [![Downloads](https://img.shields.io/github/downloads/vanloctech/youwee/total?label=Downloads)](https://github.com/vanloctech/youwee/releases)
+  [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
+  [![Reddit](https://img.shields.io/badge/Reddit-r%2Fyouwee-FF4500?logo=reddit&logoColor=white)](https://www.reddit.com/r/youwee)
   [![Tauri](https://img.shields.io/badge/Tauri-2.0-FFC131?logo=tauri&logoColor=white)](https://tauri.app/)
   [![React](https://img.shields.io/badge/React-19-61DAFB?logo=react&logoColor=white)](https://react.dev/)
-  [![TypeScript](https://img.shields.io/badge/TypeScript-5.0-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
-  [![FFmpeg](https://img.shields.io/badge/FFmpeg-007808?logo=ffmpeg&logoColor=white)](https://ffmpeg.org/)
-  [![Reddit](https://img.shields.io/badge/Reddit-r%2Fyouwee-FF4500?logo=reddit&logoColor=white)](https://www.reddit.com/r/youwee)
-  [![Vote for next language](https://img.shields.io/badge/Vote-Next_Language-orange?logo=github)](https://github.com/vanloctech/youwee/discussions/18)
 </div>
 
 ---
@@ -30,11 +28,12 @@
 - **Live Stream Support** — Download live streams with dedicated toggle
 - **AI Video Summary** — Summarize videos with Gemini, OpenAI, or Ollama
 - **AI Video Processing** — Edit videos using natural language (cut, convert, resize, extract audio)
-- **Time Range Download (Cut Video)** — Download only the segment you need by setting start/end time (powered by yt-dlp `--download-sections`)
+- **Time Range Download (Cut Video)** — Download only the segment you need by setting start/end time
 - **Batch & Playlist** — Download multiple videos or entire playlists
 - **Audio Extraction** — Extract audio in MP3, M4A, or Opus formats
 - **Subtitle Support** — Download or embed subtitles
 - **Post-Processing** — Auto-embed metadata, thumbnail, and subtitles (when enabled) into output files
+- **SponsorBlock** — Automatically skip sponsors, intros, outros, and self-promotions with remove/mark/custom modes
 - **Speed Limit** — Control download bandwidth (KB/s, MB/s, GB/s)
 - **Download Library** — Track and manage all your downloads
 - **6 Beautiful Themes** — Midnight, Aurora, Sunset, Ocean, Forest, Candy
