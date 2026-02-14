@@ -165,10 +165,12 @@ pub fn run() {
             commands::test_ai_connection,
             commands::generate_video_summary,
             commands::generate_summary_with_options,
+            commands::generate_ai_response,
             commands::get_ai_models,
             commands::get_summary_languages,
             // Processing commands
             commands::get_video_metadata,
+            commands::detect_shot_changes,
             commands::get_image_metadata,
             commands::get_processing_attachment_info,
             commands::generate_processing_command,

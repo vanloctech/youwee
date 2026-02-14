@@ -1,7 +1,7 @@
 use tauri::{AppHandle, Manager};
 use std::fs;
 use std::path::PathBuf;
-use crate::services::{AIConfig, SummaryStyle, generate_summary, generate_summary_custom, test_connection};
+use crate::services::{AIConfig, SummaryStyle, generate_summary, generate_summary_custom, generate_raw, test_connection};
 use crate::database::update_history_summary;
 
 /// Get the AI config file path
@@ -198,4 +198,24 @@ pub fn get_summary_languages() -> Vec<LanguageOption> {
 pub struct LanguageOption {
     pub value: String,
     pub label: String,
+}
+
+/// Generate raw AI text response (no summarization wrapping)
+/// Used for subtitle translation, grammar fix, and other custom AI tasks
+#[tauri::command]
+pub async fn generate_ai_response(
+    app: AppHandle,
+    prompt: String,
+) -> Result<String, String> {
+    let config = get_ai_config(app).await?;
+    
+    if !config.enabled {
+        return Err("AI features are disabled. Enable them in Settings.".to_string());
+    }
+    
+    let result = generate_raw(&config, &prompt)
+        .await
+        .map_err(|e| format!("AI generation failed: {}", e))?;
+    
+    Ok(result.summary)
 }

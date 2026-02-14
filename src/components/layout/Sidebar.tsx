@@ -8,6 +8,7 @@ import {
   ScrollText,
   Settings,
   Sparkles,
+  Subtitles,
   Sun,
   Tv,
   Wand2,
@@ -25,6 +26,7 @@ export type Page =
   | 'channels'
   | 'summary'
   | 'processing'
+  | 'subtitles'
   | 'metadata'
   | 'library'
   | 'logs'
@@ -66,6 +68,11 @@ const navItems: NavItem[] = [
     id: 'processing',
     labelKey: 'sidebar.processing',
     icon: <Wand2 className="w-5 h-5" />,
+  },
+  {
+    id: 'subtitles',
+    labelKey: 'sidebar.subtitles',
+    icon: <Subtitles className="w-5 h-5" />,
   },
   {
     id: 'metadata',

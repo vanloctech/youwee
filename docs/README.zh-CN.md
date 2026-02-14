@@ -30,6 +30,8 @@
 - **批量下载与播放列表** — 下载多个视频或整个播放列表
 - **音频提取** — 提取 MP3、M4A 或 Opus 格式的音频
 - **字幕支持** — 下载或嵌入字幕
+- **字幕工坊** — 创建、编辑并优化字幕（SRT/VTT/ASS），集成时间轴工具、查找替换、自动修复、AI 翻译、AI 语法修正与 Whisper 生成
+- **字幕页面核心能力** — 波形/频谱时间轴、镜头切换同步、基于风格预设的实时质检、拆分合并工具、双栏翻译模式（原文/译文）和批处理/项目操作
 - **后处理** — 自动将元数据、缩略图和字幕（启用时）嵌入输出文件
 - **SponsorBlock** — 自动跳过赞助段、片头片尾和自我推广片段，支持移除/标记/自定义模式
 - **下载库** — 跟踪和管理所有下载
@@ -57,6 +59,8 @@
 ![Youwee - 频道轮询](screenshots/youwee-13.png)
 ![Youwee - 队列与处理](screenshots/youwee-14.png)
 ![Youwee - 语言投票](screenshots/youwee-15.png)
+![Youwee - 字幕工坊](screenshots/youwee-16.png)
+![Youwee - 字幕时间轴与质检](screenshots/youwee-17.png)
 
 </details>
 

@@ -144,6 +144,13 @@ pub struct ProcessingAttachment {
     pub format: String,
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ShotDetectionResult {
+    pub shot_times_ms: Vec<i64>,
+    pub threshold: f64,
+    pub min_interval_ms: i64,
+}
+
 fn detect_attachment_kind(ext: &str) -> &'static str {
     let image_exts = ["png", "jpg", "jpeg", "webp", "gif", "bmp", "svg", "tiff", "tif"];
     let video_exts = ["mp4", "mkv", "webm", "avi", "mov", "wmv", "flv", "m4v", "ts", "mts"];
@@ -363,6 +370,87 @@ pub async fn get_video_metadata(app: AppHandle, path: String) -> Result<VideoMet
         file_size,
         format: format_name,
         has_audio: audio_stream.is_some(),
+    })
+}
+
+/// Detect shot changes using FFmpeg scene detection filter.
+#[tauri::command]
+pub async fn detect_shot_changes(
+    app: AppHandle,
+    path: String,
+    threshold: Option<f64>,
+    min_interval_ms: Option<i64>,
+) -> Result<ShotDetectionResult, String> {
+    let input_path = Path::new(&path);
+    if !input_path.exists() {
+        return Err(format!("Video not found: {}", path));
+    }
+
+    let ffmpeg_path = get_ffmpeg_path(&app)
+        .await
+        .ok_or("FFmpeg not found. Please install FFmpeg from Settings > Dependencies.")?;
+
+    let threshold_value = threshold.unwrap_or(0.35).clamp(0.05, 0.95);
+    let min_interval = min_interval_ms.unwrap_or(250).max(0);
+    let scene_filter = format!("select=gt(scene\\,{:.3}),showinfo", threshold_value);
+
+    let mut cmd = Command::new(ffmpeg_path);
+    cmd.args([
+        "-hide_banner",
+        "-i",
+        &path,
+        "-vf",
+        &scene_filter,
+        "-an",
+        "-f",
+        "null",
+        "-",
+    ]);
+    cmd.hide_window();
+
+    let output = cmd
+        .output()
+        .await
+        .map_err(|e| format!("Failed to run FFmpeg shot detection: {}", e))?;
+
+    if !output.status.success() {
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        return Err(format!("FFmpeg shot detection failed: {}", stderr));
+    }
+
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    let re = regex::Regex::new(r"pts_time:([0-9]+(?:\.[0-9]+)?)")
+        .map_err(|e| format!("Failed to build regex: {}", e))?;
+
+    let mut detected_ms = Vec::new();
+    for cap in re.captures_iter(&stderr) {
+        let Some(raw) = cap.get(1).map(|m| m.as_str()) else {
+            continue;
+        };
+        let Ok(sec) = raw.parse::<f64>() else {
+            continue;
+        };
+        let ms = (sec * 1000.0).round() as i64;
+        detected_ms.push(ms.max(0));
+    }
+
+    detected_ms.sort_unstable();
+    detected_ms.dedup();
+
+    let mut filtered = Vec::with_capacity(detected_ms.len());
+    for value in detected_ms {
+        let keep = filtered
+            .last()
+            .map_or(true, |last| value - *last >= min_interval);
+        if keep {
+            filtered.push(value);
+        }
+    }
+
+    Ok(ShotDetectionResult {
+        shot_times_ms: filtered,
+        threshold: threshold_value,
+        min_interval_ms: min_interval,
     })
 }
 

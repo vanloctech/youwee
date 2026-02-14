@@ -32,6 +32,8 @@
 - **Batch & Playlist** — Download multiple videos or entire playlists
 - **Audio Extraction** — Extract audio in MP3, M4A, or Opus formats
 - **Subtitle Support** — Download or embed subtitles
+- **Subtitle Workshop** — Create, edit, and refine subtitles (SRT/VTT/ASS) with timing tools, find/replace, auto-fix, AI Translate, AI Grammar Fix, and Whisper generation
+- **Subtitle Page Core Features** — Waveform/spectrogram timeline, shot-change sync, realtime QC with style profiles, split/merge tools, translator mode (source/target), and batch/project operations
 - **Post-Processing** — Auto-embed metadata, thumbnail, and subtitles (when enabled) into output files
 - **SponsorBlock** — Automatically skip sponsors, intros, outros, and self-promotions with remove/mark/custom modes
 - **Speed Limit** — Control download bandwidth (KB/s, MB/s, GB/s)
@@ -59,6 +61,8 @@
 ![Youwee - Channel Polling](docs/screenshots/youwee-13.png)
 ![Youwee - Queue & Processing](docs/screenshots/youwee-14.png)
 ![Youwee - Language Vote](docs/screenshots/youwee-15.png)
+![Youwee - Subtitle Workshop](docs/screenshots/youwee-16.png)
+![Youwee - Subtitle Timeline & QC](docs/screenshots/youwee-17.png)
 
 </details>
 

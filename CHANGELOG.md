@@ -8,6 +8,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Subtitle Workshop** - Added an all-in-one subtitle page for SRT/VTT/ASS with editing, timing tools, find/replace, auto-fix, and AI actions (Whisper, Translate, Grammar Fix)
+- **Advanced subtitle tools** - Added waveform/spectrogram timeline, shot-change sync, realtime QC with style profiles, split/merge tools, translator mode (source/target), and batch project tools
 
 ### Changed
 

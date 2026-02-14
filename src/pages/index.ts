@@ -5,5 +5,6 @@ export { LogsPage } from './LogsPage';
 export { MetadataPage } from './MetadataPage';
 export { ProcessingPage } from './ProcessingPage';
 export { SettingsPage } from './SettingsPage';
+export { SubtitlesPage } from './SubtitlesPage';
 export { SummaryPage } from './SummaryPage';
 export { UniversalPage } from './UniversalPage';

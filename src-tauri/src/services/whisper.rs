@@ -41,6 +41,21 @@ pub struct WhisperResult {
     pub language: Option<String>,
 }
 
+#[derive(Clone, Debug, Deserialize)]
+struct WhisperVerboseSegment {
+    start: f64,
+    end: f64,
+    text: String,
+}
+
+#[derive(Clone, Debug, Deserialize)]
+struct WhisperVerboseResponse {
+    text: Option<String>,
+    duration: Option<f64>,
+    language: Option<String>,
+    segments: Option<Vec<WhisperVerboseSegment>>,
+}
+
 /// Error types for Whisper operations
 #[derive(Debug)]
 pub enum WhisperError {
@@ -86,6 +101,109 @@ const MAX_FILE_SIZE: u64 = 25 * 1024 * 1024;
 
 /// Supported audio formats for Whisper
 const SUPPORTED_FORMATS: &[&str] = &["mp3", "mp4", "mpeg", "mpga", "m4a", "wav", "webm", "ogg"];
+
+fn format_srt_timestamp(seconds: f64) -> String {
+    let secs = seconds.max(0.0);
+    let total_ms = (secs * 1000.0).round() as u64;
+    let ms = total_ms % 1000;
+    let total_seconds = total_ms / 1000;
+    let s = total_seconds % 60;
+    let total_minutes = total_seconds / 60;
+    let m = total_minutes % 60;
+    let h = total_minutes / 60;
+    format!("{:02}:{:02}:{:02},{:03}", h, m, s, ms)
+}
+
+fn format_vtt_timestamp(seconds: f64) -> String {
+    let secs = seconds.max(0.0);
+    let total_ms = (secs * 1000.0).round() as u64;
+    let ms = total_ms % 1000;
+    let total_seconds = total_ms / 1000;
+    let s = total_seconds % 60;
+    let total_minutes = total_seconds / 60;
+    let m = total_minutes % 60;
+    let h = total_minutes / 60;
+    format!("{:02}:{:02}:{:02}.{:03}", h, m, s, ms)
+}
+
+fn build_subtitle_from_segments(
+    segments: &[WhisperVerboseSegment],
+    target_format: WhisperResponseFormat,
+) -> String {
+    match target_format {
+        WhisperResponseFormat::Srt => segments
+            .iter()
+            .enumerate()
+            .map(|(idx, segment)| {
+                format!(
+                    "{}\n{} --> {}\n{}\n",
+                    idx + 1,
+                    format_srt_timestamp(segment.start),
+                    format_srt_timestamp(segment.end.max(segment.start + 0.1)),
+                    segment.text.trim()
+                )
+            })
+            .collect::<Vec<_>>()
+            .join("\n"),
+        WhisperResponseFormat::Vtt => {
+            let cues = segments
+                .iter()
+                .map(|segment| {
+                    format!(
+                        "{} --> {}\n{}\n",
+                        format_vtt_timestamp(segment.start),
+                        format_vtt_timestamp(segment.end.max(segment.start + 0.1)),
+                        segment.text.trim()
+                    )
+                })
+                .collect::<Vec<_>>()
+                .join("\n");
+            format!("WEBVTT\n\n{}", cues)
+        }
+        _ => String::new(),
+    }
+}
+
+fn convert_verbose_json_to_subtitle(
+    response_text: &str,
+    target_format: WhisperResponseFormat,
+) -> Result<WhisperResult, WhisperError> {
+    let verbose: WhisperVerboseResponse = serde_json::from_str(response_text)
+        .map_err(|e| WhisperError::ParseError(e.to_string()))?;
+
+    let segments = if let Some(segments) = verbose.segments.clone() {
+        if segments.is_empty() {
+            Vec::new()
+        } else {
+            segments
+        }
+    } else {
+        Vec::new()
+    };
+
+    let subtitle_text = if !segments.is_empty() {
+        build_subtitle_from_segments(&segments, target_format)
+    } else if let Some(text) = verbose.text.clone() {
+        // Fallback when provider returns verbose_json without segments.
+        let end = verbose.duration.unwrap_or(5.0).max(1.0);
+        let fallback_segment = WhisperVerboseSegment {
+            start: 0.0,
+            end,
+            text,
+        };
+        build_subtitle_from_segments(&[fallback_segment], target_format)
+    } else {
+        return Err(WhisperError::ParseError(
+            "No text or segments in Whisper verbose_json response".to_string(),
+        ));
+    };
+
+    Ok(WhisperResult {
+        text: subtitle_text,
+        duration_seconds: verbose.duration,
+        language: verbose.language,
+    })
+}
 
 /// Transcribe audio file using OpenAI Whisper API
 /// 
@@ -163,10 +281,22 @@ pub async fn transcribe_audio(
     
     let model_name = model.unwrap_or("whisper-1");
     
+    let requested_format = response_format.clone();
+    let api_response_format = match requested_format {
+        WhisperResponseFormat::Srt | WhisperResponseFormat::Vtt => WhisperResponseFormat::VerboseJson,
+        _ => requested_format.clone(),
+    };
+
     let mut form = Form::new()
         .part("file", file_part)
         .text("model", model_name.to_string())
-        .text("response_format", response_format.to_string());
+        .text("response_format", api_response_format.to_string());
+
+    // Needed so providers that support only json/text/verbose_json still return
+    // enough timing data for local SRT/VTT conversion.
+    if matches!(api_response_format, WhisperResponseFormat::VerboseJson) {
+        form = form.text("timestamp_granularities[]", "segment");
+    }
     
     // Add language hint if provided
     if let Some(lang) = language {
@@ -207,10 +337,13 @@ pub async fn transcribe_audio(
         return Err(WhisperError::ApiError(format!("Status {}: {}", status, response_text)));
     }
     
-    // Parse response based on format
-    match response_format {
+    // Parse response based on requested format
+    match requested_format {
         WhisperResponseFormat::Text | WhisperResponseFormat::Srt | WhisperResponseFormat::Vtt => {
-            // These formats return plain text
+            if matches!(api_response_format, WhisperResponseFormat::VerboseJson) {
+                return convert_verbose_json_to_subtitle(&response_text, requested_format);
+            }
+            // Text format returns plain text
             Ok(WhisperResult {
                 text: response_text,
                 duration_seconds: None,
