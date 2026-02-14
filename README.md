@@ -32,6 +32,7 @@
 - **Batch & Playlist** — Download multiple videos or entire playlists
 - **Audio Extraction** — Extract audio in MP3, M4A, or Opus formats
 - **Subtitle Support** — Download or embed subtitles
+- **Subtitle Workshop** — Create, edit, and refine subtitles (SRT/VTT/ASS) with timing tools, find/replace, auto-fix, AI Translate, AI Grammar Fix, and Whisper generation
 - **Post-Processing** — Auto-embed metadata, thumbnail, and subtitles (when enabled) into output files
 - **SponsorBlock** — Automatically skip sponsors, intros, outros, and self-promotions with remove/mark/custom modes
 - **Speed Limit** — Control download bandwidth (KB/s, MB/s, GB/s)

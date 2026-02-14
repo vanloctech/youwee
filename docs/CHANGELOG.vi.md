@@ -8,14 +8,7 @@ và dự án tuân theo [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ## [Unreleased]
 
 ### Thêm mới
-- **Xưởng phụ đề** - Trình biên tập phụ đề đầy đủ tính năng, thay thế Subtitle Edit. Hỗ trợ định dạng SRT, VTT và ASS với trình biên tập ảo hóa cho hiệu suất mượt mà trên file lớn. Bao gồm hoàn tác/làm lại (50 cấp), chọn nhiều dòng, chỉnh sửa trực tiếp và phím tắt
-- **Công cụ thời gian phụ đề** - Dịch chuyển thời gian cho tất cả hoặc các phụ đề đã chọn, co giãn thời lượng theo tỷ lệ, và đồng bộ hai điểm. Điều chỉnh chính xác đến mili giây
-- **Tìm và thay thế phụ đề** - Tìm kiếm trong nội dung phụ đề với hỗ trợ phân biệt hoa thường, từ nguyên vẹn và regex. Thay thế một hoặc tất cả kết quả
-- **Tự động sửa lỗi phụ đề** - Phát hiện và sửa các lỗi phụ đề thường gặp: mục trống, thời gian chồng lấn, tag khiếm thính, dòng quá dài, trùng lặp, tag định dạng thừa, và thời lượng quá ngắn/dài
-- **Tải phụ đề từ URL** - Lấy danh sách phụ đề có sẵn từ bất kỳ URL video nào bằng trích xuất phụ đề của yt-dlp, hỗ trợ nhận diện phụ đề tự động tạo
-- **Dịch phụ đề bằng AI** - Dịch phụ đề sang bất kỳ ngôn ngữ nào bằng nhà cung cấp AI đã cấu hình (Gemini, OpenAI, DeepSeek, Qwen, Ollama). Xử lý theo lô 20 dòng để đảm bảo ổn định
-- **Sửa ngữ pháp bằng AI** - Sửa ngữ pháp và chính tả trong phụ đề với ba tùy chọn giọng điệu: giữ nguyên, trang trọng và thân mật. Sử dụng nhà cung cấp AI đã cấu hình
-- **Tạo phụ đề bằng Whisper** - Tạo phụ đề từ file âm thanh/video bằng OpenAI Whisper, tích hợp trực tiếp vào xưởng phụ đề
+- **Xưởng phụ đề** - Bổ sung không gian làm việc phụ đề thống nhất cho SRT/VTT/ASS, tích hợp đầy đủ các công cụ chỉnh sửa chính (thời gian, tìm/thay thế, tự sửa lỗi), tải phụ đề từ URL và các tác vụ AI (dịch, sửa ngữ pháp, tạo bằng Whisper)
 - **Lệnh AI backend** - Thêm lệnh Tauri `generate_ai_response` đọc cấu hình AI đã lưu và gọi nhà cung cấp tương ứng, cho phép các tính năng AI hoạt động từ frontend
 
 ### Thay đổi

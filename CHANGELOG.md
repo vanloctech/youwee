@@ -8,14 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
-- **Subtitle Workshop** - Full-featured subtitle editor as a replacement for Subtitle Edit. Supports SRT, VTT, and ASS formats with a virtualized editor for smooth performance on large files. Includes undo/redo (50 levels), multi-select, inline editing, and keyboard shortcuts
-- **Subtitle timing tools** - Shift timing for all or selected subtitles, scale duration proportionally, and two-point sync. Adjustable in millisecond precision
-- **Subtitle find & replace** - Search through subtitle text with match case, whole word, and regex support. Replace one or all occurrences
-- **Subtitle auto-fix** - Detect and fix common subtitle issues: empty entries, overlapping timestamps, hearing-impaired tags, long lines, duplicates, stray formatting tags, and short/long durations
-- **Subtitle download from URL** - Fetch available subtitles from any video URL using yt-dlp's subtitle extraction, with auto-generated subtitle detection
-- **AI subtitle translation** - Translate subtitles to any language using configured AI provider (Gemini, OpenAI, DeepSeek, Qwen, Ollama). Processes in batches of 20 for reliability
-- **AI grammar fix** - Fix grammar and spelling in subtitles with three tone options: original, formal, and casual. Powered by configured AI provider
-- **Whisper subtitle generation** - Generate subtitles from audio/video files using OpenAI Whisper, integrated directly into the subtitle workshop
+- **Subtitle Workshop** - New unified subtitle workspace for SRT/VTT/ASS with core editing tools (timing, find/replace, auto-fix), subtitle download from URL, and integrated AI actions (translate, grammar fix, Whisper generation)
 - **Backend AI response command** - New `generate_ai_response` Tauri command that reads saved AI config and calls the appropriate provider, enabling AI features from the frontend
 
 ### Changed

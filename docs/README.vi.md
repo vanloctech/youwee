@@ -30,6 +30,7 @@
 - **Tải hàng loạt & Playlist** — Tải nhiều video hoặc toàn bộ playlist
 - **Trích xuất Âm thanh** — Trích xuất âm thanh định dạng MP3, M4A, hoặc Opus
 - **Hỗ trợ Phụ đề** — Tải hoặc nhúng phụ đề
+- **Xưởng Phụ đề** — Tạo, chỉnh sửa và tinh chỉnh phụ đề (SRT/VTT/ASS) với công cụ thời gian, tìm/thay thế, tự sửa lỗi, AI Dịch, AI Sửa ngữ pháp và tạo phụ đề bằng Whisper
 - **Hậu xử lý** — Tự động nhúng metadata, thumbnail và phụ đề (khi bật) vào file đầu ra
 - **SponsorBlock** — Tự động bỏ qua sponsor, intro, outro và đoạn tự quảng bá với các chế độ xóa/đánh dấu/tùy chỉnh
 - **Thư viện Tải xuống** — Theo dõi và quản lý tất cả các bản tải
