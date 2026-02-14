@@ -11,6 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Video info fetch fails with authentication/proxy** - Fixed yt-dlp argument ordering so cookie and proxy flags are inserted before the `--` URL separator, preventing `Failed to fetch video info` errors while keeping downloads working
 - **Stable channel update check always shows available** - Fixed yt-dlp stable/nightly update check to read the installed channel binary version (`--version`) instead of file-existence metadata, so "Up to date" is shown correctly after update
 - **Bundled update status and binary source mismatch** - Fixed bundled update flow to show latest available version in Settings and prefer the user-updated `app_data/bin/yt-dlp` binary when present, so updating bundled actually takes effect
+- **Processing page video info redesign** - Refreshed the section below player with a YouTube-style title + modern metadata chips, and removed hover color shift/shadow on codec badges for cleaner visuals
 
 ## [0.9.3] - 2026-02-14
 
