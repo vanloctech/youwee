@@ -1,5 +1,6 @@
 import {
   AlertCircle,
+  Check,
   CheckCircle2,
   ClipboardPaste,
   FileJson,
@@ -14,6 +15,7 @@ import {
   Play,
   Plus,
   Square,
+  Subtitles,
   Trash2,
   X,
 } from 'lucide-react';
@@ -22,6 +24,7 @@ import { useTranslation } from 'react-i18next';
 import { ThemePicker } from '@/components/settings/ThemePicker';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Textarea } from '@/components/ui/textarea';
 import { useMetadata } from '@/contexts/MetadataContext';
@@ -29,6 +32,7 @@ import { cn } from '@/lib/utils';
 
 export function MetadataPage() {
   const { t } = useTranslation('metadata');
+  const { t: tDownload } = useTranslation('download');
   const [inputText, setInputText] = useState('');
   const [isExpanded, setIsExpanded] = useState(false);
   const {
@@ -313,6 +317,127 @@ export function MetadataPage() {
               <Image className="w-3.5 h-3.5" />
               {t('thumbnail')}
             </button>
+
+            {/* Subtitle toggle with popover */}
+            <Popover>
+              <PopoverTrigger asChild>
+                <button
+                  type="button"
+                  className={cn(
+                    'flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium transition-all',
+                    settings.writeSubtitles
+                      ? 'bg-teal-500/15 text-teal-600 dark:text-teal-400 border border-teal-500/30'
+                      : 'bg-background/50 text-muted-foreground hover:text-foreground border border-transparent hover:border-border/50',
+                  )}
+                >
+                  <Subtitles className="w-3.5 h-3.5" />
+                  {t('subtitles')}
+                </button>
+              </PopoverTrigger>
+              <PopoverContent className="w-72 p-0" align="start" side="bottom" sideOffset={8}>
+                {/* Header */}
+                <div className="flex items-center justify-between px-4 py-3 border-b bg-muted/30">
+                  <div className="flex items-center gap-2">
+                    <Subtitles className="w-4 h-4 text-teal-500" />
+                    <h4 className="text-sm font-medium">{t('subtitles')}</h4>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => updateSettings({ writeSubtitles: !settings.writeSubtitles })}
+                    className={cn(
+                      'h-6 px-2.5 rounded-md text-[11px] font-medium transition-colors',
+                      settings.writeSubtitles
+                        ? 'bg-teal-500/15 text-teal-600 dark:text-teal-400'
+                        : 'bg-muted/50 text-muted-foreground hover:text-foreground',
+                    )}
+                  >
+                    {settings.writeSubtitles ? t('subtitleEnabled') : t('subtitleDisabled')}
+                  </button>
+                </div>
+
+                <div className="p-4 space-y-4">
+                  {/* Language Selection */}
+                  <div className="space-y-2">
+                    <span className="text-[11px] text-muted-foreground">
+                      {t('subtitleLanguages')}
+                    </span>
+                    <div className="flex flex-wrap gap-1.5">
+                      {[
+                        'en',
+                        'vi',
+                        'ja',
+                        'ko',
+                        'zh-Hans',
+                        'zh-Hant',
+                        'es',
+                        'fr',
+                        'de',
+                        'pt',
+                        'ru',
+                      ].map((code) => {
+                        const isSelected = settings.subtitleLangs.includes(code);
+                        return (
+                          <button
+                            type="button"
+                            key={code}
+                            onClick={() => {
+                              const newLangs = isSelected
+                                ? settings.subtitleLangs.filter((l) => l !== code)
+                                : [...settings.subtitleLangs, code];
+                              updateSettings({ subtitleLangs: newLangs });
+                            }}
+                            className={cn(
+                              'h-7 px-2 rounded text-[11px] font-medium transition-colors flex items-center gap-1',
+                              isSelected
+                                ? 'bg-teal-500/15 text-teal-600 dark:text-teal-400 border border-teal-500/30'
+                                : 'bg-muted/50 text-muted-foreground hover:bg-muted hover:text-foreground border border-transparent',
+                            )}
+                            title={tDownload(`languages.${code}`)}
+                          >
+                            {isSelected && <Check className="w-3 h-3" />}
+                            {code.toUpperCase()}
+                          </button>
+                        );
+                      })}
+                    </div>
+                    <p className="text-[10px] text-muted-foreground">
+                      {settings.subtitleLangs.length === 0
+                        ? t('subtitleSelectLang')
+                        : t('subtitleSelectedLangs', {
+                            langs: settings.subtitleLangs.join(', ').toUpperCase(),
+                          })}
+                    </p>
+                  </div>
+
+                  {/* Format Selection */}
+                  <div className="space-y-2">
+                    <span className="text-[11px] text-muted-foreground">{t('subtitleFormat')}</span>
+                    <div className="grid grid-cols-3 gap-1.5">
+                      {(['srt', 'vtt', 'ass'] as const).map((fmt) => (
+                        <button
+                          type="button"
+                          key={fmt}
+                          onClick={() => updateSettings({ subtitleFormat: fmt })}
+                          className={cn(
+                            'h-8 px-2 rounded-md text-xs font-medium transition-colors',
+                            settings.subtitleFormat === fmt
+                              ? 'bg-teal-500 text-white'
+                              : 'bg-muted/50 hover:bg-muted text-muted-foreground hover:text-foreground',
+                          )}
+                        >
+                          {fmt.toUpperCase()}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Info text */}
+                  <p className="text-[10px] text-muted-foreground leading-relaxed">
+                    {t('subtitleHint')}
+                  </p>
+                </div>
+              </PopoverContent>
+            </Popover>
 
             <div className="flex-1" />
 

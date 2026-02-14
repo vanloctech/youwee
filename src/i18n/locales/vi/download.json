@@ -89,7 +89,8 @@
     "timeRange": {
       "title": "Tải theo phân đoạn",
       "apply": "Áp dụng",
-      "clear": "Xóa"
+      "clear": "Xóa",
+      "duration": "Thời lượng: {{duration}}"
     },
     "regenerateSummary": "Tạo lại tóm tắt",
     "empty": {
@@ -135,7 +136,8 @@
     "vi": "Tiếng Việt",
     "ja": "Tiếng Nhật",
     "ko": "Tiếng Hàn",
-    "zh": "Tiếng Trung",
+    "zh-Hans": "Tiếng Trung (Giản thể)",
+    "zh-Hant": "Tiếng Trung (Phồn thể)",
     "es": "Tiếng Tây Ban Nha",
     "fr": "Tiếng Pháp",
     "de": "Tiếng Đức",

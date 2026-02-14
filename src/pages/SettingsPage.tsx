@@ -440,7 +440,7 @@ function AISettingsContent({
                 value={ai.config.summary_language}
                 onValueChange={(v) => ai.updateConfig({ summary_language: v })}
               >
-                <SelectTrigger className="w-[160px] h-9">
+                <SelectTrigger className="w-[200px] h-9">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>

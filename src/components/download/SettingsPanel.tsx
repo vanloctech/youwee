@@ -84,7 +84,19 @@ const subtitleFormatOptions: { value: SubtitleFormat; label: string }[] = [
   { value: 'ass', label: 'ASS' },
 ];
 
-const commonLanguageCodes = ['en', 'vi', 'ja', 'ko', 'zh', 'es', 'fr', 'de', 'pt', 'ru'];
+const commonLanguageCodes = [
+  'en',
+  'vi',
+  'ja',
+  'ko',
+  'zh-Hans',
+  'zh-Hant',
+  'es',
+  'fr',
+  'de',
+  'pt',
+  'ru',
+];
 
 interface SettingsPanelProps {
   settings: DownloadSettings;

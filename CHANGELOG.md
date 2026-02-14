@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.9.3] - 2026-02-14
+
+### Added
+- **Subtitle download in Metadata** - New subtitle toggle in the Metadata settings bar to download subtitles (manual + auto-generated) alongside metadata. Includes a popover to select languages and format (SRT/VTT/ASS)
+
+### Changed
+- **Improved time range input UX** - Replaced plain text inputs with auto-formatting time inputs that insert `:` separators as you type (e.g. `1030` → `10:30`, `10530` → `1:05:30`). Smart placeholder shows `M:SS` or `H:MM:SS` based on video duration. Real-time validation with red border for invalid format or when start >= end. Shows total video duration hint when available
+
 ## [0.9.2] - 2026-02-13
 
 ### Added

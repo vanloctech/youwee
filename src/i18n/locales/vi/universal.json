@@ -66,7 +66,8 @@
     "timeRange": {
       "title": "Tải theo phân đoạn",
       "apply": "Áp dụng",
-      "clear": "Xóa"
+      "clear": "Xóa",
+      "duration": "Thời lượng: {{duration}}"
     },
     "videosInQueue": "{{count}} video trong hàng đợi",
     "videosInQueue_plural": "{{count}} video trong hàng đợi",

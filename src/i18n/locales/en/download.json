@@ -89,7 +89,8 @@
     "timeRange": {
       "title": "Download time range",
       "apply": "Apply",
-      "clear": "Clear"
+      "clear": "Clear",
+      "duration": "Duration: {{duration}}"
     },
     "regenerateSummary": "Regenerate summary",
     "empty": {
@@ -135,7 +136,8 @@
     "vi": "Vietnamese",
     "ja": "Japanese",
     "ko": "Korean",
-    "zh": "Chinese",
+    "zh-Hans": "Chinese (Simplified)",
+    "zh-Hant": "Chinese (Traditional)",
     "es": "Spanish",
     "fr": "French",
     "de": "German",

@@ -107,6 +107,9 @@ pub async fn fetch_metadata(
     write_description: bool,
     write_comments: bool,
     write_thumbnail: bool,
+    write_subtitles: bool,
+    subtitle_langs: Option<String>,
+    subtitle_format: Option<String>,
     // Cookie settings (optional)
     cookie_mode: Option<String>,
     cookie_browser: Option<String>,
@@ -161,6 +164,20 @@ pub async fn fetch_metadata(
         args.push("--write-thumbnail".to_string());
         args.push("--convert-thumbnails".to_string());
         args.push("jpg".to_string());
+    }
+
+    // Subtitles
+    if write_subtitles {
+        args.push("--write-subs".to_string());
+        args.push("--write-auto-subs".to_string());
+        let langs = subtitle_langs.as_deref().unwrap_or("en,vi");
+        if !langs.is_empty() {
+            args.push("--sub-langs".to_string());
+            args.push(langs.to_string());
+        }
+        let fmt = subtitle_format.as_deref().unwrap_or("srt");
+        args.push("--sub-format".to_string());
+        args.push(fmt.to_string());
     }
 
     // Auto use Deno runtime for YouTube (required for JS extractor)
@@ -390,6 +407,14 @@ pub async fn fetch_metadata(
             }
             if write_thumbnail {
                 files_saved.push("thumbnail.jpg");
+            }
+            if write_subtitles {
+                let fmt = subtitle_format.as_deref().unwrap_or("srt");
+                let langs = subtitle_langs.as_deref().unwrap_or("en,vi");
+                // Use a static string for the push, then log details
+                files_saved.push("subtitles");
+                let sub_detail = format!("subtitles ({}, {})", langs, fmt);
+                add_log_internal("info", &sub_detail, None, Some(&url)).ok();
             }
 
             let success_msg = format!("Metadata fetched: {} ({})", title, files_saved.join(", "));

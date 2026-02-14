@@ -89,7 +89,8 @@
     "timeRange": {
       "title": "下载时间范围",
       "apply": "应用",
-      "clear": "清除"
+      "clear": "清除",
+      "duration": "时长: {{duration}}"
     },
     "regenerateSummary": "重新生成摘要",
     "empty": {
@@ -135,7 +136,8 @@
     "vi": "越南语",
     "ja": "日语",
     "ko": "韩语",
-    "zh": "中文",
+    "zh-Hans": "中文（简体）",
+    "zh-Hant": "中文（繁體）",
     "es": "西班牙语",
     "fr": "法语",
     "de": "德语",

@@ -37,6 +37,9 @@ export interface MetadataSettings {
   writeDescription: boolean;
   writeComments: boolean;
   writeThumbnail: boolean;
+  writeSubtitles: boolean;
+  subtitleLangs: string[];
+  subtitleFormat: string;
 }
 
 interface MetadataProgress {
@@ -96,6 +99,9 @@ export function MetadataProvider({ children }: { children: ReactNode }) {
       writeDescription: saved.writeDescription !== false, // Default true
       writeComments: saved.writeComments === true, // Default false (can be slow)
       writeThumbnail: saved.writeThumbnail !== false, // Default true
+      writeSubtitles: saved.writeSubtitles === true, // Default false
+      subtitleLangs: saved.subtitleLangs || ['en', 'vi'],
+      subtitleFormat: saved.subtitleFormat || 'srt',
     };
   });
 
@@ -217,6 +223,9 @@ export function MetadataProvider({ children }: { children: ReactNode }) {
           writeDescription: settings.writeDescription,
           writeComments: settings.writeComments,
           writeThumbnail: settings.writeThumbnail,
+          writeSubtitles: settings.writeSubtitles,
+          subtitleLangs: settings.subtitleLangs.join(','),
+          subtitleFormat: settings.subtitleFormat,
           // Cookie settings
           cookieMode: cookieSettings.mode,
           cookieBrowser: cookieSettings.browser || null,
