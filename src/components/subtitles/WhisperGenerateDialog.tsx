@@ -12,7 +12,6 @@ import {
 } from '@/components/ui/select';
 import { useAI } from '@/contexts/AIContext';
 import { useSubtitle } from '@/contexts/SubtitleContext';
-import { parseSubtitles } from '@/lib/subtitle-parser';
 import type { SubtitleFormat } from '@/lib/types';
 import { cn } from '@/lib/utils';
 
@@ -107,8 +106,7 @@ export function WhisperGenerateDialog({ open: isOpen, onClose }: WhisperGenerate
         return;
       }
 
-      // Parse and load into editor
-      const _result = parseSubtitles(content, outputFormat);
+      // Load into editor
       const fileName = `whisper_${language || 'auto'}.${outputFormat}`;
       subtitle.loadFromContent(content, fileName, outputFormat);
       handleClose();

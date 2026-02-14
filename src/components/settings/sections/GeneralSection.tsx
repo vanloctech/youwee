@@ -80,7 +80,7 @@ export function GeneralSection({ highlightId }: GeneralSectionProps) {
           description={t('general.colorModeDesc')}
           highlight={highlightId === 'mode'}
         >
-          <div className="flex items-center gap-1 p-1 rounded-xl bg-muted/50">
+          <div className="flex w-full flex-wrap items-center gap-1 rounded-xl bg-muted/50 p-1 sm:w-auto">
             <button
               type="button"
               onClick={() => setMode('light')}
@@ -117,7 +117,7 @@ export function GeneralSection({ highlightId }: GeneralSectionProps) {
           description={tCommon('language.select')}
           highlight={highlightId === 'language'}
         >
-          <div className="flex items-center gap-1 p-1 rounded-xl bg-muted/50">
+          <div className="flex w-full flex-wrap items-center gap-1 rounded-xl bg-muted/50 p-1 sm:w-auto">
             {SUPPORTED_LANGUAGES.map((lang) => (
               <button
                 key={lang.code}
@@ -167,7 +167,7 @@ export function GeneralSection({ highlightId }: GeneralSectionProps) {
           )}
         >
           <p className="text-sm font-medium mb-3">{t('general.colorTheme')}</p>
-          <div className="grid grid-cols-3 gap-2">
+          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 xl:grid-cols-3">
             {themes.map((themeItem) => (
               <button
                 type="button"
@@ -215,7 +215,7 @@ export function GeneralSection({ highlightId }: GeneralSectionProps) {
             value={String(maxEntries)}
             onValueChange={(v) => setMaxEntries(Number.parseInt(v, 10))}
           >
-            <SelectTrigger className="w-[120px] h-9">
+            <SelectTrigger className="h-9 w-full sm:w-[120px]">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -248,7 +248,7 @@ export function GeneralSection({ highlightId }: GeneralSectionProps) {
             value={String(previewSizeThreshold)}
             onValueChange={(v) => setPreviewSizeThreshold(Number.parseInt(v, 10))}
           >
-            <SelectTrigger className="w-[120px] h-9">
+            <SelectTrigger className="h-9 w-full sm:w-[120px]">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>

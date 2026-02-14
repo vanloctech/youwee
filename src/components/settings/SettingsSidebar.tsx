@@ -30,7 +30,7 @@ export function SettingsSidebar({ activeSection, onSectionChange }: SettingsSide
   ];
 
   return (
-    <nav className="w-52 flex-shrink-0 border-r border-border/50 p-3 space-y-1">
+    <nav className="w-48 xl:w-52 2xl:w-56 flex-shrink-0 border-r border-border/50 p-3 space-y-1">
       {sections.map((section) => (
         <button
           key={section.id}

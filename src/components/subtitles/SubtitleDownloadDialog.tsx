@@ -4,7 +4,6 @@ import { useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useDownload } from '@/contexts/DownloadContext';
 import { useSubtitle } from '@/contexts/SubtitleContext';
-import { parseSubtitles } from '@/lib/subtitle-parser';
 import { cn } from '@/lib/utils';
 
 interface SubtitleDownloadInfo {
@@ -78,8 +77,7 @@ export function SubtitleDownloadDialog({ open, onClose }: SubtitleDownloadDialog
         proxyUrl: proxyUrl || undefined,
       });
 
-      // Parse and load into editor
-      const _result = parseSubtitles(content, 'srt');
+      // Load into editor
       const fileName = `${selectedLang}${selectedIsAuto ? '.auto' : ''}.srt`;
       subtitle.loadFromContent(content, fileName, 'srt');
       onClose();
