@@ -1,5 +1,5 @@
 #!/bin/sh
-# Pre-commit hook: Check biome and cargo before commit
+# Pre-commit hook: Check biome, TypeScript, and cargo before commit
 # Install: cp scripts/pre-commit .git/hooks/ && chmod +x .git/hooks/pre-commit
 
 echo "🔍 Running pre-commit checks..."
@@ -9,6 +9,15 @@ echo "→ Checking Biome..."
 bun run biome check . --colors=force || {
   echo ""
   echo "❌ Biome check failed. Run 'bun run biome check --write .' to fix."
+  exit 1
+}
+
+# Check TypeScript types (project references)
+echo ""
+echo "→ Checking TypeScript..."
+bun run tsc -b || {
+  echo ""
+  echo "❌ TypeScript check failed."
   exit 1
 }
 
