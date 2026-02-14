@@ -3,6 +3,7 @@ import { open } from '@tauri-apps/plugin-dialog';
 import { AlertTriangle, Eye, Loader2, Pause, Play, Video } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { SubtitleWaveformTimeline } from '@/components/subtitles/SubtitleWaveformTimeline';
 import { useSubtitle } from '@/contexts/SubtitleContext';
 import { formatTimeDisplay } from '@/lib/subtitle-parser';
 import type { VideoMetadata } from '@/lib/types';
@@ -29,6 +30,7 @@ export function SubtitleVideoPreview() {
     async (path: string) => {
       subtitle.setVideoPath(path);
       subtitle.setVideoCurrentTime(0);
+      subtitle.setVideoDurationMs(0);
       subtitle.setIsVideoPlaying(false);
       setVideoError(null);
       setCurrentSubText('');
@@ -204,6 +206,19 @@ export function SubtitleVideoPreview() {
     }
   }, [subtitle.activeEntryId, subtitle.entries, handleSeekToEntry]);
 
+  // External timeline seeks update `videoCurrentTime` in context.
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video) return;
+    const target = subtitle.videoCurrentTime / 1000;
+    if (!Number.isFinite(target)) return;
+    if (Math.abs(video.currentTime - target) < 0.12) return;
+    video.currentTime = target;
+    if (audioRef.current && audioSrc) {
+      audioRef.current.currentTime = target;
+    }
+  }, [subtitle.videoCurrentTime, audioSrc]);
+
   const handleVideoError = useCallback(() => {
     const video = videoRef.current;
     const mediaError = video?.error;
@@ -231,6 +246,13 @@ export function SubtitleVideoPreview() {
     setVideoError(`${errorMsg} [${diag}]`);
   }, [t]);
 
+  const handleLoadedMetadata = useCallback(() => {
+    const video = videoRef.current;
+    if (!video) return;
+    const durationMs = Number.isFinite(video.duration) ? Math.round(video.duration * 1000) : 0;
+    subtitle.setVideoDurationMs(durationMs);
+  }, [subtitle]);
+
   return (
     <div className="flex flex-col h-full">
       {/* Video Container */}
@@ -249,6 +271,7 @@ export function SubtitleVideoPreview() {
               src={videoSrc}
               className="w-full aspect-video object-contain"
               playsInline
+              onLoadedMetadata={handleLoadedMetadata}
               onError={handleVideoError}
             >
               <track kind="captions" />
@@ -339,8 +362,10 @@ export function SubtitleVideoPreview() {
         </div>
       )}
 
+      {videoSrc && <SubtitleWaveformTimeline />}
+
       {/* Current subtitle info */}
-      <div className="flex-1 overflow-auto p-3">
+      <div className="flex-1 overflow-auto p-3 min-h-[88px]">
         <div className="space-y-2">
           <h4 className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
             {t('video.currentSubtitle')}

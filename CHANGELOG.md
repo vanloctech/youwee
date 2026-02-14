@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - **Subtitle Workshop** - New unified subtitle workspace for SRT/VTT/ASS with core editing tools (timing, find/replace, auto-fix), subtitle download from URL, and integrated AI actions (translate, grammar fix, Whisper generation)
 - **Backend AI response command** - New `generate_ai_response` Tauri command that reads saved AI config and calls the appropriate provider, enabling AI features from the frontend
+- **Subtitle Phase 1 core tools** - Added waveform/spectrogram timeline editing with drag timing handles, realtime QC indicators (CPS/WPM/CPL plus duration, gap, overlap), advanced split/merge tools, and dual-column Translator Mode with optional source-text retention during AI Translate
 
 ### Changed
 

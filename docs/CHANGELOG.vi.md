@@ -10,6 +10,7 @@ và dự án tuân theo [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ### Thêm mới
 - **Xưởng phụ đề** - Bổ sung không gian làm việc phụ đề thống nhất cho SRT/VTT/ASS, tích hợp đầy đủ các công cụ chỉnh sửa chính (thời gian, tìm/thay thế, tự sửa lỗi), tải phụ đề từ URL và các tác vụ AI (dịch, sửa ngữ pháp, tạo bằng Whisper)
 - **Lệnh AI backend** - Thêm lệnh Tauri `generate_ai_response` đọc cấu hình AI đã lưu và gọi nhà cung cấp tương ứng, cho phép các tính năng AI hoạt động từ frontend
+- **Bộ công cụ phụ đề Phase 1** - Thêm timeline sóng âm/phổ tần để kéo chỉnh thời gian trực tiếp, QC realtime (CPS/WPM/CPL + thời lượng/khoảng cách/chồng lấp), công cụ tách/gộp nâng cao, và chế độ Dịch 2 cột (gốc/bản dịch) với tùy chọn giữ văn bản gốc khi dịch AI
 
 ### Thay đổi
 

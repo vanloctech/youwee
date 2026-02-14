@@ -54,6 +54,7 @@
     "findReplace": "查找和替换",
     "fixErrors": "修复错误",
     "merge": "合并",
+    "splitMerge": "拆分与合并",
     "split": "拆分",
     "download": "下载字幕",
     "whisper": "生成 (Whisper)",
@@ -86,6 +87,58 @@
     "currentTime": "当前: {{time}}",
     "unsavedChanges": "有未保存的更改",
     "modified": "已修改"
+  },
+  "qc": {
+    "title": "实时质检",
+    "passed": "所有字幕都在阈值内",
+    "issueEntries": "{{count}} 条需要复核",
+    "thresholds": "阈值: CPS {{cps}}, WPM {{wpm}}, CPL {{cpl}}",
+    "wpm": "WPM",
+    "cpl": "CPL",
+    "issuesLabel": "问题",
+    "issues": {
+      "cps": "CPS过高",
+      "wpm": "WPM过高",
+      "cpl": "单行过长",
+      "duration_short": "时长过短",
+      "duration_long": "时长过长",
+      "overlap": "字幕重叠",
+      "gap_short": "间隔过短"
+    }
+  },
+  "translator": {
+    "mode": "翻译模式",
+    "modeHint": "并排显示原文和译文",
+    "sourceText": "原文",
+    "targetText": "译文"
+  },
+  "splitMerge": {
+    "title": "拆分与合并工具",
+    "description": "快速拆分长字幕并合并已选字幕，时间轴更易控制。",
+    "smartSplitActive": "智能拆分当前行",
+    "splitLong": "拆分长行",
+    "applySplitLong": "按最大字符拆分",
+    "mergeSelected": "合并已选行",
+    "separatorNewline": "换行",
+    "separatorSpace": "空格",
+    "applyMerge": "执行合并",
+    "scopeSelected": "范围: 已选 {{count}} 行",
+    "scopeAll": "范围: 全部 {{count}} 行",
+    "needMultipleSelection": "请至少选择 2 行再合并。",
+    "cannotSplit": "当前行找不到合适的拆分点。",
+    "invalidMaxChars": "最大字符数必须至少为 10。",
+    "noLongLines": "没有字幕行超过该字符限制。"
+  },
+  "waveform": {
+    "needVideo": "请先加载视频后再使用波形时间轴编辑。",
+    "waveform": "波形",
+    "spectrogram": "频谱",
+    "zoom": "缩放",
+    "decoding": "正在分析音频波形...",
+    "decodeError": "无法从该媒体生成波形。",
+    "seekTimeline": "时间轴定位",
+    "adjustStart": "调整字幕开始时间",
+    "adjustEnd": "调整字幕结束时间"
   },
   "video": {
     "noVideo": "未加载视频",

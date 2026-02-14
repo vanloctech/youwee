@@ -9,6 +9,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { Switch } from '@/components/ui/switch';
 import { useSubtitle } from '@/contexts/SubtitleContext';
 import { LANGUAGE_OPTIONS } from '@/lib/types';
 import { cn } from '@/lib/utils';
@@ -174,6 +175,7 @@ export function TranslateDialog({ open, onClose }: TranslateDialogProps) {
 
   const [targetLang, setTargetLang] = useState('vi');
   const [isTranslating, setIsTranslating] = useState(false);
+  const [keepOriginal, setKeepOriginal] = useState(true);
   const [progress, setProgress] = useState({ current: 0, total: 0 });
   const [error, setError] = useState<string | null>(null);
 
@@ -326,6 +328,9 @@ export function TranslateDialog({ open, onClose }: TranslateDialogProps) {
       if (isCancelled()) {
         throw new Error(TRANSLATE_CANCELLED_ERROR);
       }
+      if (keepOriginal) {
+        subtitle.captureTranslationSource(entriesToTranslate.map((entry) => entry.id));
+      }
       subtitle.updateEntries(updates);
       handleClose();
     } catch (err) {
@@ -338,7 +343,7 @@ export function TranslateDialog({ open, onClose }: TranslateDialogProps) {
         setIsTranslating(false);
       }
     }
-  }, [subtitle, targetLang, handleClose]);
+  }, [subtitle, targetLang, handleClose, keepOriginal]);
 
   if (!open) return null;
 
@@ -395,6 +400,14 @@ export function TranslateDialog({ open, onClose }: TranslateDialogProps) {
             {subtitle.selectedIds.size > 0
               ? t('editor.selected', { count: subtitle.selectedIds.size })
               : t('editor.total', { count: subtitle.entries.length })}
+          </div>
+
+          <div className="flex items-center justify-between rounded-lg border border-border/60 px-3 py-2 bg-background/70">
+            <div>
+              <p className="text-sm font-medium">{t('translate.keepOriginal')}</p>
+              <p className="text-xs text-muted-foreground">{t('translator.modeHint')}</p>
+            </div>
+            <Switch checked={keepOriginal} onCheckedChange={setKeepOriginal} />
           </div>
 
           {/* Progress */}

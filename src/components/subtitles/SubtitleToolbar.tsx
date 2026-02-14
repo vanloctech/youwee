@@ -12,6 +12,7 @@ import {
   Plus,
   Redo2,
   Save,
+  Scissors,
   Search,
   Sparkles,
   Timer,
@@ -44,6 +45,7 @@ interface SubtitleToolbarProps {
   onShowTimingDialog?: () => void;
   onShowFindReplace?: () => void;
   onShowFixErrors?: () => void;
+  onShowSplitMerge?: () => void;
   onShowWhisper?: () => void;
   onShowTranslate?: () => void;
   onShowGrammarFix?: () => void;
@@ -57,6 +59,7 @@ export function SubtitleToolbar({
   onShowTimingDialog,
   onShowFindReplace,
   onShowFixErrors,
+  onShowSplitMerge,
   onShowWhisper,
   onShowTranslate,
   onShowGrammarFix,
@@ -324,6 +327,11 @@ export function SubtitleToolbar({
             label={t('toolbar.merge')}
             onClick={handleMerge}
             disabled={selectedCount < 2}
+          />
+          <ToolbarButton
+            icon={<Scissors className="w-3.5 h-3.5" />}
+            label={t('toolbar.splitMerge')}
+            onClick={() => onShowSplitMerge?.()}
           />
           <ToolbarButton
             icon={<Search className="w-3.5 h-3.5" />}

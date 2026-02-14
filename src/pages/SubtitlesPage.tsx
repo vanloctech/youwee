@@ -7,6 +7,7 @@ import { ThemePicker } from '@/components/settings/ThemePicker';
 import { FindReplacePanel } from '@/components/subtitles/FindReplacePanel';
 import { FixErrorsDialog } from '@/components/subtitles/FixErrorsDialog';
 import { GrammarFixDialog } from '@/components/subtitles/GrammarFixDialog';
+import { SplitMergeDialog } from '@/components/subtitles/SplitMergeDialog';
 import { SubtitleDownloadDialog } from '@/components/subtitles/SubtitleDownloadDialog';
 import { SubtitleEditor } from '@/components/subtitles/SubtitleEditor';
 import { SubtitlesEmptyState } from '@/components/subtitles/SubtitlesEmptyState';
@@ -27,6 +28,7 @@ export function SubtitlesPage() {
   const [showTimingDialog, setShowTimingDialog] = useState(false);
   const [showFindReplace, setShowFindReplace] = useState(false);
   const [showFixErrors, setShowFixErrors] = useState(false);
+  const [showSplitMerge, setShowSplitMerge] = useState(false);
   const [showWhisper, setShowWhisper] = useState(false);
   const [showTranslate, setShowTranslate] = useState(false);
   const [showGrammarFix, setShowGrammarFix] = useState(false);
@@ -132,6 +134,7 @@ export function SubtitlesPage() {
           onShowTimingDialog={() => setShowTimingDialog(true)}
           onShowFindReplace={() => setShowFindReplace((v) => !v)}
           onShowFixErrors={() => setShowFixErrors(true)}
+          onShowSplitMerge={() => setShowSplitMerge(true)}
           onShowWhisper={() => setShowWhisper(true)}
           onShowTranslate={() => setShowTranslate(true)}
           onShowGrammarFix={() => setShowGrammarFix(true)}
@@ -163,6 +166,7 @@ export function SubtitlesPage() {
       />
       <TimingDialog open={showTimingDialog} onClose={() => setShowTimingDialog(false)} />
       <FixErrorsDialog open={showFixErrors} onClose={() => setShowFixErrors(false)} />
+      <SplitMergeDialog open={showSplitMerge} onClose={() => setShowSplitMerge(false)} />
       <WhisperGenerateDialog open={showWhisper} onClose={() => setShowWhisper(false)} />
       <TranslateDialog open={showTranslate} onClose={() => setShowTranslate(false)} />
       <GrammarFixDialog open={showGrammarFix} onClose={() => setShowGrammarFix(false)} />

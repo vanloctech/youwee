@@ -1,12 +1,24 @@
+import { AlertTriangle, Columns2 } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useSubtitle } from '@/contexts/SubtitleContext';
 import type { SubtitleEntry } from '@/lib/subtitle-parser';
 import { formatTimeDisplay, parseTimeDisplay } from '@/lib/subtitle-parser';
+import { DEFAULT_SUBTITLE_QC_THRESHOLDS, evaluateSubtitleQc } from '@/lib/subtitle-qc';
 import { cn } from '@/lib/utils';
 
 const ROW_HEIGHT = 36; // px per row
 const OVERSCAN = 10; // extra rows rendered above/below viewport
+
+const ISSUE_CODE: Record<string, string> = {
+  cps: 'CPS',
+  wpm: 'WPM',
+  cpl: 'CPL',
+  duration_short: 'D<',
+  duration_long: 'D>',
+  overlap: 'OVR',
+  gap_short: 'GAP',
+};
 
 export function SubtitleEditor() {
   const { t } = useTranslation('subtitles');
@@ -32,6 +44,30 @@ export function SubtitleEditor() {
     [subtitle.entries, startIdx, endIdx],
   );
   const offsetY = startIdx * ROW_HEIGHT;
+  const hasTranslationSource = Boolean(subtitle.translationSourceMap);
+
+  const qcSummary = useMemo(() => {
+    const issueCounts: Record<string, number> = {};
+    const results = new Map<string, ReturnType<typeof evaluateSubtitleQc>>();
+
+    for (let i = 0; i < subtitle.entries.length; i++) {
+      const entry = subtitle.entries[i];
+      const next = i < subtitle.entries.length - 1 ? subtitle.entries[i + 1] : null;
+      const result = evaluateSubtitleQc(entry, next, DEFAULT_SUBTITLE_QC_THRESHOLDS);
+      results.set(entry.id, result);
+
+      for (const issue of result.issues) {
+        issueCounts[issue] = (issueCounts[issue] || 0) + 1;
+      }
+    }
+
+    const issueEntries = Array.from(results.values()).filter((it) => it.issues.length > 0).length;
+    return {
+      results,
+      issueCounts,
+      issueEntries,
+    };
+  }, [subtitle.entries]);
 
   // Update container height on resize
   useEffect(() => {
@@ -170,6 +206,15 @@ export function SubtitleEditor() {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [subtitle, containerHeight]);
 
+  const issueLabel = useCallback(
+    (issue: string) => {
+      const key = `qc.issues.${issue}`;
+      const translated = t(key);
+      return translated === key ? issue : translated;
+    },
+    [t],
+  );
+
   if (subtitle.entries.length === 0) {
     return (
       <div className="flex-1 flex items-center justify-center text-muted-foreground">
@@ -180,14 +225,64 @@ export function SubtitleEditor() {
 
   return (
     <div className="flex flex-col h-full overflow-hidden">
+      <div className="flex items-center justify-between px-2 py-1.5 border-b border-border/50 bg-muted/20 text-[11px]">
+        <div className="flex items-center gap-2 flex-wrap">
+          <span className="text-muted-foreground">{t('qc.title')}</span>
+          <span
+            className={cn(
+              'px-1.5 py-0.5 rounded text-[10px] font-medium',
+              qcSummary.issueEntries > 0
+                ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400'
+                : 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400',
+            )}
+          >
+            {qcSummary.issueEntries > 0
+              ? t('qc.issueEntries', { count: qcSummary.issueEntries })
+              : t('qc.passed')}
+          </span>
+          <span className="text-muted-foreground/80">
+            {t('qc.thresholds', {
+              cps: DEFAULT_SUBTITLE_QC_THRESHOLDS.maxCps,
+              wpm: DEFAULT_SUBTITLE_QC_THRESHOLDS.maxWpm,
+              cpl: DEFAULT_SUBTITLE_QC_THRESHOLDS.maxCpl,
+            })}
+          </span>
+        </div>
+        {hasTranslationSource && (
+          <button
+            type="button"
+            onClick={() => subtitle.setTranslatorMode(!subtitle.isTranslatorMode)}
+            className={cn(
+              'inline-flex items-center gap-1.5 px-2 py-1 rounded-md border text-[11px] transition-colors',
+              subtitle.isTranslatorMode
+                ? 'border-primary/50 bg-primary/10 text-primary'
+                : 'border-border/70 text-muted-foreground hover:text-foreground hover:bg-accent',
+            )}
+          >
+            <Columns2 className="w-3 h-3" />
+            {t('translator.mode')}
+          </button>
+        )}
+      </div>
+
       {/* Header */}
       <div className="flex items-center px-2 py-1.5 border-b border-border/50 bg-muted/30 text-xs font-medium text-muted-foreground flex-shrink-0 select-none">
         <div className="w-[50px] px-2 text-center">{t('editor.index')}</div>
         <div className="w-[110px] px-2">{t('editor.startTime')}</div>
         <div className="w-[110px] px-2">{t('editor.endTime')}</div>
         <div className="w-[60px] px-2 text-center">{t('editor.duration')}</div>
-        <div className="flex-1 px-2">{t('editor.text')}</div>
-        <div className="w-[45px] px-2 text-center">{t('editor.cps')}</div>
+        {subtitle.isTranslatorMode ? (
+          <>
+            <div className="flex-1 px-2 min-w-[220px]">{t('translator.sourceText')}</div>
+            <div className="flex-1 px-2 min-w-[220px]">{t('translator.targetText')}</div>
+          </>
+        ) : (
+          <div className="flex-1 px-2">{t('editor.text')}</div>
+        )}
+        <div className="w-[45px] px-1 text-center">{t('editor.cps')}</div>
+        <div className="w-[45px] px-1 text-center">{t('qc.wpm')}</div>
+        <div className="w-[45px] px-1 text-center">{t('qc.cpl')}</div>
+        <div className="w-[70px] px-1 text-center">{t('qc.issuesLabel')}</div>
       </div>
 
       {/* Virtualized List */}
@@ -205,9 +300,12 @@ export function SubtitleEditor() {
               const isSelected = subtitle.selectedIds.has(entry.id);
               const isActive = subtitle.activeEntryId === entry.id;
               const durationMs = entry.endTime - entry.startTime;
-              const durationSec = durationMs / 1000;
-              const charCount = entry.text.replace(/\n/g, '').length;
-              const cps = durationSec > 0 ? Math.round(charCount / durationSec) : 0;
+              const qc = qcSummary.results.get(entry.id);
+              const cps = qc?.metrics.cps ?? 0;
+              const wpm = qc?.metrics.wpm ?? 0;
+              const cpl = qc?.metrics.maxLineChars ?? 0;
+              const issueCodes = (qc?.issues || []).map((issue) => ISSUE_CODE[issue] || issue);
+              const hasIssues = issueCodes.length > 0;
 
               // Highlight entries at current video time
               const isAtCurrentTime =
@@ -227,6 +325,7 @@ export function SubtitleEditor() {
                     isSelected && !isActive && 'bg-accent/50',
                     !isSelected && !isActive && 'hover:bg-accent/30',
                     isAtCurrentTime && !isActive && 'bg-amber-500/10',
+                    hasIssues && !isSelected && !isActive && 'bg-amber-500/[0.06]',
                   )}
                   onClick={(e) => handleRowClick(entry, e)}
                   onDoubleClick={() => handleCellDoubleClick(entry.id, 'text')}
@@ -285,33 +384,99 @@ export function SubtitleEditor() {
                     {(durationMs / 1000).toFixed(1)}s
                   </div>
 
-                  {/* Text */}
-                  <div className="flex-1 px-2 min-w-0">
-                    {editingCell?.id === entry.id && editingCell.field === 'text' ? (
-                      <TextInput
-                        value={entry.text}
-                        onSave={(v) => handleCellSave(entry.id, 'text', v)}
-                        onCancel={handleCellCancel}
-                      />
-                    ) : (
-                      <span className="text-xs truncate block">
-                        {entry.text.replace(/\n/g, ' ↵ ')}
-                      </span>
-                    )}
-                  </div>
+                  {/* Text columns */}
+                  {subtitle.isTranslatorMode ? (
+                    <>
+                      <div className="flex-1 px-2 min-w-[220px]">
+                        <span className="text-xs truncate block text-muted-foreground">
+                          {subtitle.translationSourceMap?.[entry.id]?.replace(/\n/g, ' ↵ ') || '—'}
+                        </span>
+                      </div>
+                      <div className="flex-1 px-2 min-w-[220px]">
+                        {editingCell?.id === entry.id && editingCell.field === 'text' ? (
+                          <TextInput
+                            value={entry.text}
+                            onSave={(v) => handleCellSave(entry.id, 'text', v)}
+                            onCancel={handleCellCancel}
+                          />
+                        ) : (
+                          <span className="text-xs truncate block font-medium">
+                            {entry.text.replace(/\n/g, ' ↵ ')}
+                          </span>
+                        )}
+                      </div>
+                    </>
+                  ) : (
+                    <div className="flex-1 px-2 min-w-0">
+                      {editingCell?.id === entry.id && editingCell.field === 'text' ? (
+                        <TextInput
+                          value={entry.text}
+                          onSave={(v) => handleCellSave(entry.id, 'text', v)}
+                          onCancel={handleCellCancel}
+                        />
+                      ) : (
+                        <span className="text-xs truncate block">
+                          {entry.text.replace(/\n/g, ' ↵ ')}
+                        </span>
+                      )}
+                    </div>
+                  )}
 
                   {/* CPS */}
                   <div
                     className={cn(
-                      'w-[45px] px-2 text-center text-xs tabular-nums',
-                      cps > 25
+                      'w-[45px] px-1 text-center text-xs tabular-nums',
+                      cps > DEFAULT_SUBTITLE_QC_THRESHOLDS.maxCps
                         ? 'text-red-500'
-                        : cps > 20
+                        : cps > DEFAULT_SUBTITLE_QC_THRESHOLDS.maxCps - 2
                           ? 'text-amber-500'
                           : 'text-muted-foreground',
                     )}
                   >
                     {cps}
+                  </div>
+
+                  {/* WPM */}
+                  <div
+                    className={cn(
+                      'w-[45px] px-1 text-center text-xs tabular-nums',
+                      wpm > DEFAULT_SUBTITLE_QC_THRESHOLDS.maxWpm
+                        ? 'text-red-500'
+                        : wpm > DEFAULT_SUBTITLE_QC_THRESHOLDS.maxWpm - 20
+                          ? 'text-amber-500'
+                          : 'text-muted-foreground',
+                    )}
+                  >
+                    {wpm}
+                  </div>
+
+                  {/* CPL */}
+                  <div
+                    className={cn(
+                      'w-[45px] px-1 text-center text-xs tabular-nums',
+                      cpl > DEFAULT_SUBTITLE_QC_THRESHOLDS.maxCpl
+                        ? 'text-red-500'
+                        : cpl > DEFAULT_SUBTITLE_QC_THRESHOLDS.maxCpl - 2
+                          ? 'text-amber-500'
+                          : 'text-muted-foreground',
+                    )}
+                  >
+                    {cpl}
+                  </div>
+
+                  {/* Issues */}
+                  <div className="w-[70px] px-1 text-center text-[10px]">
+                    {hasIssues ? (
+                      <span
+                        title={qc?.issues.map(issueLabel).join(', ')}
+                        className="inline-flex items-center justify-center gap-1 text-red-500 dark:text-red-400 font-medium"
+                      >
+                        <AlertTriangle className="w-3 h-3" />
+                        {issueCodes.slice(0, 2).join('/')}
+                      </span>
+                    ) : (
+                      <span className="text-emerald-600/80 dark:text-emerald-400/80">OK</span>
+                    )}
                   </div>
                 </div>
               );
@@ -319,6 +484,22 @@ export function SubtitleEditor() {
           </div>
         </div>
       </div>
+
+      {Object.keys(qcSummary.issueCounts).length > 0 && (
+        <div className="flex items-center gap-2 flex-wrap px-2 py-1.5 border-t border-border/50 bg-muted/20 text-[10px]">
+          {Object.entries(qcSummary.issueCounts)
+            .sort((a, b) => b[1] - a[1])
+            .map(([issue, count]) => (
+              <span
+                key={issue}
+                className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-600 dark:text-amber-400"
+              >
+                <span className="font-semibold">{ISSUE_CODE[issue] || issue}</span>
+                <span>×{count}</span>
+              </span>
+            ))}
+        </div>
+      )}
     </div>
   );
 }

@@ -36,7 +36,12 @@ interface SubtitleContextValue {
   // Video sync
   videoPath: string | null;
   videoCurrentTime: number; // ms
+  videoDurationMs: number;
   isVideoPlaying: boolean;
+
+  // Translator mode
+  isTranslatorMode: boolean;
+  translationSourceMap: Record<string, string> | null;
 
   // Undo/Redo
   canUndo: boolean;
@@ -78,7 +83,13 @@ interface SubtitleContextValue {
   // Video
   setVideoPath: (path: string | null) => void;
   setVideoCurrentTime: (ms: number) => void;
+  setVideoDurationMs: (ms: number) => void;
   setIsVideoPlaying: (playing: boolean) => void;
+
+  // Translator mode
+  captureTranslationSource: (ids?: string[]) => void;
+  clearTranslationSource: () => void;
+  setTranslatorMode: (enabled: boolean) => void;
 
   // Merge/Split
   mergeEntries: (ids: string[]) => void;
@@ -104,7 +115,14 @@ export function SubtitleProvider({ children }: { children: ReactNode }) {
   // Video state
   const [videoPath, setVideoPath] = useState<string | null>(null);
   const [videoCurrentTime, setVideoCurrentTime] = useState(0);
+  const [videoDurationMs, setVideoDurationMs] = useState(0);
   const [isVideoPlaying, setIsVideoPlaying] = useState(false);
+
+  // Translator mode
+  const [isTranslatorMode, setIsTranslatorMode] = useState(false);
+  const [translationSourceMap, setTranslationSourceMap] = useState<Record<string, string> | null>(
+    null,
+  );
 
   // Undo/Redo
   const undoStack = useRef<HistoryState[]>([]);
@@ -157,6 +175,8 @@ export function SubtitleProvider({ children }: { children: ReactNode }) {
     setIsDirty(false);
     setSelectedIds(new Set());
     setActiveEntryId(null);
+    setIsTranslatorMode(false);
+    setTranslationSourceMap(null);
     undoStack.current = [];
     redoStack.current = [];
     setCanUndo(false);
@@ -175,6 +195,8 @@ export function SubtitleProvider({ children }: { children: ReactNode }) {
       setIsDirty(false);
       setSelectedIds(new Set());
       setActiveEntryId(null);
+      setIsTranslatorMode(false);
+      setTranslationSourceMap(null);
       undoStack.current = [];
       redoStack.current = [];
       setCanUndo(false);
@@ -196,7 +218,10 @@ export function SubtitleProvider({ children }: { children: ReactNode }) {
     setActiveEntryId(firstEntry.id);
     setVideoPath(null);
     setVideoCurrentTime(0);
+    setVideoDurationMs(0);
     setIsVideoPlaying(false);
+    setIsTranslatorMode(false);
+    setTranslationSourceMap(null);
     undoStack.current = [];
     redoStack.current = [];
     setCanUndo(false);
@@ -215,7 +240,10 @@ export function SubtitleProvider({ children }: { children: ReactNode }) {
     setActiveEntryId(null);
     setVideoPath(null);
     setVideoCurrentTime(0);
+    setVideoDurationMs(0);
     setIsVideoPlaying(false);
+    setIsTranslatorMode(false);
+    setTranslationSourceMap(null);
     undoStack.current = [];
     redoStack.current = [];
     setCanUndo(false);
@@ -417,6 +445,39 @@ export function SubtitleProvider({ children }: { children: ReactNode }) {
     setActiveEntryId(id);
   }, []);
 
+  const captureTranslationSource = useCallback(
+    (ids?: string[]) => {
+      const idSet = ids && ids.length > 0 ? new Set(ids) : null;
+      const map: Record<string, string> = {};
+      for (const entry of entries) {
+        if (!idSet || idSet.has(entry.id)) {
+          map[entry.id] = entry.text;
+        }
+      }
+      if (Object.keys(map).length === 0) return;
+      setTranslationSourceMap(map);
+      setIsTranslatorMode(true);
+    },
+    [entries],
+  );
+
+  const clearTranslationSource = useCallback(() => {
+    setTranslationSourceMap(null);
+    setIsTranslatorMode(false);
+  }, []);
+
+  const setTranslatorMode = useCallback(
+    (enabled: boolean) => {
+      setIsTranslatorMode((prev) => {
+        if (enabled && !translationSourceMap) {
+          return prev;
+        }
+        return enabled;
+      });
+    },
+    [translationSourceMap],
+  );
+
   // Merge/Split
   const mergeEntries = useCallback(
     (ids: string[]) => {
@@ -504,7 +565,10 @@ export function SubtitleProvider({ children }: { children: ReactNode }) {
     activeEntryId,
     videoPath,
     videoCurrentTime,
+    videoDurationMs,
     isVideoPlaying,
+    isTranslatorMode,
+    translationSourceMap,
     canUndo,
     canRedo,
     undo,
@@ -531,7 +595,11 @@ export function SubtitleProvider({ children }: { children: ReactNode }) {
     setActiveEntry,
     setVideoPath,
     setVideoCurrentTime,
+    setVideoDurationMs,
     setIsVideoPlaying,
+    captureTranslationSource,
+    clearTranslationSource,
+    setTranslatorMode,
     mergeEntries,
     splitEntry,
   };

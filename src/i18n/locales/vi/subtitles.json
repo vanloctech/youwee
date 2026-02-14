@@ -54,6 +54,7 @@
     "findReplace": "Tìm & Thay thế",
     "fixErrors": "Sửa lỗi",
     "merge": "Gộp",
+    "splitMerge": "Tách & Gộp",
     "split": "Tách",
     "download": "Tải phụ đề",
     "whisper": "Tạo (Whisper)",
@@ -86,6 +87,58 @@
     "currentTime": "Hiện tại: {{time}}",
     "unsavedChanges": "Có thay đổi chưa lưu",
     "modified": "Đã sửa"
+  },
+  "qc": {
+    "title": "QC realtime",
+    "passed": "Tất cả dòng đều trong ngưỡng",
+    "issueEntries": "{{count}} dòng cần rà soát",
+    "thresholds": "Ngưỡng: CPS {{cps}}, WPM {{wpm}}, CPL {{cpl}}",
+    "wpm": "WPM",
+    "cpl": "CPL",
+    "issuesLabel": "Lỗi",
+    "issues": {
+      "cps": "CPS quá cao",
+      "wpm": "WPM quá cao",
+      "cpl": "Dòng quá dài",
+      "duration_short": "Thời lượng quá ngắn",
+      "duration_long": "Thời lượng quá dài",
+      "overlap": "Phụ đề bị chồng",
+      "gap_short": "Khoảng cách quá ngắn"
+    }
+  },
+  "translator": {
+    "mode": "Chế độ dịch",
+    "modeHint": "Hiển thị bản gốc và bản dịch song song",
+    "sourceText": "Văn bản gốc",
+    "targetText": "Văn bản dịch"
+  },
+  "splitMerge": {
+    "title": "Công cụ Tách & Gộp",
+    "description": "Tách nhanh dòng dài và gộp các dòng đã chọn với thời gian hợp lý hơn.",
+    "smartSplitActive": "Tách thông minh dòng đang chọn",
+    "splitLong": "Tách dòng dài",
+    "applySplitLong": "Tách theo số ký tự tối đa",
+    "mergeSelected": "Gộp các dòng đã chọn",
+    "separatorNewline": "Xuống dòng",
+    "separatorSpace": "Khoảng trắng",
+    "applyMerge": "Áp dụng gộp",
+    "scopeSelected": "Phạm vi: {{count}} dòng đã chọn",
+    "scopeAll": "Phạm vi: toàn bộ {{count}} dòng",
+    "needMultipleSelection": "Hãy chọn ít nhất 2 dòng để gộp.",
+    "cannotSplit": "Không tìm được điểm tách tự nhiên trong dòng này.",
+    "invalidMaxChars": "Số ký tự tối đa phải từ 10 trở lên.",
+    "noLongLines": "Không có dòng nào vượt quá giới hạn ký tự này."
+  },
+  "waveform": {
+    "needVideo": "Hãy tải video để dùng chỉnh sửa timeline bằng sóng âm.",
+    "waveform": "Sóng âm",
+    "spectrogram": "Phổ tần",
+    "zoom": "Zoom",
+    "decoding": "Đang phân tích sóng âm...",
+    "decodeError": "Không thể tạo sóng âm từ tệp media này.",
+    "seekTimeline": "Tua timeline",
+    "adjustStart": "Chỉnh thời điểm bắt đầu phụ đề",
+    "adjustEnd": "Chỉnh thời điểm kết thúc phụ đề"
   },
   "video": {
     "noVideo": "Chưa tải video",

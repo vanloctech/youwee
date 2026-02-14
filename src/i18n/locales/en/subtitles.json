@@ -54,6 +54,7 @@
     "findReplace": "Find & Replace",
     "fixErrors": "Fix Errors",
     "merge": "Merge",
+    "splitMerge": "Split & Merge",
     "split": "Split",
     "download": "Download Subs",
     "whisper": "Generate (Whisper)",
@@ -86,6 +87,58 @@
     "currentTime": "Current: {{time}}",
     "unsavedChanges": "Unsaved changes",
     "modified": "Modified"
+  },
+  "qc": {
+    "title": "Realtime QC",
+    "passed": "All lines within limits",
+    "issueEntries": "{{count}} lines need review",
+    "thresholds": "Limits: CPS {{cps}}, WPM {{wpm}}, CPL {{cpl}}",
+    "wpm": "WPM",
+    "cpl": "CPL",
+    "issuesLabel": "Issues",
+    "issues": {
+      "cps": "CPS too high",
+      "wpm": "WPM too high",
+      "cpl": "Line too long",
+      "duration_short": "Duration too short",
+      "duration_long": "Duration too long",
+      "overlap": "Overlapping subtitle",
+      "gap_short": "Gap too short"
+    }
+  },
+  "translator": {
+    "mode": "Translator Mode",
+    "modeHint": "Show original text and translated text side by side",
+    "sourceText": "Source text",
+    "targetText": "Target text"
+  },
+  "splitMerge": {
+    "title": "Split & Merge Tools",
+    "description": "Quickly split long subtitles and merge selected lines with cleaner timing.",
+    "smartSplitActive": "Smart Split Active Line",
+    "splitLong": "Split long lines",
+    "applySplitLong": "Split by max chars",
+    "mergeSelected": "Merge selected lines",
+    "separatorNewline": "New line",
+    "separatorSpace": "Space",
+    "applyMerge": "Apply Merge",
+    "scopeSelected": "Scope: {{count}} selected lines",
+    "scopeAll": "Scope: all {{count}} lines",
+    "needMultipleSelection": "Select at least 2 lines to merge.",
+    "cannotSplit": "Cannot find a natural split point in this line.",
+    "invalidMaxChars": "Max chars must be at least 10.",
+    "noLongLines": "No subtitle lines exceed this max char setting."
+  },
+  "waveform": {
+    "needVideo": "Load a video to use waveform timeline editing.",
+    "waveform": "Waveform",
+    "spectrogram": "Spectrogram",
+    "zoom": "Zoom",
+    "decoding": "Analyzing audio waveform...",
+    "decodeError": "Could not generate waveform from this media.",
+    "seekTimeline": "Seek timeline",
+    "adjustStart": "Adjust subtitle start",
+    "adjustEnd": "Adjust subtitle end"
   },
   "video": {
     "noVideo": "No video loaded",
