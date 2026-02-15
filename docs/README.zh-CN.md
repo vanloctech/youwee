@@ -22,8 +22,8 @@
 
 ## 功能特性
 
-- **视频下载** — 支持 YouTube、TikTok、Facebook、Instagram 及 1800+ 网站
-- **浏览器扩展桥接** — Chromium + Firefox 扩展，支持悬浮按钮与一键发送到 Youwee
+- **视频下载** — 支持 YouTube、TikTok、Facebook、Instagram、Bilibili、Youku 及 1800+ 网站
+- **浏览器扩展桥接** — Chromium + Firefox 扩展，支持悬浮按钮、媒体/清晰度选择，以及 `Download now` / `Add to queue` 一键发送到 Youwee
 - **频道关注** — 关注 YouTube、Bilibili 和优酷频道，接收新视频通知，自动下载，通过系统托盘管理
 - **AI 视频摘要** — 使用 Gemini、OpenAI 或 Ollama 进行视频摘要
 - **AI 视频处理** — 使用自然语言编辑视频（剪切、转换、调整大小、提取音频）
@@ -85,14 +85,15 @@
 
 ### 浏览器扩展（Chromium + Firefox）
 
-- 从 [最新 Releases](https://github.com/vanloctech/youwee/releases/latest) 下载扩展包：
-  - `Youwee-Extension-Chromium-vX.Y.Z.zip`
-  - `Youwee-Extension-Firefox-signed-vX.Y.Z.xpi`
-- 本地开发打包：
-  ```bash
-  bun run ext:package
-  ```
-- 完整说明： [docs/browser-extension.md](browser-extension.md)
+| 浏览器 | 下载 |
+|--------|------|
+| **Chromium**（Chrome/Edge/Brave/Opera/Vivaldi/Arc/Coc Coc） | [下载 .zip](https://github.com/vanloctech/youwee/releases/latest/download/Youwee-Extension-Chromium.zip) |
+| **Firefox** | [下载 .xpi](https://github.com/vanloctech/youwee/releases/latest/download/Youwee-Extension-Firefox-signed.xpi) |
+
+- 一键将当前标签页发送到 Youwee（`Download now` 或 `Add to queue`）
+- 支持站点悬浮按钮可选择 `Video/Audio` 与清晰度
+- 弹窗可用于所有有效 HTTP/HTTPS 标签页
+- 说明文档：[docs/browser-extension.zh-CN.md](browser-extension.zh-CN.md)
 
 > ⚠️ **注意**: 该应用尚未使用 Apple 开发者证书签名。如果 macOS 阻止应用运行，请执行：
 > ```bash
@@ -133,11 +134,7 @@ bun run tauri build
 
 ## 贡献
 
-我们欢迎贡献！请查看我们的[贡献指南](CONTRIBUTING.zh-CN.md)了解：
-
-- 开始开发
-- 提交规范
-- Pull Request 指南
+欢迎贡献，详情见[贡献指南](CONTRIBUTING.zh-CN.md)。
 
 ## 许可证
 

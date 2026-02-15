@@ -8,6 +8,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Browser Extension for one-click download (Chromium + Firefox)** - You can now send the current video page from browser to Youwee and choose `Download now` or `Add to queue`
+- **Extension setup in Settings** - Added a new Settings → Extension section with direct download buttons and easy install steps for Chromium and Firefox
 
 ### Changed
 

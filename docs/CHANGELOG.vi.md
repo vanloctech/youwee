@@ -8,6 +8,8 @@ và dự án tuân theo [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ## [Unreleased]
 
 ### Thêm mới
+- **Browser Extension tải nhanh (Chromium + Firefox)** - Giờ đây bạn có thể gửi trang video đang mở từ trình duyệt sang Youwee và chọn `Download now` hoặc `Add to queue`
+- **Thiết lập Extension trong Cài đặt** - Thêm mục mới Cài đặt → Extension với nút tải trực tiếp và hướng dẫn cài đơn giản cho Chromium và Firefox
 
 ### Thay đổi
 

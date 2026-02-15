@@ -2,6 +2,7 @@ export type SettingsSectionId =
   | 'general'
   | 'dependencies'
   | 'download'
+  | 'extension'
   | 'ai'
   | 'network'
   | 'about';
@@ -163,6 +164,22 @@ export const SEARCHABLE_SETTINGS: SearchableSetting[] = [
     keywords: ['ai', 'artificial', 'intelligence', 'summary', 'smart'],
     section: 'ai',
   },
+
+  // Extension Section
+  {
+    id: 'extension-download',
+    labelKey: 'extension.title',
+    descriptionKey: 'extension.description',
+    keywords: ['extension', 'browser', 'chromium', 'firefox', 'deep-link', 'youwee://'],
+    section: 'extension',
+  },
+  {
+    id: 'extension-install',
+    labelKey: 'extension.installSteps',
+    descriptionKey: 'extension.guideDesc',
+    keywords: ['install', 'guide', 'setup', 'chrome', 'edge', 'brave', 'xpi'],
+    section: 'extension',
+  },
   {
     id: 'ai-provider',
     labelKey: 'ai.provider',
@@ -309,6 +326,7 @@ export const SECTION_INFO: Record<SettingsSectionId, { label: string; icon: stri
   general: { label: 'General', icon: 'Palette' },
   dependencies: { label: 'Dependencies', icon: 'Package' },
   download: { label: 'Download', icon: 'ArrowDownToLine' },
+  extension: { label: 'Extension', icon: 'Puzzle' },
   ai: { label: 'AI Features', icon: 'Sparkles' },
   network: { label: 'Network & Auth', icon: 'Globe' },
   about: { label: 'About', icon: 'Info' },

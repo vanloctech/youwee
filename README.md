@@ -22,8 +22,8 @@
 
 ## Features
 
-- **Video Downloads** — YouTube, TikTok, Facebook, Instagram, and 1800+ sites
-- **Browser Extension Bridge** — Chromium + Firefox extension with floating button and one-click send to Youwee app
+- **Video Downloads** — YouTube, TikTok, Facebook, Instagram, Bilibili, Youku, and 1800+ sites
+- **Browser Extension Bridge** — Chromium + Firefox extension with floating button, media/quality picker, and one-click `Download now` / `Add to queue` send to Youwee app
 - **Channel Follow** — Follow YouTube, Bilibili & Youku channels, get notified of new videos, auto-download, and manage from system tray
 - **Metadata Fetcher** — Download video info, descriptions, comments, and thumbnails without the video
 - **Live Stream Support** — Download live streams with dedicated toggle
@@ -92,14 +92,15 @@
 
 ### Browser Extension (Chromium + Firefox)
 
-- Download extension packages from [latest release assets](https://github.com/vanloctech/youwee/releases/latest):
-  - `Youwee-Extension-Chromium-vX.Y.Z.zip`
-  - `Youwee-Extension-Firefox-signed-vX.Y.Z.xpi`
-- For local development packaging:
-  ```bash
-  bun run ext:package
-  ```
-- Full guide: [docs/browser-extension.md](docs/browser-extension.md)
+| Browser | Download |
+|---------|----------|
+| **Chromium** (Chrome/Edge/Brave/Opera/Vivaldi/Arc/Coc Coc) | [Download .zip](https://github.com/vanloctech/youwee/releases/latest/download/Youwee-Extension-Chromium.zip) |
+| **Firefox** | [Download .xpi](https://github.com/vanloctech/youwee/releases/latest/download/Youwee-Extension-Firefox-signed.xpi) |
+
+- One-click send current page to Youwee with `Download now` or `Add to queue`
+- Floating button supports `Video/Audio` + quality selection on supported sites
+- Popup works on any valid HTTP/HTTPS tab
+- Guide: [docs/browser-extension.md](docs/browser-extension.md)
 
 ### Build from Source
 
@@ -135,11 +136,7 @@ bun run tauri build
 
 ## Contributing
 
-We welcome contributions! Please see our [Contributing Guide](CONTRIBUTING.md) for details on:
-
-- Getting started with development
-- Commit conventions
-- Pull request guidelines
+We welcome contributions. See [Contributing Guide](CONTRIBUTING.md).
 
 ## License
 

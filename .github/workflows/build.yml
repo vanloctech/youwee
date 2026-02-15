@@ -243,13 +243,12 @@ jobs:
 
       - name: Rename signed Firefox XPI
         run: |
-          VERSION="${GITHUB_REF_NAME#v}"
           SIGNED_XPI=$(find extensions/youwee-webext/dist/packages -name "*.xpi" | head -1)
           if [ -z "$SIGNED_XPI" ]; then
             echo "Signed Firefox XPI not found."
             exit 1
           fi
-          mv "$SIGNED_XPI" "extensions/youwee-webext/dist/packages/Youwee-Extension-Firefox-signed-v${VERSION}.xpi"
+          mv "$SIGNED_XPI" "extensions/youwee-webext/dist/packages/Youwee-Extension-Firefox-signed.xpi"
           ls -la extensions/youwee-webext/dist/packages
 
       - name: Upload extension artifacts
@@ -496,8 +495,8 @@ jobs:
           | 🪟 **Windows** | `Youwee-Windows-Setup.exe` | EXE Installer |
           | 🐧 **Linux** | `Youwee-Linux.deb` | Debian/Ubuntu |
           | 🐧 **Linux** | `Youwee-Linux.AppImage` | Portable (all distros) |
-          | 🌐 **Extension (Chromium)** | `Youwee-Extension-Chromium-${{ github.ref_name }}.zip` | Unzip and load unpacked on Chrome/Edge/Brave |
-          | 🦊 **Extension (Firefox)** | `Youwee-Extension-Firefox-signed-${{ github.ref_name }}.xpi` | Signed unlisted add-on for Firefox stable |
+          | 🌐 **Extension (Chromium)** | `Youwee-Extension-Chromium.zip` | Unzip and load unpacked on Chrome/Edge/Brave |
+          | 🦊 **Extension (Firefox)** | `Youwee-Extension-Firefox-signed.xpi` | Signed unlisted add-on for Firefox stable |
           
           ## 📋 Requirements
           - **Windows**: Windows 10 or later
@@ -509,8 +508,8 @@ jobs:
           - **Bun Runtime** - if you can only download 360p from YouTube (auto-download available in Settings)
 
           ## 🌐 Browser Extension Install
-          - Chromium: download `Youwee-Extension-Chromium-${{ github.ref_name }}.zip` -> extract -> open `chrome://extensions` -> enable Developer mode -> **Load unpacked**.
-          - Firefox: download `Youwee-Extension-Firefox-signed-${{ github.ref_name }}.xpi` and open it directly to install.
+          - Chromium: download `Youwee-Extension-Chromium.zip` -> extract -> open `chrome://extensions` -> enable Developer mode -> **Load unpacked**.
+          - Firefox: download `Youwee-Extension-Firefox-signed.xpi` and open it directly to install.
 
           ## 🔐 Verify Downloads
           
