@@ -240,7 +240,12 @@
     "madeWith": "Làm với",
     "by": "bởi",
     "autoUpdate": "Tự động kiểm tra cập nhật",
-    "autoUpdateDesc": "Kiểm tra cập nhật khi mở ứng dụng"
+    "autoUpdateDesc": "Kiểm tra cập nhật khi mở ứng dụng",
+    "shareTitle": "Chia sẻ Youwee",
+    "shareDesc": "Chia sẻ Youwee cho bạn bè qua các mạng xã hội phổ biến.",
+    "shareText": "Thử Youwee nhé - ứng dụng desktop hiện đại để tải và xử lý video.",
+    "copyLink": "Sao chép link",
+    "copied": "Đã sao chép"
   },
   "system": {
     "title": "Hệ thống",

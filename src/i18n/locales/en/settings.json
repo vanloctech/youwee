@@ -240,7 +240,12 @@
     "madeWith": "Made with",
     "by": "by",
     "autoUpdate": "Auto-check for updates",
-    "autoUpdateDesc": "Check for updates when app opens"
+    "autoUpdateDesc": "Check for updates when app opens",
+    "shareTitle": "Share Youwee",
+    "shareDesc": "Share Youwee with your friends on popular social platforms.",
+    "shareText": "Check out Youwee - a modern desktop app for downloading and processing videos.",
+    "copyLink": "Copy link",
+    "copied": "Copied"
   },
   "system": {
     "title": "System",

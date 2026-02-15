@@ -240,7 +240,12 @@
     "madeWith": "用",
     "by": "制作",
     "autoUpdate": "自动检查更新",
-    "autoUpdateDesc": "应用启动时检查更新"
+    "autoUpdateDesc": "应用启动时检查更新",
+    "shareTitle": "分享 Youwee",
+    "shareDesc": "通过主流社交平台把 Youwee 分享给更多朋友。",
+    "shareText": "试试 Youwee——一款现代化的视频下载与处理桌面应用。",
+    "copyLink": "复制链接",
+    "copied": "已复制"
   },
   "system": {
     "title": "系统",

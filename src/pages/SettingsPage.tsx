@@ -6,6 +6,7 @@ import {
   CheckCircle2,
   ChevronDown,
   ChevronUp,
+  Copy,
   Download,
   Eye,
   EyeOff,
@@ -18,6 +19,7 @@ import {
   Plus,
   RefreshCw,
   Settings,
+  Share2,
   Sparkles,
   X,
 } from 'lucide-react';
@@ -732,6 +734,67 @@ function AboutSettingsContent({
 }) {
   const { t } = useTranslation('settings');
   const { settings, updateAutoCheckUpdate } = useDownload();
+  const [copied, setCopied] = useState(false);
+
+  const appUrl = 'https://github.com/vanloctech/youwee';
+  const shareText = t('about.shareText');
+  const encodedUrl = encodeURIComponent(appUrl);
+  const encodedText = encodeURIComponent(shareText);
+
+  const shareLinks = [
+    {
+      key: 'x',
+      label: 'X',
+      faIcon: 'fa-twitter',
+      color: 'text-sky-400',
+      href: `https://x.com/intent/tweet?text=${encodedText}&url=${encodedUrl}`,
+    },
+    {
+      key: 'facebook',
+      label: 'Facebook',
+      faIcon: 'fa-facebook',
+      color: 'text-blue-600',
+      href: `https://www.facebook.com/sharer/sharer.php?u=${encodedUrl}`,
+    },
+    {
+      key: 'reddit',
+      label: 'Reddit',
+      faIcon: 'fa-reddit',
+      color: 'text-orange-500',
+      href: `https://www.reddit.com/submit?url=${encodedUrl}&title=${encodedText}`,
+    },
+    {
+      key: 'telegram',
+      label: 'Telegram',
+      faIcon: 'fa-telegram',
+      color: 'text-sky-500',
+      href: `https://t.me/share/url?url=${encodedUrl}&text=${encodedText}`,
+    },
+    {
+      key: 'whatsapp',
+      label: 'WhatsApp',
+      faIcon: 'fa-whatsapp',
+      color: 'text-green-500',
+      href: `https://wa.me/?text=${encodeURIComponent(`${shareText} ${appUrl}`)}`,
+    },
+    {
+      key: 'weibo',
+      label: 'Weibo',
+      faIcon: 'fa-weibo',
+      color: 'text-rose-500',
+      href: `https://service.weibo.com/share/share.php?url=${encodedUrl}&title=${encodedText}`,
+    },
+  ];
+
+  const handleCopyLink = async () => {
+    try {
+      await navigator.clipboard.writeText(appUrl);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1600);
+    } catch (error) {
+      console.error('Failed to copy share link:', error);
+    }
+  };
 
   return (
     <div className="space-y-8">
@@ -844,6 +907,40 @@ function AboutSettingsContent({
               <Bug className="w-3.5 h-3.5" />
               {t('about.reportIssue')}
             </a>
+          </div>
+
+          {/* Share */}
+          <div className="mt-4 pt-4 border-t border-border/50">
+            <div className="flex items-center gap-2 mb-2">
+              <Share2 className="w-4 h-4 text-muted-foreground" />
+              <p className="text-sm font-medium">{t('about.shareTitle')}</p>
+            </div>
+            <p className="text-xs text-muted-foreground mb-3">{t('about.shareDesc')}</p>
+            <div className="flex flex-wrap items-center gap-2">
+              {shareLinks.map((item) => (
+                <a
+                  key={item.key}
+                  href={item.href}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className={cn(
+                    'inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-background/50 hover:bg-background text-xs font-medium transition-colors',
+                    item.color,
+                  )}
+                >
+                  <i className={cn('fa', item.faIcon, 'text-[12px]')} aria-hidden="true" />
+                  {item.label}
+                </a>
+              ))}
+              <button
+                type="button"
+                onClick={handleCopyLink}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-background/50 hover:bg-background text-xs font-medium transition-colors"
+              >
+                {copied ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
+                {copied ? t('about.copied') : t('about.copyLink')}
+              </button>
+            </div>
           </div>
 
           {/* Made with love */}
