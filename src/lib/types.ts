@@ -101,6 +101,17 @@ export interface DownloadItem {
   settings?: ItemDownloadSettings | ItemUniversalSettings;
 }
 
+export interface ExternalEnqueueResult {
+  added: boolean;
+  itemId: string | null;
+}
+
+export interface ExternalEnqueueOptions {
+  mediaType?: 'video' | 'audio';
+  quality?: Quality;
+  audioBitrate?: AudioBitrate;
+}
+
 export interface DownloadSettings {
   quality: Quality;
   format: Format;

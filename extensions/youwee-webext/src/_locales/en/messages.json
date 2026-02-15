@@ -1,0 +1,137 @@
+{
+  "extensionName": {
+    "message": "Youwee Downloader Bridge"
+  },
+  "extensionDescription": {
+    "message": "Send current video page to Youwee desktop app and start download quickly."
+  },
+  "floatingButton": {
+    "message": "Download with Youwee"
+  },
+  "floatingLauncher": {
+    "message": "Youwee"
+  },
+  "floatingMenuTitle": {
+    "message": "Download with Youwee"
+  },
+  "floatingMedia": {
+    "message": "Media"
+  },
+  "floatingMediaVideo": {
+    "message": "Video"
+  },
+  "floatingMediaAudio": {
+    "message": "Audio"
+  },
+  "floatingQuality": {
+    "message": "Quality"
+  },
+  "floatingQualityBest": {
+    "message": "Best"
+  },
+  "floatingQualityAudioAuto": {
+    "message": "Audio Auto"
+  },
+  "floatingQualityAudio128": {
+    "message": "Audio 128 kbps"
+  },
+  "floatingButtonDownloadNow": {
+    "message": "Download now"
+  },
+  "floatingButtonAddQueue": {
+    "message": "Add to queue"
+  },
+  "floatingButtonOpening": {
+    "message": "Opening Youwee..."
+  },
+  "floatingButtonQueueSent": {
+    "message": "Sent to queue"
+  },
+  "floatingButtonFailed": {
+    "message": "Failed to open Youwee"
+  },
+  "floatingCollapse": {
+    "message": "Collapse"
+  },
+  "floatingExpand": {
+    "message": "Expand"
+  },
+  "floatingResetPosition": {
+    "message": "Reset position"
+  },
+  "floatingResetPositionDone": {
+    "message": "Position reset"
+  },
+  "floatingDisable": {
+    "message": "Turn off floating button"
+  },
+  "popupTitle": {
+    "message": "Download with Youwee"
+  },
+  "popupDescription": {
+    "message": "Open Youwee and start downloading the current video page in one click."
+  },
+  "popupCurrentUrl": {
+    "message": "Current URL"
+  },
+  "popupPrimaryAction": {
+    "message": "Download now"
+  },
+  "popupQueueAction": {
+    "message": "Add to queue"
+  },
+  "popupCopyUrl": {
+    "message": "Copy URL"
+  },
+  "popupOpenRelease": {
+    "message": "Get / Update Youwee"
+  },
+  "popupFloatingLabel": {
+    "message": "Floating button"
+  },
+  "popupFloatingEnabled": {
+    "message": "Enabled"
+  },
+  "popupFloatingDisabled": {
+    "message": "Disabled"
+  },
+  "popupFloatingToggleFailed": {
+    "message": "Failed to update floating button setting."
+  },
+  "popupMadeWith": {
+    "message": "Made with"
+  },
+  "popupBy": {
+    "message": "by"
+  },
+  "popupHint": {
+    "message": "Browser may show \"Open Youwee?\" prompt the first time. Choose \"Always allow\" for smoother use."
+  },
+  "popupUrlUnavailable": {
+    "message": "No valid HTTP/HTTPS URL in current tab."
+  },
+  "popupStatusInvalid": {
+    "message": "This tab cannot be sent to Youwee."
+  },
+  "popupStatusSupported": {
+    "message": "Supported site. Floating button is available."
+  },
+  "popupStatusNotSupported": {
+    "message": "Floating button is hidden on this site, but popup action still works."
+  },
+  "popupStatusOpening": {
+    "message": "Opening Youwee..."
+  },
+  "popupStatusQueued": {
+    "message": "Sent to queue in Youwee."
+  },
+  "popupStatusOpenFailed": {
+    "message": "Failed to open Youwee."
+  },
+  "popupCopied": {
+    "message": "URL copied to clipboard."
+  },
+  "popupCopyFailed": {
+    "message": "Failed to copy URL."
+  }
+}

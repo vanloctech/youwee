@@ -1,0 +1,137 @@
+{
+  "extensionName": {
+    "message": "Youwee Downloader Bridge"
+  },
+  "extensionDescription": {
+    "message": "Gửi trang video hiện tại sang ứng dụng Youwee desktop và tải nhanh."
+  },
+  "floatingButton": {
+    "message": "Tải với Youwee"
+  },
+  "floatingLauncher": {
+    "message": "Youwee"
+  },
+  "floatingMenuTitle": {
+    "message": "Tải với Youwee"
+  },
+  "floatingMedia": {
+    "message": "Loại"
+  },
+  "floatingMediaVideo": {
+    "message": "Video"
+  },
+  "floatingMediaAudio": {
+    "message": "Âm thanh"
+  },
+  "floatingQuality": {
+    "message": "Chất lượng"
+  },
+  "floatingQualityBest": {
+    "message": "Tốt nhất"
+  },
+  "floatingQualityAudioAuto": {
+    "message": "Âm thanh Auto"
+  },
+  "floatingQualityAudio128": {
+    "message": "Âm thanh 128 kbps"
+  },
+  "floatingButtonDownloadNow": {
+    "message": "Tải ngay"
+  },
+  "floatingButtonAddQueue": {
+    "message": "Thêm vào queue"
+  },
+  "floatingButtonOpening": {
+    "message": "Đang mở Youwee..."
+  },
+  "floatingButtonQueueSent": {
+    "message": "Đã thêm vào queue"
+  },
+  "floatingButtonFailed": {
+    "message": "Không thể mở Youwee"
+  },
+  "floatingCollapse": {
+    "message": "Thu gọn"
+  },
+  "floatingExpand": {
+    "message": "Mở rộng"
+  },
+  "floatingResetPosition": {
+    "message": "Đặt lại vị trí"
+  },
+  "floatingResetPositionDone": {
+    "message": "Đã đặt lại vị trí"
+  },
+  "floatingDisable": {
+    "message": "Tắt nút nổi"
+  },
+  "popupTitle": {
+    "message": "Tải với Youwee"
+  },
+  "popupDescription": {
+    "message": "Mở Youwee và bắt đầu tải trang video hiện tại chỉ với một lần bấm."
+  },
+  "popupCurrentUrl": {
+    "message": "URL hiện tại"
+  },
+  "popupPrimaryAction": {
+    "message": "Tải ngay"
+  },
+  "popupQueueAction": {
+    "message": "Thêm vào queue"
+  },
+  "popupCopyUrl": {
+    "message": "Sao chép URL"
+  },
+  "popupOpenRelease": {
+    "message": "Tải / Cập nhật Youwee"
+  },
+  "popupFloatingLabel": {
+    "message": "Nút nổi"
+  },
+  "popupFloatingEnabled": {
+    "message": "Đang bật"
+  },
+  "popupFloatingDisabled": {
+    "message": "Đang tắt"
+  },
+  "popupFloatingToggleFailed": {
+    "message": "Không thể cập nhật trạng thái nút nổi."
+  },
+  "popupMadeWith": {
+    "message": "Made with"
+  },
+  "popupBy": {
+    "message": "by"
+  },
+  "popupHint": {
+    "message": "Lần đầu, trình duyệt có thể hỏi \"Open Youwee?\". Chọn \"Always allow\" để dùng mượt hơn."
+  },
+  "popupUrlUnavailable": {
+    "message": "Tab hiện tại không có URL HTTP/HTTPS hợp lệ."
+  },
+  "popupStatusInvalid": {
+    "message": "Không thể gửi tab này sang Youwee."
+  },
+  "popupStatusSupported": {
+    "message": "Trang được hỗ trợ. Nút nổi đã sẵn sàng."
+  },
+  "popupStatusNotSupported": {
+    "message": "Trang này không hiện nút nổi, nhưng vẫn có thể gửi bằng popup."
+  },
+  "popupStatusOpening": {
+    "message": "Đang mở Youwee..."
+  },
+  "popupStatusQueued": {
+    "message": "Đã gửi vào queue của Youwee."
+  },
+  "popupStatusOpenFailed": {
+    "message": "Mở Youwee thất bại."
+  },
+  "popupCopied": {
+    "message": "Đã sao chép URL."
+  },
+  "popupCopyFailed": {
+    "message": "Sao chép URL thất bại."
+  }
+}

@@ -1,0 +1,450 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Youwee</title>
+    <style>
+      html,
+      body {
+        margin: 0;
+        padding: 0;
+        background: transparent;
+      }
+
+      body {
+        width: 366px;
+        font-family:
+          "Segoe UI",
+          Roboto,
+          -apple-system,
+          BlinkMacSystemFont,
+          "Helvetica Neue",
+          sans-serif;
+        color: #f8fafc;
+      }
+
+      .popup {
+        padding: 14px;
+        background: radial-gradient(circle at top right, #1f2a44 0%, #0f172a 62%, #0b1220 100%);
+      }
+
+      .head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+        margin-bottom: 12px;
+      }
+
+      .brand {
+        display: inline-flex;
+        align-items: center;
+        gap: 9px;
+        min-width: 0;
+      }
+
+      .brand-logo {
+        width: 22px;
+        height: 22px;
+        object-fit: contain;
+        display: block;
+      }
+
+      .title {
+        margin: 0;
+        font-size: 14px;
+        font-weight: 700;
+        color: #f8fafc;
+        line-height: 1.2;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+
+      .version {
+        display: inline-flex;
+        align-items: center;
+        border-radius: 999px;
+        border: 1px solid rgba(248, 113, 113, 0.4);
+        background: rgba(239, 68, 68, 0.14);
+        color: #fecaca;
+        text-decoration: none;
+        font-size: 11px;
+        font-weight: 700;
+        padding: 4px 9px;
+        white-space: nowrap;
+      }
+
+      .version:hover {
+        background: rgba(239, 68, 68, 0.22);
+      }
+
+      .url-box {
+        border: 1px solid rgba(148, 163, 184, 0.3);
+        border-radius: 10px;
+        padding: 8px 10px;
+        background: rgba(15, 23, 42, 0.64);
+        margin-bottom: 10px;
+      }
+
+      .url-head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 8px;
+        margin-bottom: 4px;
+      }
+
+      .url-label {
+        font-size: 11px;
+        color: #94a3b8;
+      }
+
+      .url-copy {
+        width: 24px;
+        height: 24px;
+        border: 1px solid rgba(148, 163, 184, 0.35);
+        border-radius: 7px;
+        background: rgba(15, 23, 42, 0.78);
+        color: #cbd5e1;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+      }
+
+      .url-copy:hover {
+        color: #f8fafc;
+      }
+
+      .url-copy:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+      }
+
+      .url-copy svg {
+        width: 14px;
+        height: 14px;
+      }
+
+      .url-value {
+        font-size: 12px;
+        font-weight: 600;
+        word-break: break-all;
+        color: #e2e8f0;
+      }
+
+      .controls {
+        display: grid;
+        gap: 7px;
+        margin-bottom: 10px;
+      }
+
+      .switch-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+        border: 1px solid rgba(148, 163, 184, 0.3);
+        border-radius: 10px;
+        padding: 8px 10px;
+        background: rgba(15, 23, 42, 0.55);
+      }
+
+      .switch-copy {
+        min-width: 0;
+      }
+
+      .switch-label {
+        font-size: 11px;
+        color: #94a3b8;
+        line-height: 1.2;
+      }
+
+      .switch-state {
+        margin-top: 2px;
+        font-size: 11px;
+        font-weight: 700;
+        color: #e2e8f0;
+      }
+
+      .floating-toggle {
+        width: 38px;
+        height: 22px;
+        border: 1px solid rgba(148, 163, 184, 0.38);
+        border-radius: 999px;
+        background: rgba(51, 65, 85, 0.65);
+        padding: 2px;
+        cursor: pointer;
+        transition: background 0.15s ease;
+      }
+
+      .floating-toggle::after {
+        content: '';
+        display: block;
+        width: 16px;
+        height: 16px;
+        border-radius: 999px;
+        background: #e2e8f0;
+        transition: transform 0.15s ease;
+      }
+
+      .floating-toggle[data-enabled='true'] {
+        background: rgba(16, 185, 129, 0.45);
+      }
+
+      .floating-toggle[data-enabled='true']::after {
+        transform: translateX(16px);
+      }
+
+      .field-label {
+        font-size: 11px;
+        color: #94a3b8;
+      }
+
+      .media-toggle {
+        display: inline-flex;
+        width: 100%;
+        border-radius: 9px;
+        border: 1px solid rgba(148, 163, 184, 0.3);
+        background: rgba(15, 23, 42, 0.75);
+        padding: 2px;
+        gap: 2px;
+      }
+
+      .media-toggle-btn {
+        flex: 1;
+        height: 29px;
+        border: 0;
+        border-radius: 7px;
+        background: transparent;
+        color: #94a3b8;
+        font-size: 12px;
+        font-weight: 700;
+        cursor: pointer;
+      }
+
+      .media-toggle-btn[data-active="true"] {
+        background: rgba(248, 250, 252, 0.12);
+        color: #f8fafc;
+      }
+
+      .field-select {
+        width: 100%;
+        height: 36px;
+        border-radius: 9px;
+        border: 1px solid rgba(148, 163, 184, 0.3);
+        background: linear-gradient(180deg, rgba(15, 23, 42, 0.78), rgba(15, 23, 42, 0.64));
+        color: #f8fafc;
+        font-size: 12px;
+        font-weight: 600;
+        padding: 0 34px 0 10px;
+        appearance: none;
+        -webkit-appearance: none;
+        outline: none;
+        transition:
+          border-color 0.15s ease,
+          box-shadow 0.15s ease;
+      }
+
+      .field-select:hover {
+        border-color: rgba(148, 163, 184, 0.44);
+      }
+
+      .field-select:focus {
+        border-color: rgba(248, 113, 113, 0.6);
+        box-shadow: 0 0 0 3px rgba(248, 113, 113, 0.14);
+      }
+
+      .field-select:disabled {
+        opacity: 0.55;
+        cursor: not-allowed;
+      }
+
+      .select-wrap {
+        position: relative;
+      }
+
+      .select-chevron {
+        position: absolute;
+        top: 50%;
+        right: 10px;
+        transform: translateY(-50%);
+        color: #cbd5e1;
+        pointer-events: none;
+        font-size: 11px;
+        opacity: 0.9;
+      }
+
+      .actions {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 8px;
+      }
+
+      .actions button {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 10px;
+        border: 1px solid transparent;
+        padding: 9px 10px;
+        font-size: 12px;
+        font-weight: 700;
+        cursor: pointer;
+      }
+
+      .primary {
+        background: linear-gradient(135deg, #ef4444, #f97316);
+        color: #fff;
+      }
+
+      .secondary {
+        background: rgba(148, 163, 184, 0.12);
+        border-color: rgba(148, 163, 184, 0.32);
+        color: #f8fafc;
+      }
+
+      .status {
+        margin-top: 10px;
+        border-radius: 8px;
+        padding: 7px 9px;
+        font-size: 11px;
+        font-weight: 600;
+        border: 1px solid transparent;
+      }
+
+      .status[hidden] {
+        display: none;
+      }
+
+      .status.ok {
+        color: #6ee7b7;
+        background: rgba(16, 185, 129, 0.13);
+        border-color: rgba(16, 185, 129, 0.34);
+      }
+
+      .status.error {
+        color: #fca5a5;
+        background: rgba(239, 68, 68, 0.15);
+        border-color: rgba(239, 68, 68, 0.34);
+      }
+
+      .footer {
+        margin-top: 10px;
+        border-top: 1px dashed rgba(148, 163, 184, 0.3);
+        padding-top: 8px;
+        display: flex;
+        justify-content: center;
+      }
+
+      .made-with {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        font-size: 11px;
+        color: #94a3b8;
+        text-decoration: none;
+      }
+
+      .heart {
+        color: #ef4444;
+      }
+
+      .author {
+        color: #f8fafc;
+        font-weight: 700;
+      }
+    </style>
+  </head>
+  <body>
+    <main class="popup">
+      <header class="head">
+        <div class="brand">
+          <img class="brand-logo" src="icons/logo-32.png" alt="Youwee" />
+          <h1 id="title" class="title">Download with Youwee</h1>
+        </div>
+        <a
+          id="versionLink"
+          class="version"
+          href="https://github.com/vanloctech/youwee/releases/latest"
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          v0.0.0
+        </a>
+      </header>
+
+      <div class="url-box">
+        <div class="url-head">
+          <div id="urlLabel" class="url-label">Current URL</div>
+          <button id="copyUrlIconBtn" class="url-copy" type="button" aria-label="Copy URL" title="Copy URL">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+              <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+            </svg>
+          </button>
+        </div>
+        <div id="urlValue" class="url-value">-</div>
+      </div>
+
+      <div class="controls">
+        <div class="switch-row">
+          <div class="switch-copy">
+            <div id="floatingLabel" class="switch-label">Floating button</div>
+            <div id="floatingState" class="switch-state">Enabled</div>
+          </div>
+          <button
+            id="floatingToggleBtn"
+            type="button"
+            class="floating-toggle"
+            data-enabled="true"
+            aria-label="Toggle floating button"
+            title="Toggle floating button"
+          ></button>
+        </div>
+
+        <label id="mediaLabel" class="field-label">Media</label>
+        <div class="media-toggle" role="group" aria-label="Media">
+          <button id="mediaVideoBtn" type="button" class="media-toggle-btn" data-media="video">
+            Video
+          </button>
+          <button id="mediaAudioBtn" type="button" class="media-toggle-btn" data-media="audio">
+            Audio
+          </button>
+        </div>
+        <label id="qualityLabel" class="field-label" for="qualitySelect">Quality</label>
+        <div class="select-wrap">
+          <select id="qualitySelect" class="field-select"></select>
+          <span class="select-chevron">▾</span>
+        </div>
+      </div>
+
+      <div class="actions">
+        <button id="downloadBtn" type="button" class="primary"></button>
+        <button id="queueBtn" type="button" class="secondary"></button>
+      </div>
+
+      <div id="status" class="status" hidden></div>
+
+      <footer class="footer">
+        <a
+          id="madeWithLink"
+          class="made-with"
+          href="https://github.com/vanloctech"
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          <span id="madeWithPrefix">Made with</span>
+          <span class="heart">❤</span>
+          <span id="madeWithBy">by</span>
+          <span class="author">vanloctech</span>
+        </a>
+      </footer>
+    </main>
+
+    <script src="shared.js"></script>
+    <script src="popup.js"></script>
+  </body>
+</html>

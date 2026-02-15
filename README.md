@@ -23,6 +23,7 @@
 ## Features
 
 - **Video Downloads** — YouTube, TikTok, Facebook, Instagram, and 1800+ sites
+- **Browser Extension Bridge** — Chromium + Firefox extension with floating button and one-click send to Youwee app
 - **Channel Follow** — Follow YouTube, Bilibili & Youku channels, get notified of new videos, auto-download, and manage from system tray
 - **Metadata Fetcher** — Download video info, descriptions, comments, and thumbnails without the video
 - **Live Stream Support** — Download live streams with dedicated toggle
@@ -88,6 +89,17 @@
 | **Linux** (x64) | [Download .deb](https://github.com/vanloctech/youwee/releases/latest/download/Youwee-Linux.deb) · [Download .AppImage](https://github.com/vanloctech/youwee/releases/latest/download/Youwee-Linux.AppImage) (Recommend for auto update) |
 
 > See all releases on the [Releases page](https://github.com/vanloctech/youwee/releases)
+
+### Browser Extension (Chromium + Firefox)
+
+- Build extension packages:
+  ```bash
+  bun run ext:build
+  ```
+- Load unpacked extension from:
+  - `extensions/youwee-webext/dist/chromium` (Chrome/Edge/Brave)
+  - `extensions/youwee-webext/dist/firefox` (Firefox)
+- Full guide: [docs/browser-extension.md](docs/browser-extension.md)
 
 ### Build from Source
 

@@ -23,6 +23,7 @@
 ## Tính năng
 
 - **Tải Video** — YouTube, TikTok, Facebook, Instagram, và hơn 1800 trang web khác
+- **Tiện ích mở rộng trình duyệt** — Extension cho Chromium + Firefox với nút nổi và gửi link 1 chạm sang Youwee
 - **Theo dõi Kênh** — Theo dõi kênh YouTube, Bilibili & Youku, nhận thông báo video mới, tự động tải xuống, và quản lý từ system tray
 - **Tóm tắt Video bằng AI** — Tóm tắt video với Gemini, OpenAI, hoặc Ollama
 - **Xử lý Video bằng AI** — Chỉnh sửa video bằng ngôn ngữ tự nhiên (cắt, chuyển đổi, thay đổi kích thước, trích xuất âm thanh)
@@ -81,6 +82,17 @@
 | **Linux** (x64) | [Tải .deb](https://github.com/vanloctech/youwee/releases/latest/download/Youwee-Linux.deb) · [Tải .AppImage](https://github.com/vanloctech/youwee/releases/latest/download/Youwee-Linux.AppImage) |
 
 > Xem tất cả các phiên bản tại [trang Releases](https://github.com/vanloctech/youwee/releases)
+
+### Tiện ích mở rộng trình duyệt (Chromium + Firefox)
+
+- Build gói extension:
+  ```bash
+  bun run ext:build
+  ```
+- Nạp extension unpacked từ:
+  - `extensions/youwee-webext/dist/chromium` (Chrome/Edge/Brave)
+  - `extensions/youwee-webext/dist/firefox` (Firefox)
+- Hướng dẫn chi tiết: [docs/browser-extension.md](browser-extension.md)
 
 > ⚠️ **Lưu ý**: Ứng dụng chưa được ký bằng chứng chỉ Apple Developer. Nếu macOS chặn ứng dụng, hãy chạy:
 > ```bash

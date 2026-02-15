@@ -23,6 +23,7 @@
 ## 功能特性
 
 - **视频下载** — 支持 YouTube、TikTok、Facebook、Instagram 及 1800+ 网站
+- **浏览器扩展桥接** — Chromium + Firefox 扩展，支持悬浮按钮与一键发送到 Youwee
 - **频道关注** — 关注 YouTube、Bilibili 和优酷频道，接收新视频通知，自动下载，通过系统托盘管理
 - **AI 视频摘要** — 使用 Gemini、OpenAI 或 Ollama 进行视频摘要
 - **AI 视频处理** — 使用自然语言编辑视频（剪切、转换、调整大小、提取音频）
@@ -81,6 +82,17 @@
 | **Linux** (x64) | [下载 .deb](https://github.com/vanloctech/youwee/releases/latest/download/Youwee-Linux.deb) · [下载 .AppImage](https://github.com/vanloctech/youwee/releases/latest/download/Youwee-Linux.AppImage) |
 
 > 在 [Releases 页面](https://github.com/vanloctech/youwee/releases) 查看所有版本
+
+### 浏览器扩展（Chromium + Firefox）
+
+- 构建扩展包：
+  ```bash
+  bun run ext:build
+  ```
+- 从以下目录加载未打包扩展：
+  - `extensions/youwee-webext/dist/chromium`（Chrome/Edge/Brave）
+  - `extensions/youwee-webext/dist/firefox`（Firefox）
+- 完整说明： [docs/browser-extension.md](browser-extension.md)
 
 > ⚠️ **注意**: 该应用尚未使用 Apple 开发者证书签名。如果 macOS 阻止应用运行，请执行：
 > ```bash

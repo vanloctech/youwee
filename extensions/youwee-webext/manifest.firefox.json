@@ -1,0 +1,78 @@
+{
+  "manifest_version": 3,
+  "name": "__MSG_extensionName__",
+  "description": "__MSG_extensionDescription__",
+  "version": "0.1.0",
+  "default_locale": "en",
+  "icons": {
+    "16": "icons/logo-16.png",
+    "32": "icons/logo-32.png",
+    "48": "icons/logo-48.png",
+    "128": "icons/logo-128.png"
+  },
+  "action": {
+    "default_icon": {
+      "16": "icons/logo-16.png",
+      "32": "icons/logo-32.png",
+      "48": "icons/logo-48.png"
+    },
+    "default_popup": "popup.html",
+    "default_title": "__MSG_extensionName__"
+  },
+  "permissions": ["activeTab", "tabs", "clipboardWrite", "storage"],
+  "web_accessible_resources": [
+    {
+      "resources": ["icons/*"],
+      "matches": ["<all_urls>"]
+    }
+  ],
+  "host_permissions": [
+    "*://*.youtube.com/*",
+    "*://youtu.be/*",
+    "*://*.tiktok.com/*",
+    "*://*.instagram.com/*",
+    "*://*.facebook.com/*",
+    "*://fb.watch/*",
+    "*://*.x.com/*",
+    "*://*.twitter.com/*",
+    "*://*.vimeo.com/*",
+    "*://*.twitch.tv/*",
+    "*://clips.twitch.tv/*",
+    "*://*.bilibili.com/*",
+    "*://b23.tv/*",
+    "*://*.dailymotion.com/*",
+    "*://dai.ly/*",
+    "*://*.soundcloud.com/*"
+  ],
+  "content_scripts": [
+    {
+      "matches": [
+        "*://*.youtube.com/*",
+        "*://youtu.be/*",
+        "*://*.tiktok.com/*",
+        "*://*.instagram.com/*",
+        "*://*.facebook.com/*",
+        "*://fb.watch/*",
+        "*://*.x.com/*",
+        "*://*.twitter.com/*",
+        "*://*.vimeo.com/*",
+        "*://*.twitch.tv/*",
+        "*://clips.twitch.tv/*",
+        "*://*.bilibili.com/*",
+        "*://b23.tv/*",
+        "*://*.dailymotion.com/*",
+        "*://dai.ly/*",
+        "*://*.soundcloud.com/*"
+      ],
+      "js": ["shared.js", "content.js"],
+      "css": ["content.css"],
+      "run_at": "document_idle"
+    }
+  ],
+  "browser_specific_settings": {
+    "gecko": {
+      "id": "youwee@vanloctech.com",
+      "strict_min_version": "121.0"
+    }
+  }
+}

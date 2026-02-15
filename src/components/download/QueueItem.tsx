@@ -92,6 +92,7 @@ function formatQuality(quality: string): string {
 
 interface QueueItemProps {
   item: DownloadItem;
+  isFocused?: boolean;
   showPlaylistBadge?: boolean;
   disabled?: boolean;
   onRemove: (id: string) => void;
@@ -100,6 +101,7 @@ interface QueueItemProps {
 
 export function QueueItem({
   item,
+  isFocused = false,
   showPlaylistBadge,
   disabled,
   onRemove,
@@ -215,9 +217,11 @@ export function QueueItem({
 
   return (
     <div
+      data-queue-item-id={item.id}
       className={cn(
-        'group relative flex gap-3 p-2 rounded-xl transition-all duration-200',
+        'group relative flex gap-3 p-2 rounded-xl border border-transparent transition-all duration-200',
         'bg-card/50 hover:bg-card/80',
+        isFocused && 'border-primary/35 bg-primary/[0.08]',
         isActive && 'bg-primary/5',
         isCompleted && 'bg-emerald-500/5',
         isError && 'bg-red-500/5',

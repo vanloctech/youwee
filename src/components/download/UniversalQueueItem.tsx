@@ -93,6 +93,7 @@ function formatQuality(quality: string): string {
 
 interface UniversalQueueItemProps {
   item: DownloadItem;
+  isFocused?: boolean;
   disabled?: boolean;
   onRemove: (id: string) => void;
   onUpdateTimeRange: (id: string, start?: string, end?: string) => void;
@@ -100,6 +101,7 @@ interface UniversalQueueItemProps {
 
 export function UniversalQueueItem({
   item,
+  isFocused = false,
   disabled,
   onRemove,
   onUpdateTimeRange,
@@ -207,9 +209,11 @@ export function UniversalQueueItem({
 
   return (
     <div
+      data-queue-item-id={item.id}
       className={cn(
-        'group relative flex gap-3 p-2 rounded-xl transition-all duration-200',
+        'group relative flex gap-3 p-2 rounded-xl border border-transparent transition-all duration-200',
         'bg-card/50 hover:bg-card/80',
+        isFocused && 'border-primary/35 bg-primary/[0.08]',
         isActive && 'bg-primary/5',
         isCompleted && 'bg-emerald-500/5',
         isError && 'bg-red-500/5',
