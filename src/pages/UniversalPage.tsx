@@ -41,6 +41,7 @@ export function UniversalPage({ onNavigateToSettings }: UniversalPageProps) {
   const { t } = useTranslation('universal');
   const {
     items,
+    focusedItemId,
     isDownloading,
     settings,
     addFromText,
@@ -146,6 +147,7 @@ export function UniversalPage({ onNavigateToSettings }: UniversalPageProps) {
         <div className="flex-1 flex flex-col overflow-hidden px-4 sm:px-6 pt-3">
           <UniversalQueueList
             items={items}
+            focusedItemId={focusedItemId}
             isDownloading={isDownloading}
             onRemove={removeItem}
             onUpdateTimeRange={updateItemTimeRange}

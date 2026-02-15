@@ -8,6 +8,8 @@ Youwee 的所有重要更改都将记录在此文件中。
 ## [Unreleased]
 
 ### 新增
+- **浏览器扩展一键下载（Chromium + Firefox）** - 现在你可以把浏览器当前视频页面直接发送到 Youwee，并选择 `Download now` 或 `Add to queue`
+- **设置中新增 Extension 安装入口** - 在 设置 → Extension 新增专属区域，提供直接下载按钮和简单安装步骤（Chromium / Firefox）
 
 ### 变更
 

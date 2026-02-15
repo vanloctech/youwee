@@ -28,6 +28,7 @@ import { useTranslation } from 'react-i18next';
 import {
   DependenciesSection,
   DownloadSection,
+  ExtensionSection,
   GeneralSection,
   NetworkSection,
   SettingsCard,
@@ -136,6 +137,8 @@ export function SettingsPage() {
                 )}
 
                 {activeSection === 'download' && <DownloadSection highlightId={highlightId} />}
+
+                {activeSection === 'extension' && <ExtensionSection highlightId={highlightId} />}
 
                 {activeSection === 'ai' && (
                   <AISettingsContent

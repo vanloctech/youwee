@@ -1,4 +1,5 @@
 import { CheckCircle2, ExternalLink, Inbox } from 'lucide-react';
+import { useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -22,6 +23,7 @@ const POPULAR_SITES = [
 
 interface UniversalQueueListProps {
   items: DownloadItem[];
+  focusedItemId?: string | null;
   isDownloading: boolean;
   onRemove: (id: string) => void;
   onUpdateTimeRange: (id: string, start?: string, end?: string) => void;
@@ -30,14 +32,24 @@ interface UniversalQueueListProps {
 
 export function UniversalQueueList({
   items,
+  focusedItemId,
   isDownloading,
   onRemove,
   onUpdateTimeRange,
   onClearCompleted,
 }: UniversalQueueListProps) {
   const { t } = useTranslation('universal');
+  const containerRef = useRef<HTMLDivElement | null>(null);
   const completedCount = items.filter((i) => i.status === 'completed').length;
   const hasCompleted = completedCount > 0;
+
+  useEffect(() => {
+    if (!focusedItemId || !containerRef.current) return;
+    const target = containerRef.current.querySelector<HTMLElement>(
+      `[data-queue-item-id="${focusedItemId}"]`,
+    );
+    target?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }, [focusedItemId]);
 
   if (items.length === 0) {
     return (
@@ -85,7 +97,7 @@ export function UniversalQueueList({
   }
 
   return (
-    <div className="flex-1 flex flex-col overflow-hidden">
+    <div ref={containerRef} className="flex-1 flex flex-col overflow-hidden">
       {/* Queue Header */}
       <div className="flex items-center justify-between mb-2">
         <span className="text-xs text-muted-foreground">
@@ -114,6 +126,7 @@ export function UniversalQueueList({
             <UniversalQueueItem
               key={item.id}
               item={item}
+              isFocused={focusedItemId === item.id}
               disabled={isDownloading}
               onRemove={onRemove}
               onUpdateTimeRange={onUpdateTimeRange}

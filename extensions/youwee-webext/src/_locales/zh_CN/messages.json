@@ -1,0 +1,137 @@
+{
+  "extensionName": {
+    "message": "Youwee 下载桥接扩展"
+  },
+  "extensionDescription": {
+    "message": "将当前视频页面发送到 Youwee 桌面应用并快速开始下载。"
+  },
+  "floatingButton": {
+    "message": "使用 Youwee 下载"
+  },
+  "floatingLauncher": {
+    "message": "Youwee"
+  },
+  "floatingMenuTitle": {
+    "message": "使用 Youwee 下载"
+  },
+  "floatingMedia": {
+    "message": "类型"
+  },
+  "floatingMediaVideo": {
+    "message": "视频"
+  },
+  "floatingMediaAudio": {
+    "message": "音频"
+  },
+  "floatingQuality": {
+    "message": "质量"
+  },
+  "floatingQualityBest": {
+    "message": "最佳"
+  },
+  "floatingQualityAudioAuto": {
+    "message": "音频自动"
+  },
+  "floatingQualityAudio128": {
+    "message": "音频 128 kbps"
+  },
+  "floatingButtonDownloadNow": {
+    "message": "立即下载"
+  },
+  "floatingButtonAddQueue": {
+    "message": "加入队列"
+  },
+  "floatingButtonOpening": {
+    "message": "正在打开 Youwee..."
+  },
+  "floatingButtonQueueSent": {
+    "message": "已加入队列"
+  },
+  "floatingButtonFailed": {
+    "message": "无法打开 Youwee"
+  },
+  "floatingCollapse": {
+    "message": "收起"
+  },
+  "floatingExpand": {
+    "message": "展开"
+  },
+  "floatingResetPosition": {
+    "message": "重置位置"
+  },
+  "floatingResetPositionDone": {
+    "message": "位置已重置"
+  },
+  "floatingDisable": {
+    "message": "关闭悬浮按钮"
+  },
+  "popupTitle": {
+    "message": "使用 Youwee 下载"
+  },
+  "popupDescription": {
+    "message": "一键打开 Youwee 并开始下载当前视频页面。"
+  },
+  "popupCurrentUrl": {
+    "message": "当前链接"
+  },
+  "popupPrimaryAction": {
+    "message": "立即下载"
+  },
+  "popupQueueAction": {
+    "message": "加入队列"
+  },
+  "popupCopyUrl": {
+    "message": "复制链接"
+  },
+  "popupOpenRelease": {
+    "message": "获取 / 更新 Youwee"
+  },
+  "popupFloatingLabel": {
+    "message": "悬浮按钮"
+  },
+  "popupFloatingEnabled": {
+    "message": "已开启"
+  },
+  "popupFloatingDisabled": {
+    "message": "已关闭"
+  },
+  "popupFloatingToggleFailed": {
+    "message": "更新悬浮按钮状态失败。"
+  },
+  "popupMadeWith": {
+    "message": "Made with"
+  },
+  "popupBy": {
+    "message": "by"
+  },
+  "popupHint": {
+    "message": "浏览器首次可能会提示“Open Youwee?”。建议选择“Always allow”以获得更流畅体验。"
+  },
+  "popupUrlUnavailable": {
+    "message": "当前标签页没有有效的 HTTP/HTTPS 链接。"
+  },
+  "popupStatusInvalid": {
+    "message": "此标签页无法发送到 Youwee。"
+  },
+  "popupStatusSupported": {
+    "message": "该站点受支持，悬浮按钮可用。"
+  },
+  "popupStatusNotSupported": {
+    "message": "该站点不显示悬浮按钮，但仍可通过扩展弹窗发送。"
+  },
+  "popupStatusOpening": {
+    "message": "正在打开 Youwee..."
+  },
+  "popupStatusQueued": {
+    "message": "已发送到 Youwee 队列。"
+  },
+  "popupStatusOpenFailed": {
+    "message": "打开 Youwee 失败。"
+  },
+  "popupCopied": {
+    "message": "链接已复制。"
+  },
+  "popupCopyFailed": {
+    "message": "复制链接失败。"
+  }
+}

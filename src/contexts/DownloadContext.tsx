@@ -27,6 +27,8 @@ import type {
   DownloadItem,
   DownloadProgress,
   DownloadSettings,
+  ExternalEnqueueOptions,
+  ExternalEnqueueResult,
   Format,
   ItemDownloadSettings,
   PlaylistVideoEntry,
@@ -202,6 +204,7 @@ interface PlaylistInfo {
 
 interface DownloadContextType {
   items: DownloadItem[];
+  focusedItemId: string | null;
   isDownloading: boolean;
   isExpandingPlaylist: boolean;
   settings: DownloadSettings;
@@ -209,6 +212,11 @@ interface DownloadContextType {
   proxySettings: ProxySettings;
   currentPlaylistInfo: PlaylistInfo | null;
   addFromText: (text: string) => Promise<number>;
+  enqueueExternalUrl: (
+    url: string,
+    options?: ExternalEnqueueOptions,
+  ) => Promise<ExternalEnqueueResult>;
+  focusItem: (itemId: string) => void;
   importFromFile: () => Promise<number>;
   importFromClipboard: () => Promise<number>;
   selectOutputFolder: () => Promise<void>;
@@ -264,6 +272,7 @@ const DownloadContext = createContext<DownloadContextType | null>(null);
 
 export function DownloadProvider({ children }: { children: ReactNode }) {
   const [items, setItems] = useState<DownloadItem[]>([]);
+  const [focusedItemId, setFocusedItemId] = useState<string | null>(null);
   const [isDownloading, setIsDownloading] = useState(false);
   const [isExpandingPlaylist, setIsExpandingPlaylist] = useState(false);
   const [cookieError, setCookieError] = useState<{ show: boolean; itemId?: string } | null>(null);
@@ -344,6 +353,7 @@ export function DownloadProvider({ children }: { children: ReactNode }) {
   const isDownloadingRef = useRef(false);
   const itemsRef = useRef<DownloadItem[]>([]);
   const settingsRef = useRef<DownloadSettings>(settings);
+  const focusClearTimerRef = useRef<number | null>(null);
 
   // Keep itemsRef in sync with items state
   useEffect(() => {
@@ -354,6 +364,14 @@ export function DownloadProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     settingsRef.current = settings;
   }, [settings]);
+
+  useEffect(() => {
+    return () => {
+      if (focusClearTimerRef.current !== null) {
+        window.clearTimeout(focusClearTimerRef.current);
+      }
+    };
+  }, []);
 
   // Get default download path on mount (only if not saved)
   useEffect(() => {
@@ -544,6 +562,72 @@ export function DownloadProvider({ children }: { children: ReactNode }) {
 
     return newItems.length;
   }, []);
+
+  const focusItem = useCallback((itemId: string) => {
+    setFocusedItemId(itemId);
+
+    if (focusClearTimerRef.current !== null) {
+      window.clearTimeout(focusClearTimerRef.current);
+    }
+
+    focusClearTimerRef.current = window.setTimeout(() => {
+      setFocusedItemId((current) => (current === itemId ? null : current));
+      focusClearTimerRef.current = null;
+    }, 3000);
+  }, []);
+
+  const enqueueExternalUrl = useCallback(
+    async (url: string, options?: ExternalEnqueueOptions): Promise<ExternalEnqueueResult> => {
+      const normalizedUrl = url.trim();
+      if (!normalizedUrl) return { added: false, itemId: null };
+
+      const existingItem = itemsRef.current.find((item) => item.url === normalizedUrl);
+      if (existingItem) {
+        focusItem(existingItem.id);
+        return { added: false, itemId: existingItem.id };
+      }
+
+      const currentSettings = settingsRef.current;
+      const mediaType = options?.mediaType === 'audio' ? 'audio' : 'video';
+      const videoQuality =
+        options?.quality && options.quality !== 'audio' ? options.quality : 'best';
+      const audioBitrate = options?.audioBitrate === '128' ? '128' : 'auto';
+
+      const settingsSnapshot: ItemDownloadSettings = {
+        quality: mediaType === 'audio' ? 'audio' : videoQuality,
+        format: mediaType === 'audio' ? 'mp3' : 'mp4',
+        outputPath: currentSettings.outputPath,
+        videoCodec: currentSettings.videoCodec,
+        audioBitrate: mediaType === 'audio' ? audioBitrate : currentSettings.audioBitrate,
+        subtitleMode: currentSettings.subtitleMode,
+        subtitleLangs: [...currentSettings.subtitleLangs],
+        subtitleEmbed: currentSettings.subtitleEmbed,
+        subtitleFormat: currentSettings.subtitleFormat,
+        autoRetryEnabled: currentSettings.autoRetryEnabled,
+        autoRetryMaxAttempts: currentSettings.autoRetryMaxAttempts,
+        autoRetryDelaySeconds: currentSettings.autoRetryDelaySeconds,
+      };
+
+      const newItem: DownloadItem = {
+        id: crypto.randomUUID(),
+        url: normalizedUrl,
+        title: normalizedUrl,
+        status: 'pending',
+        progress: 0,
+        speed: '',
+        eta: '',
+        isPlaylist: false,
+        settings: settingsSnapshot,
+      };
+
+      const nextItems = [...itemsRef.current, newItem];
+      itemsRef.current = nextItems;
+      setItems(nextItems);
+      focusItem(newItem.id);
+      return { added: true, itemId: newItem.id };
+    },
+    [focusItem],
+  );
 
   // Expand playlist URL to individual videos
   const expandPlaylistUrl = useCallback(
@@ -1218,6 +1302,7 @@ export function DownloadProvider({ children }: { children: ReactNode }) {
 
   const value: DownloadContextType = {
     items,
+    focusedItemId,
     isDownloading,
     isExpandingPlaylist,
     settings,
@@ -1225,6 +1310,8 @@ export function DownloadProvider({ children }: { children: ReactNode }) {
     proxySettings,
     currentPlaylistInfo,
     addFromText,
+    enqueueExternalUrl,
+    focusItem,
     importFromFile,
     importFromClipboard,
     selectOutputFolder,

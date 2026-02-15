@@ -8,6 +8,7 @@ mod processing;
 mod whisper;
 mod metadata;
 mod channels;
+mod external;
 
 pub use logs::*;
 pub use history::*;
@@ -19,3 +20,4 @@ pub use processing::*;
 pub use whisper::*;
 pub use metadata::*;
 pub use channels::*;
+pub use external::*;

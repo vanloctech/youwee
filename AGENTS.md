@@ -10,7 +10,7 @@ This file is read automatically at the start of every session. Follow these rule
 - **Runtime**: Use `bun` (not npm/npx)
 - **Linting**: `bun run biome check --write .`
 - **Rust check**: `cargo check` (run in `src-tauri/`)
-- **TypeScript check**: `bun run tsc --noEmit`
+- **TypeScript check**: `bun run tsc -b`
 - **Default branch**: `develop`
 - **Language**: User communicates in Vietnamese
 
@@ -43,7 +43,7 @@ When bumping the version, you MUST do ALL of the following:
 
 - **NEVER commit unless the user explicitly asks** (e.g. "commit nha", "commit di")
 - **NEVER push unless the user explicitly asks**
-- Always run all 3 checks before committing: Biome → tsc → cargo check
+- Always run all 3 checks before committing: Biome → `tsc -b` → cargo check
 - Commit message style: `type: short description` (e.g. `feat:`, `fix:`, `chore:`, `docs:`)
 
 ### Pre-commit Hook

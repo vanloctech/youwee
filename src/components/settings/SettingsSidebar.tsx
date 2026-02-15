@@ -1,4 +1,4 @@
-import { ArrowDownToLine, Globe, Info, Package, Palette, Sparkles } from 'lucide-react';
+import { ArrowDownToLine, Globe, Info, Package, Palette, Puzzle, Sparkles } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { cn } from '@/lib/utils';
 import type { SettingsSectionId } from './searchable-settings';
@@ -12,6 +12,7 @@ const SECTION_ICONS: Record<SettingsSectionId, React.ReactNode> = {
   general: <Palette className="w-4 h-4" />,
   dependencies: <Package className="w-4 h-4" />,
   download: <ArrowDownToLine className="w-4 h-4" />,
+  extension: <Puzzle className="w-4 h-4" />,
   ai: <Sparkles className="w-4 h-4" />,
   network: <Globe className="w-4 h-4" />,
   about: <Info className="w-4 h-4" />,
@@ -24,6 +25,7 @@ export function SettingsSidebar({ activeSection, onSectionChange }: SettingsSide
     { id: 'general', labelKey: 'sections.general' },
     { id: 'dependencies', labelKey: 'sections.dependencies' },
     { id: 'download', labelKey: 'sections.download' },
+    { id: 'extension', labelKey: 'sections.extension' },
     { id: 'ai', labelKey: 'sections.ai' },
     { id: 'network', labelKey: 'sections.network' },
     { id: 'about', labelKey: 'sections.about' },

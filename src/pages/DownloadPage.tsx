@@ -23,6 +23,7 @@ export function DownloadPage({ onNavigateToSettings }: DownloadPageProps) {
   const { t } = useTranslation('download');
   const {
     items,
+    focusedItemId,
     isDownloading,
     isExpandingPlaylist,
     settings,
@@ -150,6 +151,7 @@ export function DownloadPage({ onNavigateToSettings }: DownloadPageProps) {
         <div className="flex-1 flex flex-col overflow-hidden px-4 sm:px-6 pt-3">
           <QueueList
             items={items}
+            focusedItemId={focusedItemId}
             isDownloading={isDownloading}
             showPlaylistBadge={settings.downloadPlaylist}
             currentPlaylistInfo={currentPlaylistInfo}

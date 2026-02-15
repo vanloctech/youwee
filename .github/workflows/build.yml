@@ -206,9 +206,63 @@ jobs:
             src-tauri/target/${{ matrix.target }}/release/bundle/nsis/*.exe.sig
           if-no-files-found: ignore
 
+  extension:
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/v')
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Build and package extension archives
+        run: bun run ext:package
+
+      - name: Validate Firefox signing secrets
+        run: |
+          if [ -z "${{ secrets.FIREFOX_AMO_JWT_ISSUER }}" ] || [ -z "${{ secrets.FIREFOX_AMO_JWT_SECRET }}" ]; then
+            echo "Missing FIREFOX_AMO_JWT_ISSUER or FIREFOX_AMO_JWT_SECRET secrets."
+            exit 1
+          fi
+
+      - name: Sign Firefox extension (AMO unlisted)
+        run: |
+          bunx web-ext sign \
+            --source-dir extensions/youwee-webext/dist/firefox \
+            --artifacts-dir extensions/youwee-webext/dist/packages \
+            --channel unlisted \
+            --api-key "${{ secrets.FIREFOX_AMO_JWT_ISSUER }}" \
+            --api-secret "${{ secrets.FIREFOX_AMO_JWT_SECRET }}"
+
+      - name: Rename signed Firefox XPI
+        run: |
+          SIGNED_XPI=$(find extensions/youwee-webext/dist/packages -name "*.xpi" | head -1)
+          if [ -z "$SIGNED_XPI" ]; then
+            echo "Signed Firefox XPI not found."
+            exit 1
+          fi
+          mv "$SIGNED_XPI" "extensions/youwee-webext/dist/packages/Youwee-Extension-Firefox-signed.xpi"
+          ls -la extensions/youwee-webext/dist/packages
+
+      - name: Upload extension artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: youwee-extension-packages
+          path: |
+            extensions/youwee-webext/dist/packages/*.zip
+            extensions/youwee-webext/dist/packages/*.xpi
+          if-no-files-found: error
+
   # Create release after all builds complete
   release:
-    needs: build
+    needs: [build, extension]
     runs-on: ubuntu-latest
     if: startsWith(github.ref, 'refs/tags/v')
     
@@ -398,7 +452,9 @@ jobs:
             -name "*.exe" -o \
             -name "*.deb" -o \
             -name "*.AppImage" -o \
-            -name "*.app.tar.gz" \
+            -name "*.app.tar.gz" -o \
+            -name "*.xpi" -o \
+            -name "Youwee-Extension-*.zip" \
           \) ! -name "*.sig" | sort | while read file; do
             filename=$(basename "$file")
             hash=$(sha256sum "$file" | cut -d' ' -f1)
@@ -439,6 +495,8 @@ jobs:
           | 🪟 **Windows** | `Youwee-Windows-Setup.exe` | EXE Installer |
           | 🐧 **Linux** | `Youwee-Linux.deb` | Debian/Ubuntu |
           | 🐧 **Linux** | `Youwee-Linux.AppImage` | Portable (all distros) |
+          | 🌐 **Extension (Chromium)** | `Youwee-Extension-Chromium.zip` | Unzip and load unpacked on Chrome/Edge/Brave |
+          | 🦊 **Extension (Firefox)** | `Youwee-Extension-Firefox-signed.xpi` | Signed unlisted add-on for Firefox stable |
           
           ## 📋 Requirements
           - **Windows**: Windows 10 or later
@@ -448,7 +506,11 @@ jobs:
           ## 🔧 Optional
           - **FFmpeg** - for best video/audio quality (auto-download available in Settings)
           - **Bun Runtime** - if you can only download 360p from YouTube (auto-download available in Settings)
-          
+
+          ## 🌐 Browser Extension Install
+          - Chromium: download `Youwee-Extension-Chromium.zip` -> extract -> open `chrome://extensions` -> enable Developer mode -> **Load unpacked**.
+          - Firefox: download `Youwee-Extension-Firefox-signed.xpi` and open it directly to install.
+
           ## 🔐 Verify Downloads
           
           Download `SHA256SUMS.txt` and verify:
@@ -480,5 +542,7 @@ jobs:
             artifacts/**/*.exe.sig
             artifacts/**/*.app.tar.gz
             artifacts/**/*.app.tar.gz.sig
+            artifacts/**/*.xpi
+            artifacts/**/Youwee-Extension-*.zip
             latest.json
             SHA256SUMS.txt

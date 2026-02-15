@@ -1,6 +1,7 @@
 import { invoke } from '@tauri-apps/api/core';
 import { listen } from '@tauri-apps/api/event';
-import { useEffect, useState } from 'react';
+import { onOpenUrl } from '@tauri-apps/plugin-deep-link';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { DenoDialog } from '@/components/DenoDialog';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { MeteorTransition } from '@/components/effects/MeteorTransition';
@@ -18,8 +19,9 @@ import { MetadataProvider } from '@/contexts/MetadataContext';
 import { ProcessingProvider } from '@/contexts/ProcessingContext';
 import { SubtitleProvider } from '@/contexts/SubtitleContext';
 import { ThemeProvider, useTheme } from '@/contexts/ThemeContext';
-import { UniversalProvider } from '@/contexts/UniversalContext';
+import { UniversalProvider, useUniversal } from '@/contexts/UniversalContext';
 import { UpdaterProvider, useUpdater } from '@/contexts/UpdaterContext';
+import { parseExternalDeepLink, resolveExternalRouteTarget } from '@/lib/external-link';
 import {
   ChannelsPage,
   DownloadPage,
@@ -39,9 +41,13 @@ function AppContent() {
   const [showDenoDialog, setShowDenoDialog] = useState(false);
   const [ffmpegChecked, setFfmpegChecked] = useState(false);
   const updater = useUpdater();
+  const download = useDownload();
+  const universal = useUniversal();
   const { ffmpegStatus, ffmpegLoading, isAutoDownloadingDeno, denoStatus, denoSuccess } =
     useDependencies();
   const { isTransitioning, oldMode, applyPendingTheme, onTransitionComplete } = useTheme();
+  const externalDedupRef = useRef<Map<string, number>>(new Map());
+  const externalStartLockRef = useRef({ youtube: false, universal: false });
 
   // Show FFmpeg dialog on startup if not installed
   useEffect(() => {
@@ -127,6 +133,129 @@ function AppContent() {
       invoke('set_hide_dock_on_close', { hide: true }).catch(() => {});
     }
   }, []);
+
+  const handleExternalLink = useCallback(
+    async (rawLink: string) => {
+      const parsed = parseExternalDeepLink(rawLink);
+      if (!parsed) return;
+
+      const dedupeKey = `${parsed.action}:${parsed.target}:${parsed.url}:${parsed.enqueueOptions.mediaType ?? 'video'}:${parsed.enqueueOptions.quality ?? 'best'}:${parsed.enqueueOptions.audioBitrate ?? 'auto'}`;
+      const now = Date.now();
+      const lastSeen = externalDedupRef.current.get(dedupeKey);
+      if (lastSeen && now - lastSeen < 1500) {
+        return;
+      }
+      externalDedupRef.current.set(dedupeKey, now);
+
+      for (const [key, seenAt] of externalDedupRef.current.entries()) {
+        if (now - seenAt > 15000) {
+          externalDedupRef.current.delete(key);
+        }
+      }
+
+      const routeTarget = resolveExternalRouteTarget(parsed.target, parsed.url);
+      if (routeTarget === 'youtube') {
+        setCurrentPage('youtube');
+        await download.enqueueExternalUrl(parsed.url, parsed.enqueueOptions);
+
+        if (
+          parsed.action === 'download_now' &&
+          !download.isDownloading &&
+          !externalStartLockRef.current.youtube
+        ) {
+          externalStartLockRef.current.youtube = true;
+          try {
+            await download.startDownload();
+          } finally {
+            externalStartLockRef.current.youtube = false;
+          }
+        }
+        return;
+      }
+
+      setCurrentPage('universal');
+      await universal.enqueueExternalUrl(parsed.url, parsed.enqueueOptions);
+
+      if (
+        parsed.action === 'download_now' &&
+        !universal.isDownloading &&
+        !externalStartLockRef.current.universal
+      ) {
+        externalStartLockRef.current.universal = true;
+        try {
+          await universal.startDownload();
+        } finally {
+          externalStartLockRef.current.universal = false;
+        }
+      }
+    },
+    [
+      download.enqueueExternalUrl,
+      download.isDownloading,
+      download.startDownload,
+      universal.enqueueExternalUrl,
+      universal.isDownloading,
+      universal.startDownload,
+    ],
+  );
+
+  // Handle deep links delivered by Rust runtime (single-instance callback).
+  useEffect(() => {
+    const unlisten = listen<{ urls: string[] }>('external-open-url', (event) => {
+      const urls = event.payload?.urls ?? [];
+      for (const url of urls) {
+        void handleExternalLink(url);
+      }
+    });
+
+    return () => {
+      unlisten.then((fn) => fn());
+    };
+  }, [handleExternalLink]);
+
+  // Handle deep links on macOS via plugin event bridge.
+  useEffect(() => {
+    let unlisten: (() => void) | null = null;
+
+    onOpenUrl((urls) => {
+      for (const url of urls) {
+        void handleExternalLink(url);
+      }
+    })
+      .then((dispose) => {
+        unlisten = dispose;
+      })
+      .catch(() => {});
+
+    return () => {
+      if (unlisten) {
+        unlisten();
+      }
+    };
+  }, [handleExternalLink]);
+
+  // Consume pending deep links captured before frontend mount (cold start).
+  useEffect(() => {
+    let cancelled = false;
+
+    const consumePendingExternalLinks = async () => {
+      try {
+        const urls = await invoke<string[]>('consume_pending_external_links');
+        for (const url of urls) {
+          if (cancelled) break;
+          await handleExternalLink(url);
+        }
+      } catch {
+        // Ignore; app still works without extension integration.
+      }
+    };
+
+    void consumePendingExternalLinks();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [handleExternalLink]);
 
   return (
     <>

@@ -71,6 +71,18 @@ fn update_tray_schedule(app: tauri::AppHandle, status: String) {
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
+        .plugin(tauri_plugin_single_instance::init(|app, argv, _cwd| {
+            let links = commands::extract_external_links_from_argv(&argv);
+            if !links.is_empty() {
+                commands::enqueue_external_links(links.clone());
+                let _ = app.emit(
+                    "external-open-url",
+                    commands::ExternalOpenUrlEventPayload { urls: links },
+                );
+            }
+            show_main_window(app);
+        }))
+        .plugin(tauri_plugin_deep_link::init())
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_fs::init())
         .plugin(tauri_plugin_shell::init())
@@ -79,6 +91,13 @@ pub fn run() {
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_notification::init())
         .setup(|app| {
+            // Queue deep links from cold-start arguments so frontend can consume on mount.
+            let argv: Vec<String> = std::env::args().collect();
+            let initial_links = commands::extract_external_links_from_argv(&argv);
+            if !initial_links.is_empty() {
+                commands::enqueue_external_links(initial_links);
+            }
+
             // Initialize the database
             if let Err(e) = database::init_database(&app.handle()) {
                 log::error!("Failed to initialize database: {}", e);
@@ -212,6 +231,8 @@ pub fn run() {
             commands::update_channel_last_checked,
             commands::update_channel_info,
             commands::set_polling_network_config,
+            // External deep-link commands
+            commands::consume_pending_external_links,
             // System commands
             set_hide_dock_on_close,
             rebuild_tray_menu_cmd,

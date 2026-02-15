@@ -22,7 +22,8 @@
 
 ## Tính năng
 
-- **Tải Video** — YouTube, TikTok, Facebook, Instagram, và hơn 1800 trang web khác
+- **Tải Video** — YouTube, TikTok, Facebook, Instagram, Bilibili, Youku, và hơn 1800 trang web khác
+- **Tiện ích mở rộng trình duyệt** — Extension cho Chromium + Firefox với nút nổi, chọn media/chất lượng, và gửi nhanh `Download now` / `Add to queue` sang Youwee
 - **Theo dõi Kênh** — Theo dõi kênh YouTube, Bilibili & Youku, nhận thông báo video mới, tự động tải xuống, và quản lý từ system tray
 - **Tóm tắt Video bằng AI** — Tóm tắt video với Gemini, OpenAI, hoặc Ollama
 - **Xử lý Video bằng AI** — Chỉnh sửa video bằng ngôn ngữ tự nhiên (cắt, chuyển đổi, thay đổi kích thước, trích xuất âm thanh)
@@ -82,6 +83,18 @@
 
 > Xem tất cả các phiên bản tại [trang Releases](https://github.com/vanloctech/youwee/releases)
 
+### Tiện ích mở rộng trình duyệt (Chromium + Firefox)
+
+| Trình duyệt | Tải về |
+|-------------|--------|
+| **Chromium** (Chrome/Edge/Brave/Opera/Vivaldi/Arc/Coc Coc) | [Tải .zip](https://github.com/vanloctech/youwee/releases/latest/download/Youwee-Extension-Chromium.zip) |
+| **Firefox** | [Tải .xpi](https://github.com/vanloctech/youwee/releases/latest/download/Youwee-Extension-Firefox-signed.xpi) |
+
+- Gửi link từ tab hiện tại sang Youwee chỉ với 1 lần bấm (`Download now` hoặc `Add to queue`)
+- Nút nổi hỗ trợ chọn `Video/Audio` + chất lượng trên các trang được hỗ trợ
+- Popup hoạt động với mọi tab HTTP/HTTPS hợp lệ
+- Hướng dẫn: [docs/browser-extension.vi.md](browser-extension.vi.md)
+
 > ⚠️ **Lưu ý**: Ứng dụng chưa được ký bằng chứng chỉ Apple Developer. Nếu macOS chặn ứng dụng, hãy chạy:
 > ```bash
 > xattr -cr /Applications/Youwee.app
@@ -121,11 +134,7 @@ bun run tauri build
 
 ## Đóng góp
 
-Chúng tôi hoan nghênh mọi đóng góp! Xem [Hướng dẫn Đóng góp](CONTRIBUTING.vi.md) để biết chi tiết về:
-
-- Bắt đầu phát triển
-- Quy ước commit
-- Hướng dẫn pull request
+Chúng tôi hoan nghênh mọi đóng góp. Xem [Hướng dẫn Đóng góp](CONTRIBUTING.vi.md).
 
 ## Giấy phép
 
