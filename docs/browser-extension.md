@@ -26,31 +26,47 @@ The Youwee browser extension lets users send the current video page directly to 
 
 For other sites, users can still click the extension icon and send the current tab URL from popup.
 
-## Build extension packages
+## Download extension packages (recommended for users)
+
+Go to the latest release assets:
+
+- [https://github.com/vanloctech/youwee/releases/latest](https://github.com/vanloctech/youwee/releases/latest)
+
+Download files:
+
+- `Youwee-Extension-Chromium-vX.Y.Z.zip`
+- `Youwee-Extension-Firefox-signed-vX.Y.Z.xpi`
+
+### Install on Chromium browsers (Chrome/Edge/Brave)
+
+1. Extract `Youwee-Extension-Chromium-vX.Y.Z.zip`.
+2. Open extension management page (`chrome://extensions` or equivalent).
+3. Enable **Developer mode**.
+4. Click **Load unpacked**.
+5. Select extracted folder.
+
+### Install on Firefox (stable)
+
+1. Download `Youwee-Extension-Firefox-signed-vX.Y.Z.xpi`.
+2. Drag-and-drop the `.xpi` file into Firefox (or open the file directly).
+3. Confirm installation.
+
+## Build extension packages (for development)
 
 From project root:
 
 ```bash
-bun run ext:build
+bun run ext:package
 ```
 
 Output folders:
 
-- `extensions/youwee-webext/dist/chromium`
-- `extensions/youwee-webext/dist/firefox`
-
-## Install on Chromium browsers (Chrome/Edge/Brave)
-
-1. Open extension management page (`chrome://extensions` or equivalent).
-2. Enable **Developer mode**.
-3. Click **Load unpacked**.
-4. Select folder: `extensions/youwee-webext/dist/chromium`.
-
-## Install on Firefox
-
-1. Open `about:debugging#/runtime/this-firefox`.
-2. Click **Load Temporary Add-on**.
-3. Select file: `extensions/youwee-webext/dist/firefox/manifest.json`.
+- Build output:
+  - `extensions/youwee-webext/dist/chromium`
+  - `extensions/youwee-webext/dist/firefox`
+- Packaged files:
+  - `extensions/youwee-webext/dist/packages/Youwee-Extension-Chromium-vX.Y.Z.zip`
+  - `extensions/youwee-webext/dist/packages/Youwee-Extension-Firefox-unsigned-vX.Y.Z.zip`
 
 ## Usage
 

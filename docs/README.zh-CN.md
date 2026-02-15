@@ -85,13 +85,13 @@
 
 ### 浏览器扩展（Chromium + Firefox）
 
-- 构建扩展包：
+- 从 [最新 Releases](https://github.com/vanloctech/youwee/releases/latest) 下载扩展包：
+  - `Youwee-Extension-Chromium-vX.Y.Z.zip`
+  - `Youwee-Extension-Firefox-signed-vX.Y.Z.xpi`
+- 本地开发打包：
   ```bash
-  bun run ext:build
+  bun run ext:package
   ```
-- 从以下目录加载未打包扩展：
-  - `extensions/youwee-webext/dist/chromium`（Chrome/Edge/Brave）
-  - `extensions/youwee-webext/dist/firefox`（Firefox）
 - 完整说明： [docs/browser-extension.md](browser-extension.md)
 
 > ⚠️ **注意**: 该应用尚未使用 Apple 开发者证书签名。如果 macOS 阻止应用运行，请执行：

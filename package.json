@@ -11,7 +11,8 @@
     "tauri": "tauri",
     "tauri:dev": "tauri dev",
     "tauri:build": "tauri build",
-    "ext:build": "bun run extensions/youwee-webext/scripts/build.mjs"
+    "ext:build": "bun run extensions/youwee-webext/scripts/build.mjs",
+    "ext:package": "bun run ext:build && bun run extensions/youwee-webext/scripts/package.mjs"
   },
   "dependencies": {
     "@radix-ui/react-alert-dialog": "^1.1.15",

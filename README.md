@@ -92,13 +92,13 @@
 
 ### Browser Extension (Chromium + Firefox)
 
-- Build extension packages:
+- Download extension packages from [latest release assets](https://github.com/vanloctech/youwee/releases/latest):
+  - `Youwee-Extension-Chromium-vX.Y.Z.zip`
+  - `Youwee-Extension-Firefox-signed-vX.Y.Z.xpi`
+- For local development packaging:
   ```bash
-  bun run ext:build
+  bun run ext:package
   ```
-- Load unpacked extension from:
-  - `extensions/youwee-webext/dist/chromium` (Chrome/Edge/Brave)
-  - `extensions/youwee-webext/dist/firefox` (Firefox)
 - Full guide: [docs/browser-extension.md](docs/browser-extension.md)
 
 ### Build from Source

@@ -85,13 +85,13 @@
 
 ### Tiện ích mở rộng trình duyệt (Chromium + Firefox)
 
-- Build gói extension:
+- Tải gói extension từ [releases mới nhất](https://github.com/vanloctech/youwee/releases/latest):
+  - `Youwee-Extension-Chromium-vX.Y.Z.zip`
+  - `Youwee-Extension-Firefox-signed-vX.Y.Z.xpi`
+- Đóng gói local cho mục đích development:
   ```bash
-  bun run ext:build
+  bun run ext:package
   ```
-- Nạp extension unpacked từ:
-  - `extensions/youwee-webext/dist/chromium` (Chrome/Edge/Brave)
-  - `extensions/youwee-webext/dist/firefox` (Firefox)
 - Hướng dẫn chi tiết: [docs/browser-extension.md](browser-extension.md)
 
 > ⚠️ **Lưu ý**: Ứng dụng chưa được ký bằng chứng chỉ Apple Developer. Nếu macOS chặn ứng dụng, hãy chạy:
