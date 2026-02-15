@@ -603,6 +603,9 @@ export function DownloadProvider({ children }: { children: ReactNode }) {
         subtitleLangs: [...currentSettings.subtitleLangs],
         subtitleEmbed: currentSettings.subtitleEmbed,
         subtitleFormat: currentSettings.subtitleFormat,
+        autoRetryEnabled: currentSettings.autoRetryEnabled,
+        autoRetryMaxAttempts: currentSettings.autoRetryMaxAttempts,
+        autoRetryDelaySeconds: currentSettings.autoRetryDelaySeconds,
       };
 
       const newItem: DownloadItem = {

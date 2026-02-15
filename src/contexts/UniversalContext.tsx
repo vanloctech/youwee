@@ -518,6 +518,9 @@ export function UniversalProvider({ children }: { children: ReactNode }) {
         format: mediaType === 'audio' ? 'mp3' : 'mp4',
         outputPath: currentSettings.outputPath,
         audioBitrate: mediaType === 'audio' ? audioBitrate : currentSettings.audioBitrate,
+        autoRetryEnabled: currentSettings.autoRetryEnabled,
+        autoRetryMaxAttempts: currentSettings.autoRetryMaxAttempts,
+        autoRetryDelaySeconds: currentSettings.autoRetryDelaySeconds,
       };
 
       const newItem: DownloadItem = {
