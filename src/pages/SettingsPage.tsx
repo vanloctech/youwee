@@ -117,44 +117,46 @@ export function SettingsPage() {
 
         {/* Content Area */}
         <ScrollArea className="flex-1">
-          <div ref={contentRef} className="p-6 max-w-3xl">
-            {/* Animated section transitions */}
-            <div
-              className={cn(
-                'transition-all duration-300 ease-out',
-                'animate-in fade-in-0 slide-in-from-right-4',
-              )}
-              key={activeSection}
-            >
-              {activeSection === 'general' && <GeneralSection highlightId={highlightId} />}
+          <div className="w-full px-4 sm:px-6 lg:px-8">
+            <div ref={contentRef} className="mx-auto w-full max-w-6xl py-6">
+              {/* Animated section transitions */}
+              <div
+                className={cn(
+                  'transition-all duration-300 ease-out',
+                  'animate-in fade-in-0 slide-in-from-right-4',
+                )}
+                key={activeSection}
+              >
+                {activeSection === 'general' && <GeneralSection highlightId={highlightId} />}
 
-              {activeSection === 'dependencies' && (
-                <DependenciesSection highlightId={highlightId} />
-              )}
+                {activeSection === 'dependencies' && (
+                  <DependenciesSection highlightId={highlightId} />
+                )}
 
-              {activeSection === 'download' && <DownloadSection highlightId={highlightId} />}
+                {activeSection === 'download' && <DownloadSection highlightId={highlightId} />}
 
-              {activeSection === 'ai' && (
-                <AISettingsContent
-                  highlightId={highlightId}
-                  showApiKey={showApiKey}
-                  setShowApiKey={setShowApiKey}
-                />
-              )}
+                {activeSection === 'ai' && (
+                  <AISettingsContent
+                    highlightId={highlightId}
+                    showApiKey={showApiKey}
+                    setShowApiKey={setShowApiKey}
+                  />
+                )}
 
-              {activeSection === 'network' && <NetworkSection highlightId={highlightId} />}
+                {activeSection === 'network' && <NetworkSection highlightId={highlightId} />}
 
-              {activeSection === 'about' && (
-                <AboutSettingsContent
-                  appVersion={appVersion}
-                  updater={updater}
-                  isAppChecking={isAppChecking}
-                  isAppUpdateAvailable={isAppUpdateAvailable}
-                  isAppUpToDate={isAppUpToDate}
-                  isAppError={isAppError}
-                  highlightId={highlightId}
-                />
-              )}
+                {activeSection === 'about' && (
+                  <AboutSettingsContent
+                    appVersion={appVersion}
+                    updater={updater}
+                    isAppChecking={isAppChecking}
+                    isAppUpdateAvailable={isAppUpdateAvailable}
+                    isAppUpToDate={isAppUpToDate}
+                    isAppError={isAppError}
+                    highlightId={highlightId}
+                  />
+                )}
+              </div>
             </div>
           </div>
         </ScrollArea>
@@ -223,7 +225,7 @@ function AISettingsContent({
                   });
                 }}
               >
-                <SelectTrigger className="w-[160px] h-9">
+                <SelectTrigger className="h-9 w-full sm:w-[160px]">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -247,7 +249,7 @@ function AISettingsContent({
                 )}
               >
                 <p className="text-sm font-medium">{t('ai.apiKey')}</p>
-                <div className="flex items-center gap-2">
+                <div className="flex flex-col items-stretch gap-2 sm:flex-row sm:items-center">
                   <div className="relative flex-1">
                     <Input
                       type={showApiKey ? 'text' : 'password'}
@@ -279,6 +281,7 @@ function AISettingsContent({
                     variant="outline"
                     onClick={ai.testConnection}
                     disabled={ai.isTesting || !ai.config.api_key}
+                    className="w-full sm:w-auto"
                   >
                     {ai.isTesting ? <Loader2 className="w-4 h-4 animate-spin" /> : t('ai.test')}
                   </Button>
@@ -338,7 +341,7 @@ function AISettingsContent({
             {ai.config.provider === 'ollama' && (
               <div className="space-y-2 py-2">
                 <p className="text-sm font-medium">{t('ai.ollamaUrl')}</p>
-                <div className="flex items-center gap-2">
+                <div className="flex flex-col items-stretch gap-2 sm:flex-row sm:items-center">
                   <Input
                     type="text"
                     value={ai.config.ollama_url || 'http://localhost:11434'}
@@ -351,6 +354,7 @@ function AISettingsContent({
                     variant="outline"
                     onClick={ai.testConnection}
                     disabled={ai.isTesting}
+                    className="w-full sm:w-auto"
                   >
                     {ai.isTesting ? <Loader2 className="w-4 h-4 animate-spin" /> : t('ai.test')}
                   </Button>
@@ -381,19 +385,19 @@ function AISettingsContent({
               description={t('ai.modelDesc')}
               highlight={highlightId === 'ai-model'}
             >
-              <div className="flex gap-2">
+              <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row">
                 <Input
                   type="text"
                   value={ai.config.model}
                   onChange={(e) => ai.updateConfig({ model: e.target.value })}
                   placeholder={t('ai.modelPlaceholder')}
-                  className="h-9 w-52"
+                  className="h-9 w-full sm:w-52"
                 />
                 <Select
                   value={ai.models.some((m) => m.value === ai.config.model) ? ai.config.model : ''}
                   onValueChange={(v) => ai.updateConfig({ model: v })}
                 >
-                  <SelectTrigger className="w-[160px] h-9">
+                  <SelectTrigger className="h-9 w-full sm:w-[160px]">
                     <SelectValue placeholder={t('ai.quickSelect')} />
                   </SelectTrigger>
                   <SelectContent>
@@ -418,7 +422,7 @@ function AISettingsContent({
                 value={ai.config.summary_style}
                 onValueChange={(v) => ai.updateConfig({ summary_style: v as SummaryStyle })}
               >
-                <SelectTrigger className="w-[220px] h-9">
+                <SelectTrigger className="h-9 w-full sm:w-[220px]">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -440,7 +444,7 @@ function AISettingsContent({
                 value={ai.config.summary_language}
                 onValueChange={(v) => ai.updateConfig({ summary_language: v })}
               >
-                <SelectTrigger className="w-[200px] h-9">
+                <SelectTrigger className="h-9 w-full sm:w-[200px]">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -465,7 +469,7 @@ function AISettingsContent({
                 value={String(ai.config.timeout_seconds || 120)}
                 onValueChange={(v) => ai.updateConfig({ timeout_seconds: Number.parseInt(v, 10) })}
               >
-                <SelectTrigger className="w-[120px] h-9">
+                <SelectTrigger className="h-9 w-full sm:w-[120px]">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>

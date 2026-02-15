@@ -70,6 +70,7 @@ interface SettingsRowProps {
   children: ReactNode;
   className?: string;
   highlight?: boolean;
+  controlClassName?: string;
 }
 
 export function SettingsRow({
@@ -79,12 +80,13 @@ export function SettingsRow({
   children,
   className,
   highlight,
+  controlClassName,
 }: SettingsRowProps) {
   return (
     <div
       id={id}
       className={cn(
-        'flex items-center justify-between py-2 transition-all duration-500 rounded-lg px-2 -mx-2',
+        'flex flex-col items-start gap-3 py-2 transition-all duration-500 rounded-lg px-2 -mx-2 md:flex-row md:items-center md:justify-between',
         highlight && 'bg-primary/10 ring-1 ring-primary/30',
         className,
       )}
@@ -93,7 +95,7 @@ export function SettingsRow({
         <p className="text-sm font-medium">{label}</p>
         {description && <p className="text-xs text-muted-foreground">{description}</p>}
       </div>
-      {children}
+      <div className={cn('w-full md:w-auto md:shrink-0', controlClassName)}>{children}</div>
     </div>
   );
 }

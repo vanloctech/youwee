@@ -114,7 +114,7 @@ export function NetworkSection({ highlightId }: NetworkSectionProps) {
 
           {/* Cookie Mode Selection */}
           <div className="mt-3 pt-3 border-t border-border/50">
-            <div className="flex items-center justify-between">
+            <div className="flex flex-col items-start gap-2 sm:flex-row sm:items-center sm:justify-between">
               <div>
                 <p className="text-xs font-medium">{t('network.cookieSource')}</p>
                 <p className="text-xs text-muted-foreground">{t('network.cookieSourceDesc')}</p>
@@ -123,7 +123,7 @@ export function NetworkSection({ highlightId }: NetworkSectionProps) {
                 value={cookieSettings.mode}
                 onValueChange={(v) => updateCookieSettings({ mode: v as CookieMode })}
               >
-                <SelectTrigger className="w-[140px] h-8">
+                <SelectTrigger className="h-8 w-full sm:w-[140px]">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -138,7 +138,7 @@ export function NetworkSection({ highlightId }: NetworkSectionProps) {
           {/* Browser Selection */}
           {cookieSettings.mode === 'browser' && (
             <div className="mt-3 pt-3 border-t border-border/50 space-y-3">
-              <div className="flex items-center justify-between">
+              <div className="flex flex-col items-start gap-2 sm:flex-row sm:items-center sm:justify-between">
                 <div>
                   <p className="text-xs font-medium">{t('network.browser')}</p>
                   <p className="text-xs text-muted-foreground">
@@ -152,7 +152,7 @@ export function NetworkSection({ highlightId }: NetworkSectionProps) {
                   onValueChange={(v) => updateCookieSettings({ browser: v as BrowserType })}
                   disabled={isDetectingBrowsers}
                 >
-                  <SelectTrigger className="w-[160px] h-8">
+                  <SelectTrigger className="h-8 w-full sm:w-[160px]">
                     <SelectValue placeholder={t('network.selectBrowser')} />
                   </SelectTrigger>
                   <SelectContent>
@@ -176,7 +176,7 @@ export function NetworkSection({ highlightId }: NetworkSectionProps) {
 
               {/* Browser Profile */}
               {cookieSettings.browser !== 'safari' && (
-                <div className="flex items-center justify-between">
+                <div className="flex flex-col items-start gap-2 sm:flex-row sm:items-center sm:justify-between">
                   <div>
                     <p className="text-xs font-medium">{t('network.profile')}</p>
                     <p className="text-xs text-muted-foreground">
@@ -200,7 +200,7 @@ export function NetworkSection({ highlightId }: NetworkSectionProps) {
                       }}
                       disabled={isLoadingProfiles}
                     >
-                      <SelectTrigger className="w-[200px] h-8">
+                      <SelectTrigger className="h-8 w-full sm:w-[200px]">
                         <SelectValue placeholder={t('network.selectProfile')} />
                       </SelectTrigger>
                       <SelectContent>
@@ -217,13 +217,13 @@ export function NetworkSection({ highlightId }: NetworkSectionProps) {
                       </SelectContent>
                     </Select>
                   ) : (
-                    <div className="flex items-center gap-1">
+                    <div className="flex w-full items-center gap-1 sm:w-auto">
                       <Input
                         type="text"
                         value={cookieSettings.browserProfile || ''}
                         onChange={(e) => updateCookieSettings({ browserProfile: e.target.value })}
                         placeholder={t('network.profileName')}
-                        className="w-[160px] h-8 text-xs"
+                        className="h-8 w-full text-xs sm:w-[160px]"
                       />
                       {browserProfiles.length > 0 && (
                         <Button
@@ -295,7 +295,7 @@ export function NetworkSection({ highlightId }: NetworkSectionProps) {
           {/* File Selection */}
           {cookieSettings.mode === 'file' && (
             <div className="mt-3 pt-3 border-t border-border/50 space-y-3">
-              <div className="flex items-center justify-between gap-2">
+              <div className="flex flex-col items-stretch gap-2 sm:flex-row sm:items-center sm:justify-between">
                 <div className="flex-1 min-w-0">
                   <p className="text-xs font-medium">{t('network.cookieFile')}</p>
                   <p className="text-xs text-muted-foreground truncate">
@@ -319,7 +319,7 @@ export function NetworkSection({ highlightId }: NetworkSectionProps) {
                       console.error('Failed to select cookie file:', error);
                     }
                   }}
-                  className="gap-1.5"
+                  className="w-full gap-1.5 sm:w-auto"
                 >
                   <FolderOpen className="w-3.5 h-3.5" />
                   {t('network.browse')}
@@ -356,7 +356,7 @@ export function NetworkSection({ highlightId }: NetworkSectionProps) {
 
           {/* Proxy Mode Selection */}
           <div className="mt-3 pt-3 border-t border-border/50">
-            <div className="flex items-center justify-between">
+            <div className="flex flex-col items-start gap-2 sm:flex-row sm:items-center sm:justify-between">
               <div>
                 <p className="text-xs font-medium">{t('network.proxyType')}</p>
                 <p className="text-xs text-muted-foreground">{t('network.proxyTypeDesc')}</p>
@@ -365,7 +365,7 @@ export function NetworkSection({ highlightId }: NetworkSectionProps) {
                 value={proxySettings.mode}
                 onValueChange={(v) => updateProxySettings({ mode: v as ProxyMode })}
               >
-                <SelectTrigger className="w-[140px] h-8">
+                <SelectTrigger className="h-8 w-full sm:w-[140px]">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -381,7 +381,7 @@ export function NetworkSection({ highlightId }: NetworkSectionProps) {
           {proxySettings.mode !== 'off' && (
             <div className="mt-3 pt-3 border-t border-border/50 space-y-3">
               {/* Host and Port */}
-              <div className="flex items-center gap-2">
+              <div className="flex flex-col items-stretch gap-2 sm:flex-row sm:items-end">
                 <div className="flex-1">
                   <p className="text-xs font-medium mb-1">{t('network.host')}</p>
                   <Input
@@ -392,7 +392,7 @@ export function NetworkSection({ highlightId }: NetworkSectionProps) {
                     className="h-8 text-xs"
                   />
                 </div>
-                <div className="w-24">
+                <div className="w-full sm:w-24">
                   <p className="text-xs font-medium mb-1">{t('network.port')}</p>
                   <Input
                     type="number"
@@ -409,7 +409,7 @@ export function NetworkSection({ highlightId }: NetworkSectionProps) {
               </div>
 
               {/* Username and Password */}
-              <div className="flex items-center gap-2">
+              <div className="flex flex-col items-stretch gap-2 sm:flex-row sm:items-end">
                 <div className="flex-1">
                   <p className="text-xs font-medium mb-1">{t('network.usernameOptional')}</p>
                   <Input

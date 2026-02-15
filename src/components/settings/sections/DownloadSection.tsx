@@ -191,9 +191,9 @@ export function DownloadSection({ highlightId }: DownloadSectionProps) {
           description={t('download.downloadSpeedDesc')}
           highlight={highlightId === 'speed-limit'}
         >
-          <div className="flex items-center gap-3">
+          <div className="flex w-full flex-wrap items-center gap-3">
             {/* Radio: Unlimited / Limited */}
-            <div className="flex items-center gap-1 p-1 rounded-xl bg-muted/50">
+            <div className="flex items-center gap-1 rounded-xl bg-muted/50 p-1">
               <button
                 type="button"
                 onClick={() =>
@@ -226,7 +226,7 @@ export function DownloadSection({ highlightId }: DownloadSectionProps) {
 
             {/* Input + Unit dropdown (only when limited) */}
             {settings.speedLimitEnabled && (
-              <div className="flex items-center gap-1.5">
+              <div className="flex w-full flex-wrap items-center gap-1.5 sm:w-auto">
                 <Input
                   type="number"
                   min={1}
@@ -236,7 +236,7 @@ export function DownloadSection({ highlightId }: DownloadSectionProps) {
                     const value = Math.max(1, Math.min(9999, Number(e.target.value) || 1));
                     updateSpeedLimit(true, value, settings.speedLimitUnit);
                   }}
-                  className="w-20 h-9 text-center"
+                  className="h-9 w-full text-center sm:w-20"
                 />
                 <Select
                   value={settings.speedLimitUnit}
@@ -244,7 +244,7 @@ export function DownloadSection({ highlightId }: DownloadSectionProps) {
                     updateSpeedLimit(true, settings.speedLimitValue, v)
                   }
                 >
-                  <SelectTrigger className="w-[85px] h-9">
+                  <SelectTrigger className="h-9 w-full sm:w-[85px]">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
