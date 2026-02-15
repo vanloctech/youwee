@@ -117,6 +117,7 @@ export function DownloadPage({ onNavigateToSettings }: DownloadPageProps) {
             onAddUrls={addFromText}
             onImportFile={importFromFile}
             onImportClipboard={importFromClipboard}
+            onGoToSettings={onNavigateToSettings}
           />
 
           {/* Settings Bar */}

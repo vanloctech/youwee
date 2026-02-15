@@ -16,7 +16,16 @@
     "toAdd": "添加",
     "urlCount": "{{count}} 个链接",
     "urlCount_plural": "{{count}} 个链接",
-    "dropHint": "拖放链接或 .txt 文件到此处"
+    "dropHint": "拖放链接或 .txt 文件到此处",
+    "guide": "说明",
+    "guideTitle": "下载说明",
+    "guideDesc": "快速了解高画质下载与音视频合并的关键设置。",
+    "guideHighResTitle": "2K/4K/8K 与 H.264",
+    "guideHighResText": "很多来源的 H.264 最高只有 Full HD。需要 2K/4K/8K 时，建议使用 Auto（或可用时选择 VP9/AV1）。",
+    "guideFfmpegTitle": "下载后视频和音频分成两个文件",
+    "guideFfmpegText": "请在 设置 > Dependencies 安装 FFmpeg，Youwee 才能自动把视频和音频合并为一个输出文件。",
+    "guideOpenSettings": "打开设置",
+    "guideGotIt": "知道了"
   },
   "settings": {
     "video": "视频",

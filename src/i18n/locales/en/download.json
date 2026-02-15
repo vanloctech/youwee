@@ -16,7 +16,16 @@
     "toAdd": "to add",
     "urlCount": "{{count}} URL",
     "urlCount_plural": "{{count}} URLs",
-    "dropHint": "Drop URLs or .txt file here"
+    "dropHint": "Drop URLs or .txt file here",
+    "guide": "Guide",
+    "guideTitle": "Download Guide",
+    "guideDesc": "Quick tips for high-quality downloads and merged audio/video output.",
+    "guideHighResTitle": "2K/4K/8K with H.264",
+    "guideHighResText": "Many sources only provide H.264 up to Full HD. For 2K/4K/8K, use Auto (or VP9/AV1 when available) to get higher resolution.",
+    "guideFfmpegTitle": "Video and audio downloaded separately",
+    "guideFfmpegText": "Install FFmpeg in Settings > Dependencies so Youwee can merge video and audio into one output file.",
+    "guideOpenSettings": "Open Settings",
+    "guideGotIt": "Got it"
   },
   "settings": {
     "video": "Video",

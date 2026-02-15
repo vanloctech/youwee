@@ -1,7 +1,24 @@
-import { ClipboardPaste, FileText, Link, Link2, List, Loader2, Plus } from 'lucide-react';
+import {
+  CircleHelp,
+  ClipboardPaste,
+  FileText,
+  Link,
+  Link2,
+  List,
+  Loader2,
+  Plus,
+} from 'lucide-react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { cn } from '@/lib/utils';
@@ -13,6 +30,7 @@ interface UrlInputProps {
   onAddUrls: (text: string) => Promise<number>;
   onImportFile: () => Promise<number>;
   onImportClipboard: () => Promise<number>;
+  onGoToSettings?: () => void;
 }
 
 function extractFirstUrl(text: string): string | null {
@@ -55,6 +73,7 @@ export function UrlInput({
   onAddUrls,
   onImportFile,
   onImportClipboard,
+  onGoToSettings,
 }: UrlInputProps) {
   const { t } = useTranslation('download');
   const [value, setValue] = useState('');
@@ -64,6 +83,7 @@ export function UrlInput({
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [isDragOver, setIsDragOver] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false);
+  const [showGuideDialog, setShowGuideDialog] = useState(false);
   const debounceRef = useRef<number | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -224,7 +244,7 @@ export function UrlInput({
       aria-label="URL drop zone"
     >
       {/* Mode Toggle - Segmented Control */}
-      <div className="flex items-center gap-2">
+      <div className="flex items-center justify-between gap-2">
         <div className="inline-flex items-center rounded-lg bg-muted/50 p-1">
           <button
             type="button"
@@ -258,9 +278,17 @@ export function UrlInput({
           </button>
         </div>
 
-        <span className="text-xs text-muted-foreground hidden sm:inline">
-          {isExpanded ? t('urlInput.multipleHint') : t('urlInput.singleHint')}
-        </span>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setShowGuideDialog(true)}
+            className="inline-flex items-center gap-1.5 h-8 px-2.5 rounded-md border border-dashed border-border/70 text-xs font-medium text-muted-foreground hover:text-foreground hover:border-primary/50 hover:bg-primary/5 transition-colors"
+            title={t('urlInput.guide')}
+          >
+            <CircleHelp className="w-3.5 h-3.5" />
+            <span>{t('urlInput.guide')}</span>
+          </button>
+        </div>
       </div>
 
       {/* Main Input Area */}
@@ -404,6 +432,40 @@ export function UrlInput({
           <span className="ml-1">{t('urlInput.toAdd')}</span>
         </div>
       </div>
+
+      <Dialog open={showGuideDialog} onOpenChange={setShowGuideDialog}>
+        <DialogContent className="sm:max-w-[560px]">
+          <DialogHeader>
+            <DialogTitle>{t('urlInput.guideTitle')}</DialogTitle>
+            <DialogDescription>{t('urlInput.guideDesc')}</DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-3">
+            <div className="rounded-lg bg-muted/50 border border-border/60 px-3 py-2.5">
+              <p className="text-sm font-medium">{t('urlInput.guideHighResTitle')}</p>
+              <p className="text-sm text-muted-foreground mt-1">{t('urlInput.guideHighResText')}</p>
+            </div>
+            <div className="rounded-lg bg-muted/50 border border-border/60 px-3 py-2.5">
+              <p className="text-sm font-medium">{t('urlInput.guideFfmpegTitle')}</p>
+              <p className="text-sm text-muted-foreground mt-1">{t('urlInput.guideFfmpegText')}</p>
+            </div>
+          </div>
+
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button variant="outline" onClick={() => setShowGuideDialog(false)}>
+              {t('urlInput.guideGotIt')}
+            </Button>
+            <Button
+              onClick={() => {
+                setShowGuideDialog(false);
+                onGoToSettings?.();
+              }}
+            >
+              {t('urlInput.guideOpenSettings')}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Drag Drop Hint */}
       {isDragOver && (

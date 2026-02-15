@@ -16,7 +16,16 @@
     "toAdd": "để thêm",
     "urlCount": "{{count}} URL",
     "urlCount_plural": "{{count}} URL",
-    "dropHint": "Thả URL hoặc file .txt vào đây"
+    "dropHint": "Thả URL hoặc file .txt vào đây",
+    "guide": "Hướng dẫn",
+    "guideTitle": "Hướng dẫn tải",
+    "guideDesc": "Mẹo nhanh để tải đúng chất lượng cao và gộp audio/video vào một file.",
+    "guideHighResTitle": "2K/4K/8K với H.264",
+    "guideHighResText": "Nhiều nguồn chỉ có H.264 đến Full HD. Nếu muốn 2K/4K/8K, nên dùng Auto (hoặc VP9/AV1 khi có).",
+    "guideFfmpegTitle": "Bị tách riêng file video và audio",
+    "guideFfmpegText": "Hãy cài FFmpeg trong Cài đặt > Dependencies để Youwee tự gộp video và audio thành một file output.",
+    "guideOpenSettings": "Mở Cài đặt",
+    "guideGotIt": "Đã hiểu"
   },
   "settings": {
     "video": "Video",
