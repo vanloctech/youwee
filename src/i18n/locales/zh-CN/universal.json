@@ -14,7 +14,15 @@
     "toAdd": "添加",
     "urlCount": "{{count}} 个链接",
     "urlCount_plural": "{{count}} 个链接",
-    "dropHint": "拖放链接或 .txt 文件到此处"
+    "dropHint": "拖放链接或 .txt 文件到此处",
+    "detectedMultiple": "已识别 {{count}} 个链接"
+  },
+  "page": {
+    "quickSettings": "快捷设置",
+    "showSettings": "展开",
+    "hideSettings": "收起",
+    "on": "开启",
+    "off": "关闭"
   },
   "settings": {
     "video": "视频",

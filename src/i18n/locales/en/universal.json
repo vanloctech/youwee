@@ -14,7 +14,15 @@
     "toAdd": "to add",
     "urlCount": "{{count}} URL",
     "urlCount_plural": "{{count}} URLs",
-    "dropHint": "Drop URLs or .txt file here"
+    "dropHint": "Drop URLs or .txt file here",
+    "detectedMultiple": "{{count}} URLs detected"
+  },
+  "page": {
+    "quickSettings": "Quick settings",
+    "showSettings": "Show",
+    "hideSettings": "Hide",
+    "on": "ON",
+    "off": "OFF"
   },
   "settings": {
     "video": "Video",

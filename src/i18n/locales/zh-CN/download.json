@@ -25,7 +25,18 @@
     "guideFfmpegTitle": "下载后视频和音频分成两个文件",
     "guideFfmpegText": "请在 设置 > Dependencies 安装 FFmpeg，Youwee 才能自动把视频和音频合并为一个输出文件。",
     "guideOpenSettings": "打开设置",
-    "guideGotIt": "知道了"
+    "guideGotIt": "知道了",
+    "detectedMultiple": "已识别 {{count}} 个链接",
+    "detectedSingle": "已准备好单个链接",
+    "readyToAdd": "确认后加入队列",
+    "clearInput": "清空"
+  },
+  "page": {
+    "quickSettings": "快捷设置",
+    "showSettings": "展开",
+    "hideSettings": "收起",
+    "on": "开启",
+    "off": "关闭"
   },
   "settings": {
     "video": "视频",

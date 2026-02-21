@@ -9,8 +9,14 @@ interface MainLayoutProps {
 }
 
 export function MainLayout({ children, currentPage, onPageChange }: MainLayoutProps) {
+  const isMacOS = typeof navigator !== 'undefined' && navigator.platform.includes('Mac');
+
   return (
     <div className="h-screen flex overflow-hidden bg-background relative">
+      {isMacOS && (
+        <div data-tauri-drag-region className="absolute top-0 left-0 right-0 z-30 h-10" />
+      )}
+
       {/* Animated gradient background */}
       <div
         className="fixed inset-0 pointer-events-none z-0"
@@ -24,7 +30,10 @@ export function MainLayout({ children, currentPage, onPageChange }: MainLayoutPr
       />
 
       {/* Main container - unified floating panel */}
-      <div className="relative z-10 flex-1 flex min-w-0 p-3 gap-3">
+      <div
+        className="relative z-10 flex-1 flex min-w-0 p-3 gap-3"
+        style={isMacOS ? { paddingTop: '2.6rem' } : undefined}
+      >
         {/* Sidebar */}
         <Sidebar currentPage={currentPage} onPageChange={onPageChange} />
 

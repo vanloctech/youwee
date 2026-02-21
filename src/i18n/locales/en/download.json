@@ -25,7 +25,18 @@
     "guideFfmpegTitle": "Video and audio downloaded separately",
     "guideFfmpegText": "Install FFmpeg in Settings > Dependencies so Youwee can merge video and audio into one output file.",
     "guideOpenSettings": "Open Settings",
-    "guideGotIt": "Got it"
+    "guideGotIt": "Got it",
+    "detectedMultiple": "{{count}} URLs detected",
+    "detectedSingle": "Single URL ready",
+    "readyToAdd": "Review and add to queue",
+    "clearInput": "Clear"
+  },
+  "page": {
+    "quickSettings": "Quick settings",
+    "showSettings": "Show",
+    "hideSettings": "Hide",
+    "on": "ON",
+    "off": "OFF"
   },
   "settings": {
     "video": "Video",
@@ -36,7 +47,7 @@
     "more": "More",
     "subtitles": "Subtitle Settings",
     "subtitleMode": "Download Mode",
-    "subtitleOff": "Off",
+    "subtitleOff": "OFF",
     "subtitleAuto": "Auto",
     "subtitleManual": "Manual",
     "noSubtitles": "No subtitles",

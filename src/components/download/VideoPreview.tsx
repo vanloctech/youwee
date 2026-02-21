@@ -1,5 +1,15 @@
 import { invoke } from '@tauri-apps/api/core';
-import { AlertCircle, Calendar, Eye, ListVideo, Loader2, User, X } from 'lucide-react';
+import {
+  AlertCircle,
+  Calendar,
+  ChevronDown,
+  ChevronUp,
+  Eye,
+  ListVideo,
+  Loader2,
+  User,
+  X,
+} from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -145,6 +155,11 @@ export function VideoPreview({ url, onClose, onFormatSelect, className }: VideoP
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [data, setData] = useState<VideoInfoResponse | null>(null);
+  const [loadingStage, setLoadingStage] = useState<'validating' | 'fetching' | 'parsing'>(
+    'validating',
+  );
+  const [showDetails, setShowDetails] = useState(false);
+  const [showFormats, setShowFormats] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -152,6 +167,10 @@ export function VideoPreview({ url, onClose, onFormatSelect, className }: VideoP
     const fetchInfo = async () => {
       setLoading(true);
       setError(null);
+      setLoadingStage('validating');
+
+      const stage1Timer = window.setTimeout(() => setLoadingStage('fetching'), 400);
+      const stage2Timer = window.setTimeout(() => setLoadingStage('parsing'), 1200);
 
       try {
         const cookieSettings = loadCookieSettings();
@@ -175,6 +194,8 @@ export function VideoPreview({ url, onClose, onFormatSelect, className }: VideoP
         if (!cancelled) {
           setLoading(false);
         }
+        window.clearTimeout(stage1Timer);
+        window.clearTimeout(stage2Timer);
       }
     };
 
@@ -187,10 +208,27 @@ export function VideoPreview({ url, onClose, onFormatSelect, className }: VideoP
 
   if (loading) {
     return (
-      <div className={cn('rounded-xl border bg-card/50 backdrop-blur-sm p-6', className)}>
-        <div className="flex items-center justify-center gap-3 text-muted-foreground">
-          <Loader2 className="w-5 h-5 animate-spin" />
-          <span className="text-sm">Fetching video info...</span>
+      <div className={cn('rounded-xl border bg-card/50 backdrop-blur-sm p-4 sm:p-5', className)}>
+        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+          <Loader2 className="w-4 h-4 animate-spin" />
+          <span>
+            {loadingStage === 'validating' && 'Validating URL...'}
+            {loadingStage === 'fetching' && 'Fetching metadata...'}
+            {loadingStage === 'parsing' && 'Preparing preview...'}
+          </span>
+        </div>
+
+        <div className="mt-3 flex gap-3">
+          <div className="h-24 w-40 animate-pulse rounded-lg bg-muted/60" />
+          <div className="min-w-0 flex-1 space-y-2.5">
+            <div className="h-3.5 w-4/5 animate-pulse rounded bg-muted/60" />
+            <div className="h-3.5 w-3/5 animate-pulse rounded bg-muted/50" />
+            <div className="h-3 w-2/5 animate-pulse rounded bg-muted/50" />
+            <div className="flex gap-1.5">
+              <div className="h-5 w-16 animate-pulse rounded bg-muted/50" />
+              <div className="h-5 w-20 animate-pulse rounded bg-muted/50" />
+            </div>
+          </div>
         </div>
       </div>
     );
@@ -231,29 +269,27 @@ export function VideoPreview({ url, onClose, onFormatSelect, className }: VideoP
     .sort((a, b) => (b.tbr || 0) - (a.tbr || 0));
 
   return (
-    <div className={cn('rounded-xl border bg-card/50 backdrop-blur-sm overflow-hidden', className)}>
-      <div className="flex gap-4 p-4">
-        {/* Thumbnail */}
+    <div className={cn('overflow-hidden rounded-xl border bg-card/50 backdrop-blur-sm', className)}>
+      <div className="flex gap-3 p-3.5 sm:gap-4 sm:p-4">
         {info.thumbnail && (
-          <div className="relative flex-shrink-0 w-40 h-24 rounded-lg overflow-hidden bg-muted">
+          <div className="relative h-24 w-40 flex-shrink-0 overflow-hidden rounded-lg bg-muted">
             <img
               src={info.thumbnail}
               alt={info.title}
-              className="w-full h-full object-cover"
+              className="h-full w-full object-cover"
               referrerPolicy="no-referrer"
             />
             {info.duration && (
-              <div className="absolute bottom-1 right-1 px-1.5 py-0.5 rounded bg-black/80 text-white text-xs font-medium">
+              <div className="absolute bottom-1 right-1 rounded bg-black/80 px-1.5 py-0.5 text-xs font-medium text-white">
                 {formatDuration(info.duration)}
               </div>
             )}
           </div>
         )}
 
-        {/* Info */}
-        <div className="flex-1 min-w-0 space-y-2">
+        <div className="min-w-0 flex-1">
           <div className="flex items-start justify-between gap-2">
-            <h3 className="text-sm font-medium leading-tight line-clamp-2">{info.title}</h3>
+            <h3 className="line-clamp-2 text-sm font-medium leading-tight">{info.title}</h3>
             {onClose && (
               <Button
                 variant="ghost"
@@ -261,64 +297,101 @@ export function VideoPreview({ url, onClose, onFormatSelect, className }: VideoP
                 className="h-7 w-7 flex-shrink-0"
                 onClick={onClose}
               >
-                <X className="w-4 h-4" />
+                <X className="h-4 w-4" />
               </Button>
             )}
           </div>
 
-          <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+          <div className="mt-2 flex flex-wrap items-center gap-1.5 text-xs text-muted-foreground">
             {(info.channel || info.uploader) && (
-              <span className="flex items-center gap-1">
-                <User className="w-3 h-3" />
+              <span className="inline-flex items-center gap-1 rounded bg-muted/60 px-1.5 py-0.5">
+                <User className="h-3 w-3" />
                 {info.channel || info.uploader}
               </span>
             )}
             {info.view_count && (
-              <span className="flex items-center gap-1">
-                <Eye className="w-3 h-3" />
+              <span className="inline-flex items-center gap-1 rounded bg-muted/60 px-1.5 py-0.5">
+                <Eye className="h-3 w-3" />
                 {formatViewCount(info.view_count)} views
               </span>
             )}
-            {info.upload_date && (
-              <span className="flex items-center gap-1">
-                <Calendar className="w-3 h-3" />
-                {formatDate(info.upload_date)}
-              </span>
+            {videoFormats.length > 0 && (
+              <Badge variant="secondary" className="h-5 rounded px-1.5 text-[11px]">
+                Up to {videoFormats[0].height}p
+              </Badge>
             )}
-          </div>
-
-          <div className="flex items-center gap-2">
             {info.is_playlist && info.playlist_count && (
-              <Badge variant="outline" className="bg-primary/10 text-primary border-primary/20">
-                <ListVideo className="w-3 h-3 mr-1" />
+              <Badge
+                variant="outline"
+                className="h-5 rounded border-primary/20 bg-primary/10 px-1.5 text-[11px] text-primary"
+              >
+                <ListVideo className="mr-1 h-3 w-3" />
                 {info.playlist_count} videos
               </Badge>
             )}
-            {videoFormats.length > 0 && (
-              <Badge variant="secondary">Up to {videoFormats[0].height}p</Badge>
+          </div>
+
+          <div className="mt-2 flex flex-wrap items-center gap-2">
+            {(videoFormats.length > 0 || audioFormats.length > 0) && (
+              <button
+                type="button"
+                onClick={() => setShowFormats((v) => !v)}
+                className="inline-flex h-7 items-center gap-1 rounded-md border border-dashed border-border/70 px-2 text-xs text-muted-foreground transition-colors hover:border-primary/40 hover:bg-primary/5 hover:text-foreground"
+              >
+                {showFormats ? (
+                  <ChevronUp className="h-3.5 w-3.5" />
+                ) : (
+                  <ChevronDown className="h-3.5 w-3.5" />
+                )}
+                <span>{showFormats ? 'Hide formats' : 'Show formats'}</span>
+              </button>
+            )}
+
+            {(info.upload_date || info.description) && (
+              <button
+                type="button"
+                onClick={() => setShowDetails((v) => !v)}
+                className="inline-flex h-7 items-center gap-1 rounded-md border border-dashed border-border/70 px-2 text-xs text-muted-foreground transition-colors hover:border-primary/40 hover:bg-primary/5 hover:text-foreground"
+              >
+                {showDetails ? (
+                  <ChevronUp className="h-3.5 w-3.5" />
+                ) : (
+                  <ChevronDown className="h-3.5 w-3.5" />
+                )}
+                <span>{showDetails ? 'Less details' : 'More details'}</span>
+              </button>
             )}
           </div>
         </div>
       </div>
 
-      {/* Formats (collapsible later if needed) */}
-      {(videoFormats.length > 0 || audioFormats.length > 0) && (
-        <div className="border-t px-4 py-3 space-y-3 bg-muted/30">
-          <p className="text-xs font-medium text-muted-foreground">Available Formats</p>
+      {showDetails && (info.upload_date || info.description) && (
+        <div className="border-t bg-muted/20 px-4 py-3 text-xs text-muted-foreground">
+          {info.upload_date && (
+            <div className="mb-2 inline-flex items-center gap-1.5 rounded bg-muted/60 px-2 py-1">
+              <Calendar className="h-3 w-3" />
+              {formatDate(info.upload_date)}
+            </div>
+          )}
+          {info.description && <p className="line-clamp-3 leading-relaxed">{info.description}</p>}
+        </div>
+      )}
 
-          {/* Top video formats */}
+      {showFormats && (videoFormats.length > 0 || audioFormats.length > 0) && (
+        <div className="border-t bg-muted/25 px-4 py-3">
+          <p className="mb-2 text-xs font-medium text-muted-foreground">Available formats</p>
           <div className="flex flex-wrap gap-2">
             {videoFormats.slice(0, 6).map((f) => (
               <button
                 type="button"
                 key={f.format_id}
                 onClick={() => onFormatSelect?.(f.format_id)}
-                className="px-2.5 py-1.5 rounded-lg border bg-background/50 hover:bg-accent text-xs transition-colors"
+                className="rounded-lg border bg-background/50 px-2.5 py-1.5 text-xs transition-colors hover:bg-accent"
               >
                 <span className="font-medium">{f.height}p</span>
-                <span className="text-muted-foreground ml-1">{f.ext}</span>
+                <span className="ml-1 text-muted-foreground">{f.ext}</span>
                 {(f.filesize || f.filesize_approx) && (
-                  <span className="text-muted-foreground ml-1">
+                  <span className="ml-1 text-muted-foreground">
                     ({formatFilesize(f.filesize || f.filesize_approx)})
                   </span>
                 )}
@@ -329,12 +402,12 @@ export function VideoPreview({ url, onClose, onFormatSelect, className }: VideoP
                 type="button"
                 key={f.format_id}
                 onClick={() => onFormatSelect?.(f.format_id)}
-                className="px-2.5 py-1.5 rounded-lg border bg-background/50 hover:bg-accent text-xs transition-colors"
+                className="rounded-lg border bg-background/50 px-2.5 py-1.5 text-xs transition-colors hover:bg-accent"
               >
                 <span className="font-medium">Audio</span>
-                <span className="text-muted-foreground ml-1">{f.ext}</span>
+                <span className="ml-1 text-muted-foreground">{f.ext}</span>
                 {f.tbr && (
-                  <span className="text-muted-foreground ml-1">({Math.round(f.tbr)}kbps)</span>
+                  <span className="ml-1 text-muted-foreground">({Math.round(f.tbr)}kbps)</span>
                 )}
               </button>
             ))}

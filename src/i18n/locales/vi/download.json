@@ -25,7 +25,18 @@
     "guideFfmpegTitle": "Bị tách riêng file video và audio",
     "guideFfmpegText": "Hãy cài FFmpeg trong Cài đặt > Dependencies để Youwee tự gộp video và audio thành một file output.",
     "guideOpenSettings": "Mở Cài đặt",
-    "guideGotIt": "Đã hiểu"
+    "guideGotIt": "Đã hiểu",
+    "detectedMultiple": "Đã nhận diện {{count}} URL",
+    "detectedSingle": "Sẵn sàng thêm 1 URL",
+    "readyToAdd": "Kiểm tra và thêm vào hàng đợi",
+    "clearInput": "Xóa"
+  },
+  "page": {
+    "quickSettings": "Cài đặt nhanh",
+    "showSettings": "Hiện",
+    "hideSettings": "Ẩn",
+    "on": "BẬT",
+    "off": "TẮT"
   },
   "settings": {
     "video": "Video",

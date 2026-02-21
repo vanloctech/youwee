@@ -14,7 +14,15 @@
     "toAdd": "để thêm",
     "urlCount": "{{count}} URL",
     "urlCount_plural": "{{count}} URL",
-    "dropHint": "Thả URL hoặc file .txt vào đây"
+    "dropHint": "Thả URL hoặc file .txt vào đây",
+    "detectedMultiple": "Đã nhận diện {{count}} URL"
+  },
+  "page": {
+    "quickSettings": "Cài đặt nhanh",
+    "showSettings": "Hiện",
+    "hideSettings": "Ẩn",
+    "on": "BẬT",
+    "off": "TẮT"
   },
   "settings": {
     "video": "Video",

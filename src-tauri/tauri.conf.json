@@ -1,7 +1,7 @@
 {
   "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
   "productName": "Youwee",
-  "version": "0.10.1",
+  "version": "0.11.0",
   "identifier": "com.vanloctech.youwee",
   "build": {
     "frontendDist": "../dist",
@@ -20,7 +20,10 @@
         "minHeight": 500,
         "resizable": true,
         "fullscreen": false,
-        "center": true
+        "center": true,
+        "decorations": true,
+        "titleBarStyle": "Overlay",
+        "hiddenTitle": true
       }
     ],
     "security": {

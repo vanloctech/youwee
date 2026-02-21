@@ -37,6 +37,7 @@ export function QueueList({
   const completedCount = items.filter((i) => i.status === 'completed').length;
   const pendingCount = items.filter((i) => i.status === 'pending').length;
   const totalCount = items.length;
+  const completionRate = totalCount > 0 ? Math.round((completedCount / totalCount) * 100) : 0;
 
   useEffect(() => {
     if (!focusedItemId || !containerRef.current) return;
@@ -50,10 +51,13 @@ export function QueueList({
     <div ref={containerRef} className="flex-1 flex flex-col min-h-0">
       {/* Header */}
       {totalCount > 0 && (
-        <div className="flex items-center justify-between py-2 px-1 gap-2">
+        <div className="sticky top-0 z-10 flex items-center justify-between gap-2 rounded-lg bg-background/80 px-1 py-2 backdrop-blur-sm">
           <div className="flex items-center gap-2">
             <h2 className="text-sm font-medium">{t('queue.title')}</h2>
             <div className="flex items-center gap-1.5">
+              <Badge variant="outline" className="text-[10px] px-1.5 py-0">
+                {completedCount}/{totalCount}
+              </Badge>
               {pendingCount > 0 && (
                 <Badge variant="secondary" className="text-[10px] px-1.5 py-0">
                   {t('queue.pending', { count: pendingCount })}
@@ -74,6 +78,11 @@ export function QueueList({
                   className="text-[10px] px-1.5 py-0 text-primary border-primary/30"
                 >
                   {currentPlaylistInfo.index}/{currentPlaylistInfo.total}
+                </Badge>
+              )}
+              {completedCount > 0 && (
+                <Badge variant="outline" className="text-[10px] px-1.5 py-0 text-muted-foreground">
+                  {completionRate}%
                 </Badge>
               )}
             </div>

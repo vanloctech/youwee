@@ -1,5 +1,5 @@
 import { ClipboardPaste, FileText, Globe, List, Loader2, Plus } from 'lucide-react';
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -43,9 +43,11 @@ export function UniversalUrlInput({
   const hasMultipleLines = value.includes('\n');
 
   // Auto-expand when multiple lines detected
-  if (hasMultipleLines && !isExpanded) {
-    setIsExpanded(true);
-  }
+  useEffect(() => {
+    if (hasMultipleLines && !isExpanded) {
+      setIsExpanded(true);
+    }
+  }, [hasMultipleLines, isExpanded]);
 
   const handleAdd = useCallback(async () => {
     setIsAdding(true);
@@ -153,7 +155,7 @@ export function UniversalUrlInput({
       aria-label="URL drop zone"
     >
       {/* Mode Toggle */}
-      <div className="flex items-center gap-2">
+      <div className="flex items-center justify-between gap-2">
         <div className="inline-flex items-center rounded-lg bg-muted/50 p-1">
           <button
             type="button"
@@ -187,10 +189,47 @@ export function UniversalUrlInput({
           </button>
         </div>
 
-        <span className="text-xs text-muted-foreground hidden sm:inline">
-          {isExpanded ? t('urlInput.multipleHint') : t('urlInput.singleHint')}
-        </span>
+        <div className="flex items-center gap-1.5">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={handleImportClipboard}
+            disabled={disabled || isImporting}
+            className="h-8 gap-1.5 text-xs"
+            title={t('urlInput.paste')}
+          >
+            {isImporting ? (
+              <Loader2 className="w-3.5 h-3.5 animate-spin" />
+            ) : (
+              <ClipboardPaste className="w-3.5 h-3.5" />
+            )}
+            <span className="hidden sm:inline">{t('urlInput.paste')}</span>
+          </Button>
+
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={handleImportFile}
+            disabled={disabled || isImporting}
+            className="h-8 gap-1.5 text-xs"
+            title={t('urlInput.import')}
+          >
+            <FileText className="w-3.5 h-3.5" />
+            <span className="hidden sm:inline">{t('urlInput.import')}</span>
+          </Button>
+        </div>
       </div>
+
+      {value.trim() && urlCount > 1 && (
+        <div className="flex items-center justify-between gap-2 rounded-lg border border-border/60 bg-muted/25 px-2.5 py-1.5">
+          <div className="min-w-0 text-xs text-muted-foreground">
+            <span className="inline-flex items-center gap-1 rounded bg-blue-500/10 px-1.5 py-0.5 text-blue-600 dark:text-blue-400">
+              <List className="h-3 w-3" />
+              {t('urlInput.detectedMultiple', { count: urlCount })}
+            </span>
+          </div>
+        </div>
+      )}
 
       {/* Main Input Area */}
       <div className="relative">
@@ -278,43 +317,6 @@ export function UniversalUrlInput({
             {t('urlInput.addToQueue')} {urlCount > 0 ? `(${urlCount})` : ''}
           </button>
         )}
-
-        <div className="flex items-center gap-1.5">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={handleImportClipboard}
-            disabled={disabled || isImporting}
-            className="h-8 gap-1.5 text-xs"
-            title={t('urlInput.paste')}
-          >
-            {isImporting ? (
-              <Loader2 className="w-3.5 h-3.5 animate-spin" />
-            ) : (
-              <ClipboardPaste className="w-3.5 h-3.5" />
-            )}
-            <span className="hidden xs:inline">{t('urlInput.paste')}</span>
-          </Button>
-
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={handleImportFile}
-            disabled={disabled || isImporting}
-            className="h-8 gap-1.5 text-xs"
-            title={t('urlInput.import')}
-          >
-            <FileText className="w-3.5 h-3.5" />
-            <span className="hidden xs:inline">{t('urlInput.import')}</span>
-          </Button>
-        </div>
-
-        <div className="hidden sm:flex items-center gap-1 ml-auto text-xs text-muted-foreground">
-          <kbd className="px-1.5 py-0.5 rounded bg-muted font-mono text-[10px]">⌘</kbd>
-          <span>+</span>
-          <kbd className="px-1.5 py-0.5 rounded bg-muted font-mono text-[10px]">↵</kbd>
-          <span className="ml-1">{t('urlInput.toAdd')}</span>
-        </div>
       </div>
 
       {/* Drag Drop Hint */}
