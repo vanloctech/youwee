@@ -254,7 +254,7 @@
     const media = getMediaValue();
     const current = ext.normalizeQuality(media, qualitySelect?.value || '');
     const options = getQualityOptions(media);
-    qualitySelect.innerHTML = '';
+    qualitySelect.replaceChildren();
     for (const option of options) {
       const item = document.createElement('option');
       item.value = option.value;

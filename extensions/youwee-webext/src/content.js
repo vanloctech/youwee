@@ -197,7 +197,7 @@
     const options = getQualityOptions(media);
     const normalizedCurrent = ext.normalizeQuality(media, qualitySelect.value);
 
-    qualitySelect.innerHTML = '';
+    qualitySelect.replaceChildren();
     for (const option of options) {
       const item = document.createElement('option');
       item.value = option.value;
@@ -299,6 +299,7 @@
 
   function buildWidget() {
     const logoUrl = api?.runtime?.getURL?.('icons/logo-64.png') || '';
+    const launcherLabel = ext.t('floatingLauncher', 'Youwee');
 
     const container = document.createElement('div');
     container.id = ROOT_ID;
@@ -310,7 +311,11 @@
     tab.type = 'button';
     tab.className = 'youwee-floating__tab';
     tab.title = ext.t('floatingExpand', 'Expand');
-    tab.innerHTML = `<img class="youwee-floating__logo-img" src="${logoUrl}" alt="Youwee" />`;
+    const tabLogo = document.createElement('img');
+    tabLogo.className = 'youwee-floating__logo-img';
+    tabLogo.src = logoUrl;
+    tabLogo.alt = 'Youwee';
+    tab.append(tabLogo);
     tab.addEventListener('click', (event) => {
       if (!isTrustedUserEvent(event)) return;
       setCollapsedState(false);
@@ -319,14 +324,21 @@
     const launch = document.createElement('button');
     launch.type = 'button';
     launch.className = 'youwee-floating__launcher';
-    launch.title = ext.t('floatingLauncher', 'Youwee');
-    launch.innerHTML = `
-      <span class="youwee-floating__logo">
-        <img class="youwee-floating__logo-img" src="${logoUrl}" alt="Youwee" />
-      </span>
-      <span class="youwee-floating__text">${ext.t('floatingLauncher', 'Youwee')}</span>
-      <span class="youwee-floating__chevron">▾</span>
-    `;
+    launch.title = launcherLabel;
+    const launchLogoWrap = document.createElement('span');
+    launchLogoWrap.className = 'youwee-floating__logo';
+    const launchLogo = document.createElement('img');
+    launchLogo.className = 'youwee-floating__logo-img';
+    launchLogo.src = logoUrl;
+    launchLogo.alt = 'Youwee';
+    launchLogoWrap.append(launchLogo);
+    const launchText = document.createElement('span');
+    launchText.className = 'youwee-floating__text';
+    launchText.textContent = launcherLabel;
+    const launchChevron = document.createElement('span');
+    launchChevron.className = 'youwee-floating__chevron';
+    launchChevron.textContent = '▾';
+    launch.append(launchLogoWrap, launchText, launchChevron);
     launch.addEventListener('click', (event) => {
       if (!isTrustedUserEvent(event)) return;
       setPanelOpen(!openState);
@@ -336,47 +348,89 @@
     dropdown.className = 'youwee-floating__panel';
     dropdown.hidden = true;
 
-    dropdown.innerHTML = `
-      <div class="youwee-floating__title-row">
-        <div class="youwee-floating__title">${ext.t('floatingMenuTitle', 'Download with Youwee')}</div>
-        <div class="youwee-floating__title-actions">
-          <button
-            type="button"
-            class="youwee-floating__tiny-btn"
-            data-action="collapse"
-            title="${ext.t('floatingCollapse', 'Collapse')}"
-            aria-label="${ext.t('floatingCollapse', 'Collapse')}"
-          >—</button>
-          <button
-            type="button"
-            class="youwee-floating__tiny-btn"
-            data-action="disable"
-            title="${ext.t('floatingDisable', 'Turn off floating button')}"
-            aria-label="${ext.t('floatingDisable', 'Turn off floating button')}"
-          >×</button>
-        </div>
-      </div>
-      <label class="youwee-floating__label">${ext.t('floatingMedia', 'Media')}</label>
-      <div class="youwee-floating__toggle" role="group" aria-label="${ext.t('floatingMedia', 'Media')}">
-        <button type="button" class="youwee-floating__toggle-btn" data-media="video">
-          ${ext.t('floatingMediaVideo', 'Video')}
-        </button>
-        <button type="button" class="youwee-floating__toggle-btn" data-media="audio">
-          ${ext.t('floatingMediaAudio', 'Audio')}
-        </button>
-      </div>
-      <label class="youwee-floating__label" for="youwee-quality-select">${ext.t('floatingQuality', 'Quality')}</label>
-      <select id="youwee-quality-select" class="youwee-floating__select"></select>
-      <div class="youwee-floating__actions">
-        <button type="button" class="youwee-floating__action youwee-floating__action--primary" data-action="download_now">
-          ${ext.t('floatingButtonDownloadNow', 'Download now')}
-        </button>
-        <button type="button" class="youwee-floating__action youwee-floating__action--secondary" data-action="queue_only">
-          ${ext.t('floatingButtonAddQueue', 'Add to queue')}
-        </button>
-      </div>
-      <div class="youwee-floating__feedback" aria-live="polite"></div>
-    `;
+    const titleRow = document.createElement('div');
+    titleRow.className = 'youwee-floating__title-row';
+
+    const title = document.createElement('div');
+    title.className = 'youwee-floating__title';
+    title.textContent = ext.t('floatingMenuTitle', 'Download with Youwee');
+
+    const titleActions = document.createElement('div');
+    titleActions.className = 'youwee-floating__title-actions';
+
+    const collapseBtn = document.createElement('button');
+    collapseBtn.type = 'button';
+    collapseBtn.className = 'youwee-floating__tiny-btn';
+    collapseBtn.dataset.action = 'collapse';
+    collapseBtn.title = ext.t('floatingCollapse', 'Collapse');
+    collapseBtn.setAttribute('aria-label', ext.t('floatingCollapse', 'Collapse'));
+    collapseBtn.textContent = '—';
+
+    const disableBtn = document.createElement('button');
+    disableBtn.type = 'button';
+    disableBtn.className = 'youwee-floating__tiny-btn';
+    disableBtn.dataset.action = 'disable';
+    disableBtn.title = ext.t('floatingDisable', 'Turn off floating button');
+    disableBtn.setAttribute('aria-label', ext.t('floatingDisable', 'Turn off floating button'));
+    disableBtn.textContent = '×';
+
+    titleActions.append(collapseBtn, disableBtn);
+    titleRow.append(title, titleActions);
+
+    const mediaLabel = document.createElement('label');
+    mediaLabel.className = 'youwee-floating__label';
+    mediaLabel.textContent = ext.t('floatingMedia', 'Media');
+
+    const mediaToggle = document.createElement('div');
+    mediaToggle.className = 'youwee-floating__toggle';
+    mediaToggle.setAttribute('role', 'group');
+    mediaToggle.setAttribute('aria-label', ext.t('floatingMedia', 'Media'));
+
+    const mediaVideoButton = document.createElement('button');
+    mediaVideoButton.type = 'button';
+    mediaVideoButton.className = 'youwee-floating__toggle-btn';
+    mediaVideoButton.dataset.media = 'video';
+    mediaVideoButton.textContent = ext.t('floatingMediaVideo', 'Video');
+
+    const mediaAudioButton = document.createElement('button');
+    mediaAudioButton.type = 'button';
+    mediaAudioButton.className = 'youwee-floating__toggle-btn';
+    mediaAudioButton.dataset.media = 'audio';
+    mediaAudioButton.textContent = ext.t('floatingMediaAudio', 'Audio');
+
+    mediaToggle.append(mediaVideoButton, mediaAudioButton);
+
+    const qualityLabel = document.createElement('label');
+    qualityLabel.className = 'youwee-floating__label';
+    qualityLabel.htmlFor = 'youwee-quality-select';
+    qualityLabel.textContent = ext.t('floatingQuality', 'Quality');
+
+    const select = document.createElement('select');
+    select.id = 'youwee-quality-select';
+    select.className = 'youwee-floating__select';
+
+    const actions = document.createElement('div');
+    actions.className = 'youwee-floating__actions';
+
+    const downloadNowBtn = document.createElement('button');
+    downloadNowBtn.type = 'button';
+    downloadNowBtn.className = 'youwee-floating__action youwee-floating__action--primary';
+    downloadNowBtn.dataset.action = 'download_now';
+    downloadNowBtn.textContent = ext.t('floatingButtonDownloadNow', 'Download now');
+
+    const queueOnlyBtn = document.createElement('button');
+    queueOnlyBtn.type = 'button';
+    queueOnlyBtn.className = 'youwee-floating__action youwee-floating__action--secondary';
+    queueOnlyBtn.dataset.action = 'queue_only';
+    queueOnlyBtn.textContent = ext.t('floatingButtonAddQueue', 'Add to queue');
+
+    actions.append(downloadNowBtn, queueOnlyBtn);
+
+    const feedback = document.createElement('div');
+    feedback.className = 'youwee-floating__feedback';
+    feedback.setAttribute('aria-live', 'polite');
+
+    dropdown.append(titleRow, mediaLabel, mediaToggle, qualityLabel, select, actions, feedback);
 
     container.appendChild(tab);
     container.appendChild(launch);
