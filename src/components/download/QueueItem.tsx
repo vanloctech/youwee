@@ -299,8 +299,8 @@ export function QueueItem({
             {/* Progress Bar at bottom */}
             <div className="absolute bottom-0 left-0 right-0 p-2">
               <div className="h-1.5 rounded-full overflow-hidden bg-white/20 mb-1 backdrop-blur-sm">
-                {/* Live stream: indeterminate shimmer progress bar */}
-                {item.isLive && item.progress === 0 ? (
+                {/* Indeterminate shimmer: live streams or ffmpeg muxing */}
+                {(item.isLive || item.isMuxing) && item.progress === 0 ? (
                   <div
                     className="h-full w-full rounded-full animate-shimmer"
                     style={{
@@ -331,7 +331,7 @@ export function QueueItem({
                 )}
               </div>
               <div className="flex items-center justify-between text-[10px] text-white/90 font-medium">
-                {/* Live stream: show "LIVE • elapsed time" only */}
+                {/* Live stream: show "LIVE • elapsed time" */}
                 {item.isLive && item.progress === 0 ? (
                   <div className="flex items-center gap-1.5">
                     <span className="flex items-center gap-1 text-red-400">
@@ -342,6 +342,22 @@ export function QueueItem({
                       <>
                         <span className="text-white/50">•</span>
                         <span>{item.elapsedTime}</span>
+                      </>
+                    )}
+                  </div>
+                ) : item.isMuxing && item.progress === 0 ? (
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-blue-300">Muxing</span>
+                    {item.elapsedTime && (
+                      <>
+                        <span className="text-white/50">•</span>
+                        <span>{item.elapsedTime}</span>
+                      </>
+                    )}
+                    {item.speed && (
+                      <>
+                        <span className="text-white/50">•</span>
+                        <span>{item.speed}</span>
                       </>
                     )}
                   </div>

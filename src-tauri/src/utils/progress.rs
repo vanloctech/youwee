@@ -92,3 +92,51 @@ pub fn parse_progress(
 
     None
 }
+
+/// Parse ffmpeg stderr progress output emitted during mux/merge/postprocess.
+///
+/// ffmpeg writes lines like:
+///   frame=   75 fps=0.0 q=-1.0 Lsize=     133KiB time=00:00:05.00 bitrate= 217.7kbits/s speed= 223x
+///
+/// Returns (downloaded_size, speed, elapsed_time) when matched.
+/// - downloaded_size: output file size so far (e.g. "133KiB")
+/// - speed:          processing speed (e.g. "223x")
+/// - elapsed_time:   mux progress timestamp (e.g. "00:00:05.00")
+pub fn parse_ffmpeg_progress(line: &str) -> Option<(String, String, String)> {
+    // Quick guard: ffmpeg progress lines always contain both "time=" and "speed="
+    if !line.contains("time=") || !line.contains("speed=") {
+        return None;
+    }
+
+    let mut size = String::new();
+    let mut speed = String::new();
+    let mut time = String::new();
+
+    // Extract Lsize= or size= value
+    if let Some(re) = regex::Regex::new(r"[Ll]?size=\s*([\d.]+\s*\w+)").ok() {
+        if let Some(caps) = re.captures(line) {
+            size = caps.get(1).map(|m| m.as_str().trim().to_string()).unwrap_or_default();
+        }
+    }
+
+    // Extract speed= value (e.g. "223x" or "1.5x")
+    if let Some(re) = regex::Regex::new(r"speed=\s*([\d.]+x)").ok() {
+        if let Some(caps) = re.captures(line) {
+            speed = caps.get(1).map(|m| m.as_str().to_string()).unwrap_or_default();
+        }
+    }
+
+    // Extract time= value (e.g. "00:00:05.00")
+    if let Some(re) = regex::Regex::new(r"time=\s*(\d{2}:\d{2}:\d{2}(?:\.\d+)?)").ok() {
+        if let Some(caps) = re.captures(line) {
+            time = caps.get(1).map(|m| m.as_str().to_string()).unwrap_or_default();
+        }
+    }
+
+    // Must have at least time to be a valid ffmpeg progress line
+    if time.is_empty() {
+        return None;
+    }
+
+    Some((size, speed, time))
+}
