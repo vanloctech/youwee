@@ -100,8 +100,9 @@ export interface DownloadItem {
   error?: string;
   isPlaylist?: boolean;
   isLive?: boolean; // true if video is currently live streaming
-  downloadedSize?: string; // For live streams: "2.87 MiB"
-  elapsedTime?: string; // For live streams: "00:00:07"
+  isMuxing?: boolean; // true during ffmpeg mux/merge phase (e.g. --download-sections)
+  downloadedSize?: string; // For live/muxing: current output size
+  elapsedTime?: string; // For live/muxing: elapsed time
   playlistIndex?: number;
   playlistTotal?: number;
   thumbnail?: string;
