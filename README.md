@@ -93,6 +93,23 @@
 
 > See all releases on the [Releases page](https://github.com/vanloctech/youwee/releases)
 
+#### Linux .deb — yt-dlp PPA (recommended)
+
+The `.deb` package depends on `yt-dlp` and `ffmpeg`. Ubuntu/Debian ship an older `yt-dlp` that
+may lack features Youwee requires (e.g. `--js-runtimes`). Add the
+[tomtomtom/yt-dlp PPA](https://launchpad.net/~tomtomtom/+archive/ubuntu/yt-dlp) for a current
+version before installing:
+
+```bash
+sudo add-apt-repository -y ppa:tomtomtom/yt-dlp
+sudo apt update
+sudo apt install ./Youwee-Linux.deb      # pulls yt-dlp (PPA) + ffmpeg automatically
+```
+
+If you skip the PPA, the distro `yt-dlp` will be installed but some downloads may fail.
+You can also switch to **App managed** yt-dlp in **Settings > Dependencies** and Youwee
+will download and maintain its own copy.
+
 ### Browser Extension (Chromium + Firefox)
 
 | Browser | Download |
@@ -111,7 +128,7 @@
 
 - [Bun](https://bun.sh/) (v1.3.5 or later)
 - [Rust](https://www.rust-lang.org/) (v1.70 or later)
-- [Tauri CLI](https://tauri.app/v1/guides/getting-started/prerequisites)
+- [Tauri 2 prerequisites](https://tauri.app/start/prerequisites/) (system libraries for your platform)
 
 #### Steps
 
@@ -130,11 +147,27 @@ bun run tauri dev
 bun run tauri build
 ```
 
+#### Nix devshell (Linux)
+
+If you use [Nix](https://nixos.org/), a `flake.nix` provides a complete development
+environment with all build and runtime dependencies:
+
+```bash
+nix develop          # enter devshell (bun, cargo, rustc, pkg-config, WebKitGTK, etc.)
+bun install
+bun run tauri dev    # development
+bun run tauri build -b deb   # produce .deb (binary is auto-patched for FHS portability)
+```
+
+The devshell consumes [konductor](https://github.com/braincraftio/konductor) via
+`inputsFrom` and adds `yt-dlp`, `ffmpeg`, `deno`, and `glib-networking` for runtime
+and WebKitGTK TLS support.
+
 ## Tech Stack
 
 - **Frontend**: React 19, TypeScript, Tailwind CSS, shadcn/ui
 - **Backend**: Rust, Tauri 2.0
-- **Downloader**: yt-dlp (bundled)
+- **Downloader**: yt-dlp (bundled on macOS/Windows, system package on Linux)
 - **Build**: Bun, Vite
 
 ## Contributing
