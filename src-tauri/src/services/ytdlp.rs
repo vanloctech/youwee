@@ -442,7 +442,11 @@ pub fn parse_ytdlp_error(stderr: &str) -> Option<BackendError> {
 
     // Douyin / TikTok fresh cookies requirement
     if stderr_lower.contains("fresh cookies")
-        || (stderr_lower.contains("douyin") && stderr_lower.contains("cookies") && stderr_lower.contains("needed"))
+        || stderr_lower.contains("fresh login cookies")
+        || (stderr_lower.contains("douyin")
+            && stderr_lower.contains("cookies")
+            && stderr_lower.contains("fresh")
+            && (stderr_lower.contains("needed") || stderr_lower.contains("requires")))
     {
         return Some(
             BackendError::from_message(
