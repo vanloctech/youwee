@@ -6,7 +6,7 @@
     "externalBin": [],
     "linux": {
       "deb": {
-        "depends": ["ffmpeg", "yt-dlp"]
+        "recommends": ["ffmpeg", "yt-dlp"]
       }
     }
   }

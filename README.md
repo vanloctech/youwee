@@ -93,22 +93,21 @@
 
 > See all releases on the [Releases page](https://github.com/vanloctech/youwee/releases)
 
-#### Linux .deb — yt-dlp PPA (recommended)
+#### Linux .deb — optional system dependencies
 
-The `.deb` package depends on `yt-dlp` and `ffmpeg`. Ubuntu/Debian ship an older `yt-dlp` that
-may lack features Youwee requires (e.g. `--js-runtimes`). Add the
-[tomtomtom/yt-dlp PPA](https://launchpad.net/~tomtomtom/+archive/ubuntu/yt-dlp) for a current
-version before installing:
+The `.deb` package works out of the box with its bundled yt-dlp binary. For best results,
+install system `ffmpeg` and a current `yt-dlp` so the app can use them automatically:
 
 ```bash
+# Optional: add PPA for a current yt-dlp (Ubuntu/Debian ship older versions)
 sudo add-apt-repository -y ppa:tomtomtom/yt-dlp
 sudo apt update
-sudo apt install ./Youwee-Linux.deb      # pulls yt-dlp (PPA) + ffmpeg automatically
+sudo apt install ffmpeg yt-dlp
 ```
 
-If you skip the PPA, the distro `yt-dlp` will be installed but some downloads may fail.
-You can also switch to **App managed** yt-dlp in **Settings > Dependencies** and Youwee
-will download and maintain its own copy.
+When system binaries are present, Youwee prefers them over bundled versions. Without them,
+the bundled yt-dlp and the app-managed FFmpeg download (Settings > Dependencies) provide
+full functionality.
 
 ### Browser Extension (Chromium + Firefox)
 
