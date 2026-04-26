@@ -123,9 +123,10 @@ export function UniversalQueueItem({
   const [thumbError, setThumbError] = useState(false);
 
   // Reset thumb error when the thumbnail source changes (e.g. metadata fetch completes)
+  // biome-ignore lint/correctness/useExhaustiveDependencies: intentional re-run when thumbnail changes
   useEffect(() => {
     setThumbError(false);
-  }, [item.thumbnail, item.url]);
+  }, [item.thumbnail]);
 
   const videoId = getYouTubeVideoId(item.url);
   const thumbnailUrl =
@@ -363,7 +364,7 @@ export function UniversalQueueItem({
                   </div>
                 ) : item.isMuxing && item.progress === 0 ? (
                   <div className="flex items-center gap-1.5">
-                    <span className="text-blue-300">Muxing</span>
+                    <span className="text-blue-300">{t('queue.status.muxing')}</span>
                     {item.elapsedTime && (
                       <>
                         <span className="text-white/50">•</span>

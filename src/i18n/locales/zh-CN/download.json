@@ -130,7 +130,8 @@
       "completed": "已完成",
       "failed": "失败",
       "failedHint": "查看日志页面了解详情",
-      "retrying": "{{seconds}}秒后重试 {{current}}/{{total}}"
+      "retrying": "{{seconds}}秒后重试 {{current}}/{{total}}",
+      "muxing": "合并中"
     },
     "summarize": "摘要",
     "openFolder": "打开所在文件夹",

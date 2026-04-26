@@ -96,7 +96,8 @@
       "completed": "Завершено",
       "failed": "Ошибка",
       "failedHint": "Смотрите страницу Журналов для подробностей",
-      "retrying": "Попытка {{current}}/{{total}} через {{seconds}}с"
+      "retrying": "Попытка {{current}}/{{total}} через {{seconds}}с",
+      "muxing": "Сведение"
     },
     "summarize": "Сводка",
     "fetchingTranscript": "Получение транскрипции...",

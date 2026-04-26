@@ -130,7 +130,8 @@
       "completed": "Terminé",
       "failed": "Échec",
       "failedHint": "Voir la page Journaux pour les détails",
-      "retrying": "Nouvelle tentative {{current}}/{{total}} dans {{seconds}}s"
+      "retrying": "Nouvelle tentative {{current}}/{{total}} dans {{seconds}}s",
+      "muxing": "Fusion"
     },
     "summarize": "Résumer",
     "fetchingTranscript": "Récupération de la transcription...",

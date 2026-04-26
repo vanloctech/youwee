@@ -347,7 +347,7 @@ export function QueueItem({
                   </div>
                 ) : item.isMuxing && item.progress === 0 ? (
                   <div className="flex items-center gap-1.5">
-                    <span className="text-blue-300">Muxing</span>
+                    <span className="text-blue-300">{t('queue.status.muxing')}</span>
                     {item.elapsedTime && (
                       <>
                         <span className="text-white/50">•</span>
