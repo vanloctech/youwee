@@ -27,28 +27,37 @@ pub fn system_gallerydl_not_found_message() -> String {
     }
 }
 
+/// Resolve system binary candidates in correct precedence order:
+/// 1. PATH entries (honors the user's environment: Nix, Homebrew, pipx, distro, etc.)
+/// 2. Well-known fallback paths (for GUI apps that may not inherit shell PATH)
 fn get_system_binary_candidates(binary_name: &str) -> Vec<PathBuf> {
-    let mut candidates = vec![
-        PathBuf::from("/opt/homebrew/bin").join(binary_name),
-        PathBuf::from("/usr/local/bin").join(binary_name),
-        PathBuf::from("/usr/bin").join(binary_name),
-    ];
-
-    if let Ok(path_var) = std::env::var("PATH") {
-        for dir in std::env::split_paths(&path_var) {
-            candidates.push(dir.join(binary_name));
-        }
-    }
-
-    let mut unique = Vec::new();
+    let mut candidates = Vec::new();
     let mut seen = HashSet::new();
-    for path in candidates {
+
+    let mut push_unique = |path: PathBuf| {
         let key = path.to_string_lossy().to_string();
         if seen.insert(key) {
-            unique.push(path);
+            candidates.push(path);
+        }
+    };
+
+    // PATH first — this is the OS-level contract for binary resolution.
+    // Nix, Homebrew, pipx, distro packages, and user installs all express
+    // their binaries through PATH.
+    if let Ok(path_var) = std::env::var("PATH") {
+        for dir in std::env::split_paths(&path_var) {
+            push_unique(dir.join(binary_name));
         }
     }
-    unique
+
+    // Well-known fallback locations for environments where PATH may not
+    // include these (e.g., macOS GUI apps launched from Finder/Dock that
+    // don't inherit the user's shell PATH).
+    push_unique(PathBuf::from("/opt/homebrew/bin").join(binary_name));
+    push_unique(PathBuf::from("/usr/local/bin").join(binary_name));
+    push_unique(PathBuf::from("/usr/bin").join(binary_name));
+
+    candidates
 }
 
 pub fn get_system_gallerydl_path() -> Option<PathBuf> {

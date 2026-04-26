@@ -16,6 +16,7 @@
           yt-dlp   # Video extraction — resolved via system PATH (source=Auto)
           ffmpeg   # Post-processing: merge, transcode, embed metadata/subs
           deno     # JavaScript runtime for yt-dlp YouTube extraction (--js-runtimes)
+          gallery-dl       # Gallery/collection downloads — resolved via system PATH
           glib-networking  # GnuTLS backend for GIO — required by WebKitGTK for HTTPS
         ];
 
