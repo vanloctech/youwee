@@ -228,9 +228,11 @@
     "whisperModelPlaceholder": "Nome do Modelo",
     "whisperCompatible": "Trazendo compatibilidade com LLM e APIs que sigam a mesma interface OpenAI",
     "ollamaUrl": "Ollama URL",
+    "lmstudioUrl": "URL do LM Studio",
     "proxyUrl": "URLs customizadas de proxy",
     "proxyCustom": "Proxy (Avançado)",
-    "ollamaLocal": "Configurações via modelo Ollama"
+    "ollamaLocal": "Configurações via modelo Ollama",
+    "lmstudioLocal": "LM Studio (Local)"
   },
   "extension": {
     "title": "Extensões Digitais",

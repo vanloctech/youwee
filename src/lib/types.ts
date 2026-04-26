@@ -322,7 +322,14 @@ export interface HistoryAdvancedFilters {
 }
 
 // AI types
-export type AIProvider = 'gemini' | 'openai' | 'deepseek' | 'qwen' | 'ollama' | 'proxy';
+export type AIProvider =
+  | 'gemini'
+  | 'openai'
+  | 'deepseek'
+  | 'qwen'
+  | 'ollama'
+  | 'lmstudio'
+  | 'proxy';
 export type SummaryStyle = 'short' | 'concise' | 'detailed';
 
 // Network Proxy types
@@ -368,6 +375,7 @@ export interface AIConfig {
   api_key?: string;
   model: string;
   ollama_url?: string;
+  lmstudio_url?: string;
   proxy_url?: string; // Custom OpenAI-compatible API endpoint
   summary_style: SummaryStyle;
   summary_language: string;

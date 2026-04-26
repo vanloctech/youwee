@@ -50,7 +50,51 @@ pub fn build_format_string(quality: &str, format: &str, video_codec: &str) -> St
     let is_high_res = matches!(quality, "8k" | "4k" | "2k");
     let is_auto_codec = video_codec == "auto" || video_codec.is_empty();
 
-    if format == "mp4" {
+    if format == "webm" {
+        let webm_codec_filter = match video_codec {
+            "vp9" => "[vcodec^=vp9]",
+            "av1" => "[vcodec^=av01]",
+            _ => "", // H.264 is not WebM-compatible; use WebM-native codecs instead.
+        };
+
+        if let Some(h) = height {
+            if !webm_codec_filter.is_empty() {
+                format!(
+                    "bestvideo[height<={}][ext=webm]{}+bestaudio[ext=webm]/\
+                     bestvideo[height<={}][ext=webm]+bestaudio[ext=webm]/\
+                     best[height<={}][ext=webm]",
+                    h, webm_codec_filter, h, h
+                )
+            } else if quality == "8k" {
+                format!(
+                    "bestvideo[height<={}][ext=webm][vcodec^=av01]+bestaudio[ext=webm]/\
+                     bestvideo[height<={}][ext=webm][vcodec^=vp9]+bestaudio[ext=webm]/\
+                     bestvideo[height<={}][ext=webm]+bestaudio[ext=webm]/\
+                     best[height<={}][ext=webm]",
+                    h, h, h, h
+                )
+            } else {
+                format!(
+                    "bestvideo[height<={}][ext=webm][vcodec^=vp9]+bestaudio[ext=webm]/\
+                     bestvideo[height<={}][ext=webm][vcodec^=av01]+bestaudio[ext=webm]/\
+                     bestvideo[height<={}][ext=webm]+bestaudio[ext=webm]/\
+                     best[height<={}][ext=webm]",
+                    h, h, h, h
+                )
+            }
+        } else if !webm_codec_filter.is_empty() {
+            format!(
+                "bestvideo[ext=webm]{}+bestaudio[ext=webm]/\
+                 bestvideo[ext=webm]+bestaudio[ext=webm]/best[ext=webm]",
+                webm_codec_filter
+            )
+        } else {
+            "bestvideo[ext=webm][vcodec^=vp9]+bestaudio[ext=webm]/\
+             bestvideo[ext=webm][vcodec^=av01]+bestaudio[ext=webm]/\
+             bestvideo[ext=webm]+bestaudio[ext=webm]/best[ext=webm]"
+                .to_string()
+        }
+    } else if format == "mp4" {
         if let Some(h) = height {
             if is_high_res && is_auto_codec {
                 // High-res auto codec: prioritize by resolution, smart codec fallback
@@ -137,5 +181,29 @@ pub fn build_format_string(quality: &str, format: &str, video_codec: &str) -> St
             "bestvideo{}+bestaudio/bestvideo+bestaudio/best",
             codec_filter
         )
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::build_format_string;
+
+    #[test]
+    fn webm_4k_ignores_h264_and_uses_webm_streams() {
+        let format = build_format_string("4k", "webm", "h264");
+
+        assert!(format.contains("[ext=webm]"));
+        assert!(format.contains("bestaudio[ext=webm]"));
+        assert!(format.contains("[vcodec^=vp9]"));
+        assert!(!format.contains("[vcodec^=avc]"));
+        assert!(!format.contains("+bestaudio/"));
+    }
+
+    #[test]
+    fn webm_respects_compatible_explicit_codec() {
+        let format = build_format_string("4k", "webm", "av1");
+
+        assert!(format.contains("bestvideo[height<=2160][ext=webm][vcodec^=av01]"));
+        assert!(format.contains("bestaudio[ext=webm]"));
     }
 }

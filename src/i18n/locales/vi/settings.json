@@ -249,9 +249,11 @@
     "whisperModelPlaceholder": "Model (mặc định: whisper-1)",
     "whisperCompatible": "Tương thích với Groq, LocalAI, Faster-Whisper và các API tương thích OpenAI khác",
     "ollamaUrl": "URL Ollama",
+    "lmstudioUrl": "URL LM Studio",
     "proxyUrl": "URL API Endpoint",
     "proxyCustom": "Proxy (Tùy chỉnh)",
-    "ollamaLocal": "Ollama (Nội bộ)"
+    "ollamaLocal": "Ollama (Nội bộ)",
+    "lmstudioLocal": "LM Studio (Nội bộ)"
   },
   "extension": {
     "title": "Browser Extension",

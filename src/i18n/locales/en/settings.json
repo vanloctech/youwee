@@ -249,9 +249,11 @@
     "whisperModelPlaceholder": "Model (default: whisper-1)",
     "whisperCompatible": "Compatible with Groq, LocalAI, Faster-Whisper and other OpenAI-compatible APIs",
     "ollamaUrl": "Ollama URL",
+    "lmstudioUrl": "LM Studio URL",
     "proxyUrl": "API Endpoint URL",
     "proxyCustom": "Proxy (Custom)",
-    "ollamaLocal": "Ollama (Local)"
+    "ollamaLocal": "Ollama (Local)",
+    "lmstudioLocal": "LM Studio (Local)"
   },
   "extension": {
     "title": "Browser Extension",

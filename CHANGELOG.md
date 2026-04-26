@@ -8,10 +8,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **LM Studio AI provider** - Added LM Studio as a local OpenAI-compatible AI provider with a configurable local endpoint and no API key requirement
 
 ### Changed
 
 ### Fixed
+- **4K WebM post-processing** - Fixed WebM downloads selecting MP4/H.264-compatible streams that could make FFmpeg fail during post-processing conversion
 
 ## [0.13.0] - 2026-04-15
 
