@@ -142,6 +142,12 @@ pub fn get_ai_models(provider: String) -> Vec<ModelOption> {
             ModelOption { value: "phi3".to_string(), label: "Phi 3".to_string() },
             ModelOption { value: "deepseek-coder-v2".to_string(), label: "DeepSeek Coder V2".to_string() },
         ],
+        "lmstudio" => vec![
+            ModelOption { value: "local-model".to_string(), label: "Local Model (Recommended)".to_string() },
+            ModelOption { value: "llama-3.2-3b-instruct".to_string(), label: "Llama 3.2 3B Instruct".to_string() },
+            ModelOption { value: "qwen2.5-7b-instruct".to_string(), label: "Qwen 2.5 7B Instruct".to_string() },
+            ModelOption { value: "mistral-7b-instruct".to_string(), label: "Mistral 7B Instruct".to_string() },
+        ],
         "deepseek" => vec![
             ModelOption { value: "deepseek-chat".to_string(), label: "DeepSeek Chat (Recommended)".to_string() },
             ModelOption { value: "deepseek-reasoner".to_string(), label: "DeepSeek Reasoner (R1)".to_string() },

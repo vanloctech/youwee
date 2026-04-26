@@ -10,6 +10,7 @@ pub enum AIProvider {
     DeepSeek,
     Qwen,
     Ollama,
+    LmStudio,
     Proxy, // OpenAI-compatible API with custom domain
 }
 
@@ -42,6 +43,7 @@ pub struct AIConfig {
     pub api_key: Option<String>,
     pub model: String,
     pub ollama_url: Option<String>,
+    pub lmstudio_url: Option<String>,
     pub proxy_url: Option<String>, // Custom OpenAI-compatible API endpoint
     pub summary_style: SummaryStyle,
     pub summary_language: String, // "auto", "en", "vi", "ja", etc.
@@ -67,6 +69,7 @@ impl Default for AIConfig {
             api_key: None,
             model: "gemini-2.0-flash".to_string(),
             ollama_url: Some("http://localhost:11434".to_string()),
+            lmstudio_url: Some("http://localhost:1234".to_string()),
             proxy_url: Some("https://api.openai.com".to_string()),
             summary_style: SummaryStyle::Short,
             summary_language: "auto".to_string(),
@@ -600,6 +603,81 @@ pub async fn generate_with_proxy(
     })
 }
 
+/// Generate summary using LM Studio (local OpenAI-compatible API)
+pub async fn generate_with_lmstudio(
+    lmstudio_url: &str,
+    model: &str,
+    transcript: &str,
+    style: &SummaryStyle,
+    language: &str,
+    title: Option<&str>,
+) -> Result<SummaryResult, AIError> {
+    let client = Client::new();
+    let prompt = build_prompt(transcript, style, language, title);
+    
+    let base_url = lmstudio_url.trim_end_matches('/');
+    let url = if base_url.ends_with("/chat/completions") || base_url.ends_with("/v1/chat/completions") {
+        base_url.to_string()
+    } else if base_url.ends_with("/v1") {
+        format!("{}/chat/completions", base_url)
+    } else {
+        format!("{}/v1/chat/completions", base_url)
+    };
+    
+    let body = serde_json::json!({
+        "model": model,
+        "messages": [{
+            "role": "user",
+            "content": prompt
+        }],
+        "temperature": 0.7,
+        "max_tokens": 1024,
+    });
+    
+    let response = client
+        .post(&url)
+        .header("Content-Type", "application/json")
+        .json(&body)
+        .send()
+        .await
+        .map_err(|e| AIError::NetworkError(format!("Failed to connect to LM Studio at {}: {}", lmstudio_url, e)))?;
+    
+    let status = response.status();
+    let response_text = response.text().await.unwrap_or_default();
+    
+    if !status.is_success() {
+        if let Ok(error_json) = serde_json::from_str::<serde_json::Value>(&response_text) {
+            let error_msg = error_json
+                .get("error")
+                .and_then(|e| e.get("message"))
+                .and_then(|m| m.as_str())
+                .unwrap_or(&response_text);
+            return Err(AIError::ApiError(format!("LM Studio API error: {}", error_msg)));
+        }
+        return Err(AIError::ApiError(format!("Status {}: {}", status, response_text)));
+    }
+    
+    let json: serde_json::Value = serde_json::from_str(&response_text)
+        .map_err(|e| AIError::ParseError(format!("Failed to parse response: {}", e)))?;
+    
+    let summary = json
+        .get("choices")
+        .and_then(|c| c.get(0))
+        .and_then(|c| c.get("message"))
+        .and_then(|m| m.get("content"))
+        .and_then(|t| t.as_str())
+        .ok_or_else(|| AIError::ParseError(format!(
+            "No content in response. Response: {}", 
+            &response_text[..response_text.len().min(500)]
+        )))?;
+    
+    Ok(SummaryResult {
+        summary: summary.trim().to_string(),
+        provider: "LM Studio".to_string(),
+        model: model.to_string(),
+    })
+}
+
 /// Generate summary based on config
 pub async fn generate_summary(
     config: &AIConfig,
@@ -630,6 +708,10 @@ pub async fn generate_summary(
         AIProvider::Ollama => {
             let ollama_url = config.ollama_url.as_ref().map(|s| s.as_str()).unwrap_or("http://localhost:11434");
             generate_with_ollama(ollama_url, &config.model, transcript, &config.summary_style, &config.summary_language, title).await
+        }
+        AIProvider::LmStudio => {
+            let lmstudio_url = config.lmstudio_url.as_ref().map(|s| s.as_str()).unwrap_or("http://localhost:1234");
+            generate_with_lmstudio(lmstudio_url, &config.model, transcript, &config.summary_style, &config.summary_language, title).await
         }
         AIProvider::Proxy => {
             let api_key = config.api_key.as_ref().ok_or(AIError::NoApiKey)?;
@@ -672,6 +754,10 @@ pub async fn generate_summary_custom(
             let ollama_url = config.ollama_url.as_ref().map(|s| s.as_str()).unwrap_or("http://localhost:11434");
             generate_with_ollama(ollama_url, &config.model, transcript, style, language, title).await
         }
+        AIProvider::LmStudio => {
+            let lmstudio_url = config.lmstudio_url.as_ref().map(|s| s.as_str()).unwrap_or("http://localhost:1234");
+            generate_with_lmstudio(lmstudio_url, &config.model, transcript, style, language, title).await
+        }
         AIProvider::Proxy => {
             let api_key = config.api_key.as_ref().ok_or(AIError::NoApiKey)?;
             let proxy_url = config.proxy_url.as_ref().map(|s| s.as_str()).unwrap_or("https://api.openai.com");
@@ -707,6 +793,10 @@ pub async fn generate_raw(config: &AIConfig, prompt: &str) -> Result<SummaryResu
         AIProvider::Ollama => {
             let ollama_url = config.ollama_url.as_ref().map(|s| s.as_str()).unwrap_or("http://localhost:11434");
             generate_raw_with_ollama(ollama_url, &config.model, prompt).await
+        }
+        AIProvider::LmStudio => {
+            let lmstudio_url = config.lmstudio_url.as_ref().map(|s| s.as_str()).unwrap_or("http://localhost:1234");
+            generate_raw_with_lmstudio(lmstudio_url, &config.model, prompt).await
         }
         AIProvider::Proxy => {
             let api_key = config.api_key.as_ref().ok_or(AIError::NoApiKey)?;
@@ -894,6 +984,65 @@ async fn generate_raw_with_ollama(
         summary: text.to_string(),
         model: model.to_string(),
         provider: "Ollama".to_string(),
+    })
+}
+
+/// Raw generation with LM Studio (no summarization wrapping)
+async fn generate_raw_with_lmstudio(
+    lmstudio_url: &str,
+    model: &str,
+    prompt: &str,
+) -> Result<SummaryResult, AIError> {
+    let client = Client::new();
+    let base_url = lmstudio_url.trim_end_matches('/');
+    let url = if base_url.ends_with("/chat/completions") || base_url.ends_with("/v1/chat/completions") {
+        base_url.to_string()
+    } else if base_url.ends_with("/v1") {
+        format!("{}/chat/completions", base_url)
+    } else {
+        format!("{}/v1/chat/completions", base_url)
+    };
+    
+    let body = serde_json::json!({
+        "model": model,
+        "messages": [{
+            "role": "user",
+            "content": prompt
+        }],
+        "temperature": 0.3,
+        "max_tokens": 2048
+    });
+    
+    let response = client
+        .post(&url)
+        .header("Content-Type", "application/json")
+        .json(&body)
+        .send()
+        .await
+        .map_err(|e| AIError::NetworkError(format!("Failed to connect to LM Studio at {}: {}", lmstudio_url, e)))?;
+    
+    let status = response.status();
+    let response_text = response.text().await.unwrap_or_default();
+    
+    if !status.is_success() {
+        return Err(AIError::ApiError(format!("LM Studio API error: {}", response_text)));
+    }
+    
+    let json: serde_json::Value = serde_json::from_str(&response_text)
+        .map_err(|e| AIError::ParseError(e.to_string()))?;
+    
+    let text = json
+        .get("choices")
+        .and_then(|c| c.get(0))
+        .and_then(|c| c.get("message"))
+        .and_then(|m| m.get("content"))
+        .and_then(|t| t.as_str())
+        .ok_or_else(|| AIError::ParseError("No text in response".to_string()))?;
+    
+    Ok(SummaryResult {
+        summary: text.to_string(),
+        model: model.to_string(),
+        provider: "LM Studio".to_string(),
     })
 }
 

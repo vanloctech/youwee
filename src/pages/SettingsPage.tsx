@@ -231,6 +231,7 @@ function AISettingsContent({
                       deepseek: 'deepseek-chat',
                       qwen: 'qwen-turbo',
                       ollama: 'llama3.2',
+                      lmstudio: 'local-model',
                       proxy: 'gpt-4o-mini',
                     };
                     ai.updateConfig({
@@ -249,12 +250,13 @@ function AISettingsContent({
                     <SelectItem value="qwen">Qwen</SelectItem>
                     <SelectItem value="proxy">{t('ai.proxyCustom')}</SelectItem>
                     <SelectItem value="ollama">{t('ai.ollamaLocal')}</SelectItem>
+                    <SelectItem value="lmstudio">{t('ai.lmstudioLocal')}</SelectItem>
                   </SelectContent>
                 </Select>
               </SettingsRow>
 
               {/* API Key */}
-              {ai.config.provider !== 'ollama' && (
+              {ai.config.provider !== 'ollama' && ai.config.provider !== 'lmstudio' && (
                 <div
                   id="ai-api-key"
                   className={cn(
@@ -361,6 +363,31 @@ function AISettingsContent({
                       value={ai.config.ollama_url || 'http://localhost:11434'}
                       onChange={(e) => ai.updateConfig({ ollama_url: e.target.value })}
                       placeholder="http://localhost:11434"
+                      className="h-9 bg-background flex-1"
+                    />
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={ai.testConnection}
+                      disabled={ai.isTesting}
+                      className="w-full sm:w-auto"
+                    >
+                      {ai.isTesting ? <Loader2 className="w-4 h-4 animate-spin" /> : t('ai.test')}
+                    </Button>
+                  </div>
+                </div>
+              )}
+
+              {/* LM Studio URL */}
+              {ai.config.provider === 'lmstudio' && (
+                <div className="space-y-2 py-2">
+                  <p className="text-sm font-medium">{t('ai.lmstudioUrl')}</p>
+                  <div className="flex flex-col items-stretch gap-2 sm:flex-row sm:items-center">
+                    <Input
+                      type="text"
+                      value={ai.config.lmstudio_url || 'http://localhost:1234'}
+                      onChange={(e) => ai.updateConfig({ lmstudio_url: e.target.value })}
+                      placeholder="http://localhost:1234"
                       className="h-9 bg-background flex-1"
                     />
                     <Button

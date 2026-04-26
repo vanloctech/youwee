@@ -249,9 +249,11 @@
     "whisperModelPlaceholder": "模型（默认：whisper-1）",
     "whisperCompatible": "兼容 Groq、LocalAI、Faster-Whisper 等 OpenAI 兼容 API",
     "ollamaUrl": "Ollama 地址",
+    "lmstudioUrl": "LM Studio 地址",
     "proxyUrl": "API 端点地址",
     "proxyCustom": "代理（自定义）",
-    "ollamaLocal": "Ollama（本地）"
+    "ollamaLocal": "Ollama（本地）",
+    "lmstudioLocal": "LM Studio（本地）"
   },
   "extension": {
     "title": "浏览器扩展",

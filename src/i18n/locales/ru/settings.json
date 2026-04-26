@@ -228,9 +228,11 @@
     "whisperModelPlaceholder": "Модель (по умолчанию: whisper-1)",
     "whisperCompatible": "Совместим с Groq, LocalAI, Faster-Whisper и другими OpenAI-совместимыми API",
     "ollamaUrl": "URL Ollama",
+    "lmstudioUrl": "URL LM Studio",
     "proxyUrl": "URL конечной точки API",
     "proxyCustom": "Прокси (настроить)",
-    "ollamaLocal": "Ollama (локальный)"
+    "ollamaLocal": "Ollama (локальный)",
+    "lmstudioLocal": "LM Studio (локальный)"
   },
   "extension": {
     "title": "Расширение для браузера",

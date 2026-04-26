@@ -8,6 +8,7 @@ Youwee 的所有重要更改都将记录在此文件中。
 ## [Unreleased]
 
 ### 新增
+- **LM Studio AI 提供商** - 新增 LM Studio 作为本地 OpenAI 兼容 AI 提供商，支持自定义本地端点且无需 API 密钥
 
 ### 变更
 
