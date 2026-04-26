@@ -104,8 +104,12 @@ fn get_system_binary_candidates(binary_name: &str) -> Vec<PathBuf> {
     }
 
     // Well-known fallback locations for environments where PATH may not
-    // include these (e.g., macOS GUI apps launched from Finder/Dock that
-    // don't inherit the user's shell PATH).
+    // include these (e.g., macOS GUI apps launched from Finder/Dock or
+    // Linux desktop files that don't inherit the user's shell PATH).
+    if let Ok(home) = std::env::var("HOME") {
+        // ~/.local/bin — standard XDG location for pipx, pip --user, etc.
+        push_unique(PathBuf::from(&home).join(".local/bin").join(binary_name));
+    }
     push_unique(PathBuf::from("/opt/homebrew/bin").join(binary_name));
     push_unique(PathBuf::from("/usr/local/bin").join(binary_name));
     push_unique(PathBuf::from("/usr/bin").join(binary_name));
