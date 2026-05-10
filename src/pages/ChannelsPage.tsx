@@ -532,6 +532,9 @@ export function ChannelsPage() {
     channelNewCounts,
     browseChannelAvatar,
     browseFetchProgress,
+    browseHasMore,
+    browseLoadingMore,
+    loadMoreChannelVideos,
   } = useChannels();
 
   const { ffmpegStatus } = useDependencies();
@@ -749,7 +752,9 @@ export function ChannelsPage() {
             <span className="hidden sm:inline">
               {browseLoading
                 ? browseFetchProgress
-                  ? `${browseFetchProgress.fetched}/${browseFetchProgress.limit}`
+                  ? browseFetchProgress.limit
+                    ? `${browseFetchProgress.fetched}/${browseFetchProgress.limit}`
+                    : `${browseFetchProgress.fetched}`
                   : t('fetching')
                 : t('fetchVideos')}
             </span>
@@ -934,7 +939,11 @@ export function ChannelsPage() {
                 <p className="text-sm text-muted-foreground">
                   {t('fetching')}
                   {browseFetchProgress &&
-                    ` (${browseFetchProgress.fetched}/${browseFetchProgress.limit})`}
+                    ` (${
+                      browseFetchProgress.limit
+                        ? `${browseFetchProgress.fetched}/${browseFetchProgress.limit}`
+                        : browseFetchProgress.fetched
+                    })`}
                 </p>
               </div>
             )}
@@ -951,6 +960,20 @@ export function ChannelsPage() {
                     onToggle={() => toggleVideoSelection(video.id)}
                   />
                 ))}
+                {(browseHasMore || browseLoadingMore) && (
+                  <div className="flex justify-center pt-3">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={loadMoreChannelVideos}
+                      disabled={browseLoadingMore}
+                      className="rounded-md border border-dashed"
+                    >
+                      {browseLoadingMore && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+                      {t('loadMore')}
+                    </Button>
+                  </div>
+                )}
               </div>
             )}
           </div>
@@ -1177,6 +1200,9 @@ function ChannelDetailView({ channel, onBack }: { channel: FollowedChannel; onBa
     browseVideos,
     browseLoading,
     browseFetchProgress,
+    browseHasMore,
+    browseLoadingMore,
+    loadMoreChannelVideos,
     selectedVideoIds,
     toggleVideoSelection,
     selectAllVideos,
@@ -1768,7 +1794,11 @@ function ChannelDetailView({ channel, onBack }: { channel: FollowedChannel; onBa
             <p className="text-sm text-muted-foreground">
               {t('fetching')}
               {browseFetchProgress &&
-                ` (${browseFetchProgress.fetched}/${browseFetchProgress.limit})`}
+                ` (${
+                  browseFetchProgress.limit
+                    ? `${browseFetchProgress.fetched}/${browseFetchProgress.limit}`
+                    : browseFetchProgress.fetched
+                })`}
             </p>
           </div>
         )}
@@ -1784,6 +1814,20 @@ function ChannelDetailView({ channel, onBack }: { channel: FollowedChannel; onBa
                 onToggle={() => toggleVideoSelection(video.id)}
               />
             ))}
+            {(browseHasMore || browseLoadingMore) && (
+              <div className="flex justify-center pt-3">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={loadMoreChannelVideos}
+                  disabled={browseLoadingMore}
+                  className="rounded-md border border-dashed"
+                >
+                  {browseLoadingMore && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+                  {t('loadMore')}
+                </Button>
+              </div>
+            )}
           </div>
         )}
       </div>

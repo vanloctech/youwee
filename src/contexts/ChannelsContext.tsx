@@ -28,6 +28,8 @@ const SUPPORTED_PLATFORMS = [
   { platform: 'youku', hosts: ['youku.com'] },
 ] as const;
 
+const CHANNEL_BROWSE_BATCH_SIZE = 100;
+
 export type Platform = (typeof SUPPORTED_PLATFORMS)[number]['platform'] | 'other';
 
 /** Detect which platform a URL belongs to */
@@ -189,8 +191,11 @@ interface ChannelsContextType {
   browseError: string | null;
   browseChannelName: string | null;
   browseChannelAvatar: string | null;
-  browseFetchProgress: { fetched: number; limit: number } | null;
-  fetchChannelVideos: (url: string, limit?: number) => Promise<void>;
+  browseFetchProgress: { fetched: number; limit: number | null } | null;
+  browseHasMore: boolean;
+  browseLoadingMore: boolean;
+  fetchChannelVideos: (url: string, limit?: number | null) => Promise<void>;
+  loadMoreChannelVideos: () => Promise<void>;
   clearBrowse: () => void;
 
   // Video selection & download
@@ -240,8 +245,10 @@ export function ChannelsProvider({ children }: { children: ReactNode }) {
   // Fetch progress (for non-flat-playlist platforms like Bilibili)
   const [browseFetchProgress, setBrowseFetchProgress] = useState<{
     fetched: number;
-    limit: number;
+    limit: number | null;
   } | null>(null);
+  const [browseHasMore, setBrowseHasMore] = useState(false);
+  const [browseLoadingMore, setBrowseLoadingMore] = useState(false);
 
   // Selection state
   const [selectedVideoIds, setSelectedVideoIds] = useState<Set<string>>(new Set());
@@ -348,38 +355,47 @@ export function ChannelsProvider({ children }: { children: ReactNode }) {
   }, []);
 
   // Sync browse videos to channel_videos DB for a followed channel
-  const syncVideosToDb = useCallback(async (channelId: string, videos: PlaylistVideoEntry[]) => {
-    if (videos.length === 0) return;
+  const syncVideosToDb = useCallback(
+    async (
+      channelId: string,
+      videos: PlaylistVideoEntry[],
+      options?: { updateLastVideoId?: boolean },
+    ) => {
+      if (videos.length === 0) return;
 
-    const now = new Date().toISOString();
-    const channelVideos: ChannelVideo[] = videos.map((v) => ({
-      id: crypto.randomUUID(),
-      channel_id: channelId,
-      video_id: v.id,
-      title: v.title,
-      url: v.url,
-      thumbnail: v.thumbnail,
-      duration: v.duration,
-      upload_date: v.upload_date,
-      status: 'new',
-      created_at: now,
-    }));
+      const now = new Date().toISOString();
+      const channelVideos: ChannelVideo[] = videos.map((v) => ({
+        id: crypto.randomUUID(),
+        channel_id: channelId,
+        video_id: v.id,
+        title: v.title,
+        url: v.url,
+        thumbnail: v.thumbnail,
+        duration: v.duration,
+        upload_date: v.upload_date,
+        status: 'new',
+        created_at: now,
+      }));
 
-    try {
-      await invoke('save_channel_videos', {
-        channelId,
-        videos: channelVideos,
-      });
+      try {
+        await invoke('save_channel_videos', {
+          channelId,
+          videos: channelVideos,
+        });
 
-      // Update last_video_id to the newest video
-      await invoke('update_channel_last_checked', {
-        id: channelId,
-        lastVideoId: videos[0].id,
-      });
-    } catch (error) {
-      console.error('Failed to sync videos to DB:', error);
-    }
-  }, []);
+        if (options?.updateLastVideoId ?? true) {
+          // Update last_video_id to the newest video from the first fetched batch only.
+          await invoke('update_channel_last_checked', {
+            id: channelId,
+            lastVideoId: videos[0].id,
+          });
+        }
+      } catch (error) {
+        console.error('Failed to sync videos to DB:', error);
+      }
+    },
+    [],
+  );
 
   // Refresh followed channels list
   const refreshChannels = useCallback(async () => {
@@ -509,58 +525,80 @@ export function ChannelsProvider({ children }: { children: ReactNode }) {
   // Request ID ref to detect stale responses from concurrent/cancelled fetches
   const fetchRequestIdRef = useRef(0);
 
-  const fetchChannelVideos = useCallback(
-    async (url: string, limit = 50) => {
+  const fetchChannelVideosBatch = useCallback(
+    async (url: string, options?: { limit?: number | null; append?: boolean }) => {
       const requestId = ++fetchRequestIdRef.current;
+      const effectiveLimit = options?.limit ?? CHANNEL_BROWSE_BATCH_SIZE;
+      const isLoadMore = options?.append ?? false;
+      const start = isLoadMore ? browseVideos.length + 1 : 1;
 
-      setBrowseLoading(true);
-      setBrowseError(null);
-      setBrowseVideos([]);
-      setBrowseChannelName(null);
-      setBrowseChannelAvatar(null);
+      if (isLoadMore) {
+        setBrowseLoadingMore(true);
+        setBrowseError(null);
+      } else {
+        setBrowseUrl(url);
+        setBrowseLoading(true);
+        setBrowseError(null);
+        setBrowseVideos([]);
+        setBrowseChannelName(null);
+        setBrowseChannelAvatar(null);
+        setBrowseHasMore(false);
+        setSelectedVideoIds(new Set());
+        setVideoStates(new Map());
+      }
       setBrowseFetchProgress(null);
-      setSelectedVideoIds(new Set());
-      setVideoStates(new Map());
 
       const { cookieMode, cookieBrowser, cookieBrowserProfile, cookieFilePath } =
         getCookieSettings();
       const proxyUrl = getProxyUrl();
 
       try {
-        // Fetch videos and channel info in parallel
-        const [videos, channelInfo] = await Promise.all([
-          invoke<PlaylistVideoEntry[]>('get_channel_videos', {
-            url,
-            limit,
-            cookieMode,
-            cookieBrowser,
-            cookieBrowserProfile,
-            cookieFilePath,
-            proxyUrl,
-          }),
-          invoke<{ name: string; avatar_url: string | null }>('get_channel_info', {
-            url,
-            cookieMode,
-            cookieBrowser,
-            cookieBrowserProfile,
-            cookieFilePath,
-            proxyUrl,
-          }).catch(() => null), // Don't fail if channel info fetch fails
-        ]);
+        const videosPromise = invoke<PlaylistVideoEntry[]>('get_channel_videos', {
+          url,
+          limit: effectiveLimit,
+          start,
+          cookieMode,
+          cookieBrowser,
+          cookieBrowserProfile,
+          cookieFilePath,
+          proxyUrl,
+        });
+        const channelInfoPromise = isLoadMore
+          ? Promise.resolve(null)
+          : invoke<{ name: string; avatar_url: string | null }>('get_channel_info', {
+              url,
+              cookieMode,
+              cookieBrowser,
+              cookieBrowserProfile,
+              cookieFilePath,
+              proxyUrl,
+            }).catch(() => null);
+
+        const [videos, channelInfo] = await Promise.all([videosPromise, channelInfoPromise]);
 
         // Discard stale response if a newer fetch was triggered
         if (requestId !== fetchRequestIdRef.current) return;
 
-        setBrowseVideos(videos);
+        setBrowseHasMore(videos.length === effectiveLimit);
+        setBrowseVideos((prev) => {
+          if (!isLoadMore) return videos;
+
+          const next = new Map(prev.map((video) => [video.id, video]));
+          for (const video of videos) {
+            next.set(video.id, video);
+          }
+          return Array.from(next.values());
+        });
 
         // Use channel info from dedicated command, fallback to video metadata
         // Treat "Channel" (the Rust default) as a failure so we can use better fallbacks
-        const hasValidChannelInfo = channelInfo?.name && channelInfo.name !== 'Channel';
+        const hasValidChannelInfo =
+          !isLoadMore && channelInfo?.name && channelInfo.name !== 'Channel';
 
         if (hasValidChannelInfo) {
           setBrowseChannelName(channelInfo.name);
           setBrowseChannelAvatar(channelInfo.avatar_url);
-        } else {
+        } else if (!isLoadMore) {
           // Fallback: use video metadata or URL-based extraction
           if (videos.length > 0) {
             const name = videos[0].channel || extractChannelFromUrl(url) || 'Channel';
@@ -575,7 +613,9 @@ export function ChannelsProvider({ children }: { children: ReactNode }) {
         // If this channel is already followed, sync videos to DB and load statuses
         const followedChannel = followedChannelsRef.current.find((c) => c.url === url);
         if (followedChannel && videos.length > 0) {
-          await syncVideosToDb(followedChannel.id, videos);
+          await syncVideosToDb(followedChannel.id, videos, {
+            updateLastVideoId: !isLoadMore,
+          });
           await refreshChannelNewCounts();
 
           // Load statuses from DB and merge into videoStates
@@ -618,21 +658,44 @@ export function ChannelsProvider({ children }: { children: ReactNode }) {
       } finally {
         // Only update loading state if this is still the current request
         if (requestId === fetchRequestIdRef.current) {
-          setBrowseLoading(false);
+          if (isLoadMore) {
+            setBrowseLoadingMore(false);
+          } else {
+            setBrowseLoading(false);
+          }
           setBrowseFetchProgress(null);
         }
       }
     },
-    [getCookieSettings, getProxyUrl, syncVideosToDb, refreshChannelNewCounts],
+    [browseVideos.length, getCookieSettings, getProxyUrl, syncVideosToDb, refreshChannelNewCounts],
   );
+
+  const fetchChannelVideos = useCallback(
+    async (url: string, limit?: number | null) => {
+      await fetchChannelVideosBatch(url, { limit, append: false });
+    },
+    [fetchChannelVideosBatch],
+  );
+
+  const loadMoreChannelVideos = useCallback(async () => {
+    if (!browseUrl || browseLoading || browseLoadingMore || !browseHasMore) return;
+    await fetchChannelVideosBatch(browseUrl, {
+      limit: CHANNEL_BROWSE_BATCH_SIZE,
+      append: true,
+    });
+  }, [browseHasMore, browseLoading, browseLoadingMore, browseUrl, fetchChannelVideosBatch]);
 
   // Clear browse state
   const clearBrowse = useCallback(() => {
+    fetchRequestIdRef.current += 1;
     setBrowseUrl('');
     setBrowseVideos([]);
     setBrowseError(null);
     setBrowseChannelName(null);
     setBrowseChannelAvatar(null);
+    setBrowseHasMore(false);
+    setBrowseLoadingMore(false);
+    setBrowseFetchProgress(null);
     setSelectedVideoIds(new Set());
     setVideoStates(new Map());
   }, []);
@@ -1036,7 +1099,7 @@ export function ChannelsProvider({ children }: { children: ReactNode }) {
 
   // Listen for fetch progress events (non-flat-playlist platforms)
   useEffect(() => {
-    const unlisten = listen<{ fetched: number; limit: number }>(
+    const unlisten = listen<{ fetched: number; limit: number | null }>(
       'channel-fetch-progress',
       (event) => {
         setBrowseFetchProgress(event.payload);
@@ -1222,7 +1285,10 @@ export function ChannelsProvider({ children }: { children: ReactNode }) {
         browseChannelName,
         browseChannelAvatar,
         browseFetchProgress,
+        browseHasMore,
+        browseLoadingMore,
         fetchChannelVideos,
+        loadMoreChannelVideos,
         clearBrowse,
         selectedVideoIds,
         toggleVideoSelection,

@@ -37,6 +37,7 @@ pub async fn get_channel_videos(
     app: AppHandle,
     url: String,
     limit: Option<u32>,
+    start: Option<u32>,
     cookie_mode: Option<String>,
     cookie_browser: Option<String>,
     cookie_browser_profile: Option<String>,
@@ -57,7 +58,7 @@ pub async fn get_channel_videos(
             tokio::time::sleep(std::time::Duration::from_secs(2)).await;
         }
 
-        match fetch_channel_videos_once(&app, &url, limit, is_youtube,
+        match fetch_channel_videos_once(&app, &url, limit, start, is_youtube,
             cookie_mode.as_deref(), cookie_browser.as_deref(),
             cookie_browser_profile.as_deref(), cookie_file_path.as_deref(),
             proxy_url.as_deref(),
@@ -79,6 +80,7 @@ async fn fetch_channel_videos_once(
     app: &AppHandle,
     url: &str,
     limit: Option<u32>,
+    start: Option<u32>,
     is_youtube: bool,
     cookie_mode: Option<&str>,
     cookie_browser: Option<&str>,
@@ -98,10 +100,18 @@ async fn fetch_channel_videos_once(
         args.push("--flat-playlist".to_string());
     }
 
-    let effective_limit = limit.unwrap_or(50);
-    if effective_limit > 0 {
+    if let Some(start) = start.filter(|start| *start > 1) {
+        args.push("--playlist-start".to_string());
+        args.push(start.to_string());
+    }
+
+    if let Some(effective_limit) = limit.filter(|limit| *limit > 0) {
+        let playlist_end = start
+            .filter(|start| *start > 1)
+            .map(|start| start.saturating_add(effective_limit).saturating_sub(1))
+            .unwrap_or(effective_limit);
         args.push("--playlist-end".to_string());
-        args.push(effective_limit.to_string());
+        args.push(playlist_end.to_string());
     }
 
     // Add Deno runtime for YouTube
@@ -156,7 +166,7 @@ async fn fetch_channel_videos_once(
                                 fetched_count = new_count;
                                 let _ = app.emit("channel-fetch-progress", serde_json::json!({
                                     "fetched": fetched_count,
-                                    "limit": effective_limit
+                                    "limit": limit
                                 }));
                             }
                         }
@@ -230,7 +240,7 @@ async fn fetch_channel_videos_once(
     let fetched_count = output.lines().filter(|line| !line.trim().is_empty()).count() as u32;
     let _ = app.emit("channel-fetch-progress", serde_json::json!({
         "fetched": fetched_count,
-        "limit": effective_limit
+        "limit": limit
     }));
 
     let mut entries: Vec<PlaylistVideoEntry> = Vec::new();
