@@ -8,8 +8,10 @@ import {
   Download,
   ExternalLink,
   FileVideo,
+  Folder,
   FolderOpen,
   HardDrive,
+  Hash,
   Loader2,
   Pause,
   Pencil,
@@ -21,6 +23,8 @@ import {
 } from 'lucide-react';
 import { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { CollectionManagerDialog } from '@/components/history/CollectionManagerDialog';
+import { HistoryTagsCollectionsDialog } from '@/components/history/HistoryTagsCollectionsDialog';
 import { SimpleMarkdown } from '@/components/ui/simple-markdown';
 import { useAI } from '@/contexts/AIContext';
 import { useHistory } from '@/contexts/HistoryContext';
@@ -64,8 +68,15 @@ function formatRelativeTime(
 
 export function HistoryItem({ entry }: HistoryItemProps) {
   const { t } = useTranslation('pages');
-  const { entries, openFileLocation, deleteEntry, renameEntry, redownload, getRedownloadTask } =
-    useHistory();
+  const {
+    entries,
+    openFileLocation,
+    deleteEntry,
+    renameEntry,
+    redownload,
+    getRedownloadTask,
+    setAdvancedFilters,
+  } = useHistory();
   const ai = useAI();
   const { currentEntry, isPlaying, playFrom, togglePlay } = usePlayer();
   const [isDeleting, setIsDeleting] = useState(false);
@@ -77,6 +88,8 @@ export function HistoryItem({ entry }: HistoryItemProps) {
   const [showFullSummary, setShowFullSummary] = useState(false);
   const [thumbError, setThumbError] = useState(false);
   const [isRenameEditorOpen, setIsRenameEditorOpen] = useState(false);
+  const [isTaggingDialogOpen, setIsTaggingDialogOpen] = useState(false);
+  const [isCollectionsManagerOpen, setIsCollectionsManagerOpen] = useState(false);
   const [renameName, setRenameName] = useState('');
   const [isRenaming, setIsRenaming] = useState(false);
 
@@ -194,6 +207,20 @@ export function HistoryItem({ entry }: HistoryItemProps) {
     ai.startSummaryTask(entry.id, entry.url);
   }, [ai, entry.url, entry.id]);
 
+  const handleTagFilter = useCallback(
+    (tagId: string) => {
+      setAdvancedFilters({ tagIds: [tagId], matchMode: 'any' });
+    },
+    [setAdvancedFilters],
+  );
+
+  const handleCollectionFilter = useCallback(
+    (collectionId: string) => {
+      setAdvancedFilters({ collectionIds: [collectionId], matchMode: 'any' });
+    },
+    [setAdvancedFilters],
+  );
+
   const handlePlayAudio = useCallback(() => {
     if (!canPlayAudio) return;
 
@@ -308,6 +335,36 @@ export function HistoryItem({ entry }: HistoryItemProps) {
               {formatRelativeTime(entry.downloaded_at, t)}
             </span>
           </div>
+
+          {(entry.tags.length > 0 || entry.collections.length > 0) && (
+            <div className="mt-2 flex flex-wrap gap-2">
+              {entry.tags.map((tag) => (
+                <button
+                  type="button"
+                  key={tag.id}
+                  onClick={() => handleTagFilter(tag.id)}
+                  className="inline-flex items-center gap-1 rounded-md bg-blue-500/10 px-2 py-0.5 text-[11px] font-medium text-blue-600 transition-colors hover:bg-blue-500/20 dark:text-blue-400"
+                >
+                  <Hash className="w-3 h-3" />
+                  {tag.name}
+                </button>
+              ))}
+              {entry.collections.map((collection) => (
+                <button
+                  type="button"
+                  key={collection.id}
+                  onClick={() => handleCollectionFilter(collection.id)}
+                  className="inline-flex items-center gap-1.5 rounded-md bg-amber-500/10 px-2 py-0.5 text-[11px] font-medium text-amber-600 transition-colors hover:bg-amber-500/20 dark:text-amber-400"
+                >
+                  <span
+                    className="h-2 w-2 rounded-full bg-amber-500/80"
+                    style={collection.color ? { backgroundColor: collection.color } : undefined}
+                  />
+                  {collection.name}
+                </button>
+              ))}
+            </div>
+          )}
 
           {/* AI Summary */}
           <div className="mt-2">
@@ -515,6 +572,18 @@ export function HistoryItem({ entry }: HistoryItemProps) {
 
           <button
             type="button"
+            onClick={() => setIsTaggingDialogOpen(true)}
+            className={cn(
+              'flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium',
+              'bg-muted/50 hover:bg-muted text-muted-foreground hover:text-foreground transition-colors',
+            )}
+          >
+            <Folder className="w-3.5 h-3.5" />
+            {t('library.item.manageTagsCollections')}
+          </button>
+
+          <button
+            type="button"
             onClick={handleDelete}
             disabled={isDeleting}
             className={cn(
@@ -560,6 +629,17 @@ export function HistoryItem({ entry }: HistoryItemProps) {
             </button>
           </div>
         )}
+
+        <HistoryTagsCollectionsDialog
+          entry={entry}
+          open={isTaggingDialogOpen}
+          onOpenChange={setIsTaggingDialogOpen}
+          onOpenCollectionsManager={() => setIsCollectionsManagerOpen(true)}
+        />
+        <CollectionManagerDialog
+          open={isCollectionsManagerOpen}
+          onOpenChange={setIsCollectionsManagerOpen}
+        />
       </div>
     </div>
   );

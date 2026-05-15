@@ -23,7 +23,8 @@ pub fn system_gallerydl_not_found_message() -> String {
     }
     #[cfg(not(any(target_os = "macos", target_os = "windows", target_os = "linux")))]
     {
-        "System gallery-dl not found. Install it and ensure `gallery-dl` is available in PATH.".to_string()
+        "System gallery-dl not found. Install it and ensure `gallery-dl` is available in PATH."
+            .to_string()
     }
 }
 
@@ -84,10 +85,11 @@ pub async fn check_gallerydl_internal(_app: &AppHandle) -> Result<GalleryDlStatu
 
     if !output.status.success() {
         let stderr = String::from_utf8_lossy(&output.stderr);
-        return Err(
-            BackendError::from_message(format!("gallery-dl command failed: {}", stderr.trim()))
-                .to_wire_string(),
-        );
+        return Err(BackendError::from_message(format!(
+            "gallery-dl command failed: {}",
+            stderr.trim()
+        ))
+        .to_wire_string());
     }
 
     Ok(GalleryDlStatus {

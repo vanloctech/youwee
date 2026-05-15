@@ -81,6 +81,49 @@ pub fn init_database(app: &AppHandle) -> Result<(), String> {
     conn.execute("ALTER TABLE history ADD COLUMN time_range TEXT", [])
         .ok(); // Ignore error if column already exists
 
+    conn.execute(
+        "CREATE TABLE IF NOT EXISTS tags (
+            id TEXT PRIMARY KEY,
+            name TEXT NOT NULL,
+            normalized_name TEXT NOT NULL UNIQUE,
+            created_at INTEGER NOT NULL
+        )",
+        [],
+    )
+    .map_err(|e| format!("Failed to create tags table: {}", e))?;
+
+    conn.execute(
+        "CREATE TABLE IF NOT EXISTS history_tags (
+            history_id TEXT NOT NULL,
+            tag_id TEXT NOT NULL,
+            UNIQUE(history_id, tag_id)
+        )",
+        [],
+    )
+    .map_err(|e| format!("Failed to create history_tags table: {}", e))?;
+
+    conn.execute(
+        "CREATE TABLE IF NOT EXISTS collections (
+            id TEXT PRIMARY KEY,
+            name TEXT NOT NULL,
+            normalized_name TEXT NOT NULL UNIQUE,
+            color TEXT,
+            created_at INTEGER NOT NULL
+        )",
+        [],
+    )
+    .map_err(|e| format!("Failed to create collections table: {}", e))?;
+
+    conn.execute(
+        "CREATE TABLE IF NOT EXISTS history_collections (
+            history_id TEXT NOT NULL,
+            collection_id TEXT NOT NULL,
+            UNIQUE(history_id, collection_id)
+        )",
+        [],
+    )
+    .map_err(|e| format!("Failed to create history_collections table: {}", e))?;
+
     // Create history indexes
     conn.execute(
         "CREATE INDEX IF NOT EXISTS idx_history_downloaded ON history(downloaded_at DESC)",
@@ -90,6 +133,42 @@ pub fn init_database(app: &AppHandle) -> Result<(), String> {
 
     conn.execute(
         "CREATE INDEX IF NOT EXISTS idx_history_source ON history(source)",
+        [],
+    )
+    .ok();
+
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_tags_normalized_name ON tags(normalized_name)",
+        [],
+    )
+    .ok();
+
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_history_tags_history_id ON history_tags(history_id)",
+        [],
+    )
+    .ok();
+
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_history_tags_tag_id ON history_tags(tag_id)",
+        [],
+    )
+    .ok();
+
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_collections_normalized_name ON collections(normalized_name)",
+        [],
+    )
+    .ok();
+
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_history_collections_history_id ON history_collections(history_id)",
+        [],
+    )
+    .ok();
+
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_history_collections_collection_id ON history_collections(collection_id)",
         [],
     )
     .ok();

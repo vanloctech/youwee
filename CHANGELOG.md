@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Library tagging and collections** - Added free-form tags and virtual collections for Library items, including item-level assignment, quick chip filters, collection management, and advanced filtering by tags or collections
 
 ### Changed
 - **Gallery URL input alignment** - Updated the Gallery input to match the YouTube single/multiple flow more closely, including the Add button style, batch layout, URL hints, and language copy across locales

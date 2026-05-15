@@ -237,6 +237,8 @@
       "dateTo": "To",
       "formats": "Formats",
       "qualities": "Qualities",
+      "tags": "Tags",
+      "collections": "Collections",
       "activeFilters": "{{count}} active filters",
       "clearFilters": "Clear filters",
       "refresh": "Refresh",
@@ -265,6 +267,7 @@
       "renameCancel": "Cancel",
       "renameFailed": "Failed to rename file",
       "redownload": "Re-download",
+      "manageTagsCollections": "Manage tags & collections",
       "openUrl": "Open URL",
       "copy": "Copy",
       "copied": "Copied",
@@ -279,6 +282,41 @@
         "twitter": "Twitter",
         "bilibili": "Bilibili",
         "other": "Other"
+      }
+    },
+    "collections": {
+      "title": "Collections",
+      "manage": "Manage collections",
+      "assignHint": "Use collections to group videos into virtual folders.",
+      "managerTitle": "Collections manager",
+      "managerDescription": "Create, rename, or delete virtual collections for your library.",
+      "newPlaceholder": "New collection name",
+      "create": "Create",
+      "rename": "Rename",
+      "delete": "Delete",
+      "empty": "No collections yet",
+      "itemCount": "{{count}} items",
+      "deleteConfirm": "Delete collection \"{{name}}\"?",
+      "errors": {
+        "create": "Failed to create collection",
+        "rename": "Failed to rename collection",
+        "delete": "Failed to delete collection"
+      }
+    },
+    "tagging": {
+      "dialogTitle": "Manage tags & collections",
+      "dialogDescription": "Organize this library item with free-form tags and virtual collections.",
+      "tags": "Tags",
+      "tagsHint": "Type a tag and press Enter to create or assign it.",
+      "tagPlaceholder": "Add a tag like #Study or #Entertainment",
+      "addTag": "Add tag",
+      "noTags": "No tags selected",
+      "existingTags": "Existing tags",
+      "noTagsYet": "No tags yet",
+      "cancel": "Cancel",
+      "save": "Save",
+      "errors": {
+        "save": "Failed to save tags or collections"
       }
     }
   },

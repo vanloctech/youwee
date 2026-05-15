@@ -237,6 +237,8 @@
       "dateTo": "Đến ngày",
       "formats": "Định dạng",
       "qualities": "Chất lượng",
+      "tags": "Tag",
+      "collections": "Bộ sưu tập",
       "activeFilters": "{{count}} bộ lọc đang áp dụng",
       "clearFilters": "Xóa bộ lọc",
       "refresh": "Làm mới",
@@ -265,6 +267,7 @@
       "renameCancel": "Hủy",
       "renameFailed": "Đổi tên file thất bại",
       "redownload": "Tải lại",
+      "manageTagsCollections": "Quản lý tag & bộ sưu tập",
       "openUrl": "Mở URL",
       "copy": "Sao chép",
       "copied": "Đã sao chép",
@@ -279,6 +282,41 @@
         "twitter": "Twitter",
         "bilibili": "Bilibili",
         "other": "Khác"
+      }
+    },
+    "collections": {
+      "title": "Bộ sưu tập",
+      "manage": "Quản lý bộ sưu tập",
+      "assignHint": "Dùng bộ sưu tập để gom video thành các thư mục ảo.",
+      "managerTitle": "Quản lý bộ sưu tập",
+      "managerDescription": "Tạo, đổi tên hoặc xóa các bộ sưu tập ảo cho thư viện của bạn.",
+      "newPlaceholder": "Tên bộ sưu tập mới",
+      "create": "Tạo",
+      "rename": "Đổi tên",
+      "delete": "Xóa",
+      "empty": "Chưa có bộ sưu tập nào",
+      "itemCount": "{{count}} mục",
+      "deleteConfirm": "Xóa bộ sưu tập \"{{name}}\"?",
+      "errors": {
+        "create": "Tạo bộ sưu tập thất bại",
+        "rename": "Đổi tên bộ sưu tập thất bại",
+        "delete": "Xóa bộ sưu tập thất bại"
+      }
+    },
+    "tagging": {
+      "dialogTitle": "Quản lý tag & bộ sưu tập",
+      "dialogDescription": "Sắp xếp mục trong thư viện này bằng tag tự do và bộ sưu tập ảo.",
+      "tags": "Tag",
+      "tagsHint": "Gõ tag rồi nhấn Enter để tạo hoặc gán tag.",
+      "tagPlaceholder": "Thêm tag như #Hoc_tap hoặc #Giai_tri",
+      "addTag": "Thêm tag",
+      "noTags": "Chưa chọn tag nào",
+      "existingTags": "Tag hiện có",
+      "noTagsYet": "Chưa có tag nào",
+      "cancel": "Hủy",
+      "save": "Lưu",
+      "errors": {
+        "save": "Lưu tag hoặc bộ sưu tập thất bại"
       }
     }
   },

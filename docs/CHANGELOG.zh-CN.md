@@ -8,6 +8,7 @@ Youwee 的所有重要更改都将记录在此文件中。
 ## [Unreleased]
 
 ### 新增
+- **媒体库标签与合集** - 为媒体库项目新增自由标签和虚拟合集，包含逐项分配、快捷 chip 筛选、合集管理，以及按标签或合集进行高级筛选
 
 ### 变更
 - **Gallery URL 输入与 YouTube 对齐** - 更新 Gallery 输入区域，使其更接近 YouTube 的 single/multiple 流程，包括 Add 按钮样式、批量布局、URL 提示以及多语言文案

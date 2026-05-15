@@ -11,10 +11,7 @@ use tokio::process::Command;
 
 use crate::database::{add_history_internal, add_log_internal};
 use crate::services::{
-    get_deno_path,
-    get_ffmpeg_path,
-    get_ytdlp_path,
-    get_ytdlp_source,
+    get_deno_path, get_ffmpeg_path, get_ytdlp_path, get_ytdlp_source,
     system_ytdlp_not_found_message,
 };
 use crate::types::{BackendError, DependencySource};
@@ -64,8 +61,8 @@ fn split_info_json_and_comments(
     let content = std::fs::read_to_string(&info_json_path)
         .map_err(|e| format!("Failed to read info.json: {}", e))?;
 
-    let mut json: serde_json::Value = serde_json::from_str(&content)
-        .map_err(|e| format!("Failed to parse info.json: {}", e))?;
+    let mut json: serde_json::Value =
+        serde_json::from_str(&content).map_err(|e| format!("Failed to parse info.json: {}", e))?;
 
     // Extract comments if they exist
     let comments = json.get("comments").cloned();
@@ -131,8 +128,8 @@ pub async fn fetch_metadata(
     validate_url(&url).map_err(|e| BackendError::from_message(e).to_wire_string())?;
     let url = normalize_url(&url);
 
-    let sanitized_path =
-        sanitize_output_path(&output_path).map_err(|e| BackendError::from_message(e).to_wire_string())?;
+    let sanitized_path = sanitize_output_path(&output_path)
+        .map_err(|e| BackendError::from_message(e).to_wire_string())?;
     // Use title only without extension - yt-dlp will add .info.json, .description, .jpg etc
     let output_template = format!("{}/%(title)s", sanitized_path);
 
@@ -286,18 +283,16 @@ pub async fn fetch_metadata(
             .stderr(Stdio::piped());
         cmd.hide_window();
 
-        let mut process = cmd
-            .spawn()
-            .map_err(|e| BackendError::from_message(format!("Failed to start yt-dlp: {}", e)).to_wire_string())?;
+        let mut process = cmd.spawn().map_err(|e| {
+            BackendError::from_message(format!("Failed to start yt-dlp: {}", e)).to_wire_string()
+        })?;
 
-        let stdout = process
-            .stdout
-            .take()
-            .ok_or_else(|| BackendError::from_message("Failed to capture stdout").to_wire_string())?;
-        let stderr = process
-            .stderr
-            .take()
-            .ok_or_else(|| BackendError::from_message("Failed to capture stderr").to_wire_string())?;
+        let stdout = process.stdout.take().ok_or_else(|| {
+            BackendError::from_message("Failed to capture stdout").to_wire_string()
+        })?;
+        let stderr = process.stderr.take().ok_or_else(|| {
+            BackendError::from_message("Failed to capture stderr").to_wire_string()
+        })?;
 
         let mut stdout_reader = BufReader::new(stdout).lines();
         let mut stderr_reader = BufReader::new(stderr).lines();
@@ -375,10 +370,9 @@ pub async fn fetch_metadata(
             }
         }
 
-        let status = process
-            .wait()
-            .await
-            .map_err(|e| BackendError::from_message(format!("Process error: {}", e)).to_wire_string())?;
+        let status = process.wait().await.map_err(|e| {
+            BackendError::from_message(format!("Process error: {}", e)).to_wire_string()
+        })?;
 
         if status.success() {
             let title = video_title.clone().unwrap_or_else(|| "Unknown".to_string());
@@ -394,8 +388,10 @@ pub async fn fetch_metadata(
 
             // Post-process: rename description file to .description.txt
             if write_description {
-                let old_path = Path::new(&sanitized_path).join(format!("{}.description", safe_title));
-                let new_path = Path::new(&sanitized_path).join(format!("{}.description.txt", safe_title));
+                let old_path =
+                    Path::new(&sanitized_path).join(format!("{}.description", safe_title));
+                let new_path =
+                    Path::new(&sanitized_path).join(format!("{}.description.txt", safe_title));
                 if old_path.exists() {
                     std::fs::rename(&old_path, &new_path).ok();
                 }
@@ -403,11 +399,19 @@ pub async fn fetch_metadata(
 
             // Post-process: split comments into separate file
             if write_comments || (write_info_json && write_comments) {
-                if let Err(e) =
-                    split_info_json_and_comments(&sanitized_path, &title, write_info_json, write_comments)
-                {
-                    add_log_internal("stderr", &format!("Post-process warning: {}", e), None, Some(&url))
-                        .ok();
+                if let Err(e) = split_info_json_and_comments(
+                    &sanitized_path,
+                    &title,
+                    write_info_json,
+                    write_comments,
+                ) {
+                    add_log_internal(
+                        "stderr",
+                        &format!("Post-process warning: {}", e),
+                        None,
+                        Some(&url),
+                    )
+                    .ok();
                 }
             }
 
@@ -445,9 +449,9 @@ pub async fn fetch_metadata(
                 sanitized_path.clone(),           // filepath = output folder
                 None,                             // filesize
                 video_duration.map(|d| d as u64), // duration as u64
-                Some("metadata".to_string()),    // quality field used for type
-                Some(files_saved.join(", ")),    // format field used for what was saved
-                Some("metadata".to_string()),    // source
+                Some("metadata".to_string()),     // quality field used for type
+                Some(files_saved.join(", ")),     // format field used for what was saved
+                Some("metadata".to_string()),     // source
                 None,                             // time_range
             )
             .ok();

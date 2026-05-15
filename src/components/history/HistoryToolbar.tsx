@@ -3,12 +3,15 @@ import {
   ChevronDown,
   ChevronUp,
   Filter,
+  Folder,
+  Hash,
   RefreshCw,
   Search,
   Trash2,
 } from 'lucide-react';
 import { useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { CollectionManagerDialog } from '@/components/history/CollectionManagerDialog';
 import { Input } from '@/components/ui/input';
 import {
   Select,
@@ -31,6 +34,8 @@ export function HistoryToolbar() {
     setFilter,
     setSearch,
     advancedFilters,
+    tags,
+    collections,
     setAdvancedFilters,
     clearAdvancedFilters,
     sort,
@@ -41,6 +46,7 @@ export function HistoryToolbar() {
 
   const [clearing, setClearing] = useState(false);
   const [advancedOpen, setAdvancedOpen] = useState(false);
+  const [collectionsManagerOpen, setCollectionsManagerOpen] = useState(false);
 
   const filterOptions: { value: HistoryFilter; label: string }[] = [
     { value: 'all', label: t('library.toolbar.filterAll') },
@@ -81,7 +87,9 @@ export function HistoryToolbar() {
     (advancedFilters.mediaType !== 'all' ? 1 : 0) +
     (advancedFilters.datePreset !== 'all' ? 1 : 0) +
     (advancedFilters.formats.length > 0 ? 1 : 0) +
-    (advancedFilters.qualities.length > 0 ? 1 : 0);
+    (advancedFilters.qualities.length > 0 ? 1 : 0) +
+    (advancedFilters.tagIds.length > 0 ? 1 : 0) +
+    (advancedFilters.collectionIds.length > 0 ? 1 : 0);
 
   const toggleFormat = useCallback(
     (format: string) => {
@@ -103,6 +111,28 @@ export function HistoryToolbar() {
       setAdvancedFilters({ qualities: next });
     },
     [advancedFilters.qualities, setAdvancedFilters],
+  );
+
+  const toggleTag = useCallback(
+    (tagId: string) => {
+      const current = advancedFilters.tagIds;
+      const next = current.includes(tagId)
+        ? current.filter((item) => item !== tagId)
+        : [...current, tagId];
+      setAdvancedFilters({ tagIds: next, matchMode: 'any' });
+    },
+    [advancedFilters.tagIds, setAdvancedFilters],
+  );
+
+  const toggleCollection = useCallback(
+    (collectionId: string) => {
+      const current = advancedFilters.collectionIds;
+      const next = current.includes(collectionId)
+        ? current.filter((item) => item !== collectionId)
+        : [...current, collectionId];
+      setAdvancedFilters({ collectionIds: next, matchMode: 'any' });
+    },
+    [advancedFilters.collectionIds, setAdvancedFilters],
   );
 
   const handleClear = useCallback(async () => {
@@ -194,6 +224,19 @@ export function HistoryToolbar() {
               </span>
             )}
             {advancedOpen ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setCollectionsManagerOpen(true)}
+            className={cn(
+              'flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium',
+              'bg-muted/50 hover:bg-muted transition-colors',
+              'text-muted-foreground hover:text-foreground',
+            )}
+          >
+            <Folder className="w-4 h-4" />
+            {t('library.collections.manage')}
           </button>
 
           <button
@@ -364,6 +407,71 @@ export function HistoryToolbar() {
             </div>
           </div>
 
+          <div className="grid gap-3 md:grid-cols-2">
+            <div className="space-y-2">
+              <p className="text-xs font-medium text-muted-foreground">
+                {t('library.tagging.tags')}
+              </p>
+              <div className="flex flex-wrap gap-1.5">
+                {tags.length === 0 ? (
+                  <span className="text-xs text-muted-foreground">
+                    {t('library.tagging.noTagsYet')}
+                  </span>
+                ) : (
+                  tags.map((tag) => (
+                    <button
+                      type="button"
+                      key={tag.id}
+                      onClick={() => toggleTag(tag.id)}
+                      className={cn(
+                        'inline-flex items-center gap-1 rounded-md border px-2 py-1 text-xs transition-colors',
+                        advancedFilters.tagIds.includes(tag.id)
+                          ? 'bg-blue-500/10 border-blue-500/40 text-blue-600 dark:text-blue-400'
+                          : 'bg-background/60 border-border/50 text-muted-foreground hover:text-foreground',
+                      )}
+                    >
+                      <Hash className="w-3 h-3" />
+                      {tag.name}
+                    </button>
+                  ))
+                )}
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <p className="text-xs font-medium text-muted-foreground">
+                {t('library.collections.title')}
+              </p>
+              <div className="flex flex-wrap gap-1.5">
+                {collections.length === 0 ? (
+                  <span className="text-xs text-muted-foreground">
+                    {t('library.collections.empty')}
+                  </span>
+                ) : (
+                  collections.map((collection) => (
+                    <button
+                      type="button"
+                      key={collection.id}
+                      onClick={() => toggleCollection(collection.id)}
+                      className={cn(
+                        'inline-flex items-center gap-2 rounded-md border px-2 py-1 text-xs transition-colors',
+                        advancedFilters.collectionIds.includes(collection.id)
+                          ? 'bg-amber-500/10 border-amber-500/40 text-amber-600 dark:text-amber-400'
+                          : 'bg-background/60 border-border/50 text-muted-foreground hover:text-foreground',
+                      )}
+                    >
+                      <span
+                        className="h-2.5 w-2.5 rounded-full bg-amber-500/80"
+                        style={collection.color ? { backgroundColor: collection.color } : undefined}
+                      />
+                      {collection.name}
+                    </button>
+                  ))
+                )}
+              </div>
+            </div>
+          </div>
+
           <div className="flex items-center justify-between">
             <span className="text-xs text-muted-foreground">
               {t('library.toolbar.activeFilters', { count: activeAdvancedCount })}
@@ -379,6 +487,11 @@ export function HistoryToolbar() {
           </div>
         </div>
       )}
+
+      <CollectionManagerDialog
+        open={collectionsManagerOpen}
+        onOpenChange={setCollectionsManagerOpen}
+      />
     </div>
   );
 }

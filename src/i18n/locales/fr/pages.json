@@ -237,6 +237,8 @@
       "dateTo": "Au",
       "formats": "Formats",
       "qualities": "Qualités",
+      "tags": "Tags",
+      "collections": "Collections",
       "activeFilters": "{{count}} filtres actifs",
       "clearFilters": "Effacer les filtres",
       "refresh": "Actualiser",
@@ -259,7 +261,13 @@
       "generatingSummary": "Génération du résumé...",
       "downloading": "Téléchargement...",
       "openFolder": "Ouvrir le dossier",
+      "rename": "Renommer",
+      "renamePlaceholder": "Entrez le nouveau nom du fichier",
+      "renameSave": "Enregistrer",
+      "renameCancel": "Annuler",
+      "renameFailed": "Échec du renommage du fichier",
       "redownload": "Retélécharger",
+      "manageTagsCollections": "Gérer tags et collections",
       "openUrl": "Ouvrir l'URL",
       "copy": "Copier",
       "copied": "Copié",
@@ -274,6 +282,41 @@
         "twitter": "Twitter",
         "bilibili": "Bilibili",
         "other": "Autre"
+      }
+    },
+    "collections": {
+      "title": "Collections",
+      "manage": "Gérer les collections",
+      "assignHint": "Utilisez des collections pour regrouper les vidéos dans des dossiers virtuels.",
+      "managerTitle": "Gestionnaire de collections",
+      "managerDescription": "Créez, renommez ou supprimez des collections virtuelles pour votre bibliothèque.",
+      "newPlaceholder": "Nom de la nouvelle collection",
+      "create": "Créer",
+      "rename": "Renommer",
+      "delete": "Supprimer",
+      "empty": "Aucune collection pour le moment",
+      "itemCount": "{{count}} éléments",
+      "deleteConfirm": "Supprimer la collection \"{{name}}\" ?",
+      "errors": {
+        "create": "Échec de la création de la collection",
+        "rename": "Échec du renommage de la collection",
+        "delete": "Échec de la suppression de la collection"
+      }
+    },
+    "tagging": {
+      "dialogTitle": "Gérer tags et collections",
+      "dialogDescription": "Organisez cet élément de la bibliothèque avec des tags libres et des collections virtuelles.",
+      "tags": "Tags",
+      "tagsHint": "Saisissez un tag puis appuyez sur Entrée pour le créer ou l'assigner.",
+      "tagPlaceholder": "Ajouter un tag comme #Étude ou #Divertissement",
+      "addTag": "Ajouter un tag",
+      "noTags": "Aucun tag sélectionné",
+      "existingTags": "Tags existants",
+      "noTagsYet": "Aucun tag pour le moment",
+      "cancel": "Annuler",
+      "save": "Enregistrer",
+      "errors": {
+        "save": "Échec de l'enregistrement des tags ou collections"
       }
     }
   }

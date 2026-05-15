@@ -210,7 +210,9 @@ pub fn infer_error_code(message: &str) -> &'static str {
     }
     if m.contains("aria2c not found")
         || (m.contains("aria2c") || m.contains("aria2"))
-            && (m.contains("no such file") || m.contains("not recognized") || m.contains("not found"))
+            && (m.contains("no such file")
+                || m.contains("not recognized")
+                || m.contains("not found"))
     {
         return code::ARIA2_NOT_FOUND;
     }

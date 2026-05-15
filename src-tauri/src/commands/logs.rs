@@ -1,7 +1,7 @@
-use crate::types::LogEntry;
 use crate::database::{
-    get_logs_from_db, add_log_internal, clear_logs_from_db, export_logs_from_db
+    add_log_internal, clear_logs_from_db, export_logs_from_db, get_logs_from_db,
 };
+use crate::types::LogEntry;
 
 #[tauri::command]
 pub fn get_logs(
@@ -19,12 +19,7 @@ pub fn add_log(
     details: Option<String>,
     url: Option<String>,
 ) -> Result<LogEntry, String> {
-    add_log_internal(
-        &log_type,
-        &message,
-        details.as_deref(),
-        url.as_deref(),
-    )
+    add_log_internal(&log_type, &message, details.as_deref(), url.as_deref())
 }
 
 #[tauri::command]

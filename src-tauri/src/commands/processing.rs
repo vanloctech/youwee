@@ -1,20 +1,20 @@
+use rusqlite::params;
+use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 use std::process::Stdio;
 use std::sync::LazyLock;
-use serde::{Deserialize, Serialize};
 use tauri::{AppHandle, Emitter, Manager};
 use tokio::io::{AsyncBufReadExt, BufReader};
 use tokio::process::Command;
 use tokio::sync::Mutex;
-use rusqlite::params;
 
 use crate::database::get_db;
-use crate::services::{get_ffmpeg_path, generate_raw, AIConfig};
-use crate::utils::{CommandExt, validate_ffmpeg_args, args_to_display_command};
+use crate::services::{generate_raw, get_ffmpeg_path, AIConfig};
+use crate::utils::{args_to_display_command, validate_ffmpeg_args, CommandExt};
 
 // Store for active processing jobs
-static ACTIVE_JOBS: LazyLock<Mutex<HashMap<String, tokio::sync::oneshot::Sender<()>>>> = 
+static ACTIVE_JOBS: LazyLock<Mutex<HashMap<String, tokio::sync::oneshot::Sender<()>>>> =
     LazyLock::new(|| Mutex::new(HashMap::new()));
 
 /// Parse a shell command string into arguments, respecting quotes
@@ -24,7 +24,7 @@ fn parse_shell_command(cmd: &str) -> Vec<String> {
     let mut in_quotes = false;
     let mut quote_char = ' ';
     let mut chars = cmd.chars().peekable();
-    
+
     while let Some(c) = chars.next() {
         match c {
             '"' | '\'' if !in_quotes => {
@@ -50,11 +50,11 @@ fn parse_shell_command(cmd: &str) -> Vec<String> {
             }
         }
     }
-    
+
     if !current.is_empty() {
         args.push(current);
     }
-    
+
     args
 }
 
@@ -152,8 +152,12 @@ pub struct ShotDetectionResult {
 }
 
 fn detect_attachment_kind(ext: &str) -> &'static str {
-    let image_exts = ["png", "jpg", "jpeg", "webp", "gif", "bmp", "svg", "tiff", "tif"];
-    let video_exts = ["mp4", "mkv", "webm", "avi", "mov", "wmv", "flv", "m4v", "ts", "mts"];
+    let image_exts = [
+        "png", "jpg", "jpeg", "webp", "gif", "bmp", "svg", "tiff", "tif",
+    ];
+    let video_exts = [
+        "mp4", "mkv", "webm", "avi", "mov", "wmv", "flv", "m4v", "ts", "mts",
+    ];
     let subtitle_exts = ["srt", "ass", "ssa", "vtt", "sub"];
 
     if image_exts.contains(&ext) {
@@ -176,8 +180,8 @@ pub async fn get_processing_attachment_info(path: String) -> Result<ProcessingAt
         return Err(format!("File not found: {}", path));
     }
 
-    let metadata = std::fs::metadata(&path)
-        .map_err(|e| format!("Failed to read file metadata: {}", e))?;
+    let metadata =
+        std::fs::metadata(&path).map_err(|e| format!("Failed to read file metadata: {}", e))?;
 
     let filename = file_path
         .file_name()
@@ -192,12 +196,14 @@ pub async fn get_processing_attachment_info(path: String) -> Result<ProcessingAt
     let kind = detect_attachment_kind(&ext).to_string();
     let mut width = None;
     let mut height = None;
-    let mut format = if ext.is_empty() { "unknown".to_string() } else { ext };
+    let mut format = if ext.is_empty() {
+        "unknown".to_string()
+    } else {
+        ext
+    };
 
     if kind == "image" {
-        if let Ok(reader) = image::ImageReader::open(&path)
-            .and_then(|r| r.with_guessed_format())
-        {
+        if let Ok(reader) = image::ImageReader::open(&path).and_then(|r| r.with_guessed_format()) {
             if let Some(detected) = reader.format() {
                 format = format!("{:?}", detected).to_lowercase();
             }
@@ -223,37 +229,40 @@ pub async fn get_processing_attachment_info(path: String) -> Result<ProcessingAt
 #[tauri::command]
 pub async fn get_image_metadata(path: String) -> Result<ImageInfo, String> {
     let file_path = std::path::Path::new(&path);
-    
+
     if !file_path.exists() {
         return Err(format!("File not found: {}", path));
     }
-    
+
     let file_size = std::fs::metadata(&path)
         .map_err(|e| format!("Failed to read file metadata: {}", e))?
         .len();
-    
+
     let filename = file_path
         .file_name()
         .map(|n| n.to_string_lossy().to_string())
         .unwrap_or_else(|| "unknown".to_string());
-    
+
     // Read image dimensions
     let reader = image::ImageReader::open(&path)
         .map_err(|e| format!("Failed to open image: {}", e))?
         .with_guessed_format()
         .map_err(|e| format!("Failed to detect image format: {}", e))?;
-    
-    let format = reader.format()
+
+    let format = reader
+        .format()
         .map(|f| format!("{:?}", f).to_lowercase())
         .unwrap_or_else(|| {
-            file_path.extension()
+            file_path
+                .extension()
                 .map(|e| e.to_string_lossy().to_lowercase())
                 .unwrap_or_else(|| "unknown".to_string())
         });
-    
-    let (width, height) = reader.into_dimensions()
+
+    let (width, height) = reader
+        .into_dimensions()
         .map_err(|e| format!("Failed to read image dimensions: {}", e))?;
-    
+
     Ok(ImageInfo {
         path,
         filename,
@@ -267,96 +276,120 @@ pub async fn get_image_metadata(path: String) -> Result<ImageInfo, String> {
 /// Get video metadata using FFprobe
 #[tauri::command]
 pub async fn get_video_metadata(app: AppHandle, path: String) -> Result<VideoMetadata, String> {
-    let ffprobe_path = get_ffprobe_path(&app).await
+    let ffprobe_path = get_ffprobe_path(&app)
+        .await
         .ok_or("FFprobe not found. Please install FFmpeg.")?;
-    
+
     let mut cmd = Command::new(&ffprobe_path);
     cmd.args([
-            "-v", "quiet",
-            "-print_format", "json",
-            "-show_format",
-            "-show_streams",
-            &path,
-        ]);
+        "-v",
+        "quiet",
+        "-print_format",
+        "json",
+        "-show_format",
+        "-show_streams",
+        &path,
+    ]);
     cmd.hide_window();
-    let output = cmd.output().await
+    let output = cmd
+        .output()
+        .await
         .map_err(|e| format!("Failed to run ffprobe: {}", e))?;
-    
+
     if !output.status.success() {
         return Err("FFprobe failed to analyze video".to_string());
     }
-    
+
     let json_str = String::from_utf8_lossy(&output.stdout);
     let json: serde_json::Value = serde_json::from_str(&json_str)
         .map_err(|e| format!("Failed to parse ffprobe output: {}", e))?;
-    
+
     // Extract video stream info
-    let streams = json.get("streams").and_then(|s| s.as_array()).ok_or("No streams found")?;
+    let streams = json
+        .get("streams")
+        .and_then(|s| s.as_array())
+        .ok_or("No streams found")?;
     let format = json.get("format").ok_or("No format info")?;
-    
-    let video_stream = streams.iter().find(|s| {
-        s.get("codec_type").and_then(|c| c.as_str()) == Some("video")
-    });
-    
-    let audio_stream = streams.iter().find(|s| {
-        s.get("codec_type").and_then(|c| c.as_str()) == Some("audio")
-    });
-    
+
+    let video_stream = streams
+        .iter()
+        .find(|s| s.get("codec_type").and_then(|c| c.as_str()) == Some("video"));
+
+    let audio_stream = streams
+        .iter()
+        .find(|s| s.get("codec_type").and_then(|c| c.as_str()) == Some("audio"));
+
     let filename = Path::new(&path)
         .file_name()
         .map(|n| n.to_string_lossy().to_string())
         .unwrap_or_default();
-    
-    let duration = format.get("duration")
+
+    let duration = format
+        .get("duration")
         .and_then(|d| d.as_str())
         .and_then(|d| d.parse::<f64>().ok())
         .unwrap_or(0.0);
-    
+
     let (width, height, fps, video_codec) = if let Some(vs) = video_stream {
         let w = vs.get("width").and_then(|v| v.as_i64()).unwrap_or(0) as i32;
         let h = vs.get("height").and_then(|v| v.as_i64()).unwrap_or(0) as i32;
-        let codec = vs.get("codec_name").and_then(|v| v.as_str()).unwrap_or("unknown").to_string();
-        
+        let codec = vs
+            .get("codec_name")
+            .and_then(|v| v.as_str())
+            .unwrap_or("unknown")
+            .to_string();
+
         // Parse FPS from r_frame_rate (e.g., "30/1" or "30000/1001")
-        let fps_str = vs.get("r_frame_rate").and_then(|v| v.as_str()).unwrap_or("0/1");
+        let fps_str = vs
+            .get("r_frame_rate")
+            .and_then(|v| v.as_str())
+            .unwrap_or("0/1");
         let fps_parts: Vec<&str> = fps_str.split('/').collect();
         let fps = if fps_parts.len() == 2 {
             let num = fps_parts[0].parse::<f64>().unwrap_or(0.0);
             let den = fps_parts[1].parse::<f64>().unwrap_or(1.0);
-            if den > 0.0 { num / den } else { 0.0 }
+            if den > 0.0 {
+                num / den
+            } else {
+                0.0
+            }
         } else {
             fps_str.parse::<f64>().unwrap_or(0.0)
         };
-        
+
         (w, h, fps, codec)
     } else {
         (0, 0, 0.0, "none".to_string())
     };
-    
+
     let audio_codec = audio_stream
         .and_then(|a| a.get("codec_name"))
         .and_then(|c| c.as_str())
         .unwrap_or("none")
         .to_string();
-    
-    let bitrate = format.get("bit_rate")
+
+    let bitrate = format
+        .get("bit_rate")
         .and_then(|b| b.as_str())
         .and_then(|b| b.parse::<i64>().ok())
-        .unwrap_or(0) / 1000; // Convert to kbps
-    
-    let file_size = format.get("size")
+        .unwrap_or(0)
+        / 1000; // Convert to kbps
+
+    let file_size = format
+        .get("size")
         .and_then(|s| s.as_str())
         .and_then(|s| s.parse::<i64>().ok())
         .unwrap_or(0);
-    
-    let format_name = format.get("format_name")
+
+    let format_name = format
+        .get("format_name")
         .and_then(|f| f.as_str())
         .unwrap_or("unknown")
         .split(',')
         .next()
         .unwrap_or("unknown")
         .to_string();
-    
+
     Ok(VideoMetadata {
         path,
         filename,
@@ -567,7 +600,10 @@ fn try_build_subtitle_command(
         "-i".to_string(),
         input_path.to_string(),
         "-vf".to_string(),
-        format!("subtitles='{}'", escape_subtitles_filter_path(&subtitle.path)),
+        format!(
+            "subtitles='{}'",
+            escape_subtitles_filter_path(&subtitle.path)
+        ),
         "-c:v".to_string(),
         "libx264".to_string(),
         "-preset".to_string(),
@@ -597,10 +633,7 @@ fn try_build_subtitle_command(
     Ok(Some(FFmpegCommandResult {
         command: args_to_display_command(&args),
         command_args: args,
-        explanation: format!(
-            "Burn subtitles from '{}' into the video",
-            subtitle.filename
-        ),
+        explanation: format!("Burn subtitles from '{}' into the video", subtitle.filename),
         estimated_size_mb: (metadata.file_size as f64 / 1_000_000.0) * 1.05,
         estimated_time_seconds: (metadata.duration / 2.0).max(5.0),
         output_path,
@@ -629,11 +662,19 @@ async fn try_build_merge_command(
     if intro_hint && outro_hint && video_attachments.len() >= 2 {
         ordered_paths.push(video_attachments[0].path.clone());
         ordered_paths.push(input_path.to_string());
-        for file in video_attachments.iter().skip(1).take(video_attachments.len().saturating_sub(2))
+        for file in video_attachments
+            .iter()
+            .skip(1)
+            .take(video_attachments.len().saturating_sub(2))
         {
             ordered_paths.push(file.path.clone());
         }
-        ordered_paths.push(video_attachments.last().map(|a| a.path.clone()).unwrap_or_default());
+        ordered_paths.push(
+            video_attachments
+                .last()
+                .map(|a| a.path.clone())
+                .unwrap_or_default(),
+        );
         warnings.push(
             "Interpreted first attached video as intro and last attached video as outro."
                 .to_string(),
@@ -651,7 +692,8 @@ async fn try_build_merge_command(
             ordered_paths.push(file.path.clone());
         }
         if outro_hint {
-            warnings.push("Appended attached videos after main video as outro sequence.".to_string());
+            warnings
+                .push("Appended attached videos after main video as outro sequence.".to_string());
         }
     }
 
@@ -669,7 +711,11 @@ async fn try_build_merge_command(
     let target_height = if metadata.height > 0 {
         metadata.height
     } else {
-        ordered_meta.first().map(|m| m.height).unwrap_or(1080).max(1)
+        ordered_meta
+            .first()
+            .map(|m| m.height)
+            .unwrap_or(1080)
+            .max(1)
     };
     let target_fps = if metadata.fps > 0.0 {
         metadata.fps
@@ -793,8 +839,12 @@ pub async fn generate_processing_command(
 ) -> Result<FFmpegCommandResult, String> {
     // Build context for AI
     let selection_info = if let (Some(start), Some(end)) = (timeline_start, timeline_end) {
-        format!("Timeline selection: {} to {} ({} seconds)", 
-            format_time(start), format_time(end), end - start)
+        format!(
+            "Timeline selection: {} to {} ({} seconds)",
+            format_time(start),
+            format_time(end),
+            end - start
+        )
     } else {
         "No timeline selection".to_string()
     };
@@ -851,19 +901,21 @@ pub async fn generate_processing_command(
                 file.path,
             ));
         }
-        section.push_str(r#"
+        section.push_str(
+            r#"
 ## FFmpeg Attachment Operations Available
 - Image overlay/watermark: `-i "image.png" -filter_complex "[0:v][1:v]overlay=x:y"`
 - Burn subtitle from file: `-vf "subtitles='path/to/subtitle.srt'"`
 - Merge multiple videos: `-i intro.mp4 -i main.mp4 -i outro.mp4 -filter_complex "concat=..."`
 - IMPORTANT: The main loaded video is always `input_path`.
 - IMPORTANT: Always use the exact full paths provided above for attached files.
-"#);
+"#,
+        );
         section
     } else {
         String::new()
     };
-    
+
     let ai_prompt = format!(
         r#"You are an FFmpeg command generator assistant. Your ONLY job is to convert video editing requests into FFmpeg commands.
 
@@ -942,65 +994,77 @@ For valid video requests:
         attachment_section,
         user_prompt,
     );
-    
+
     // Load AI config
     let config = load_ai_config(&app).await?;
-    
+
     if !config.enabled {
         return Err("AI is not enabled. Please configure AI in Settings.".to_string());
     }
-    
+
     // Generate using AI (raw mode, no summarization wrapping)
-    let result = generate_raw(&config, &ai_prompt).await
+    let result = generate_raw(&config, &ai_prompt)
+        .await
         .map_err(|e| format!("AI generation failed: {}", e))?;
-    
+
     #[cfg(debug_assertions)]
     {
-        println!("[PROCESSING] AI Response: {}", &result.summary[..result.summary.len().min(500)]);
+        println!(
+            "[PROCESSING] AI Response: {}",
+            &result.summary[..result.summary.len().min(500)]
+        );
     }
-    
+
     // Parse JSON from response
     let response_text = result.summary.trim();
-    
+
     // Try to extract JSON from the response (handle markdown code blocks)
     let json_str = if response_text.starts_with('{') {
         response_text.to_string()
     } else {
         // Try to find JSON in markdown code block
-        let cleaned = response_text
-            .replace("```json", "")
-            .replace("```", "");
-        
+        let cleaned = response_text.replace("```json", "").replace("```", "");
+
         if let Some(start) = cleaned.find('{') {
             if let Some(end) = cleaned.rfind('}') {
                 cleaned[start..=end].to_string()
             } else {
-                return Err(format!("Invalid AI response: no valid JSON found. Response: {}", 
-                    &response_text[..response_text.len().min(200)]));
+                return Err(format!(
+                    "Invalid AI response: no valid JSON found. Response: {}",
+                    &response_text[..response_text.len().min(200)]
+                ));
             }
         } else {
-            return Err(format!("Invalid AI response: no JSON found. Response: {}", 
-                &response_text[..response_text.len().min(200)]));
+            return Err(format!(
+                "Invalid AI response: no JSON found. Response: {}",
+                &response_text[..response_text.len().min(200)]
+            ));
         }
     };
-    
+
     let parsed: serde_json::Value = serde_json::from_str(&json_str)
         .map_err(|e| format!("Failed to parse AI response: {}", e))?;
-    
+
     // Check if AI detected off-topic request
-    if parsed.get("off_topic").and_then(|v| v.as_bool()).unwrap_or(false) {
-        let message = parsed.get("message")
+    if parsed
+        .get("off_topic")
+        .and_then(|v| v.as_bool())
+        .unwrap_or(false)
+    {
+        let message = parsed
+            .get("message")
             .and_then(|m| m.as_str())
             .unwrap_or("I can only help with video editing tasks.");
         return Err(message.to_string());
     }
-    
+
     // Replace placeholder paths with actual paths
-    let command = parsed.get("command")
+    let command = parsed
+        .get("command")
         .and_then(|c| c.as_str())
         .ok_or("No command in response")?
         .replace("{input}", &input_path);
-    
+
     // Parse command into args for safe execution
     let all_args = parse_shell_command(&command);
     // Skip "ffmpeg" prefix if present
@@ -1009,10 +1073,10 @@ For valid video requests:
     } else {
         all_args
     };
-    
+
     // Validate args to block dangerous patterns
     validate_ffmpeg_args(&command_args)?;
-    
+
     // Generate timestamp for unique output names
     let timestamp = chrono::Local::now().format("%Y%m%d_%H%M%S").to_string();
     let input_stem = Path::new(&input_path)
@@ -1020,8 +1084,9 @@ For valid video requests:
         .map(|s| s.to_string_lossy().to_string())
         .unwrap_or("output".to_string());
     let output_base_dir = resolve_output_dir(&input_path, output_dir.as_deref());
-    
-    let output_path = parsed.get("output_path")
+
+    let output_path = parsed
+        .get("output_path")
         .and_then(|p| p.as_str())
         .map(|p| {
             // Extract extension from AI's suggested path
@@ -1029,13 +1094,13 @@ For valid video requests:
                 .extension()
                 .map(|e| e.to_string_lossy().to_string())
                 .unwrap_or("mp4".to_string());
-            
+
             // Extract suffix (like _cut, _720p, etc.) from AI's path
             let ai_stem = Path::new(p)
                 .file_stem()
                 .map(|s| s.to_string_lossy().to_string())
                 .unwrap_or_default();
-            
+
             // Try to find a suffix pattern in AI's filename
             let suffix = if ai_stem.contains("_cut") {
                 "_cut"
@@ -1050,42 +1115,58 @@ For valid video requests:
             } else {
                 "_processed"
             };
-            
+
             // Build output path with timestamp
-            output_base_dir.join(format!("{}{}_{}.{}", input_stem, suffix, timestamp, ext))
-                .to_string_lossy().to_string()
+            output_base_dir
+                .join(format!("{}{}_{}.{}", input_stem, suffix, timestamp, ext))
+                .to_string_lossy()
+                .to_string()
         })
         .unwrap_or_else(|| {
-            output_base_dir.join(format!("{}_processed_{}.mp4", input_stem, timestamp))
-                .to_string_lossy().to_string()
+            output_base_dir
+                .join(format!("{}_processed_{}.mp4", input_stem, timestamp))
+                .to_string_lossy()
+                .to_string()
         });
-    
+
     // Update command with the new timestamped output path
-    let (command, command_args) = if let Some(ai_output) = parsed.get("output_path").and_then(|p| p.as_str()) {
-        let updated_cmd = command.replace(ai_output, &output_path);
-        let updated_args: Vec<String> = command_args.iter().map(|a| a.replace(ai_output, &output_path)).collect();
-        (updated_cmd, updated_args)
-    } else {
-        (command, command_args)
-    };
-    
+    let (command, command_args) =
+        if let Some(ai_output) = parsed.get("output_path").and_then(|p| p.as_str()) {
+            let updated_cmd = command.replace(ai_output, &output_path);
+            let updated_args: Vec<String> = command_args
+                .iter()
+                .map(|a| a.replace(ai_output, &output_path))
+                .collect();
+            (updated_cmd, updated_args)
+        } else {
+            (command, command_args)
+        };
+
     Ok(FFmpegCommandResult {
         command,
         command_args,
-        explanation: parsed.get("explanation")
+        explanation: parsed
+            .get("explanation")
             .and_then(|e| e.as_str())
             .unwrap_or("Processing video...")
             .to_string(),
-        estimated_size_mb: parsed.get("estimated_size_mb")
+        estimated_size_mb: parsed
+            .get("estimated_size_mb")
             .and_then(|s| s.as_f64())
             .unwrap_or(0.0),
-        estimated_time_seconds: parsed.get("estimated_time_seconds")
+        estimated_time_seconds: parsed
+            .get("estimated_time_seconds")
             .and_then(|t| t.as_f64())
             .unwrap_or(0.0),
         output_path,
-        warnings: parsed.get("warnings")
+        warnings: parsed
+            .get("warnings")
             .and_then(|w| w.as_array())
-            .map(|arr| arr.iter().filter_map(|v| v.as_str().map(String::from)).collect())
+            .map(|arr| {
+                arr.iter()
+                    .filter_map(|v| v.as_str().map(String::from))
+                    .collect()
+            })
             .unwrap_or_default(),
     })
 }
@@ -1106,259 +1187,381 @@ pub async fn generate_quick_action_command(
         .file_stem()
         .map(|s| s.to_string_lossy().to_string())
         .unwrap_or("output".to_string());
-    
+
     // Generate timestamp suffix for unique output names
     let timestamp = chrono::Local::now().format("%Y%m%d_%H%M%S").to_string();
-    
+
     let (command_args, output_path, explanation) = match task_type.as_str() {
         "cut" => {
             let start = timeline_start.ok_or("No start time selected")?;
             let end = timeline_end.ok_or("No end time selected")?;
             let duration = end - start;
             let output = output_base_dir.join(format!("{}_cut_{}.mp4", input_stem, timestamp));
-            
+
             let args = vec![
                 "-y".to_string(),
-                "-ss".to_string(), format_time(start),
-                "-i".to_string(), input_path.clone(),
-                "-t".to_string(), duration.to_string(),
-                "-c".to_string(), "copy".to_string(),
-                "-progress".to_string(), "pipe:2".to_string(),
+                "-ss".to_string(),
+                format_time(start),
+                "-i".to_string(),
+                input_path.clone(),
+                "-t".to_string(),
+                duration.to_string(),
+                "-c".to_string(),
+                "copy".to_string(),
+                "-progress".to_string(),
+                "pipe:2".to_string(),
                 output.to_string_lossy().to_string(),
             ];
-            
-            (args, output.to_string_lossy().to_string(), 
-             format!("Cut video from {} to {} (duration: {})", 
-                format_time(start), format_time(end), format_time(duration)))
+
+            (
+                args,
+                output.to_string_lossy().to_string(),
+                format!(
+                    "Cut video from {} to {} (duration: {})",
+                    format_time(start),
+                    format_time(end),
+                    format_time(duration)
+                ),
+            )
         }
-        
+
         "extract_audio" => {
-            let format = options.get("format")
+            let format = options
+                .get("format")
                 .and_then(|f| f.as_str())
                 .unwrap_or("mp3");
-            
+
             let (ext, codec_args) = match format {
                 "m4a" => ("m4a", vec!["-c:a".to_string(), "copy".to_string()]),
                 "flac" => ("flac", vec!["-c:a".to_string(), "flac".to_string()]),
                 "wav" => ("wav", vec!["-c:a".to_string(), "pcm_s16le".to_string()]),
-                "mp3" => ("m4a", vec!["-c:a".to_string(), "aac".to_string(), "-b:a".to_string(), "192k".to_string()]),
-                _ => ("m4a", vec!["-c:a".to_string(), "aac".to_string(), "-b:a".to_string(), "192k".to_string()]),
+                "mp3" => (
+                    "m4a",
+                    vec![
+                        "-c:a".to_string(),
+                        "aac".to_string(),
+                        "-b:a".to_string(),
+                        "192k".to_string(),
+                    ],
+                ),
+                _ => (
+                    "m4a",
+                    vec![
+                        "-c:a".to_string(),
+                        "aac".to_string(),
+                        "-b:a".to_string(),
+                        "192k".to_string(),
+                    ],
+                ),
             };
-            
+
             let output = output_base_dir.join(format!("{}_{}.{}", input_stem, timestamp, ext));
-            
+
             let mut args = vec![
                 "-y".to_string(),
-                "-i".to_string(), input_path.clone(),
+                "-i".to_string(),
+                input_path.clone(),
                 "-vn".to_string(),
             ];
             args.extend(codec_args);
             args.extend([
-                "-progress".to_string(), "pipe:2".to_string(),
+                "-progress".to_string(),
+                "pipe:2".to_string(),
                 output.to_string_lossy().to_string(),
             ]);
-            
-            (args, output.to_string_lossy().to_string(),
-             format!("Extract audio as {}", ext.to_uppercase()))
+
+            (
+                args,
+                output.to_string_lossy().to_string(),
+                format!("Extract audio as {}", ext.to_uppercase()),
+            )
         }
-        
+
         "resize" => {
-            let resolution = options.get("resolution")
+            let resolution = options
+                .get("resolution")
                 .and_then(|r| r.as_str())
                 .unwrap_or("720");
-            
+
             // Validate resolution is numeric
             if !resolution.chars().all(|c| c.is_ascii_digit()) {
                 return Err("Invalid resolution value".to_string());
             }
-            
+
             let output =
                 output_base_dir.join(format!("{}_{}p_{}.mp4", input_stem, resolution, timestamp));
-            
+
             let args = vec![
                 "-y".to_string(),
-                "-i".to_string(), input_path.clone(),
-                "-vf".to_string(), format!("scale=-1:{}", resolution),
-                "-c:v".to_string(), "libx264".to_string(),
-                "-preset".to_string(), "medium".to_string(),
-                "-crf".to_string(), "23".to_string(),
-                "-c:a".to_string(), "copy".to_string(),
-                "-progress".to_string(), "pipe:2".to_string(),
+                "-i".to_string(),
+                input_path.clone(),
+                "-vf".to_string(),
+                format!("scale=-1:{}", resolution),
+                "-c:v".to_string(),
+                "libx264".to_string(),
+                "-preset".to_string(),
+                "medium".to_string(),
+                "-crf".to_string(),
+                "23".to_string(),
+                "-c:a".to_string(),
+                "copy".to_string(),
+                "-progress".to_string(),
+                "pipe:2".to_string(),
                 output.to_string_lossy().to_string(),
             ];
-            
-            (args, output.to_string_lossy().to_string(),
-             format!("Resize video to {}p", resolution))
+
+            (
+                args,
+                output.to_string_lossy().to_string(),
+                format!("Resize video to {}p", resolution),
+            )
         }
-        
+
         "convert" => {
-            let format = options.get("format")
+            let format = options
+                .get("format")
                 .and_then(|f| f.as_str())
                 .unwrap_or("mp4");
-            
+
             // Validate format is alphanumeric
             if !format.chars().all(|c| c.is_ascii_alphanumeric()) {
                 return Err("Invalid format value".to_string());
             }
-            
+
             let output = output_base_dir.join(format!("{}_{}.{}", input_stem, timestamp, format));
-            
+
             let codec_args: Vec<String> = match format {
-                "webm" => vec!["-c:v".to_string(), "libvpx-vp9".to_string(), "-c:a".to_string(), "libopus".to_string()],
-                "mkv" => vec!["-c:v".to_string(), "copy".to_string(), "-c:a".to_string(), "copy".to_string()],
-                "avi" => vec!["-c:v".to_string(), "libxvid".to_string(), "-c:a".to_string(), "mp3".to_string()],
-                "mov" => vec!["-c:v".to_string(), "libx264".to_string(), "-c:a".to_string(), "aac".to_string()],
-                _ => vec!["-c:v".to_string(), "libx264".to_string(), "-c:a".to_string(), "aac".to_string()],
+                "webm" => vec![
+                    "-c:v".to_string(),
+                    "libvpx-vp9".to_string(),
+                    "-c:a".to_string(),
+                    "libopus".to_string(),
+                ],
+                "mkv" => vec![
+                    "-c:v".to_string(),
+                    "copy".to_string(),
+                    "-c:a".to_string(),
+                    "copy".to_string(),
+                ],
+                "avi" => vec![
+                    "-c:v".to_string(),
+                    "libxvid".to_string(),
+                    "-c:a".to_string(),
+                    "mp3".to_string(),
+                ],
+                "mov" => vec![
+                    "-c:v".to_string(),
+                    "libx264".to_string(),
+                    "-c:a".to_string(),
+                    "aac".to_string(),
+                ],
+                _ => vec![
+                    "-c:v".to_string(),
+                    "libx264".to_string(),
+                    "-c:a".to_string(),
+                    "aac".to_string(),
+                ],
             };
-            
-            let mut args = vec![
-                "-y".to_string(),
-                "-i".to_string(), input_path.clone(),
-            ];
+
+            let mut args = vec!["-y".to_string(), "-i".to_string(), input_path.clone()];
             args.extend(codec_args);
             args.extend([
-                "-progress".to_string(), "pipe:2".to_string(),
+                "-progress".to_string(),
+                "pipe:2".to_string(),
                 output.to_string_lossy().to_string(),
             ]);
-            
-            (args, output.to_string_lossy().to_string(),
-             format!("Convert to {}", format.to_uppercase()))
+
+            (
+                args,
+                output.to_string_lossy().to_string(),
+                format!("Convert to {}", format.to_uppercase()),
+            )
         }
-        
+
         "speed" => {
-            let speed = options.get("speed")
-                .and_then(|s| s.as_f64())
-                .unwrap_or(2.0);
-            
-            let output = output_base_dir.join(format!("{}_{}x_{}.mp4", input_stem, speed, timestamp));
+            let speed = options.get("speed").and_then(|s| s.as_f64()).unwrap_or(2.0);
+
+            let output =
+                output_base_dir.join(format!("{}_{}x_{}.mp4", input_stem, speed, timestamp));
             let pts = 1.0 / speed;
             let atempo = speed.min(2.0).max(0.5);
-            
+
             let args = vec![
                 "-y".to_string(),
-                "-i".to_string(), input_path.clone(),
+                "-i".to_string(),
+                input_path.clone(),
                 "-filter_complex".to_string(),
                 format!("[0:v]setpts={}*PTS[v];[0:a]atempo={}[a]", pts, atempo),
-                "-map".to_string(), "[v]".to_string(),
-                "-map".to_string(), "[a]".to_string(),
-                "-progress".to_string(), "pipe:2".to_string(),
+                "-map".to_string(),
+                "[v]".to_string(),
+                "-map".to_string(),
+                "[a]".to_string(),
+                "-progress".to_string(),
+                "pipe:2".to_string(),
                 output.to_string_lossy().to_string(),
             ];
-            
-            (args, output.to_string_lossy().to_string(),
-             format!("Change speed to {}x", speed))
+
+            (
+                args,
+                output.to_string_lossy().to_string(),
+                format!("Change speed to {}x", speed),
+            )
         }
-        
+
         "compress" => {
-            let output = output_base_dir.join(format!("{}_compressed_{}.mp4", input_stem, timestamp));
-            
+            let output =
+                output_base_dir.join(format!("{}_compressed_{}.mp4", input_stem, timestamp));
+
             let args = vec![
                 "-y".to_string(),
-                "-i".to_string(), input_path.clone(),
-                "-c:v".to_string(), "libx264".to_string(),
-                "-preset".to_string(), "slow".to_string(),
-                "-crf".to_string(), "28".to_string(),
-                "-c:a".to_string(), "aac".to_string(),
-                "-b:a".to_string(), "128k".to_string(),
-                "-progress".to_string(), "pipe:2".to_string(),
+                "-i".to_string(),
+                input_path.clone(),
+                "-c:v".to_string(),
+                "libx264".to_string(),
+                "-preset".to_string(),
+                "slow".to_string(),
+                "-crf".to_string(),
+                "28".to_string(),
+                "-c:a".to_string(),
+                "aac".to_string(),
+                "-b:a".to_string(),
+                "128k".to_string(),
+                "-progress".to_string(),
+                "pipe:2".to_string(),
                 output.to_string_lossy().to_string(),
             ];
-            
-            (args, output.to_string_lossy().to_string(),
-             "Compress video to reduce file size".to_string())
+
+            (
+                args,
+                output.to_string_lossy().to_string(),
+                "Compress video to reduce file size".to_string(),
+            )
         }
-        
+
         "remove_audio" => {
             let output = output_base_dir.join(format!("{}_noaudio_{}.mp4", input_stem, timestamp));
-            
+
             let args = vec![
                 "-y".to_string(),
-                "-i".to_string(), input_path.clone(),
-                "-c:v".to_string(), "copy".to_string(),
+                "-i".to_string(),
+                input_path.clone(),
+                "-c:v".to_string(),
+                "copy".to_string(),
                 "-an".to_string(),
-                "-progress".to_string(), "pipe:2".to_string(),
+                "-progress".to_string(),
+                "pipe:2".to_string(),
                 output.to_string_lossy().to_string(),
             ];
-            
-            (args, output.to_string_lossy().to_string(),
-             "Remove audio track".to_string())
+
+            (
+                args,
+                output.to_string_lossy().to_string(),
+                "Remove audio track".to_string(),
+            )
         }
-        
+
         "thumbnail" => {
             let time = timeline_start.unwrap_or(0.0);
             let output = output_base_dir.join(format!("{}_thumb_{}.jpg", input_stem, timestamp));
-            
+
             let args = vec![
                 "-y".to_string(),
-                "-ss".to_string(), format_time(time),
-                "-i".to_string(), input_path.clone(),
-                "-vframes".to_string(), "1".to_string(),
-                "-q:v".to_string(), "2".to_string(),
+                "-ss".to_string(),
+                format_time(time),
+                "-i".to_string(),
+                input_path.clone(),
+                "-vframes".to_string(),
+                "1".to_string(),
+                "-q:v".to_string(),
+                "2".to_string(),
                 output.to_string_lossy().to_string(),
             ];
-            
-            (args, output.to_string_lossy().to_string(),
-             format!("Extract thumbnail at {}", format_time(time)))
+
+            (
+                args,
+                output.to_string_lossy().to_string(),
+                format!("Extract thumbnail at {}", format_time(time)),
+            )
         }
-        
+
         "gif" => {
             let start = timeline_start.unwrap_or(0.0);
             let end = timeline_end.unwrap_or(start + 5.0);
             let duration = end - start;
             let output = output_base_dir.join(format!("{}_{}.gif", input_stem, timestamp));
-            
+
             let args = vec![
                 "-y".to_string(),
-                "-ss".to_string(), format_time(start),
-                "-t".to_string(), duration.to_string(),
-                "-i".to_string(), input_path.clone(),
-                "-vf".to_string(), "fps=15,scale=480:-1:flags=lanczos".to_string(),
-                "-progress".to_string(), "pipe:2".to_string(),
+                "-ss".to_string(),
+                format_time(start),
+                "-t".to_string(),
+                duration.to_string(),
+                "-i".to_string(),
+                input_path.clone(),
+                "-vf".to_string(),
+                "fps=15,scale=480:-1:flags=lanczos".to_string(),
+                "-progress".to_string(),
+                "pipe:2".to_string(),
                 output.to_string_lossy().to_string(),
             ];
-            
-            (args, output.to_string_lossy().to_string(),
-             format!("Create GIF from {} to {}", format_time(start), format_time(end)))
+
+            (
+                args,
+                output.to_string_lossy().to_string(),
+                format!(
+                    "Create GIF from {} to {}",
+                    format_time(start),
+                    format_time(end)
+                ),
+            )
         }
-        
+
         "rotate" => {
-            let degrees = options.get("degrees")
+            let degrees = options
+                .get("degrees")
                 .and_then(|d| d.as_i64())
                 .unwrap_or(90);
-            
+
             let transpose = match degrees {
                 90 => "transpose=1",
                 180 => "transpose=2,transpose=2",
                 270 => "transpose=2",
                 _ => "transpose=1",
             };
-            
+
             let output = output_base_dir.join(format!("{}_rotated_{}.mp4", input_stem, timestamp));
-            
+
             let args = vec![
                 "-y".to_string(),
-                "-i".to_string(), input_path.clone(),
-                "-vf".to_string(), transpose.to_string(),
-                "-c:a".to_string(), "copy".to_string(),
-                "-progress".to_string(), "pipe:2".to_string(),
+                "-i".to_string(),
+                input_path.clone(),
+                "-vf".to_string(),
+                transpose.to_string(),
+                "-c:a".to_string(),
+                "copy".to_string(),
+                "-progress".to_string(),
+                "pipe:2".to_string(),
                 output.to_string_lossy().to_string(),
             ];
-            
-            (args, output.to_string_lossy().to_string(),
-             format!("Rotate video {}°", degrees))
+
+            (
+                args,
+                output.to_string_lossy().to_string(),
+                format!("Rotate video {}°", degrees),
+            )
         }
-        
+
         _ => {
             return Err(format!("Unknown task type: {}", task_type));
         }
     };
-    
+
     // Generate display command from args
     let command = args_to_display_command(&command_args);
-    
+
     // Estimate processing time (rough: 1 second per 10 seconds of video)
     let estimated_time = metadata.duration / 10.0;
-    
+
     Ok(FFmpegCommandResult {
         command,
         command_args,
@@ -1384,20 +1587,22 @@ pub async fn execute_ffmpeg_command(
     println!("[FFMPEG] Args: {:?}", command_args);
     println!("[FFMPEG] Input: {}", input_path);
     println!("[FFMPEG] Output: {}", output_path);
-    
+
     // Validate args to block dangerous patterns
     validate_ffmpeg_args(&command_args)?;
-    
-    let ffmpeg_path = get_ffmpeg_path(&app).await
-        .ok_or("FFmpeg not found")?;
+
+    let ffmpeg_path = get_ffmpeg_path(&app).await.ok_or("FFmpeg not found")?;
     println!("[FFMPEG] FFmpeg path: {:?}", ffmpeg_path);
-    
+
     // Get video metadata for progress calculation
     let metadata = get_video_metadata(app.clone(), input_path.clone()).await?;
     let total_duration_secs = metadata.duration;
     let total_frames = (metadata.duration * metadata.fps) as i64;
-    println!("[FFMPEG] Total duration: {} secs, Total frames: {}", total_duration_secs, total_frames);
-    
+    println!(
+        "[FFMPEG] Total duration: {} secs, Total frames: {}",
+        total_duration_secs, total_frames
+    );
+
     // Ensure -progress pipe:2 is in the args for progress tracking
     let mut args = command_args;
     if !args.iter().any(|a| a == "-progress") {
@@ -1406,39 +1611,38 @@ pub async fn execute_ffmpeg_command(
         args.insert(insert_pos, "-progress".to_string());
         args.insert(insert_pos + 1, "pipe:2".to_string());
     }
-    
+
     println!("[FFMPEG] Final args count: {}", args.len());
     for (i, arg) in args.iter().enumerate() {
         println!("[FFMPEG]   arg[{}]: '{}'", i, arg);
     }
-    
+
     // Create cancellation channel
     let (cancel_tx, mut cancel_rx) = tokio::sync::oneshot::channel::<()>();
-    
+
     {
         let mut jobs = ACTIVE_JOBS.lock().await;
         jobs.insert(job_id.clone(), cancel_tx);
     }
-    
+
     println!("[FFMPEG] Spawning FFmpeg process...");
     let mut cmd = Command::new(&ffmpeg_path);
     cmd.args(&args)
         .stdout(Stdio::piped())
         .stderr(Stdio::piped());
     cmd.hide_window();
-    let mut child = cmd.spawn()
-        .map_err(|e| {
-            println!("[FFMPEG] Failed to spawn: {}", e);
-            format!("Failed to start FFmpeg: {}", e)
-        })?;
+    let mut child = cmd.spawn().map_err(|e| {
+        println!("[FFMPEG] Failed to spawn: {}", e);
+        format!("Failed to start FFmpeg: {}", e)
+    })?;
     println!("[FFMPEG] FFmpeg process spawned successfully");
-    
+
     let stderr = child.stderr.take().ok_or("Failed to capture stderr")?;
     let mut reader = BufReader::new(stderr).lines();
-    
+
     let app_clone = app.clone();
     let job_id_clone = job_id.clone();
-    
+
     // Progress parsing task
     let progress_task = tokio::spawn(async move {
         let mut current_frame: i64 = 0;
@@ -1448,27 +1652,33 @@ pub async fn execute_ffmpeg_command(
         let mut current_size = String::new();
         let mut current_speed = String::new();
         let mut error_lines: Vec<String> = Vec::new();
-        
+
         while let Ok(Some(line)) = reader.next_line().await {
             // Log all stderr lines for debugging
             println!("[FFMPEG STDERR] {}", line);
-            
+
             // Collect error messages
             if line.contains("Error") || line.contains("error") || line.contains("Invalid") {
                 error_lines.push(line.clone());
             }
-            
+
             // Parse progress output (handle both "key=value" and "key= value" formats)
             if line.starts_with("frame=") {
                 if let Some(val) = line.strip_prefix("frame=") {
                     // Handle "frame= 3944" format (space after =)
-                    current_frame = val.trim().split_whitespace().next()
+                    current_frame = val
+                        .trim()
+                        .split_whitespace()
+                        .next()
                         .and_then(|s| s.parse().ok())
                         .unwrap_or(current_frame);
                 }
             } else if line.starts_with("fps=") {
                 if let Some(val) = line.strip_prefix("fps=") {
-                    current_fps = val.trim().split_whitespace().next()
+                    current_fps = val
+                        .trim()
+                        .split_whitespace()
+                        .next()
                         .and_then(|s| s.parse().ok())
                         .unwrap_or(current_fps);
                 }
@@ -1508,10 +1718,12 @@ pub async fn execute_ffmpeg_command(
                 } else {
                     0.0
                 };
-                
-                println!("[FFMPEG PROGRESS] time_secs={}, duration={}, percent={:.1}%", 
-                    current_time_secs, total_duration_secs, percent);
-                
+
+                println!(
+                    "[FFMPEG PROGRESS] time_secs={}, duration={}, percent={:.1}%",
+                    current_time_secs, total_duration_secs, percent
+                );
+
                 let progress = ProcessingProgress {
                     job_id: job_id_clone.clone(),
                     percent,
@@ -1522,28 +1734,28 @@ pub async fn execute_ffmpeg_command(
                     time: current_time.clone(),
                     size: current_size.clone(),
                 };
-                
+
                 let _ = app_clone.emit("processing-progress", &progress);
             }
         }
-        
+
         if !error_lines.is_empty() {
             println!("[FFMPEG] Collected errors: {:?}", error_lines);
         }
     });
-    
+
     // Wait for completion or cancellation
     tokio::select! {
         status = child.wait() => {
             println!("[FFMPEG] Process exited with status: {:?}", status);
             progress_task.abort();
-            
+
             // Clean up
             {
                 let mut jobs = ACTIVE_JOBS.lock().await;
                 jobs.remove(&job_id);
             }
-            
+
             match status {
                 Ok(exit_status) if exit_status.success() => {
                     println!("[FFMPEG] Success! Output: {}", output_path);
@@ -1573,15 +1785,15 @@ pub async fn execute_ffmpeg_command(
         _ = &mut cancel_rx => {
             child.kill().await.ok();
             progress_task.abort();
-            
+
             // Clean up output file
             tokio::fs::remove_file(&output_path).await.ok();
-            
+
             {
                 let mut jobs = ACTIVE_JOBS.lock().await;
                 jobs.remove(&job_id);
             }
-            
+
             Err("Processing cancelled".to_string())
         }
     }
@@ -1601,36 +1813,42 @@ pub async fn cancel_ffmpeg(job_id: String) -> Result<(), String> {
 
 /// Get processing history from database
 #[tauri::command]
-pub async fn get_processing_history(_app: AppHandle, limit: i32) -> Result<Vec<ProcessingJob>, String> {
+pub async fn get_processing_history(
+    _app: AppHandle,
+    limit: i32,
+) -> Result<Vec<ProcessingJob>, String> {
     let conn = get_db()?;
-    
-    let mut stmt = conn.prepare(
-        "SELECT id, input_path, output_path, task_type, user_prompt, 
+
+    let mut stmt = conn
+        .prepare(
+            "SELECT id, input_path, output_path, task_type, user_prompt, 
          ffmpeg_command, status, progress, error_message, created_at, completed_at
          FROM processing_jobs 
          ORDER BY created_at DESC 
-         LIMIT ?1"
-    ).map_err(|e| format!("Failed to prepare query: {}", e))?;
-    
-    let jobs = stmt.query_map(params![limit], |row| {
-        Ok(ProcessingJob {
-            id: row.get(0)?,
-            input_path: row.get(1)?,
-            output_path: row.get(2)?,
-            task_type: row.get(3)?,
-            user_prompt: row.get(4)?,
-            ffmpeg_command: row.get(5)?,
-            status: row.get(6)?,
-            progress: row.get(7)?,
-            error_message: row.get(8)?,
-            created_at: row.get(9)?,
-            completed_at: row.get(10)?,
+         LIMIT ?1",
+        )
+        .map_err(|e| format!("Failed to prepare query: {}", e))?;
+
+    let jobs = stmt
+        .query_map(params![limit], |row| {
+            Ok(ProcessingJob {
+                id: row.get(0)?,
+                input_path: row.get(1)?,
+                output_path: row.get(2)?,
+                task_type: row.get(3)?,
+                user_prompt: row.get(4)?,
+                ffmpeg_command: row.get(5)?,
+                status: row.get(6)?,
+                progress: row.get(7)?,
+                error_message: row.get(8)?,
+                created_at: row.get(9)?,
+                completed_at: row.get(10)?,
+            })
         })
-    })
-    .map_err(|e| format!("Query failed: {}", e))?
-    .filter_map(|r| r.ok())
-    .collect();
-    
+        .map_err(|e| format!("Query failed: {}", e))?
+        .filter_map(|r| r.ok())
+        .collect();
+
     Ok(jobs)
 }
 
@@ -1638,10 +1856,10 @@ pub async fn get_processing_history(_app: AppHandle, limit: i32) -> Result<Vec<P
 #[tauri::command]
 pub async fn delete_processing_job(_app: AppHandle, id: String) -> Result<(), String> {
     let conn = get_db()?;
-    
+
     conn.execute("DELETE FROM processing_jobs WHERE id = ?1", params![id])
         .map_err(|e| format!("Failed to delete job: {}", e))?;
-    
+
     Ok(())
 }
 
@@ -1649,10 +1867,11 @@ pub async fn delete_processing_job(_app: AppHandle, id: String) -> Result<(), St
 #[tauri::command]
 pub async fn clear_processing_history(_app: AppHandle) -> Result<u64, String> {
     let conn = get_db()?;
-    
-    let deleted = conn.execute("DELETE FROM processing_jobs", [])
+
+    let deleted = conn
+        .execute("DELETE FROM processing_jobs", [])
         .map_err(|e| format!("Failed to clear history: {}", e))?;
-    
+
     Ok(deleted as u64)
 }
 
@@ -1670,14 +1889,14 @@ pub async fn save_processing_job(
     let conn = get_db()?;
     let created_at = chrono::Utc::now().to_rfc3339();
     let status = "pending".to_string();
-    
+
     conn.execute(
         "INSERT INTO processing_jobs (id, input_path, output_path, task_type, user_prompt, ffmpeg_command, status, progress, created_at)
          VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9)",
         params![id, input_path, output_path, task_type, user_prompt, ffmpeg_command, status, 0.0, created_at],
     )
     .map_err(|e| format!("Failed to save job: {}", e))?;
-    
+
     Ok(())
 }
 
@@ -1691,7 +1910,7 @@ pub async fn update_processing_job(
     error_message: Option<String>,
 ) -> Result<(), String> {
     let conn = get_db()?;
-    
+
     if status == "completed" || status == "failed" || status == "cancelled" {
         let completed_at = chrono::Utc::now().to_rfc3339();
         conn.execute(
@@ -1706,7 +1925,7 @@ pub async fn update_processing_job(
         )
         .map_err(|e| format!("Failed to update job: {}", e))?;
     }
-    
+
     Ok(())
 }
 
@@ -1714,28 +1933,31 @@ pub async fn update_processing_job(
 #[tauri::command]
 pub async fn get_processing_presets(_app: AppHandle) -> Result<Vec<ProcessingPreset>, String> {
     let conn = get_db()?;
-    
-    let mut stmt = conn.prepare(
-        "SELECT id, name, description, task_type, prompt_template, icon, created_at
+
+    let mut stmt = conn
+        .prepare(
+            "SELECT id, name, description, task_type, prompt_template, icon, created_at
          FROM processing_presets 
-         ORDER BY name ASC"
-    ).map_err(|e| format!("Failed to prepare query: {}", e))?;
-    
-    let presets = stmt.query_map([], |row| {
-        Ok(ProcessingPreset {
-            id: row.get(0)?,
-            name: row.get(1)?,
-            description: row.get(2)?,
-            task_type: row.get(3)?,
-            prompt_template: row.get(4)?,
-            icon: row.get(5)?,
-            created_at: row.get(6)?,
+         ORDER BY name ASC",
+        )
+        .map_err(|e| format!("Failed to prepare query: {}", e))?;
+
+    let presets = stmt
+        .query_map([], |row| {
+            Ok(ProcessingPreset {
+                id: row.get(0)?,
+                name: row.get(1)?,
+                description: row.get(2)?,
+                task_type: row.get(3)?,
+                prompt_template: row.get(4)?,
+                icon: row.get(5)?,
+                created_at: row.get(6)?,
+            })
         })
-    })
-    .map_err(|e| format!("Query failed: {}", e))?
-    .filter_map(|r| r.ok())
-    .collect();
-    
+        .map_err(|e| format!("Query failed: {}", e))?
+        .filter_map(|r| r.ok())
+        .collect();
+
     Ok(presets)
 }
 
@@ -1751,14 +1973,14 @@ pub async fn save_processing_preset(
     let conn = get_db()?;
     let id = uuid::Uuid::new_v4().to_string();
     let created_at = chrono::Utc::now().to_rfc3339();
-    
+
     conn.execute(
         "INSERT INTO processing_presets (id, name, description, task_type, prompt_template, created_at)
          VALUES (?1, ?2, ?3, ?4, ?5, ?6)",
         params![id, name, description, task_type, prompt_template, created_at],
     )
     .map_err(|e| format!("Failed to save preset: {}", e))?;
-    
+
     Ok(())
 }
 
@@ -1766,10 +1988,10 @@ pub async fn save_processing_preset(
 #[tauri::command]
 pub async fn delete_processing_preset(_app: AppHandle, id: String) -> Result<(), String> {
     let conn = get_db()?;
-    
+
     conn.execute("DELETE FROM processing_presets WHERE id = ?1", params![id])
         .map_err(|e| format!("Failed to delete preset: {}", e))?;
-    
+
     Ok(())
 }
 
@@ -1783,12 +2005,12 @@ async fn get_ffprobe_path(app: &AppHandle) -> Option<std::path::PathBuf> {
         let ffprobe_path = bin_dir.join("ffprobe.exe");
         #[cfg(not(windows))]
         let ffprobe_path = bin_dir.join("ffprobe");
-        
+
         if ffprobe_path.exists() {
             return Some(ffprobe_path);
         }
     }
-    
+
     // Fallback to system ffprobe
     #[cfg(unix)]
     {
@@ -1796,7 +2018,7 @@ async fn get_ffprobe_path(app: &AppHandle) -> Option<std::path::PathBuf> {
         cmd.arg("ffprobe");
         cmd.hide_window();
         let output = cmd.output().await.ok()?;
-        
+
         if output.status.success() {
             let path_str = String::from_utf8_lossy(&output.stdout).trim().to_string();
             if !path_str.is_empty() {
@@ -1804,37 +2026,42 @@ async fn get_ffprobe_path(app: &AppHandle) -> Option<std::path::PathBuf> {
             }
         }
     }
-    
+
     #[cfg(windows)]
     {
         let mut cmd = Command::new("where");
         cmd.arg("ffprobe");
         cmd.hide_window();
         let output = cmd.output().await.ok()?;
-        
+
         if output.status.success() {
-            let path_str = String::from_utf8_lossy(&output.stdout).lines().next()?.to_string();
+            let path_str = String::from_utf8_lossy(&output.stdout)
+                .lines()
+                .next()?
+                .to_string();
             if !path_str.is_empty() {
                 return Some(std::path::PathBuf::from(path_str));
             }
         }
     }
-    
+
     None
 }
 
 async fn load_ai_config(app: &AppHandle) -> Result<AIConfig, String> {
-    let app_data_dir = app.path().app_data_dir()
+    let app_data_dir = app
+        .path()
+        .app_data_dir()
         .map_err(|_| "Failed to get app data directory")?;
-    
+
     let config_path = app_data_dir.join("ai_config.json");
-    
+
     if config_path.exists() {
-        let content = tokio::fs::read_to_string(&config_path).await
+        let content = tokio::fs::read_to_string(&config_path)
+            .await
             .map_err(|e| format!("Failed to read AI config: {}", e))?;
-        
-        serde_json::from_str(&content)
-            .map_err(|e| format!("Failed to parse AI config: {}", e))
+
+        serde_json::from_str(&content).map_err(|e| format!("Failed to parse AI config: {}", e))
     } else {
         Err("AI config not found. Please configure AI in Settings.".to_string())
     }
@@ -1845,7 +2072,7 @@ fn format_time(seconds: f64) -> String {
     let mins = ((seconds % 3600.0) / 60.0) as i32;
     let secs = (seconds % 60.0) as i32;
     let ms = ((seconds % 1.0) * 1000.0) as i32;
-    
+
     // FFmpeg requires HH:MM:SS.mmm format
     format!("{:02}:{:02}:{:02}.{:03}", hrs, mins, secs, ms)
 }
@@ -1856,7 +2083,7 @@ fn format_time(seconds: f64) -> String {
 fn needs_preview_transcode(codec: &str, container_format: &str) -> bool {
     let codec_lower = codec.to_lowercase();
     let format_lower = container_format.to_lowercase();
-    
+
     // Step 1: Check container format.
     // WebKit only supports MP4/MOV/M4V containers reliably.
     // ffprobe returns format_name like "mov,mp4,m4a,3gp,3g2,mj2" for MP4 files.
@@ -1865,22 +2092,28 @@ fn needs_preview_transcode(codec: &str, container_format: &str) -> bool {
         || format_lower.contains("m4v")
         || format_lower.contains("m4a")
         || format_lower.contains("3gp");
-    
+
     if !has_supported_container {
-        log::info!("[PREVIEW] Container '{}' not natively supported by WebKit — preview needed", container_format);
+        log::info!(
+            "[PREVIEW] Container '{}' not natively supported by WebKit — preview needed",
+            container_format
+        );
         return true;
     }
-    
+
     // Step 2: Check codec within a supported container.
     // HEVC: natively supported on macOS (AVFoundation), but NOT on Linux (WebKitGTK/GStreamer).
     #[cfg(target_os = "macos")]
     let problematic_codecs = ["vp9", "vp8", "av1", "theora"];
     #[cfg(not(target_os = "macos"))]
     let problematic_codecs = ["vp9", "vp8", "av1", "hevc", "h265", "theora"];
-    
+
     let has_problematic_codec = problematic_codecs.iter().any(|c| codec_lower.contains(c));
     if has_problematic_codec {
-        log::info!("[PREVIEW] Codec '{}' not natively supported — preview needed", codec);
+        log::info!(
+            "[PREVIEW] Codec '{}' not natively supported — preview needed",
+            codec
+        );
     }
     has_problematic_codec
 }
@@ -1897,19 +2130,24 @@ pub async fn generate_video_preview(
     if !needs_preview_transcode(&video_codec, &container_format) {
         return Err("Preview not needed for this codec/container".to_string());
     }
-    
-    let ffmpeg_path = get_ffmpeg_path(&app).await
-        .ok_or_else(|| {
-            log::error!("[PREVIEW] FFmpeg not found — cannot generate preview for codec '{}' in '{}'", video_codec, container_format);
-            "FFmpeg not found. Please install FFmpeg from the Dependencies tab in Settings.".to_string()
-        })?;
-    
+
+    let ffmpeg_path = get_ffmpeg_path(&app).await.ok_or_else(|| {
+        log::error!(
+            "[PREVIEW] FFmpeg not found — cannot generate preview for codec '{}' in '{}'",
+            video_codec,
+            container_format
+        );
+        "FFmpeg not found. Please install FFmpeg from the Dependencies tab in Settings.".to_string()
+    })?;
+
     // Create preview directory
-    let app_data_dir = app.path().app_data_dir()
+    let app_data_dir = app
+        .path()
+        .app_data_dir()
         .map_err(|_| "Failed to get app data directory")?;
     let preview_dir = app_data_dir.join("previews");
     std::fs::create_dir_all(&preview_dir).ok();
-    
+
     // Generate unique preview filename based on input path hash
     let hash = {
         use std::collections::hash_map::DefaultHasher;
@@ -1919,44 +2157,61 @@ pub async fn generate_video_preview(
         hasher.finish()
     };
     let preview_path = preview_dir.join(format!("preview_{}.mp4", hash));
-    
+
     // Check if preview already exists
     if preview_path.exists() {
         log::info!("[PREVIEW] Cache hit: {}", preview_path.display());
         return Ok(preview_path.to_string_lossy().to_string());
     }
-    
-    log::info!("[PREVIEW] Generating preview for '{}' (codec={}, container={})", input_path, video_codec, container_format);
-    
+
+    log::info!(
+        "[PREVIEW] Generating preview for '{}' (codec={}, container={})",
+        input_path,
+        video_codec,
+        container_format
+    );
+
     // Emit progress start
-    let _ = app.emit("preview-progress", serde_json::json!({
-        "status": "starting",
-        "percent": 0
-    }));
-    
+    let _ = app.emit(
+        "preview-progress",
+        serde_json::json!({
+            "status": "starting",
+            "percent": 0
+        }),
+    );
+
     // Generate preview with FFmpeg
     // Settings: 720p, H.264, 30fps, fast preset, NO AUDIO
     // Audio is stripped (-an) because GStreamer on some Linux systems cannot
     // decode AAC audio, flooding avdec_aac errors and crashing the WebProcess.
     let mut cmd = Command::new(&ffmpeg_path);
     cmd.args([
-            "-y",
-            "-i", &input_path,
-            "-vf", "scale=-2:720",
-            "-c:v", "libx264",
-            "-preset", "ultrafast",
-            "-crf", "28",
-            "-r", "30",
-            "-an",
-            "-movflags", "+faststart",
-            preview_path.to_str().unwrap(),
-        ])
-        .stdout(Stdio::piped())
-        .stderr(Stdio::piped());
+        "-y",
+        "-i",
+        &input_path,
+        "-vf",
+        "scale=-2:720",
+        "-c:v",
+        "libx264",
+        "-preset",
+        "ultrafast",
+        "-crf",
+        "28",
+        "-r",
+        "30",
+        "-an",
+        "-movflags",
+        "+faststart",
+        preview_path.to_str().unwrap(),
+    ])
+    .stdout(Stdio::piped())
+    .stderr(Stdio::piped());
     cmd.hide_window();
-    let output = cmd.output().await
+    let output = cmd
+        .output()
+        .await
         .map_err(|e| format!("Failed to run FFmpeg: {}", e))?;
-    
+
     if !output.status.success() {
         let stderr = String::from_utf8_lossy(&output.stderr);
         // Clean up failed preview
@@ -1964,15 +2219,18 @@ pub async fn generate_video_preview(
         log::error!("[PREVIEW] FFmpeg failed for '{}': {}", input_path, stderr);
         return Err(format!("FFmpeg failed: {}", stderr));
     }
-    
+
     log::info!("[PREVIEW] Preview generated: {}", preview_path.display());
-    
+
     // Emit progress complete
-    let _ = app.emit("preview-progress", serde_json::json!({
-        "status": "complete",
-        "percent": 100
-    }));
-    
+    let _ = app.emit(
+        "preview-progress",
+        serde_json::json!({
+            "status": "complete",
+            "percent": 100
+        }),
+    );
+
     Ok(preview_path.to_string_lossy().to_string())
 }
 
@@ -1982,10 +2240,12 @@ pub async fn check_preview_exists(
     app: AppHandle,
     input_path: String,
 ) -> Result<Option<String>, String> {
-    let app_data_dir = app.path().app_data_dir()
+    let app_data_dir = app
+        .path()
+        .app_data_dir()
         .map_err(|_| "Failed to get app data directory")?;
     let preview_dir = app_data_dir.join("previews");
-    
+
     let hash = {
         use std::collections::hash_map::DefaultHasher;
         use std::hash::{Hash, Hasher};
@@ -1994,7 +2254,7 @@ pub async fn check_preview_exists(
         hasher.finish()
     };
     let preview_path = preview_dir.join(format!("preview_{}.mp4", hash));
-    
+
     if preview_path.exists() {
         Ok(Some(preview_path.to_string_lossy().to_string()))
     } else {
@@ -2005,14 +2265,16 @@ pub async fn check_preview_exists(
 /// Clean up old preview files
 #[tauri::command]
 pub async fn cleanup_previews(app: AppHandle) -> Result<u32, String> {
-    let app_data_dir = app.path().app_data_dir()
+    let app_data_dir = app
+        .path()
+        .app_data_dir()
         .map_err(|_| "Failed to get app data directory")?;
     let preview_dir = app_data_dir.join("previews");
-    
+
     if !preview_dir.exists() {
         return Ok(0);
     }
-    
+
     let mut count = 0;
     if let Ok(entries) = std::fs::read_dir(&preview_dir) {
         for entry in entries.filter_map(|e| e.ok()) {
@@ -2030,7 +2292,7 @@ pub async fn cleanup_previews(app: AppHandle) -> Result<u32, String> {
             }
         }
     }
-    
+
     Ok(count)
 }
 
@@ -2041,14 +2303,15 @@ pub async fn generate_video_thumbnail(
     app: AppHandle,
     input_path: String,
 ) -> Result<String, String> {
-    let ffmpeg_path = get_ffmpeg_path(&app).await
-        .ok_or_else(|| {
-            log::error!("FFmpeg not found — cannot generate thumbnail");
-            "FFmpeg not found. Please install FFmpeg from the Dependencies tab in Settings.".to_string()
-        })?;
+    let ffmpeg_path = get_ffmpeg_path(&app).await.ok_or_else(|| {
+        log::error!("FFmpeg not found — cannot generate thumbnail");
+        "FFmpeg not found. Please install FFmpeg from the Dependencies tab in Settings.".to_string()
+    })?;
 
     // Create preview directory (reuse the same directory as video previews)
-    let app_data_dir = app.path().app_data_dir()
+    let app_data_dir = app
+        .path()
+        .app_data_dir()
         .map_err(|_| "Failed to get app data directory")?;
     let preview_dir = app_data_dir.join("previews");
     std::fs::create_dir_all(&preview_dir).ok();
@@ -2074,18 +2337,25 @@ pub async fn generate_video_thumbnail(
     // Extract a single frame at 1 second, scale to 720p height, high quality JPEG
     let mut cmd = Command::new(&ffmpeg_path);
     cmd.args([
-            "-y",
-            "-ss", "1",
-            "-i", &input_path,
-            "-frames:v", "1",
-            "-vf", "scale=-2:720",
-            "-q:v", "2",
-            thumb_path.to_str().unwrap(),
-        ])
-        .stdout(Stdio::piped())
-        .stderr(Stdio::piped());
+        "-y",
+        "-ss",
+        "1",
+        "-i",
+        &input_path,
+        "-frames:v",
+        "1",
+        "-vf",
+        "scale=-2:720",
+        "-q:v",
+        "2",
+        thumb_path.to_str().unwrap(),
+    ])
+    .stdout(Stdio::piped())
+    .stderr(Stdio::piped());
     cmd.hide_window();
-    let output = cmd.output().await
+    let output = cmd
+        .output()
+        .await
         .map_err(|e| format!("Failed to run FFmpeg: {}", e))?;
 
     if !output.status.success() {
@@ -2104,18 +2374,16 @@ pub async fn generate_video_thumbnail(
 /// and synced with the silent H.264 <video> preview. WAV/PCM requires no codec
 /// decoding, making it safe on Linux systems where GStreamer AAC decoding crashes.
 #[tauri::command]
-pub async fn generate_audio_preview(
-    app: AppHandle,
-    input_path: String,
-) -> Result<String, String> {
-    let ffmpeg_path = get_ffmpeg_path(&app).await
-        .ok_or_else(|| {
-            log::error!("FFmpeg not found — cannot generate audio preview");
-            "FFmpeg not found. Please install FFmpeg from the Dependencies tab in Settings.".to_string()
-        })?;
+pub async fn generate_audio_preview(app: AppHandle, input_path: String) -> Result<String, String> {
+    let ffmpeg_path = get_ffmpeg_path(&app).await.ok_or_else(|| {
+        log::error!("FFmpeg not found — cannot generate audio preview");
+        "FFmpeg not found. Please install FFmpeg from the Dependencies tab in Settings.".to_string()
+    })?;
 
     // Create preview directory (reuse the same directory as video/thumbnail previews)
-    let app_data_dir = app.path().app_data_dir()
+    let app_data_dir = app
+        .path()
+        .app_data_dir()
         .map_err(|_| "Failed to get app data directory")?;
     let preview_dir = app_data_dir.join("previews");
     std::fs::create_dir_all(&preview_dir).ok();
@@ -2136,30 +2404,43 @@ pub async fn generate_audio_preview(
         return Ok(audio_path.to_string_lossy().to_string());
     }
 
-    log::info!("[AUDIO_PREVIEW] Generating audio preview for '{}'", input_path);
+    log::info!(
+        "[AUDIO_PREVIEW] Generating audio preview for '{}'",
+        input_path
+    );
 
     // Extract audio as PCM WAV: mono, 44.1kHz, 16-bit
     // Mono (-ac 1) halves file size while being fine for preview purposes
     let mut cmd = Command::new(&ffmpeg_path);
     cmd.args([
-            "-y",
-            "-i", &input_path,
-            "-vn",
-            "-c:a", "pcm_s16le",
-            "-ar", "44100",
-            "-ac", "1",
-            audio_path.to_str().unwrap(),
-        ])
-        .stdout(Stdio::piped())
-        .stderr(Stdio::piped());
+        "-y",
+        "-i",
+        &input_path,
+        "-vn",
+        "-c:a",
+        "pcm_s16le",
+        "-ar",
+        "44100",
+        "-ac",
+        "1",
+        audio_path.to_str().unwrap(),
+    ])
+    .stdout(Stdio::piped())
+    .stderr(Stdio::piped());
     cmd.hide_window();
-    let output = cmd.output().await
+    let output = cmd
+        .output()
+        .await
         .map_err(|e| format!("Failed to run FFmpeg: {}", e))?;
 
     if !output.status.success() {
         let stderr = String::from_utf8_lossy(&output.stderr);
         std::fs::remove_file(&audio_path).ok();
-        log::error!("[AUDIO_PREVIEW] FFmpeg failed for '{}': {}", input_path, stderr);
+        log::error!(
+            "[AUDIO_PREVIEW] FFmpeg failed for '{}': {}",
+            input_path,
+            stderr
+        );
         return Err(format!("FFmpeg audio preview failed: {}", stderr));
     }
 

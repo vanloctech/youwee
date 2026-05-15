@@ -280,6 +280,19 @@ export interface LogEntry {
 export type LogFilter = 'all' | 'command' | 'success' | 'error' | 'stderr';
 
 // History types
+export interface HistoryTag {
+  id: string;
+  name: string;
+  itemCount?: number | null;
+}
+
+export interface HistoryCollection {
+  id: string;
+  name: string;
+  color?: string | null;
+  itemCount?: number | null;
+}
+
 export interface HistoryEntry {
   id: string;
   url: string;
@@ -295,6 +308,8 @@ export interface HistoryEntry {
   file_exists: boolean;
   summary?: string; // AI-generated summary
   time_range?: string; // Time range cut (e.g. "00:10-01:00")
+  tags: HistoryTag[];
+  collections: HistoryCollection[];
 }
 
 export type HistoryFilter =
@@ -309,6 +324,7 @@ export type HistoryFilter =
 export type HistoryMediaType = 'all' | 'video' | 'audio';
 export type HistoryDatePreset = 'all' | 'today' | 'last7days' | 'last30days' | 'custom';
 export type HistorySort = 'recent' | 'oldest' | 'title' | 'size';
+export type HistoryFilterMatchMode = 'any' | 'all';
 
 export interface HistoryAdvancedFilters {
   mediaType: HistoryMediaType;
@@ -319,6 +335,9 @@ export interface HistoryAdvancedFilters {
   customDateTo?: string | null;
   formats: string[];
   qualities: string[];
+  tagIds: string[];
+  collectionIds: string[];
+  matchMode: HistoryFilterMatchMode;
 }
 
 // AI types

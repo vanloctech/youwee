@@ -19,16 +19,14 @@ fn extract_external_link_from_arg(arg: &str) -> Option<String> {
         return None;
     }
 
-    trimmed
-        .find("youwee://")
-        .and_then(|start| {
-            let candidate = trimmed[start..].trim_matches('"').to_string();
-            if is_valid_external_link(&candidate) {
-                Some(candidate)
-            } else {
-                None
-            }
-        })
+    trimmed.find("youwee://").and_then(|start| {
+        let candidate = trimmed[start..].trim_matches('"').to_string();
+        if is_valid_external_link(&candidate) {
+            Some(candidate)
+        } else {
+            None
+        }
+    })
 }
 
 fn is_valid_external_link(link: &str) -> bool {

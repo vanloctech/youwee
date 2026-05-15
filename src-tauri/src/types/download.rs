@@ -18,7 +18,7 @@ pub struct DownloadProgress {
     pub error_code: Option<String>,
     pub error_params: Option<Value>,
     pub history_id: Option<String>, // Related history entry id (set when finished)
-    pub filepath: Option<String>, // Final output path when finished
+    pub filepath: Option<String>,   // Final output path when finished
     pub downloaded_size: Option<String>, // For live streams: "2.87 MiB"
     pub elapsed_time: Option<String>, // For live streams: "00:00:07"
 }

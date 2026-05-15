@@ -15,9 +15,11 @@ import { localizeUnknownError } from '@/lib/backend-error';
 import type {
   DownloadProgress,
   HistoryAdvancedFilters,
+  HistoryCollection,
   HistoryEntry,
   HistoryFilter,
   HistorySort,
+  HistoryTag,
 } from '@/lib/types';
 
 // Re-download task state
@@ -38,6 +40,8 @@ interface HistoryContextType {
   search: string;
   advancedFilters: HistoryAdvancedFilters;
   sort: HistorySort;
+  tags: HistoryTag[];
+  collections: HistoryCollection[];
   loading: boolean;
   totalCount: number;
   maxEntries: number;
@@ -49,11 +53,19 @@ interface HistoryContextType {
   setSort: (sort: HistorySort) => void;
   setMaxEntries: (max: number) => void;
   refreshHistory: () => Promise<void>;
+  refreshTaxonomy: () => Promise<void>;
   deleteEntry: (id: string) => Promise<void>;
   clearHistory: () => Promise<void>;
   openFileLocation: (filepath: string) => Promise<void>;
   checkFileExists: (filepath: string) => Promise<boolean>;
   renameEntry: (entryId: string, newName: string) => Promise<void>;
+  createCollection: (name: string, color?: string | null) => Promise<void>;
+  renameCollection: (id: string, name: string) => Promise<void>;
+  deleteCollection: (id: string) => Promise<void>;
+  assignHistoryTags: (historyId: string, tags: string[]) => Promise<void>;
+  assignHistoryCollections: (historyId: string, collectionIds: string[]) => Promise<void>;
+  removeHistoryTag: (historyId: string, tagId: string) => Promise<void>;
+  removeHistoryFromCollection: (historyId: string, collectionId: string) => Promise<void>;
   redownload: (entry: HistoryEntry) => Promise<void>;
   getRedownloadTask: (entryId: string) => RedownloadTask | undefined;
 }
@@ -72,6 +84,9 @@ const DEFAULT_ADVANCED_FILTERS: HistoryAdvancedFilters = {
   customDateTo: null,
   formats: [],
   qualities: [],
+  tagIds: [],
+  collectionIds: [],
+  matchMode: 'any',
 };
 
 const SORT_OPTIONS: HistorySort[] = ['recent', 'oldest', 'title', 'size'];
@@ -126,6 +141,9 @@ function buildResolvedHistoryFilters(filters: HistoryAdvancedFilters): HistoryAd
     mediaType: filters.mediaType || 'all',
     formats: filters.formats || [],
     qualities: filters.qualities || [],
+    tagIds: filters.tagIds || [],
+    collectionIds: filters.collectionIds || [],
+    matchMode: filters.matchMode || 'any',
   };
 }
 
@@ -148,6 +166,8 @@ export function HistoryProvider({ children }: { children: ReactNode }) {
     }
     return 'recent';
   });
+  const [tags, setTags] = useState<HistoryTag[]>([]);
+  const [collections, setCollections] = useState<HistoryCollection[]>([]);
   const [loading, setLoading] = useState(false);
   const [totalCount, setTotalCount] = useState(0);
   const [maxEntries, setMaxEntriesState] = useState(() => {
@@ -213,6 +233,19 @@ export function HistoryProvider({ children }: { children: ReactNode }) {
     localStorage.setItem(HISTORY_SORT_KEY, nextSort);
   }, []);
 
+  const refreshTaxonomy = useCallback(async () => {
+    try {
+      const [nextTags, nextCollections] = await Promise.all([
+        invoke<HistoryTag[]>('get_tags'),
+        invoke<HistoryCollection[]>('get_collections'),
+      ]);
+      setTags(nextTags);
+      setCollections(nextCollections);
+    } catch (error) {
+      console.error('Failed to fetch history taxonomy:', error);
+    }
+  }, []);
+
   const refreshHistory = useCallback(async () => {
     setLoading(true);
     try {
@@ -270,22 +303,28 @@ export function HistoryProvider({ children }: { children: ReactNode }) {
     }
   }, [filter, search, advancedFilters, sort]);
 
-  const deleteEntry = useCallback(async (id: string) => {
-    try {
-      await invoke('delete_history', { id });
-      setEntries((prev) => prev.filter((e) => e.id !== id));
-      setTotalCount((prev) => Math.max(0, prev - 1));
-      setHistoryVersion((prev) => prev + 1);
-    } catch (error) {
-      console.error('Failed to delete history entry:', error);
-      throw error;
-    }
-  }, []);
+  const deleteEntry = useCallback(
+    async (id: string) => {
+      try {
+        await invoke('delete_history', { id });
+        setEntries((prev) => prev.filter((e) => e.id !== id));
+        setTotalCount((prev) => Math.max(0, prev - 1));
+        setHistoryVersion((prev) => prev + 1);
+        void refreshTaxonomy();
+      } catch (error) {
+        console.error('Failed to delete history entry:', error);
+        throw error;
+      }
+    },
+    [refreshTaxonomy],
+  );
 
   const clearHistory = useCallback(async () => {
     try {
       await invoke('clear_history');
       setEntries([]);
+      setTags([]);
+      setCollections([]);
       setTotalCount(0);
       setHistoryVersion((prev) => prev + 1);
     } catch (error) {
@@ -348,6 +387,62 @@ export function HistoryProvider({ children }: { children: ReactNode }) {
       setHistoryVersion((prev) => prev + 1);
     },
     [entries],
+  );
+
+  const assignHistoryTags = useCallback(
+    async (historyId: string, nextTags: string[]) => {
+      await invoke('assign_history_tags', { historyId, tags: nextTags });
+      await Promise.all([refreshHistory(), refreshTaxonomy()]);
+    },
+    [refreshHistory, refreshTaxonomy],
+  );
+
+  const assignHistoryCollections = useCallback(
+    async (historyId: string, collectionIds: string[]) => {
+      await invoke('assign_history_collections', { historyId, collectionIds });
+      await Promise.all([refreshHistory(), refreshTaxonomy()]);
+    },
+    [refreshHistory, refreshTaxonomy],
+  );
+
+  const removeHistoryTag = useCallback(
+    async (historyId: string, tagId: string) => {
+      await invoke('remove_history_tag', { historyId, tagId });
+      await Promise.all([refreshHistory(), refreshTaxonomy()]);
+    },
+    [refreshHistory, refreshTaxonomy],
+  );
+
+  const removeHistoryFromCollection = useCallback(
+    async (historyId: string, collectionId: string) => {
+      await invoke('remove_history_from_collection', { historyId, collectionId });
+      await Promise.all([refreshHistory(), refreshTaxonomy()]);
+    },
+    [refreshHistory, refreshTaxonomy],
+  );
+
+  const createCollection = useCallback(
+    async (name: string, color?: string | null) => {
+      await invoke('create_collection', { name, color: color ?? null });
+      await refreshTaxonomy();
+    },
+    [refreshTaxonomy],
+  );
+
+  const renameCollection = useCallback(
+    async (id: string, name: string) => {
+      await invoke('rename_collection', { id, name });
+      await Promise.all([refreshHistory(), refreshTaxonomy()]);
+    },
+    [refreshHistory, refreshTaxonomy],
+  );
+
+  const deleteCollection = useCallback(
+    async (id: string) => {
+      await invoke('delete_collection', { id });
+      await Promise.all([refreshHistory(), refreshTaxonomy()]);
+    },
+    [refreshHistory, refreshTaxonomy],
   );
 
   const redownload = useCallback(
@@ -543,6 +638,10 @@ export function HistoryProvider({ children }: { children: ReactNode }) {
     refreshHistory();
   }, [refreshHistory]);
 
+  useEffect(() => {
+    refreshTaxonomy();
+  }, [refreshTaxonomy]);
+
   // Auto-refresh every 30 seconds when page is visible
   useEffect(() => {
     const interval = setInterval(() => {
@@ -575,6 +674,8 @@ export function HistoryProvider({ children }: { children: ReactNode }) {
         search,
         advancedFilters,
         sort,
+        tags,
+        collections,
         loading,
         totalCount,
         maxEntries,
@@ -586,11 +687,19 @@ export function HistoryProvider({ children }: { children: ReactNode }) {
         setSort,
         setMaxEntries,
         refreshHistory,
+        refreshTaxonomy,
         deleteEntry,
         clearHistory,
         openFileLocation,
         checkFileExists,
         renameEntry,
+        createCollection,
+        renameCollection,
+        deleteCollection,
+        assignHistoryTags,
+        assignHistoryCollections,
+        removeHistoryTag,
+        removeHistoryFromCollection,
         redownload,
         getRedownloadTask,
       }}

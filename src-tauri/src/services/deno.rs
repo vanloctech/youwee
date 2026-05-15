@@ -1,9 +1,9 @@
-use std::process::Stdio;
-use std::path::PathBuf;
-use tauri::{AppHandle, Manager};
-use tokio::process::Command;
 use crate::types::DenoStatus;
 use crate::utils::CommandExt;
+use std::path::PathBuf;
+use std::process::Stdio;
+use tauri::{AppHandle, Manager};
+use tokio::process::Command;
 
 /// Get the Deno binary path (app data or system)
 pub async fn get_deno_path(app: &AppHandle) -> Option<PathBuf> {
@@ -14,12 +14,12 @@ pub async fn get_deno_path(app: &AppHandle) -> Option<PathBuf> {
         let deno_path = bin_dir.join("deno.exe");
         #[cfg(not(windows))]
         let deno_path = bin_dir.join("deno");
-        
+
         if deno_path.exists() {
             return Some(deno_path);
         }
     }
-    
+
     // Fallback: check if system deno is available
     #[cfg(unix)]
     {
@@ -29,12 +29,12 @@ pub async fn get_deno_path(app: &AppHandle) -> Option<PathBuf> {
         if deno_home.exists() {
             return Some(deno_home);
         }
-        
+
         let mut cmd = Command::new("which");
         cmd.arg("deno");
         cmd.hide_window();
         let output = cmd.output().await.ok()?;
-        
+
         if output.status.success() {
             let path_str = String::from_utf8_lossy(&output.stdout).trim().to_string();
             if !path_str.is_empty() {
@@ -42,22 +42,25 @@ pub async fn get_deno_path(app: &AppHandle) -> Option<PathBuf> {
             }
         }
     }
-    
+
     #[cfg(windows)]
     {
         let mut cmd = Command::new("where");
         cmd.arg("deno");
         cmd.hide_window();
         let output = cmd.output().await.ok()?;
-        
+
         if output.status.success() {
-            let path_str = String::from_utf8_lossy(&output.stdout).lines().next()?.to_string();
+            let path_str = String::from_utf8_lossy(&output.stdout)
+                .lines()
+                .next()?
+                .to_string();
             if !path_str.is_empty() {
                 return Some(PathBuf::from(path_str));
             }
         }
     }
-    
+
     None
 }
 
@@ -70,7 +73,7 @@ pub async fn check_deno_internal(app: &AppHandle) -> Result<DenoStatus, String> 
         let deno_path = bin_dir.join("deno.exe");
         #[cfg(not(windows))]
         let deno_path = bin_dir.join("deno");
-        
+
         if deno_path.exists() {
             let mut cmd = Command::new(&deno_path);
             cmd.args(["--version"])
@@ -78,13 +81,21 @@ pub async fn check_deno_internal(app: &AppHandle) -> Result<DenoStatus, String> 
                 .stderr(Stdio::piped());
             cmd.hide_window();
             let output = cmd.output().await;
-            
+
             if let Ok(output) = output {
                 if output.status.success() {
                     let stdout = String::from_utf8_lossy(&output.stdout);
                     // Deno outputs: "deno 2.1.2 (stable, release, aarch64-apple-darwin)"
-                    let version = stdout.lines().next()
-                        .map(|l| l.trim_start_matches("deno ").split_whitespace().next().unwrap_or("").to_string())
+                    let version = stdout
+                        .lines()
+                        .next()
+                        .map(|l| {
+                            l.trim_start_matches("deno ")
+                                .split_whitespace()
+                                .next()
+                                .unwrap_or("")
+                                .to_string()
+                        })
                         .unwrap_or_default();
                     return Ok(DenoStatus {
                         installed: true,
@@ -96,31 +107,39 @@ pub async fn check_deno_internal(app: &AppHandle) -> Result<DenoStatus, String> 
             }
         }
     }
-    
+
     // Check system Deno (including ~/.deno/bin/deno)
     let home = std::env::var("HOME").unwrap_or_default();
     let deno_home = PathBuf::from(&home).join(".deno/bin/deno");
-    
+
     let (deno_cmd, is_home_deno) = if deno_home.exists() {
         (deno_home.to_string_lossy().to_string(), true)
     } else {
         ("deno".to_string(), false)
     };
-    
+
     let mut cmd = Command::new(&deno_cmd);
     cmd.args(["--version"])
         .stdout(Stdio::piped())
         .stderr(Stdio::piped());
     cmd.hide_window();
     let output = cmd.output().await;
-    
+
     match output {
         Ok(output) if output.status.success() => {
             let stdout = String::from_utf8_lossy(&output.stdout);
-            let version = stdout.lines().next()
-                .map(|l| l.trim_start_matches("deno ").split_whitespace().next().unwrap_or("").to_string())
+            let version = stdout
+                .lines()
+                .next()
+                .map(|l| {
+                    l.trim_start_matches("deno ")
+                        .split_whitespace()
+                        .next()
+                        .unwrap_or("")
+                        .to_string()
+                })
                 .unwrap_or_default();
-            
+
             let path = if is_home_deno {
                 Some(deno_home.to_string_lossy().to_string())
             } else {
@@ -129,7 +148,9 @@ pub async fn check_deno_internal(app: &AppHandle) -> Result<DenoStatus, String> 
                     let mut cmd = Command::new("which");
                     cmd.arg("deno");
                     cmd.hide_window();
-                    cmd.output().await.ok()
+                    cmd.output()
+                        .await
+                        .ok()
                         .map(|o| String::from_utf8_lossy(&o.stdout).trim().to_string())
                 }
                 #[cfg(windows)]
@@ -137,13 +158,20 @@ pub async fn check_deno_internal(app: &AppHandle) -> Result<DenoStatus, String> 
                     let mut cmd = Command::new("where");
                     cmd.arg("deno");
                     cmd.hide_window();
-                    cmd.output().await.ok()
-                        .map(|o| String::from_utf8_lossy(&o.stdout).lines().next().unwrap_or("").to_string())
+                    cmd.output().await.ok().map(|o| {
+                        String::from_utf8_lossy(&o.stdout)
+                            .lines()
+                            .next()
+                            .unwrap_or("")
+                            .to_string()
+                    })
                 }
                 #[cfg(not(any(unix, windows)))]
-                { None }
+                {
+                    None
+                }
             };
-            
+
             Ok(DenoStatus {
                 installed: true,
                 version: Some(version),
@@ -165,25 +193,41 @@ pub fn get_deno_download_url() -> &'static str {
     #[cfg(target_os = "macos")]
     {
         #[cfg(target_arch = "aarch64")]
-        { "https://github.com/denoland/deno/releases/latest/download/deno-aarch64-apple-darwin.zip" }
+        {
+            "https://github.com/denoland/deno/releases/latest/download/deno-aarch64-apple-darwin.zip"
+        }
         #[cfg(target_arch = "x86_64")]
-        { "https://github.com/denoland/deno/releases/latest/download/deno-x86_64-apple-darwin.zip" }
+        {
+            "https://github.com/denoland/deno/releases/latest/download/deno-x86_64-apple-darwin.zip"
+        }
         #[cfg(not(any(target_arch = "aarch64", target_arch = "x86_64")))]
-        { "https://github.com/denoland/deno/releases/latest/download/deno-aarch64-apple-darwin.zip" }
+        {
+            "https://github.com/denoland/deno/releases/latest/download/deno-aarch64-apple-darwin.zip"
+        }
     }
     #[cfg(target_os = "windows")]
-    { "https://github.com/denoland/deno/releases/latest/download/deno-x86_64-pc-windows-msvc.zip" }
+    {
+        "https://github.com/denoland/deno/releases/latest/download/deno-x86_64-pc-windows-msvc.zip"
+    }
     #[cfg(target_os = "linux")]
     {
         #[cfg(target_arch = "aarch64")]
-        { "https://github.com/denoland/deno/releases/latest/download/deno-aarch64-unknown-linux-gnu.zip" }
+        {
+            "https://github.com/denoland/deno/releases/latest/download/deno-aarch64-unknown-linux-gnu.zip"
+        }
         #[cfg(target_arch = "x86_64")]
-        { "https://github.com/denoland/deno/releases/latest/download/deno-x86_64-unknown-linux-gnu.zip" }
+        {
+            "https://github.com/denoland/deno/releases/latest/download/deno-x86_64-unknown-linux-gnu.zip"
+        }
         #[cfg(not(any(target_arch = "aarch64", target_arch = "x86_64")))]
-        { "https://github.com/denoland/deno/releases/latest/download/deno-x86_64-unknown-linux-gnu.zip" }
+        {
+            "https://github.com/denoland/deno/releases/latest/download/deno-x86_64-unknown-linux-gnu.zip"
+        }
     }
     #[cfg(not(any(target_os = "macos", target_os = "windows", target_os = "linux")))]
-    { "" }
+    {
+        ""
+    }
 }
 
 /// Deno update info
@@ -199,7 +243,7 @@ pub struct DenoUpdateInfo {
 pub async fn check_deno_update_internal(app: &AppHandle) -> Result<DenoUpdateInfo, String> {
     // Get current installed version
     let current_status = check_deno_internal(app).await?;
-    
+
     if !current_status.installed {
         return Ok(DenoUpdateInfo {
             has_update: false,
@@ -208,9 +252,9 @@ pub async fn check_deno_update_internal(app: &AppHandle) -> Result<DenoUpdateInf
             release_url: None,
         });
     }
-    
+
     let current_version = current_status.version.clone();
-    
+
     // Only check updates for bundled Deno (not system)
     if current_status.is_system {
         return Ok(DenoUpdateInfo {
@@ -220,45 +264,46 @@ pub async fn check_deno_update_internal(app: &AppHandle) -> Result<DenoUpdateInf
             release_url: Some("System Deno - update via deno upgrade".to_string()),
         });
     }
-    
+
     // Fetch latest release from GitHub API
     let client = reqwest::Client::builder()
         .user_agent("Youwee/0.6.0")
         .timeout(std::time::Duration::from_secs(30))
         .build()
         .map_err(|e| format!("Failed to create HTTP client: {}", e))?;
-    
+
     let response = client
         .get("https://api.github.com/repos/denoland/deno/releases/latest")
         .send()
         .await
         .map_err(|e| format!("Failed to fetch release info: {}", e))?;
-    
+
     if !response.status().is_success() {
-        return Err(format!("Failed to fetch release info: HTTP {}", response.status()));
+        return Err(format!(
+            "Failed to fetch release info: HTTP {}",
+            response.status()
+        ));
     }
-    
-    let json: serde_json::Value = response.json().await
+
+    let json: serde_json::Value = response
+        .json()
+        .await
         .map_err(|e| format!("Failed to parse release info: {}", e))?;
-    
-    let tag_name = json["tag_name"].as_str()
-        .ok_or("No tag_name in release")?;
-    
-    let html_url = json["html_url"].as_str()
-        .map(|s| s.to_string());
-    
+
+    let tag_name = json["tag_name"].as_str().ok_or("No tag_name in release")?;
+
+    let html_url = json["html_url"].as_str().map(|s| s.to_string());
+
     // Extract version from tag (remove 'v' prefix if present)
-    let latest_version = tag_name
-        .trim_start_matches('v')
-        .to_string();
-    
+    let latest_version = tag_name.trim_start_matches('v').to_string();
+
     // Compare versions
     let has_update = if let Some(ref current) = current_version {
         latest_version != *current && !current.contains(&latest_version)
     } else {
         false
     };
-    
+
     Ok(DenoUpdateInfo {
         has_update,
         current_version,
