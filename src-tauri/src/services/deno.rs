@@ -5,59 +5,66 @@ use tokio::process::Command;
 use crate::types::DenoStatus;
 use crate::utils::CommandExt;
 
-/// Get the Deno binary path (app data or system)
+/// Get the Deno binary path.
+///
+/// Resolution order:
+///   1. App-managed binary in app_data_dir/bin/
+///   2. System PATH via which/where (Nix, Homebrew, distro, etc.)
+///   3. ~/.deno/bin/deno fallback (curl installer location)
 pub async fn get_deno_path(app: &AppHandle) -> Option<PathBuf> {
-    // First check app data directory
+    // First check app data directory (app-managed download)
     if let Ok(app_data_dir) = app.path().app_data_dir() {
         let bin_dir = app_data_dir.join("bin");
         #[cfg(windows)]
         let deno_path = bin_dir.join("deno.exe");
         #[cfg(not(windows))]
         let deno_path = bin_dir.join("deno");
-        
+
         if deno_path.exists() {
             return Some(deno_path);
         }
     }
-    
-    // Fallback: check if system deno is available
+
+    // System PATH — honors Nix, Homebrew, distro packages, etc.
     #[cfg(unix)]
     {
-        // Check common deno locations
+        let mut cmd = Command::new("which");
+        cmd.arg("deno");
+        cmd.hide_window();
+        if let Ok(output) = cmd.output().await {
+            if output.status.success() {
+                let path_str = String::from_utf8_lossy(&output.stdout).trim().to_string();
+                if !path_str.is_empty() {
+                    return Some(PathBuf::from(path_str));
+                }
+            }
+        }
+
+        // Fallback: ~/.deno/bin/deno (curl installer location)
         let home = std::env::var("HOME").unwrap_or_default();
         let deno_home = PathBuf::from(&home).join(".deno/bin/deno");
         if deno_home.exists() {
             return Some(deno_home);
         }
-        
-        let mut cmd = Command::new("which");
-        cmd.arg("deno");
-        cmd.hide_window();
-        let output = cmd.output().await.ok()?;
-        
-        if output.status.success() {
-            let path_str = String::from_utf8_lossy(&output.stdout).trim().to_string();
-            if !path_str.is_empty() {
-                return Some(PathBuf::from(path_str));
-            }
-        }
     }
-    
+
     #[cfg(windows)]
     {
         let mut cmd = Command::new("where");
         cmd.arg("deno");
         cmd.hide_window();
-        let output = cmd.output().await.ok()?;
-        
-        if output.status.success() {
-            let path_str = String::from_utf8_lossy(&output.stdout).lines().next()?.to_string();
-            if !path_str.is_empty() {
-                return Some(PathBuf::from(path_str));
+        if let Ok(output) = cmd.output().await {
+            if output.status.success() {
+                if let Some(path_str) = String::from_utf8_lossy(&output.stdout).lines().next() {
+                    let path_str = path_str.to_string();
+                    if !path_str.is_empty() {
+                        return Some(PathBuf::from(path_str));
+                    }
+                }
             }
         }
     }
-    
+
     None
 }
 
@@ -97,33 +104,23 @@ pub async fn check_deno_internal(app: &AppHandle) -> Result<DenoStatus, String> 
         }
     }
     
-    // Check system Deno (including ~/.deno/bin/deno)
-    let home = std::env::var("HOME").unwrap_or_default();
-    let deno_home = PathBuf::from(&home).join(".deno/bin/deno");
-    
-    let (deno_cmd, is_home_deno) = if deno_home.exists() {
-        (deno_home.to_string_lossy().to_string(), true)
-    } else {
-        ("deno".to_string(), false)
-    };
-    
-    let mut cmd = Command::new(&deno_cmd);
+    // Check system Deno: PATH first (Nix, Homebrew, distro), then ~/.deno fallback.
+    // Use "deno" so the OS resolves via PATH. If that fails, try ~/.deno/bin/deno.
+    let mut cmd = Command::new("deno");
     cmd.args(["--version"])
         .stdout(Stdio::piped())
         .stderr(Stdio::piped());
     cmd.hide_window();
     let output = cmd.output().await;
-    
-    match output {
-        Ok(output) if output.status.success() => {
+
+    if let Ok(output) = &output {
+        if output.status.success() {
             let stdout = String::from_utf8_lossy(&output.stdout);
             let version = stdout.lines().next()
                 .map(|l| l.trim_start_matches("deno ").split_whitespace().next().unwrap_or("").to_string())
                 .unwrap_or_default();
-            
-            let path = if is_home_deno {
-                Some(deno_home.to_string_lossy().to_string())
-            } else {
+
+            let path = {
                 #[cfg(unix)]
                 {
                     let mut cmd = Command::new("which");
@@ -143,21 +140,47 @@ pub async fn check_deno_internal(app: &AppHandle) -> Result<DenoStatus, String> 
                 #[cfg(not(any(unix, windows)))]
                 { None }
             };
-            
-            Ok(DenoStatus {
+
+            return Ok(DenoStatus {
                 installed: true,
                 version: Some(version),
                 binary_path: path,
                 is_system: true,
-            })
+            });
         }
-        _ => Ok(DenoStatus {
-            installed: false,
-            version: None,
-            binary_path: None,
-            is_system: false,
-        }),
     }
+
+    // Fallback: ~/.deno/bin/deno (curl installer location, not on PATH)
+    let home = std::env::var("HOME").unwrap_or_default();
+    let deno_home = PathBuf::from(&home).join(".deno/bin/deno");
+    if deno_home.exists() {
+        let mut cmd = Command::new(&deno_home);
+        cmd.args(["--version"])
+            .stdout(Stdio::piped())
+            .stderr(Stdio::piped());
+        cmd.hide_window();
+        if let Ok(output) = cmd.output().await {
+            if output.status.success() {
+                let stdout = String::from_utf8_lossy(&output.stdout);
+                let version = stdout.lines().next()
+                    .map(|l| l.trim_start_matches("deno ").split_whitespace().next().unwrap_or("").to_string())
+                    .unwrap_or_default();
+                return Ok(DenoStatus {
+                    installed: true,
+                    version: Some(version),
+                    binary_path: Some(deno_home.to_string_lossy().to_string()),
+                    is_system: true,
+                });
+            }
+        }
+    }
+
+    Ok(DenoStatus {
+        installed: false,
+        version: None,
+        binary_path: None,
+        is_system: false,
+    })
 }
 
 /// Get Deno download URL for current platform

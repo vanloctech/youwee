@@ -80,28 +80,41 @@ pub async fn set_ytdlp_source(app: &AppHandle, source: &DependencySource) -> Res
     Ok(())
 }
 
+/// Resolve system binary candidates in correct precedence order:
+/// 1. PATH entries (honors the user's environment: Nix, Homebrew, distro, etc.)
+/// 2. Well-known fallback paths (for GUI apps that may not inherit shell PATH)
 fn get_system_binary_candidates(binary_name: &str) -> Vec<PathBuf> {
-    let mut candidates = vec![
-        PathBuf::from("/opt/homebrew/bin").join(binary_name),
-        PathBuf::from("/usr/local/bin").join(binary_name),
-        PathBuf::from("/usr/bin").join(binary_name),
-    ];
-
-    if let Ok(path_var) = std::env::var("PATH") {
-        for dir in std::env::split_paths(&path_var) {
-            candidates.push(dir.join(binary_name));
-        }
-    }
-
-    let mut unique = Vec::new();
+    let mut candidates = Vec::new();
     let mut seen = HashSet::new();
-    for path in candidates {
+
+    let mut push_unique = |path: PathBuf| {
         let key = path.to_string_lossy().to_string();
         if seen.insert(key) {
-            unique.push(path);
+            candidates.push(path);
+        }
+    };
+
+    // PATH first — this is the OS-level contract for binary resolution.
+    // Nix, Homebrew, distro packages, and user installs all express
+    // their binaries through PATH.
+    if let Ok(path_var) = std::env::var("PATH") {
+        for dir in std::env::split_paths(&path_var) {
+            push_unique(dir.join(binary_name));
         }
     }
-    unique
+
+    // Well-known fallback locations for environments where PATH may not
+    // include these (e.g., macOS GUI apps launched from Finder/Dock or
+    // Linux desktop files that don't inherit the user's shell PATH).
+    if let Ok(home) = std::env::var("HOME") {
+        // ~/.local/bin — standard XDG location for pipx, pip --user, etc.
+        push_unique(PathBuf::from(&home).join(".local/bin").join(binary_name));
+    }
+    push_unique(PathBuf::from("/opt/homebrew/bin").join(binary_name));
+    push_unique(PathBuf::from("/usr/local/bin").join(binary_name));
+    push_unique(PathBuf::from("/usr/bin").join(binary_name));
+
+    candidates
 }
 
 fn get_system_ytdlp_path() -> Option<PathBuf> {
@@ -185,18 +198,26 @@ fn get_legacy_ytdlp_path(app: &AppHandle) -> Option<PathBuf> {
     })
 }
 
-/// Get the bundled yt-dlp path
+/// Get the bundled yt-dlp path.
+/// Returns None if the file doesn't exist or is an empty placeholder
+/// (build.rs creates empty placeholders for dev builds; CI provides the real binary).
 fn get_bundled_ytdlp_path() -> Option<PathBuf> {
     #[cfg(windows)]
     let binary_name = "yt-dlp.exe";
     #[cfg(not(windows))]
     let binary_name = "yt-dlp";
-    
-    // Check next to executable first
+
     if let Ok(exe_path) = std::env::current_exe() {
         if let Some(exe_dir) = exe_path.parent() {
             let bundled = exe_dir.join(binary_name);
             if bundled.exists() {
+                // Reject empty placeholder files created by build.rs for dev builds.
+                // A real yt-dlp binary is several MB; an empty file is not usable.
+                if let Ok(meta) = std::fs::metadata(&bundled) {
+                    if meta.len() < 1024 {
+                        return None;
+                    }
+                }
                 return Some(bundled);
             }
         }
@@ -290,7 +311,13 @@ pub fn get_channel_api_url(channel: &YtdlpChannel) -> Option<&'static str> {
     }
 }
 
-/// Get the path to yt-dlp binary based on current channel setting
+/// Get the path to yt-dlp binary based on current channel setting.
+///
+/// Resolution order for source=Auto (default):
+///   1. User-updated binary in app_data_dir/bin/ (legacy or channel-specific)
+///   2. Bundled sidecar (real binary, not empty placeholder from dev builds)
+///   3. System PATH (Nix, Homebrew, distro package manager, etc.)
+///
 /// Returns: (path, is_bundled)
 pub async fn get_ytdlp_path(app: &AppHandle) -> Option<(PathBuf, bool)> {
     let source = get_ytdlp_source(app).await;
@@ -300,14 +327,14 @@ pub async fn get_ytdlp_path(app: &AppHandle) -> Option<(PathBuf, bool)> {
     }
 
     let channel = get_ytdlp_channel(app).await;
-    
+
     match channel {
         YtdlpChannel::Bundled => {
             // Prefer user-updated legacy binary so bundled update actually takes effect.
             if let Some(legacy_binary) = get_legacy_ytdlp_path(app) {
                 return Some((legacy_binary, false));
             }
-            // Use bundled version
+            // Use bundled version (rejects empty placeholders from dev builds)
             if let Some(bundled) = get_bundled_ytdlp_path() {
                 return Some((bundled, true));
             }
@@ -325,12 +352,21 @@ pub async fn get_ytdlp_path(app: &AppHandle) -> Option<(PathBuf, bool)> {
             }
         }
     }
-    
+
     // Final fallback: check app_data_dir/bin/yt-dlp (legacy location)
     if let Some(legacy_binary) = get_legacy_ytdlp_path(app) {
         return Some((legacy_binary, false));
     }
-    
+
+    // Last resort for Auto mode: check system PATH.
+    // This covers Nix devshells, system package managers, and any other
+    // environment where yt-dlp is available on PATH but not bundled.
+    if source == DependencySource::Auto {
+        if let Some(system_path) = get_system_ytdlp_path() {
+            return Some((system_path, false));
+        }
+    }
+
     None
 }
 

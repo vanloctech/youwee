@@ -130,7 +130,8 @@
       "completed": "Hoàn thành",
       "failed": "Thất bại",
       "failedHint": "Xem trang Logs để biết chi tiết",
-      "retrying": "Thử lại {{current}}/{{total}} sau {{seconds}}s"
+      "retrying": "Thử lại {{current}}/{{total}} sau {{seconds}}s",
+      "muxing": "Đang ghép"
     },
     "summarize": "Tóm tắt",
     "openFolder": "Mở vị trí file",

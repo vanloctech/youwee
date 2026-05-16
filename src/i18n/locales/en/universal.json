@@ -96,7 +96,8 @@
       "completed": "Completed",
       "failed": "Failed",
       "failedHint": "View Logs page for details",
-      "retrying": "Retry {{current}}/{{total}} in {{seconds}}s"
+      "retrying": "Retry {{current}}/{{total}} in {{seconds}}s",
+      "muxing": "Muxing"
     },
     "summarize": "Summarize",
     "openFolder": "Show in folder",

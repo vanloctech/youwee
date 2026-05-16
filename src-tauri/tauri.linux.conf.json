@@ -1,0 +1,13 @@
+{
+  "build": {
+    "beforeBundleCommand": "bash scripts/patch-fhs-binary.sh"
+  },
+  "bundle": {
+    "externalBin": [],
+    "linux": {
+      "deb": {
+        "recommends": ["ffmpeg", "yt-dlp"]
+      }
+    }
+  }
+}

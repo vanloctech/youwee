@@ -290,6 +290,11 @@ export function DependenciesSection({ highlightId }: DependenciesSectionProps) {
                       t('dependencies.videoDownloadEngine')
                     )}
                   </p>
+                  {ytdlpInfo?.binary_path && (
+                    <p className="text-[10px] font-mono text-muted-foreground/50 mt-0.5 truncate">
+                      {ytdlpInfo.binary_path}
+                    </p>
+                  )}
                 </div>
               </div>
               <Button
@@ -549,6 +554,11 @@ export function DependenciesSection({ highlightId }: DependenciesSectionProps) {
                       t('dependencies.audioVideoProcessing')
                     )}
                   </p>
+                  {ffmpegStatus?.binary_path && (
+                    <p className="text-[10px] font-mono text-muted-foreground/50 mt-0.5 truncate">
+                      {ffmpegStatus.binary_path}
+                    </p>
+                  )}
                 </div>
               </div>
               <div className="flex items-center gap-2">
@@ -698,6 +708,11 @@ export function DependenciesSection({ highlightId }: DependenciesSectionProps) {
                       t('dependencies.jsRuntimeForYoutube')
                     )}
                   </p>
+                  {denoStatus?.binary_path && (
+                    <p className="text-[10px] font-mono text-muted-foreground/50 mt-0.5 truncate">
+                      {denoStatus.binary_path}
+                    </p>
+                  )}
                 </div>
               </div>
               <div className="flex items-center gap-2">
@@ -792,6 +807,11 @@ export function DependenciesSection({ highlightId }: DependenciesSectionProps) {
                       </span>
                     )}
                   </p>
+                  {galleryDlStatus?.binary_path && (
+                    <p className="text-[10px] font-mono text-muted-foreground/50 mt-0.5 truncate">
+                      {galleryDlStatus.binary_path}
+                    </p>
+                  )}
                 </div>
               </div>
               <Button
