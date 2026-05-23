@@ -7,20 +7,23 @@ interface SimpleMarkdownProps {
 
 /**
  * A lightweight markdown renderer for basic formatting.
- * Supports: **bold**, *italic*, ### headers, - lists, [links](url), `code`
+ * Supports: **bold**, *italic*, ### headers, - lists, [links](url), `code`, ```code blocks```
  */
 export function SimpleMarkdown({ content, className }: SimpleMarkdownProps) {
   const lines = content.split('\n');
   const elements: React.ReactNode[] = [];
   let listItems: string[] = [];
   let listKey = 0;
+  let codeBlockLines: string[] = [];
+  let codeBlockKey = 0;
+  let inCodeBlock = false;
 
   const flushList = () => {
     if (listItems.length > 0) {
       elements.push(
         <ul key={`list-${listKey++}`} className="list-disc list-inside space-y-1 my-2">
           {listItems.map((item) => (
-            <li key={`${listKey}-${item}`} className="text-inherit">
+            <li key={`${listKey}-${item}`} className="min-w-0 break-words text-inherit">
               {parseInline(item)}
             </li>
           ))}
@@ -30,9 +33,42 @@ export function SimpleMarkdown({ content, className }: SimpleMarkdownProps) {
     }
   };
 
+  const flushCodeBlock = () => {
+    if (codeBlockLines.length > 0) {
+      elements.push(
+        <pre
+          key={`code-${codeBlockKey++}`}
+          className="my-3 w-full max-w-full overflow-x-auto rounded-lg bg-muted px-3 py-2 text-[0.9em] leading-relaxed"
+        >
+          <code className="block font-mono whitespace-pre-wrap break-words">
+            {codeBlockLines.join('\n')}
+          </code>
+        </pre>,
+      );
+      codeBlockLines = [];
+    }
+  };
+
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i];
     const trimmed = line.trim();
+
+    if (trimmed.startsWith('```')) {
+      flushList();
+      if (inCodeBlock) {
+        flushCodeBlock();
+        inCodeBlock = false;
+      } else {
+        inCodeBlock = true;
+        codeBlockLines = [];
+      }
+      continue;
+    }
+
+    if (inCodeBlock) {
+      codeBlockLines.push(line);
+      continue;
+    }
 
     // Empty line
     if (!trimmed) {
@@ -44,7 +80,7 @@ export function SimpleMarkdown({ content, className }: SimpleMarkdownProps) {
     if (trimmed.startsWith('### ')) {
       flushList();
       elements.push(
-        <h4 key={i} className="font-semibold text-foreground mt-3 mb-1">
+        <h4 key={i} className="mt-3 mb-1 break-words font-semibold text-foreground">
           {parseInline(trimmed.slice(4))}
         </h4>,
       );
@@ -53,7 +89,7 @@ export function SimpleMarkdown({ content, className }: SimpleMarkdownProps) {
     if (trimmed.startsWith('## ')) {
       flushList();
       elements.push(
-        <h3 key={i} className="font-semibold text-foreground mt-3 mb-1">
+        <h3 key={i} className="mt-3 mb-1 break-words font-semibold text-foreground">
           {parseInline(trimmed.slice(3))}
         </h3>,
       );
@@ -62,7 +98,7 @@ export function SimpleMarkdown({ content, className }: SimpleMarkdownProps) {
     if (trimmed.startsWith('# ')) {
       flushList();
       elements.push(
-        <h2 key={i} className="font-bold text-foreground mt-3 mb-1">
+        <h2 key={i} className="mt-3 mb-1 break-words font-bold text-foreground">
           {parseInline(trimmed.slice(2))}
         </h2>,
       );
@@ -85,15 +121,20 @@ export function SimpleMarkdown({ content, className }: SimpleMarkdownProps) {
     // Regular paragraph
     flushList();
     elements.push(
-      <p key={i} className="my-1">
+      <p key={i} className="my-1 min-w-0 break-words">
         {parseInline(trimmed)}
       </p>,
     );
   }
 
   flushList();
+  flushCodeBlock();
 
-  return <div className={cn('text-inherit leading-relaxed', className)}>{elements}</div>;
+  return (
+    <div className={cn('min-w-0 max-w-full break-words text-inherit leading-relaxed', className)}>
+      {elements}
+    </div>
+  );
 }
 
 /**
@@ -133,7 +174,7 @@ function parseInline(text: string): React.ReactNode {
     const codeMatch = remaining.match(/^`([^`]+?)`/);
     if (codeMatch) {
       parts.push(
-        <code key={key++} className="px-1 py-0.5 bg-muted rounded text-[0.9em] font-mono">
+        <code key={key++} className="rounded bg-muted px-1 py-0.5 font-mono text-[0.9em] break-all">
           {codeMatch[1]}
         </code>,
       );

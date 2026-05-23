@@ -31,6 +31,7 @@ import {
   ExtensionSection,
   GeneralSection,
   NetworkSection,
+  PluginsSection,
   SettingsCard,
   SettingsDivider,
   SettingsRow,
@@ -145,6 +146,8 @@ export function SettingsPage({
                 )}
 
                 {activeSection === 'download' && <DownloadSection highlightId={highlightId} />}
+
+                {activeSection === 'plugins' && <PluginsSection highlightId={highlightId} />}
 
                 {activeSection === 'extension' && <ExtensionSection highlightId={highlightId} />}
 

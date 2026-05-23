@@ -28,6 +28,7 @@
 
 - **Video Downloads** — YouTube, TikTok, Facebook, Instagram, Bilibili, Youku, and 1800+ sites
 - **Browser Extension Bridge** — Chromium + Firefox extension with floating button, media/quality picker, and one-click `Download now` / `Add to queue` send to Youwee app
+- **Plugins & Workflow Automation** — Install signed plugins, configure custom fields, assign them to download workflows, and extend Youwee with notifications, uploads, and post-download automations
 - **Channel Follow** — Follow YouTube, Bilibili & Youku channels, get notified of new videos, auto-download, and manage from system tray
 - **Metadata Fetcher** — Download video info, descriptions, comments, and thumbnails without the video
 - **Live Stream Support** — Download live streams with dedicated toggle
@@ -106,6 +107,13 @@
 - Floating button supports `Video/Audio` + quality selection on supported sites
 - Popup works on any valid HTTP/HTTPS tab
 - Guide: [docs/browser-extension.md](docs/browser-extension.md)
+
+### Plugins
+
+- Install signed `.ywp` plugins to extend post-download workflows with custom actions such as notifications, uploads, and third-party integrations
+- Create a plugin workspace from Youwee, attach it for live debugging, then build and sign the final plugin package with `youwee-sdk`
+- Plugins can provide localized guides, typed configuration fields, requested permissions, and trigger-based workflow steps inside the app
+- SDK guide: [sdk-js/README.md](sdk-js/README.md)
 
 ### Build from Source
 

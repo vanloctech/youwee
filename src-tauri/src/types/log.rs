@@ -10,3 +10,10 @@ pub struct LogEntry {
     pub details: Option<String>,
     pub url: Option<String>,
 }
+
+#[derive(Clone, Serialize, Deserialize, Debug)]
+pub struct PluginLogsPage {
+    pub items: Vec<LogEntry>,
+    pub total: i64,
+    pub has_more: bool,
+}

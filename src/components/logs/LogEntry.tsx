@@ -225,7 +225,7 @@ export function LogEntry({ log }: LogEntryProps) {
       <div className="space-y-1.5 min-w-0">
         <p
           className={cn(
-            'text-sm font-mono break-words whitespace-pre-wrap',
+            'text-sm font-mono whitespace-pre-wrap break-words [overflow-wrap:anywhere]',
             log.log_type === 'command' && 'text-blue-400',
             log.log_type === 'error' && 'text-red-400',
             log.log_type === 'stderr' && 'text-yellow-400',
@@ -235,19 +235,19 @@ export function LogEntry({ log }: LogEntryProps) {
         </p>
 
         {log.details && (
-          <p className="text-xs text-muted-foreground break-words whitespace-pre-wrap">
+          <p className="text-xs text-muted-foreground whitespace-pre-wrap break-words [overflow-wrap:anywhere]">
             {log.details}
           </p>
         )}
 
         {log.url && (
-          <p className="text-xs text-muted-foreground truncate">
+          <p className="text-xs text-muted-foreground whitespace-pre-wrap break-words [overflow-wrap:anywhere]">
             <span className="opacity-60">{t('logs.entry.url')}:</span>{' '}
             <a
               href={isSafeUrl(log.url) ? log.url : '#'}
               target="_blank"
               rel="noopener noreferrer"
-              className="text-primary hover:underline"
+              className="break-words text-primary hover:underline [overflow-wrap:anywhere]"
             >
               {log.url}
             </a>

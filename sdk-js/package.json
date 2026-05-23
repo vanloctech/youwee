@@ -1,0 +1,76 @@
+{
+  "name": "youwee-sdk",
+  "version": "1.0.3",
+  "description": "Youwee plugin SDK for JavaScript runtimes.",
+  "type": "commonjs",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "bin": {
+    "youwee-sdk": "./dist/cli.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/vanloctech/youwee.git",
+    "directory": "sdk-js"
+  },
+  "homepage": "https://github.com/vanloctech/youwee/tree/develop/sdk-js",
+  "bugs": {
+    "url": "https://github.com/vanloctech/youwee/issues"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./runtime": {
+      "types": "./dist/runtime.d.ts",
+      "default": "./dist/runtime.js"
+    },
+    "./runtime-cli": {
+      "types": "./dist/runtime-cli.d.ts",
+      "default": "./dist/runtime-cli.js"
+    },
+    "./ai": {
+      "types": "./dist/ai.d.ts",
+      "default": "./dist/ai.js"
+    },
+    "./compatibility": {
+      "types": "./dist/compatibility.d.ts",
+      "default": "./dist/compatibility.js"
+    },
+    "./manifest": {
+      "types": "./dist/manifest.d.ts",
+      "default": "./dist/manifest.js"
+    },
+    "./schema": {
+      "types": "./dist/schema.d.ts",
+      "default": "./dist/schema.js"
+    },
+    "./packager": {
+      "types": "./dist/packager.d.ts",
+      "default": "./dist/packager.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "scripts": {
+    "build": "tsc -p ./tsconfig.json",
+    "typecheck": "tsc -p ./tsconfig.json --noEmit"
+  },
+  "files": [
+    "dist",
+    "LICENSE",
+    "README.md",
+    "CHANGELOG.md",
+    "RELEASING.md"
+  ],
+  "keywords": [
+    "youwee",
+    "plugin",
+    "sdk",
+    "youtube-downloader"
+  ],
+  "license": "MIT",
+  "engines": {
+    "node": ">=18"
+  }
+}

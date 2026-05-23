@@ -6,7 +6,7 @@
 //! - Progress tracking
 //! - Subtitle handling
 
-use std::collections::VecDeque;
+use std::collections::{BTreeMap, VecDeque};
 use std::process::Stdio;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
@@ -22,10 +22,14 @@ use crate::database::add_history_internal;
 use crate::database::add_log_internal;
 use crate::database::update_history_download;
 use crate::services::{
-    get_deno_path, get_ffmpeg_path, get_ytdlp_path, get_ytdlp_source,
+    enqueue_post_download_workflow, get_deno_path, get_ffmpeg_path,
+    get_ytdlp_path, get_ytdlp_source, resolve_download_workflow_snapshot,
     system_ytdlp_not_found_message,
 };
-use crate::types::{BackendError, DependencySource, DownloadProgress};
+use crate::types::{
+    BackendError, DependencySource, DownloadProgress, PluginWorkflowStepSnapshot,
+    PostDownloadPluginPayload,
+};
 use crate::utils::{
     build_format_string, format_size, parse_progress, sanitize_output_path, CommandExt,
 };
@@ -33,6 +37,204 @@ use crate::utils::{
 pub static CANCEL_FLAG: AtomicBool = AtomicBool::new(false);
 
 const RECENT_OUTPUT_LIMIT: usize = 30;
+
+fn extract_time_range(download_sections: &Option<String>) -> Option<String> {
+    download_sections.as_ref().and_then(|s| {
+        let stripped = s.strip_prefix('*').unwrap_or(s);
+        if stripped.is_empty() {
+            None
+        } else {
+            Some(stripped.to_string())
+        }
+    })
+}
+
+fn workflow_steps_for_trigger(
+    app: &AppHandle,
+    trigger: &str,
+    workflow_snapshots: &BTreeMap<String, Vec<PluginWorkflowStepSnapshot>>,
+) -> Vec<PluginWorkflowStepSnapshot> {
+    workflow_snapshots
+        .get(trigger)
+        .cloned()
+        .unwrap_or_else(|| resolve_download_workflow_snapshot(app, trigger, None, &[]))
+}
+
+#[allow(clippy::too_many_arguments)]
+fn build_trigger_payload(
+    job_id: &str,
+    source: Option<String>,
+    trigger: &str,
+    output_path: &str,
+    filesize: Option<u64>,
+    format: Option<String>,
+    quality: Option<String>,
+    url: &str,
+    title: Option<String>,
+    thumbnail: Option<String>,
+    history_id: Option<String>,
+    time_range: Option<String>,
+    download_kind: &str,
+) -> PostDownloadPluginPayload {
+    let display_name = title
+        .clone()
+        .filter(|value| !value.trim().is_empty())
+        .unwrap_or_else(|| url.to_string());
+
+    PostDownloadPluginPayload {
+        job_id: job_id.to_string(),
+        source,
+        trigger: trigger.to_string(),
+        filepath: String::new(),
+        filename: display_name,
+        directory: output_path.to_string(),
+        filesize,
+        format,
+        quality,
+        url: url.to_string(),
+        title,
+        thumbnail,
+        history_id,
+        time_range,
+        download_kind: download_kind.to_string(),
+        workflow_run_id: None,
+        workflow_step_index: None,
+        workflow_step_plugin_id: None,
+        chain_state: None,
+    }
+}
+
+#[allow(clippy::too_many_arguments)]
+fn enqueue_failed_workflow(
+    app: &AppHandle,
+    workflow_steps: &[PluginWorkflowStepSnapshot],
+    job_id: &str,
+    source: Option<String>,
+    output_path: &str,
+    format: Option<String>,
+    quality: Option<String>,
+    url: &str,
+    title: Option<String>,
+    thumbnail: Option<String>,
+    history_id: Option<String>,
+    time_range: Option<String>,
+    download_kind: &str,
+) {
+    if workflow_steps.is_empty() {
+        return;
+    }
+
+    let payload = build_trigger_payload(
+        job_id,
+        source,
+        "download.failed",
+        output_path,
+        None,
+        format,
+        quality,
+        url,
+        title,
+        thumbnail,
+        history_id,
+        time_range,
+        download_kind,
+    );
+    let _ = enqueue_post_download_workflow(app, workflow_steps.to_vec(), payload);
+}
+
+#[allow(clippy::too_many_arguments)]
+fn enqueue_before_start_workflow(
+    app: &AppHandle,
+    workflow_steps: &[PluginWorkflowStepSnapshot],
+    job_id: &str,
+    source: Option<String>,
+    output_path: &str,
+    format: Option<String>,
+    quality: Option<String>,
+    url: &str,
+    title: Option<String>,
+    thumbnail: Option<String>,
+    history_id: Option<String>,
+    time_range: Option<String>,
+    download_kind: &str,
+) {
+    if workflow_steps.is_empty() {
+        return;
+    }
+
+    let payload = build_trigger_payload(
+        job_id,
+        source,
+        "download.beforeStart",
+        output_path,
+        None,
+        format,
+        quality,
+        url,
+        title,
+        thumbnail,
+        history_id,
+        time_range,
+        download_kind,
+    );
+    let _ = enqueue_post_download_workflow(app, workflow_steps.to_vec(), payload);
+}
+
+async fn run_completed_plugins(
+    app: &AppHandle,
+    workflow_steps: &[PluginWorkflowStepSnapshot],
+    job_id: &str,
+    source: Option<String>,
+    filepath: &str,
+    filesize: Option<u64>,
+    format: Option<String>,
+    quality: Option<String>,
+    url: &str,
+    title: Option<String>,
+    thumbnail: Option<String>,
+    history_id: Option<String>,
+    time_range: Option<String>,
+    download_kind: &str,
+) {
+    if workflow_steps.is_empty() {
+        return;
+    }
+
+    let path = std::path::Path::new(filepath);
+    let filename = path
+        .file_name()
+        .and_then(|name| name.to_str())
+        .unwrap_or(filepath)
+        .to_string();
+    let directory = path
+        .parent()
+        .map(|parent| parent.to_string_lossy().to_string())
+        .unwrap_or_default();
+
+    let payload = PostDownloadPluginPayload {
+        job_id: job_id.to_string(),
+        source,
+        trigger: "download.completed".to_string(),
+        filepath: filepath.to_string(),
+        filename,
+        directory,
+        filesize,
+        format,
+        quality,
+        url: url.to_string(),
+        title,
+        thumbnail,
+        history_id,
+        time_range,
+        download_kind: download_kind.to_string(),
+        workflow_run_id: None,
+        workflow_step_index: None,
+        workflow_step_plugin_id: None,
+        chain_state: None,
+    };
+
+    let _ = enqueue_post_download_workflow(app, workflow_steps.to_vec(), payload);
+}
 
 /// Decode raw bytes from a child process into a Rust String.
 ///
@@ -268,10 +470,33 @@ pub async fn download_video(
     thumbnail: Option<String>,
     // Source/extractor name (optional, from yt-dlp extractor e.g. "BiliBili", "TikTok")
     source: Option<String>,
+    // Legacy snapshot of plugin ids enabled when the job was queued
+    post_download_plugins: Option<Vec<String>>,
+    // Snapshot of workflow steps by trigger at queue time
+    plugin_workflow_snapshots: Option<BTreeMap<String, Vec<PluginWorkflowStepSnapshot>>>,
+    // Full workflow step snapshot used for post-processing
+    post_download_workflow_steps: Option<Vec<PluginWorkflowStepSnapshot>>,
+    // When false, caller is responsible for firing the final download.failed workflow.
+    emit_failed_workflow: Option<bool>,
+    // Caller context used in plugin payload
+    download_kind: Option<String>,
 ) -> Result<(), String> {
     CANCEL_FLAG.store(false, Ordering::SeqCst);
     validate_url(&url).map_err(|e| BackendError::from_message(e).to_wire_string())?;
     let url = normalize_url(&url);
+    let post_download_plugins = post_download_plugins.unwrap_or_default();
+    let mut plugin_workflow_snapshots = plugin_workflow_snapshots.unwrap_or_default();
+    if !plugin_workflow_snapshots.contains_key("download.completed") {
+        let completed_steps = resolve_download_workflow_snapshot(
+            &app,
+            "download.completed",
+            post_download_workflow_steps,
+            &post_download_plugins,
+        );
+        plugin_workflow_snapshots.insert("download.completed".to_string(), completed_steps);
+    }
+    let emit_failed_workflow = emit_failed_workflow.unwrap_or(true);
+    let download_kind = download_kind.unwrap_or_else(|| "download".to_string());
 
     let should_log_stderr = log_stderr.unwrap_or(true);
     let sanitized_path = sanitize_output_path(&output_path)
@@ -497,6 +722,15 @@ pub async fn download_video(
     let command_str = format!("[{}] yt-dlp {}", binary_path_str, args.join(" "));
     add_log_internal("command", &command_str, None, Some(&url)).ok();
 
+    let trigger_source = source.clone().or_else(|| detect_source(&url));
+    let trigger_time_range = extract_time_range(&download_sections);
+    let before_start_steps =
+        workflow_steps_for_trigger(&app, "download.beforeStart", &plugin_workflow_snapshots);
+    let completed_workflow_steps =
+        workflow_steps_for_trigger(&app, "download.completed", &plugin_workflow_snapshots);
+    let failed_workflow_steps =
+        workflow_steps_for_trigger(&app, "download.failed", &plugin_workflow_snapshots);
+
     // Try to get yt-dlp path (prioritizes bundled version for stability)
     if let Some((binary_path, _)) = get_ytdlp_path(&app).await {
         // Build extended PATH with deno/bun locations for JavaScript runtime support
@@ -515,9 +749,48 @@ pub async fn download_video(
             .stderr(Stdio::piped());
         cmd.hide_window();
 
-        let process = cmd.spawn().map_err(|e| {
-            BackendError::from_message(format!("Failed to start yt-dlp: {}", e)).to_wire_string()
-        })?;
+        let process = match cmd.spawn() {
+            Ok(process) => process,
+            Err(error) => {
+                if emit_failed_workflow {
+                    enqueue_failed_workflow(
+                        &app,
+                        &failed_workflow_steps,
+                        &id,
+                        trigger_source.clone(),
+                        &sanitized_path,
+                        Some(format.clone()),
+                        Some(quality.clone()),
+                        &url,
+                        title.clone(),
+                        thumbnail.clone(),
+                        history_id.clone(),
+                        trigger_time_range.clone(),
+                        &download_kind,
+                    );
+                }
+                return Err(
+                    BackendError::from_message(format!("Failed to start yt-dlp: {}", error))
+                        .to_wire_string(),
+                );
+            }
+        };
+
+        enqueue_before_start_workflow(
+            &app,
+            &before_start_steps,
+            &id,
+            trigger_source.clone(),
+            &sanitized_path,
+            Some(format.clone()),
+            Some(quality.clone()),
+            &url,
+            title.clone(),
+            thumbnail.clone(),
+            history_id.clone(),
+            trigger_time_range.clone(),
+            &download_kind,
+        );
 
         return handle_tokio_download(
             app,
@@ -533,12 +806,34 @@ pub async fn download_video(
             download_sections,
             history_id.clone(),
             filepath_tmp.clone(),
+            sanitized_path.clone(),
+            completed_workflow_steps.clone(),
+            failed_workflow_steps.clone(),
+            emit_failed_workflow,
+            download_kind.clone(),
         )
         .await;
     }
 
     let ytdlp_source = get_ytdlp_source(&app).await;
     if ytdlp_source == DependencySource::System {
+        if emit_failed_workflow {
+            enqueue_failed_workflow(
+                &app,
+                &failed_workflow_steps,
+                &id,
+                trigger_source.clone(),
+                &sanitized_path,
+                Some(format.clone()),
+                Some(quality.clone()),
+                &url,
+                title.clone(),
+                thumbnail.clone(),
+                history_id.clone(),
+                trigger_time_range.clone(),
+                &download_kind,
+            );
+        }
         return Err(BackendError::new(
             crate::types::code::YTDLP_SYSTEM_NOT_FOUND,
             system_ytdlp_not_found_message(),
@@ -551,10 +846,51 @@ pub async fn download_video(
 
     match sidecar_result {
         Ok(sidecar) => {
-            let (mut rx, child) = sidecar.args(&args).spawn().map_err(|e| {
-                BackendError::from_message(format!("Failed to start bundled yt-dlp: {}", e))
-                    .to_wire_string()
-            })?;
+            let (mut rx, child) = match sidecar.args(&args).spawn() {
+                Ok(result) => result,
+                Err(error) => {
+                    if emit_failed_workflow {
+                        enqueue_failed_workflow(
+                            &app,
+                            &failed_workflow_steps,
+                            &id,
+                            trigger_source.clone(),
+                            &sanitized_path,
+                            Some(format.clone()),
+                            Some(quality.clone()),
+                            &url,
+                            title.clone(),
+                            thumbnail.clone(),
+                            history_id.clone(),
+                            trigger_time_range.clone(),
+                            &download_kind,
+                        );
+                    }
+                    return Err(
+                        BackendError::from_message(format!(
+                            "Failed to start bundled yt-dlp: {}",
+                            error
+                        ))
+                        .to_wire_string(),
+                    );
+                }
+            };
+
+            enqueue_before_start_workflow(
+                &app,
+                &before_start_steps,
+                &id,
+                trigger_source.clone(),
+                &sanitized_path,
+                Some(format.clone()),
+                Some(quality.clone()),
+                &url,
+                title.clone(),
+                thumbnail.clone(),
+                history_id.clone(),
+                trigger_time_range.clone(),
+                &download_kind,
+            );
 
             // Only use frontend title if it's not a URL (placeholder)
             let mut current_title: Option<String> =
@@ -751,6 +1087,23 @@ pub async fn download_video(
                     CommandEvent::Error(err) => {
                         let error = BackendError::from_message(format!("Process error: {}", err));
                         add_log_internal("error", error.message(), None, Some(&url)).ok();
+                        if emit_failed_workflow {
+                            enqueue_failed_workflow(
+                                &app,
+                                &failed_workflow_steps,
+                                &id,
+                                source.clone().or_else(|| detect_source(&url)),
+                                &sanitized_path,
+                                Some(format.clone()),
+                                quality_display.clone().or_else(|| Some(quality.clone())),
+                                &url,
+                                current_title.clone(),
+                                thumbnail.clone(),
+                                history_id.clone(),
+                                extract_time_range(&download_sections),
+                                &download_kind,
+                            );
+                        }
                         return Err(error.to_wire_string());
                     }
                     CommandEvent::Terminated(status) => {
@@ -822,14 +1175,7 @@ pub async fn download_video(
                             // Save to history (update existing or create new)
                             let progress_history_id = if let Some(ref filepath) = final_filepath {
                                 // Extract time range from download_sections (strip "*" prefix)
-                                let time_range = download_sections.as_ref().and_then(|s| {
-                                    let stripped = s.strip_prefix('*').unwrap_or(s);
-                                    if stripped.is_empty() {
-                                        None
-                                    } else {
-                                        Some(stripped.to_string())
-                                    }
-                                });
+                                let time_range = extract_time_range(&download_sections);
 
                                 if let Some(ref hist_id) = history_id {
                                     // Update existing history entry (re-download)
@@ -875,7 +1221,7 @@ pub async fn download_video(
                                 speed: String::new(),
                                 eta: String::new(),
                                 status: "finished".to_string(),
-                                title: display_title,
+                                title: display_title.clone(),
                                 playlist_index: current_index,
                                 playlist_count: total_count,
                                 filesize: reported_filesize,
@@ -884,12 +1230,31 @@ pub async fn download_video(
                                 error_message: None,
                                 error_code: None,
                                 error_params: None,
-                                history_id: progress_history_id,
+                                history_id: progress_history_id.clone(),
                                 filepath: final_filepath.clone(),
                                 downloaded_size: None,
                                 elapsed_time: None,
                             };
                             app.emit("download-progress", progress).ok();
+                            if let Some(ref filepath) = final_filepath {
+                                run_completed_plugins(
+                                    &app,
+                                    &completed_workflow_steps,
+                                    &id,
+                                    source.clone().or_else(|| detect_source(&url)),
+                                    filepath,
+                                    reported_filesize,
+                                    Some(format.clone()),
+                                    quality_display.clone().or_else(|| Some(quality.clone())),
+                                    &url,
+                                    display_title.clone(),
+                                    thumbnail.clone().or_else(|| generate_thumbnail_url(&url)),
+                                    progress_history_id.clone(),
+                                    extract_time_range(&download_sections),
+                                    &download_kind,
+                                )
+                                .await;
+                            }
                             return Ok(());
                         } else {
                             let recent_lines: Vec<String> = recent_output.iter().cloned().collect();
@@ -919,6 +1284,26 @@ pub async fn download_video(
                             };
                             app.emit("download-progress", progress).ok();
 
+                            if emit_failed_workflow && !failed_workflow_steps.is_empty() {
+                                let payload = build_trigger_payload(
+                                    &id,
+                                    source.clone().or_else(|| detect_source(&url)),
+                                    "download.failed",
+                                    &sanitized_path,
+                                    None,
+                                    Some(format.clone()),
+                                    quality_display.clone().or_else(|| Some(quality.clone())),
+                                    &url,
+                                    current_title.clone(),
+                                    thumbnail.clone(),
+                                    history_id.clone(),
+                                    extract_time_range(&download_sections),
+                                    &download_kind,
+                                );
+                                let _ =
+                                    enqueue_post_download_workflow(&app, failed_workflow_steps.clone(), payload);
+                            }
+
                             return Err(error.to_wire_string());
                         }
                     }
@@ -929,6 +1314,23 @@ pub async fn download_video(
         }
         Err(_) => {
             if ytdlp_source == DependencySource::App {
+                if emit_failed_workflow {
+                    enqueue_failed_workflow(
+                        &app,
+                        &failed_workflow_steps,
+                        &id,
+                        trigger_source.clone(),
+                        &sanitized_path,
+                        Some(format.clone()),
+                        Some(quality.clone()),
+                        &url,
+                        title.clone(),
+                        thumbnail.clone(),
+                        history_id.clone(),
+                        trigger_time_range.clone(),
+                        &download_kind,
+                    );
+                }
                 return Err(BackendError::new(
                     crate::types::code::YTDLP_APP_NOT_FOUND,
                     "App-managed yt-dlp not found. Please install it from Settings > Dependencies.",
@@ -944,10 +1346,48 @@ pub async fn download_video(
                 .stderr(Stdio::piped());
             cmd.hide_window();
 
-            let process = cmd.spawn().map_err(|e| {
-                BackendError::from_message(format!("Failed to start yt-dlp: {}", e))
-                    .to_wire_string()
-            })?;
+            let process = match cmd.spawn() {
+                Ok(process) => process,
+                Err(error) => {
+                    if emit_failed_workflow {
+                        enqueue_failed_workflow(
+                            &app,
+                            &failed_workflow_steps,
+                            &id,
+                            trigger_source,
+                            &sanitized_path,
+                            Some(format.clone()),
+                            Some(quality.clone()),
+                            &url,
+                            title.clone(),
+                            thumbnail.clone(),
+                            history_id.clone(),
+                            trigger_time_range,
+                            &download_kind,
+                        );
+                    }
+                    return Err(
+                        BackendError::from_message(format!("Failed to start yt-dlp: {}", error))
+                            .to_wire_string(),
+                    );
+                }
+            };
+
+            enqueue_before_start_workflow(
+                &app,
+                &before_start_steps,
+                &id,
+                source.clone().or_else(|| detect_source(&url)),
+                &sanitized_path,
+                Some(format.clone()),
+                Some(quality.clone()),
+                &url,
+                title.clone(),
+                thumbnail.clone(),
+                history_id.clone(),
+                extract_time_range(&download_sections),
+                &download_kind,
+            );
 
             handle_tokio_download(
                 app,
@@ -963,6 +1403,11 @@ pub async fn download_video(
                 download_sections,
                 history_id.clone(),
                 filepath_tmp,
+                sanitized_path,
+                completed_workflow_steps,
+                failed_workflow_steps,
+                emit_failed_workflow,
+                download_kind,
             )
             .await
         }
@@ -983,6 +1428,11 @@ async fn handle_tokio_download(
     download_sections: Option<String>,
     history_id: Option<String>,
     filepath_tmp: std::path::PathBuf,
+    output_directory: String,
+    completed_workflow_steps: Vec<PluginWorkflowStepSnapshot>,
+    failed_workflow_steps: Vec<PluginWorkflowStepSnapshot>,
+    emit_failed_workflow: bool,
+    download_kind: String,
 ) -> Result<(), String> {
     let stdout = process
         .stdout
@@ -1245,9 +1695,31 @@ async fn handle_tokio_download(
     // Wait for process to fully exit before reading the temp file.
     // yt-dlp writes --print-to-file after_move:filepath near process exit;
     // reading before wait() can race and miss the path.
-    let status = process.wait().await.map_err(|e| {
-        BackendError::from_message(format!("Process error: {}", e)).to_wire_string()
-    })?;
+    let status = match process.wait().await {
+        Ok(status) => status,
+        Err(error) => {
+            if emit_failed_workflow {
+                enqueue_failed_workflow(
+                    &app,
+                    &failed_workflow_steps,
+                    &id,
+                    source.clone().or_else(|| detect_source(&url)),
+                    &output_directory,
+                    Some(format.clone()),
+                    quality_display.clone().or_else(|| Some(quality.clone())),
+                    &url,
+                    current_title.clone(),
+                    thumbnail.clone(),
+                    history_id.clone(),
+                    extract_time_range(&download_sections),
+                    &download_kind,
+                );
+            }
+            return Err(
+                BackendError::from_message(format!("Process error: {}", error)).to_wire_string(),
+            );
+        }
+    };
 
     // Primary filepath source: read from the --print-to-file temp file (UTF-8).
     // This is reliable on all platforms, especially Windows with non-UTF-8 locales
@@ -1315,14 +1787,7 @@ async fn handle_tokio_download(
         // Save to history (update existing or create new)
         let progress_history_id = if let Some(ref filepath) = final_filepath {
             // Extract time range from download_sections (strip "*" prefix)
-            let time_range = download_sections.as_ref().and_then(|s| {
-                let stripped = s.strip_prefix('*').unwrap_or(s);
-                if stripped.is_empty() {
-                    None
-                } else {
-                    Some(stripped.to_string())
-                }
-            });
+            let time_range = extract_time_range(&download_sections);
 
             if let Some(ref hist_id) = history_id {
                 update_history_download(
@@ -1365,21 +1830,40 @@ async fn handle_tokio_download(
             speed: String::new(),
             eta: String::new(),
             status: "finished".to_string(),
-            title: display_title,
+            title: display_title.clone(),
             playlist_index: current_index,
             playlist_count: total_count,
             filesize: reported_filesize,
-            resolution: quality_display,
-            format_ext: Some(format),
+            resolution: quality_display.clone(),
+            format_ext: Some(format.clone()),
             error_message: None,
             error_code: None,
             error_params: None,
-            history_id: progress_history_id,
+            history_id: progress_history_id.clone(),
             filepath: final_filepath.clone(),
             downloaded_size: None,
             elapsed_time: None,
         };
         app.emit("download-progress", progress).ok();
+        if let Some(ref filepath) = final_filepath {
+            run_completed_plugins(
+                &app,
+                &completed_workflow_steps,
+                &id,
+                source.clone().or_else(|| detect_source(&url)),
+                filepath,
+                reported_filesize,
+                Some(format.clone()),
+                quality_display.clone().or_else(|| Some(quality.clone())),
+                &url,
+                display_title.clone(),
+                thumbnail.clone().or_else(|| generate_thumbnail_url(&url)),
+                progress_history_id.clone(),
+                extract_time_range(&download_sections),
+                &download_kind,
+            )
+            .await;
+        }
         Ok(())
     } else {
         let recent_lines = recent_output_snapshot(&recent_output);
@@ -1393,7 +1877,7 @@ async fn handle_tokio_download(
             speed: String::new(),
             eta: String::new(),
             status: "error".to_string(),
-            title: current_title,
+            title: current_title.clone(),
             playlist_index: current_index,
             playlist_count: total_count,
             filesize: None,
@@ -1408,6 +1892,25 @@ async fn handle_tokio_download(
             elapsed_time: None,
         };
         app.emit("download-progress", progress).ok();
+
+        if emit_failed_workflow && !failed_workflow_steps.is_empty() {
+            let payload = build_trigger_payload(
+                &id,
+                source.clone().or_else(|| detect_source(&url)),
+                "download.failed",
+                &output_directory,
+                None,
+                Some(format.clone()),
+                quality_display.clone().or_else(|| Some(quality.clone())),
+                &url,
+                current_title.clone(),
+                thumbnail.clone(),
+                history_id.clone(),
+                extract_time_range(&download_sections),
+                &download_kind,
+            );
+            let _ = enqueue_post_download_workflow(&app, failed_workflow_steps, payload);
+        }
 
         Err(error.to_wire_string())
     }

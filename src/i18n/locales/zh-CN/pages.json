@@ -165,6 +165,7 @@
       "searchPlaceholder": "搜索日志...",
       "filterAll": "全部",
       "filterCommands": "命令",
+      "filterInfo": "信息",
       "filterSuccess": "成功",
       "filterErrors": "错误",
       "filterDetail": "详情",

@@ -28,6 +28,7 @@
 
 - **视频下载** — 支持 YouTube、TikTok、Facebook、Instagram、Bilibili、Youku 及 1800+ 网站
 - **浏览器扩展桥接** — Chromium + Firefox 扩展，支持悬浮按钮、媒体/清晰度选择，以及 `Download now` / `Add to queue` 一键发送到 Youwee
+- **插件与工作流自动化** — 安装已签名插件、配置自定义字段、将其加入下载工作流，并用通知、上传或下载后自动化扩展 Youwee
 - **频道关注** — 关注 YouTube、Bilibili 和优酷频道，接收新视频通知，自动下载，通过系统托盘管理
 - **AI 视频摘要** — 使用 Gemini、OpenAI 或 Ollama 进行视频摘要
 - **AI 视频处理** — 使用自然语言编辑视频（剪切、转换、调整大小、提取音频）
@@ -104,6 +105,13 @@
 - 支持站点悬浮按钮可选择 `Video/Audio` 与清晰度
 - 弹窗可用于所有有效 HTTP/HTTPS 标签页
 - 说明文档：[docs/browser-extension.zh-CN.md](browser-extension.zh-CN.md)
+
+### 插件
+
+- 安装已签名的 `.ywp` 插件，为下载后工作流增加通知、文件上传或第三方集成等自定义动作
+- 可直接在 Youwee 中创建插件 workspace，附加到应用进行实时调试，然后使用 `youwee-sdk` 构建并签名最终插件包
+- 插件支持多语言说明文档、强类型配置字段、可审批权限，以及基于触发器的工作流步骤
+- SDK 文档：[sdk-js/README.md](../sdk-js/README.md)
 
 ### 从源码构建
 

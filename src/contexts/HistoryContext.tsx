@@ -12,6 +12,10 @@ import {
 import { syncAssetScopePaths } from '@/lib/asset-access';
 import { collectAssetScopeCandidates } from '@/lib/asset-paths';
 import { localizeUnknownError } from '@/lib/backend-error';
+import {
+  loadPluginWorkflowSnapshots,
+  loadPostDownloadWorkflowSteps,
+} from '@/lib/post-download-plugins';
 import type {
   DownloadProgress,
   HistoryAdvancedFilters,
@@ -591,6 +595,9 @@ export function HistoryProvider({ children }: { children: ReactNode }) {
           // External downloader settings
           useAria2,
           aria2Args,
+          pluginWorkflowSnapshots: loadPluginWorkflowSnapshots(),
+          postDownloadWorkflowSteps: loadPostDownloadWorkflowSteps(),
+          downloadKind: 'history-redownload',
         });
 
         // Mark as completed

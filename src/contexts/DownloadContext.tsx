@@ -25,6 +25,12 @@ import {
   isRetryableError,
   waitWithCancellation,
 } from '@/lib/download-retry';
+import {
+  enqueuePluginWorkflowTrigger,
+  loadPluginWorkflowSnapshots,
+  loadPostDownloadWorkflowSteps,
+  refreshPostDownloadWorkflowSteps,
+} from '@/lib/post-download-plugins';
 import type {
   AudioBitrate,
   CookieSettings,
@@ -36,6 +42,7 @@ import type {
   Format,
   ItemDownloadSettings,
   PlaylistVideoEntry,
+  PostDownloadPluginPayload,
   ProxySettings,
   Quality,
   SponsorBlockAction,
@@ -371,6 +378,10 @@ export function DownloadProvider({ children }: { children: ReactNode }) {
     syncPollingNetworkConfig(loadCookieSettings(), loadProxySettings());
   }, [syncPollingNetworkConfig]);
 
+  useEffect(() => {
+    refreshPostDownloadWorkflowSteps();
+  }, []);
+
   const [currentPlaylistInfo, setCurrentPlaylistInfo] = useState<PlaylistInfo | null>(null);
 
   const isDownloadingRef = useRef(false);
@@ -546,55 +557,136 @@ export function DownloadProvider({ children }: { children: ReactNode }) {
     return `${m}:${s.toString().padStart(2, '0')}`;
   }, []);
 
-  // Add individual URLs (not playlist expansion)
-  const addUrlsDirectly = useCallback((urls: string[], playlistId?: string) => {
-    if (urls.length === 0) return 0;
-
-    const currentItems = itemsRef.current;
-    const currentSettings = settingsRef.current;
-
-    // Snapshot current settings for these items
-    const settingsSnapshot: ItemDownloadSettings = {
-      quality: currentSettings.quality,
-      format: currentSettings.format,
-      outputPath: currentSettings.outputPath,
-      videoCodec: currentSettings.videoCodec,
-      audioBitrate: currentSettings.audioBitrate,
-      useAria2: currentSettings.useAria2,
-      aria2Args: currentSettings.aria2Args,
-      subtitleMode: currentSettings.subtitleMode,
-      subtitleLangs: [...currentSettings.subtitleLangs],
-      subtitleEmbed: currentSettings.subtitleEmbed,
-      subtitleFormat: currentSettings.subtitleFormat,
-      autoRetryEnabled: currentSettings.autoRetryEnabled,
-      autoRetryMaxAttempts: currentSettings.autoRetryMaxAttempts,
-      autoRetryDelaySeconds: currentSettings.autoRetryDelaySeconds,
-    };
-
-    const newItems: DownloadItem[] = urls
-      .filter((url) => !currentItems.some((item) => item.url === url))
-      .map((url, index) => ({
-        id: crypto.randomUUID(),
-        url,
-        title: url,
-        status: 'pending' as const,
-        progress: 0,
-        speed: '',
-        eta: '',
-        isPlaylist: false,
-        // Store playlist context for display
-        playlistIndex: playlistId ? index + 1 : undefined,
-        playlistTotal: playlistId ? urls.length : undefined,
-        // Store settings snapshot
-        settings: settingsSnapshot,
-      }));
-
-    if (newItems.length > 0) {
-      setItems((prev) => [...prev, ...newItems]);
+  const enqueueQueuedWorkflowForItems = useCallback((queuedItems: DownloadItem[]) => {
+    for (const item of queuedItems) {
+      const itemSettings = item.settings as ItemDownloadSettings | undefined;
+      const workflowSnapshots = itemSettings?.pluginWorkflowSnapshots;
+      const timeRange =
+        itemSettings?.timeRangeStart && itemSettings?.timeRangeEnd
+          ? `${itemSettings.timeRangeStart}-${itemSettings.timeRangeEnd}`
+          : null;
+      const payload: PostDownloadPluginPayload = {
+        jobId: item.id,
+        source: item.extractor || null,
+        trigger: 'download.queued',
+        filepath: '',
+        filename: item.title || item.url,
+        directory: itemSettings?.outputPath ?? settingsRef.current.outputPath,
+        filesize: item.filesize ?? null,
+        format: itemSettings?.format ?? settingsRef.current.format,
+        quality: itemSettings?.quality ?? settingsRef.current.quality,
+        url: item.url,
+        title: item.title || null,
+        thumbnail: item.thumbnail || null,
+        historyId: null,
+        timeRange,
+        downloadKind: 'download',
+        workflowRunId: null,
+        workflowStepIndex: null,
+        workflowStepPluginId: null,
+        chainState: null,
+      };
+      void enqueuePluginWorkflowTrigger('download.queued', payload, workflowSnapshots).catch(
+        (error) => {
+          console.error('Failed to enqueue download.queued workflow:', error);
+        },
+      );
     }
-
-    return newItems.length;
   }, []);
+
+  const enqueueFailedWorkflowForItem = useCallback(
+    (item: DownloadItem, itemSettings: ItemDownloadSettings | undefined) => {
+      const workflowSnapshots = itemSettings?.pluginWorkflowSnapshots;
+      const timeRange =
+        itemSettings?.timeRangeStart && itemSettings?.timeRangeEnd
+          ? `${itemSettings.timeRangeStart}-${itemSettings.timeRangeEnd}`
+          : null;
+      const payload: PostDownloadPluginPayload = {
+        jobId: item.id,
+        source: item.extractor || null,
+        trigger: 'download.failed',
+        filepath: '',
+        filename: item.title || item.url,
+        directory: itemSettings?.outputPath ?? settings.outputPath,
+        filesize: item.filesize ?? null,
+        format: itemSettings?.format ?? settings.format,
+        quality: itemSettings?.quality ?? settings.quality,
+        url: item.url,
+        title: item.title || null,
+        thumbnail: item.thumbnail || null,
+        historyId: null,
+        timeRange,
+        downloadKind: 'download',
+        workflowRunId: null,
+        workflowStepIndex: null,
+        workflowStepPluginId: null,
+        chainState: null,
+      };
+      void enqueuePluginWorkflowTrigger('download.failed', payload, workflowSnapshots).catch(
+        (error) => {
+          console.error('Failed to enqueue download.failed workflow:', error);
+        },
+      );
+    },
+    [settings.format, settings.outputPath, settings.quality],
+  );
+
+  // Add individual URLs (not playlist expansion)
+  const addUrlsDirectly = useCallback(
+    (urls: string[], playlistId?: string) => {
+      if (urls.length === 0) return 0;
+
+      const currentItems = itemsRef.current;
+      const currentSettings = settingsRef.current;
+      const workflowSnapshots = loadPluginWorkflowSnapshots();
+
+      // Snapshot current settings for these items
+      const settingsSnapshot: ItemDownloadSettings = {
+        quality: currentSettings.quality,
+        format: currentSettings.format,
+        outputPath: currentSettings.outputPath,
+        videoCodec: currentSettings.videoCodec,
+        audioBitrate: currentSettings.audioBitrate,
+        useAria2: currentSettings.useAria2,
+        aria2Args: currentSettings.aria2Args,
+        subtitleMode: currentSettings.subtitleMode,
+        subtitleLangs: [...currentSettings.subtitleLangs],
+        subtitleEmbed: currentSettings.subtitleEmbed,
+        subtitleFormat: currentSettings.subtitleFormat,
+        pluginWorkflowSnapshots: workflowSnapshots,
+        postDownloadWorkflowSteps: loadPostDownloadWorkflowSteps(),
+        autoRetryEnabled: currentSettings.autoRetryEnabled,
+        autoRetryMaxAttempts: currentSettings.autoRetryMaxAttempts,
+        autoRetryDelaySeconds: currentSettings.autoRetryDelaySeconds,
+      };
+
+      const newItems: DownloadItem[] = urls
+        .filter((url) => !currentItems.some((item) => item.url === url))
+        .map((url, index) => ({
+          id: crypto.randomUUID(),
+          url,
+          title: url,
+          status: 'pending' as const,
+          progress: 0,
+          speed: '',
+          eta: '',
+          isPlaylist: false,
+          // Store playlist context for display
+          playlistIndex: playlistId ? index + 1 : undefined,
+          playlistTotal: playlistId ? urls.length : undefined,
+          // Store settings snapshot
+          settings: settingsSnapshot,
+        }));
+
+      if (newItems.length > 0) {
+        setItems((prev) => [...prev, ...newItems]);
+        enqueueQueuedWorkflowForItems(newItems);
+      }
+
+      return newItems.length;
+    },
+    [enqueueQueuedWorkflowForItems],
+  );
 
   const focusItem = useCallback((itemId: string) => {
     setFocusedItemId(itemId);
@@ -621,6 +713,7 @@ export function DownloadProvider({ children }: { children: ReactNode }) {
       }
 
       const currentSettings = settingsRef.current;
+      const workflowSnapshots = loadPluginWorkflowSnapshots();
       const mediaType = options?.mediaType === 'audio' ? 'audio' : 'video';
       const videoQuality =
         options?.quality && options.quality !== 'audio' ? options.quality : 'best';
@@ -638,6 +731,8 @@ export function DownloadProvider({ children }: { children: ReactNode }) {
         subtitleLangs: [...currentSettings.subtitleLangs],
         subtitleEmbed: currentSettings.subtitleEmbed,
         subtitleFormat: currentSettings.subtitleFormat,
+        pluginWorkflowSnapshots: workflowSnapshots,
+        postDownloadWorkflowSteps: loadPostDownloadWorkflowSteps(),
         autoRetryEnabled: currentSettings.autoRetryEnabled,
         autoRetryMaxAttempts: currentSettings.autoRetryMaxAttempts,
         autoRetryDelaySeconds: currentSettings.autoRetryDelaySeconds,
@@ -659,9 +754,10 @@ export function DownloadProvider({ children }: { children: ReactNode }) {
       itemsRef.current = nextItems;
       setItems(nextItems);
       focusItem(newItem.id);
+      enqueueQueuedWorkflowForItems([newItem]);
       return { added: true, itemId: newItem.id };
     },
-    [focusItem],
+    [enqueueQueuedWorkflowForItems, focusItem],
   );
 
   // Expand playlist URL to individual videos
@@ -680,6 +776,7 @@ export function DownloadProvider({ children }: { children: ReactNode }) {
         });
 
         // Snapshot current settings for these items
+        const workflowSnapshots = loadPluginWorkflowSnapshots();
         const settingsSnapshot: ItemDownloadSettings = {
           quality: settingsRef.current.quality,
           format: settingsRef.current.format,
@@ -692,6 +789,8 @@ export function DownloadProvider({ children }: { children: ReactNode }) {
           subtitleLangs: [...settingsRef.current.subtitleLangs],
           subtitleEmbed: settingsRef.current.subtitleEmbed,
           subtitleFormat: settingsRef.current.subtitleFormat,
+          pluginWorkflowSnapshots: workflowSnapshots,
+          postDownloadWorkflowSteps: loadPostDownloadWorkflowSteps(),
           autoRetryEnabled: settingsRef.current.autoRetryEnabled,
           autoRetryMaxAttempts: settingsRef.current.autoRetryMaxAttempts,
           autoRetryDelaySeconds: settingsRef.current.autoRetryDelaySeconds,
@@ -721,6 +820,7 @@ export function DownloadProvider({ children }: { children: ReactNode }) {
 
         if (newItems.length > 0) {
           setItems((prev) => [...prev, ...newItems]);
+          enqueueQueuedWorkflowForItems(newItems);
         }
 
         return entries.map((e) => e.url);
@@ -729,7 +829,7 @@ export function DownloadProvider({ children }: { children: ReactNode }) {
         throw error;
       }
     },
-    [settings, cookieSettings, proxySettings, formatDuration],
+    [settings, cookieSettings, proxySettings, formatDuration, enqueueQueuedWorkflowForItems],
   );
 
   const addFromText = useCallback(
@@ -1004,6 +1104,12 @@ export function DownloadProvider({ children }: { children: ReactNode }) {
             thumbnail: item.thumbnail || null,
             // Source/extractor from video info fetch
             source: item.extractor || null,
+            pluginWorkflowSnapshots:
+              itemSettings?.pluginWorkflowSnapshots ?? loadPluginWorkflowSnapshots(),
+            postDownloadWorkflowSteps:
+              itemSettings?.postDownloadWorkflowSteps ?? loadPostDownloadWorkflowSteps(),
+            emitFailedWorkflow: false,
+            downloadKind: 'download',
           });
 
           setItems((items) =>
@@ -1025,6 +1131,7 @@ export function DownloadProvider({ children }: { children: ReactNode }) {
             isRetryableError(parsedError.message, parsedError.code, parsedError.retryable);
 
           if (!canRetry) {
+            enqueueFailedWorkflowForItem(item, itemSettings);
             setItems((items) =>
               items.map((i) =>
                 i.id === item.id
@@ -1137,7 +1244,7 @@ export function DownloadProvider({ children }: { children: ReactNode }) {
       isDownloadingRef.current = false;
       setCurrentPlaylistInfo(null);
     }
-  }, [settings, cookieSettings, proxySettings]);
+  }, [enqueueFailedWorkflowForItem, settings, cookieSettings, proxySettings]);
 
   const stopDownload = useCallback(async () => {
     try {

@@ -165,6 +165,7 @@
       "searchPlaceholder": "Search logs...",
       "filterAll": "All",
       "filterCommands": "Commands",
+      "filterInfo": "Info",
       "filterSuccess": "Success",
       "filterErrors": "Errors",
       "filterDetail": "Detail",
