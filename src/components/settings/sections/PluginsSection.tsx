@@ -1,4 +1,4 @@
-import { Braces } from 'lucide-react';
+import { Atom } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { PostDownloadPluginsCard } from '@/components/settings/PostDownloadPluginsCard';
 import { SettingsSection } from '../SettingsSection';
@@ -19,7 +19,7 @@ export function PluginsSection({ highlightId }: PluginsSectionProps) {
         <SettingsSection
           title={t('plugins.title')}
           description={t('plugins.description')}
-          icon={<Braces className="w-5 h-5 text-white" />}
+          icon={<Atom className="w-5 h-5 text-white" />}
           iconClassName="bg-gradient-to-br from-purple-500 to-fuchsia-600 shadow-purple-500/20"
         >
           <PostDownloadPluginsCard />

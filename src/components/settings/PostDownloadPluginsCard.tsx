@@ -2,21 +2,28 @@ import { invoke } from '@tauri-apps/api/core';
 import { listen } from '@tauri-apps/api/event';
 import { open } from '@tauri-apps/plugin-dialog';
 import {
-  Braces,
+  Atom,
+  Blocks,
+  Bot,
   ChevronDown,
   Download,
   FolderOpen,
+  Globe,
   Info,
   MoveDown,
   MoveUp,
   PackageOpen,
+  Plug,
   Plus,
+  Puzzle,
   RefreshCw,
+  Shield,
   ShieldCheck,
   TerminalSquare,
   Trash2,
+  Wrench,
 } from 'lucide-react';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { PluginLogsDialog } from '@/components/settings/PluginLogsDialog';
 import { Button } from '@/components/ui/button';
@@ -30,6 +37,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { SimpleMarkdown } from '@/components/ui/simple-markdown';
 import { Switch } from '@/components/ui/switch';
 import { Textarea } from '@/components/ui/textarea';
 import { localizeUnknownError } from '@/lib/backend-error';
@@ -43,6 +51,7 @@ import type {
   PluginExecutionStatusEvent,
   PluginFilesystemPermission,
   PluginLogsPage,
+  PluginManifestIconName,
   PluginPackageInspection,
   PluginPermissionApproval,
   PluginProvider,
@@ -64,6 +73,7 @@ type InstallPluginSourceInput = {
 type CreatePluginFormState = {
   name: string;
   destinationRoot: string;
+  icon: PluginManifestIconName | '';
   id: string;
   slug: string;
   version: string;
@@ -74,7 +84,6 @@ type CreatePluginFormState = {
   license: string;
   timeoutSec: string;
   supportedProviders: PluginProvider[];
-  preferredProvider: PluginProvider;
   triggers: WorkflowTrigger[];
   permissionNetwork: boolean;
   permissionFilesystem: PluginFilesystemPermission[];
@@ -113,6 +122,17 @@ type CreatePluginConfigValidation = {
   hasErrors: boolean;
 };
 
+type PluginGuideDialogState = {
+  title: string;
+  content: string;
+} | null;
+
+type PluginReminderToastState = {
+  pluginId: string;
+  pluginName: string;
+  pluginIcon?: PluginManifestIconName | null;
+} | null;
+
 const PROVIDER_LABELS: Record<PluginProvider, string> = {
   deno: 'Deno',
   python: 'Python',
@@ -145,6 +165,21 @@ const FILESYSTEM_PERMISSIONS: PluginFilesystemPermission[] = [
   'fs.temp.write',
   'fs.user-selected.read',
   'fs.user-selected.write',
+];
+
+const PLUGIN_ICON_OPTIONS: PluginManifestIconName[] = [
+  'puzzle',
+  'atom',
+  'plug',
+  'blocks',
+  'package-open',
+  'bot',
+  'shield',
+  'wrench',
+  'globe',
+  'folder-open',
+  'terminal-square',
+  'info',
 ];
 
 function summarizeRequestedPermissions(
@@ -338,6 +373,7 @@ const WORKFLOW_TRIGGER_TONES: Record<
 const DEFAULT_CREATE_PLUGIN_FORM: CreatePluginFormState = {
   name: '',
   destinationRoot: '',
+  icon: '',
   id: '',
   slug: '',
   version: '0.1.0',
@@ -348,12 +384,75 @@ const DEFAULT_CREATE_PLUGIN_FORM: CreatePluginFormState = {
   license: 'MIT',
   timeoutSec: '60',
   supportedProviders: ['deno'],
-  preferredProvider: 'deno',
   triggers: ['download.completed'],
   permissionNetwork: false,
   permissionFilesystem: [],
   configFields: [],
 };
+
+function getPluginIconLabel(
+  icon: PluginManifestIconName,
+  t: (key: string, opts?: Record<string, unknown>) => string,
+) {
+  switch (icon) {
+    case 'puzzle':
+      return t('download.pluginIconPuzzle');
+    case 'atom':
+      return t('download.pluginIconAtom');
+    case 'plug':
+      return t('download.pluginIconPlug');
+    case 'blocks':
+      return t('download.pluginIconBlocks');
+    case 'package-open':
+      return t('download.pluginIconPackageOpen');
+    case 'bot':
+      return t('download.pluginIconBot');
+    case 'shield':
+      return t('download.pluginIconShield');
+    case 'wrench':
+      return t('download.pluginIconWrench');
+    case 'globe':
+      return t('download.pluginIconGlobe');
+    case 'folder-open':
+      return t('download.pluginIconFolderOpen');
+    case 'terminal-square':
+      return t('download.pluginIconTerminalSquare');
+    case 'info':
+      return t('download.pluginIconInfo');
+  }
+}
+
+function renderPluginManifestIcon(
+  icon: PluginManifestIconName | string | null | undefined,
+  className = 'h-4 w-4',
+) {
+  switch (icon) {
+    case 'atom':
+      return <Atom className={className} />;
+    case 'plug':
+      return <Plug className={className} />;
+    case 'blocks':
+      return <Blocks className={className} />;
+    case 'package-open':
+      return <PackageOpen className={className} />;
+    case 'bot':
+      return <Bot className={className} />;
+    case 'shield':
+      return <Shield className={className} />;
+    case 'wrench':
+      return <Wrench className={className} />;
+    case 'globe':
+      return <Globe className={className} />;
+    case 'folder-open':
+      return <FolderOpen className={className} />;
+    case 'terminal-square':
+      return <TerminalSquare className={className} />;
+    case 'info':
+      return <Info className={className} />;
+    default:
+      return <Puzzle className={className} />;
+  }
+}
 
 function getFilesystemPermissionLabel(
   permission: PluginFilesystemPermission,
@@ -384,16 +483,27 @@ function getFilesystemPermissionLabel(
 function validateCreatePluginConfigFields(
   fields: CreatePluginConfigFieldDraft[],
   t: (key: string, opts?: Record<string, unknown>) => string,
+  options?: {
+    activeFieldIds?: Set<string>;
+    showAll?: boolean;
+  },
 ): CreatePluginConfigValidation {
   const fieldErrors: Record<string, string[]> = {};
   const globalErrors: string[] = [];
   const seenKeys = new Map<string, string>();
+  const activeFieldIds = options?.activeFieldIds ?? new Set<string>();
+  const showAll = options?.showAll ?? false;
 
   const addFieldError = (clientId: string, message: string) => {
     fieldErrors[clientId] = [...(fieldErrors[clientId] ?? []), message];
   };
 
   for (const field of fields) {
+    const isActive = showAll || activeFieldIds.has(field.clientId);
+    if (!isActive) {
+      continue;
+    }
+
     const trimmedKey = field.key.trim();
     const trimmedLabel = field.label.trim();
 
@@ -633,6 +743,9 @@ export function PostDownloadPluginsCard() {
   const [installing, setInstalling] = useState(false);
   const [createOpen, setCreateOpen] = useState(false);
   const [runtimeGuideOpen, setRuntimeGuideOpen] = useState(false);
+  const [pluginGuideDialog, setPluginGuideDialog] = useState<PluginGuideDialogState>(null);
+  const [importDisclaimerOpen, setImportDisclaimerOpen] = useState(false);
+  const [pluginReminderToast, setPluginReminderToast] = useState<PluginReminderToastState>(null);
   const [expandedPluginId, setExpandedPluginId] = useState<string | null>(null);
   const [createPluginForm, setCreatePluginForm] = useState<CreatePluginFormState>(
     DEFAULT_CREATE_PLUGIN_FORM,
@@ -662,18 +775,72 @@ export function PostDownloadPluginsCard() {
     fs: [],
   });
   const [createdWorkspace, setCreatedWorkspace] = useState<PluginWorkspaceSummary | null>(null);
+  const [createPluginConfigTouched, setCreatePluginConfigTouched] = useState<
+    Record<string, boolean>
+  >({});
+  const [createPluginSubmitAttempted, setCreatePluginSubmitAttempted] = useState(false);
   const [attachWorkspacePath, setAttachWorkspacePath] = useState<string | null>(null);
   const [uninstallTarget, setUninstallTarget] = useState<PluginSummary | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const pluginReminderToastTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const createPluginConfigValidation = useMemo(
-    () => validateCreatePluginConfigFields(createPluginForm.configFields, t),
-    [createPluginForm.configFields, t],
+    () =>
+      validateCreatePluginConfigFields(createPluginForm.configFields, t, {
+        activeFieldIds: new Set(
+          Object.entries(createPluginConfigTouched)
+            .filter(([, touched]) => touched)
+            .map(([clientId]) => clientId),
+        ),
+        showAll: createPluginSubmitAttempted,
+      }),
+    [createPluginConfigTouched, createPluginForm.configFields, createPluginSubmitAttempted, t],
   );
   const createPluginCanSubmit =
     !creating &&
     createPluginForm.name.trim().length > 0 &&
     createPluginForm.destinationRoot.trim().length > 0 &&
     !createPluginConfigValidation.hasErrors;
+
+  const clearPluginReminderToast = useCallback(() => {
+    setPluginReminderToast(null);
+    if (pluginReminderToastTimeoutRef.current) {
+      clearTimeout(pluginReminderToastTimeoutRef.current);
+      pluginReminderToastTimeoutRef.current = null;
+    }
+  }, []);
+
+  const showPluginReminderToast = useCallback(
+    (plugin: PluginSummary) => {
+      clearPluginReminderToast();
+      setPluginReminderToast({
+        pluginId: plugin.manifest.id,
+        pluginName: plugin.manifest.name,
+        pluginIcon: plugin.manifest.icon,
+      });
+      pluginReminderToastTimeoutRef.current = setTimeout(() => {
+        setPluginReminderToast(null);
+        pluginReminderToastTimeoutRef.current = null;
+      }, 5000);
+    },
+    [clearPluginReminderToast],
+  );
+
+  const isPluginAssignedToAnyWorkflow = useCallback(
+    (pluginId: string) =>
+      Object.values(workflows).some((workflow) =>
+        workflow.steps.some((step) => step.pluginId === pluginId),
+      ),
+    [workflows],
+  );
+
+  useEffect(
+    () => () => {
+      if (pluginReminderToastTimeoutRef.current) {
+        clearTimeout(pluginReminderToastTimeoutRef.current);
+      }
+    },
+    [],
+  );
 
   const loadPlugins = useCallback(async () => {
     setLoading(true);
@@ -800,6 +967,11 @@ export function PostDownloadPluginsCard() {
   };
 
   const handleImportPackage = async () => {
+    setImportDisclaimerOpen(true);
+  };
+
+  const handleConfirmImportPackage = async () => {
+    setImportDisclaimerOpen(false);
     const selected = await open({
       directory: false,
       multiple: false,
@@ -894,6 +1066,9 @@ export function PostDownloadPluginsCard() {
             : item,
         ),
       );
+      if (enabled && !isPluginAssignedToAnyWorkflow(plugin.manifest.id)) {
+        showPluginReminderToast(plugin);
+      }
     } catch (err) {
       console.error('Failed to update plugin state:', err);
       setError(t('download.pluginStateError'));
@@ -926,6 +1101,9 @@ export function PostDownloadPluginsCard() {
             : item,
         ),
       );
+      if (!isPluginAssignedToAnyWorkflow(permissionDialogPlugin.manifest.id)) {
+        showPluginReminderToast(permissionDialogPlugin);
+      }
       setPermissionDialogPlugin(null);
     } catch (err) {
       console.error('Failed to enable plugin with permissions:', err);
@@ -959,17 +1137,19 @@ export function PostDownloadPluginsCard() {
   };
 
   const handleCreatePlugin = async () => {
+    setCreatePluginSubmitAttempted(true);
     const trimmedName = createPluginForm.name.trim();
     const trimmedDestinationRoot = createPluginForm.destinationRoot.trim();
-    if (!trimmedName || !trimmedDestinationRoot || createPluginConfigValidation.hasErrors) return;
+    const submitValidation = validateCreatePluginConfigFields(createPluginForm.configFields, t, {
+      showAll: true,
+    });
+    if (!trimmedName || !trimmedDestinationRoot || submitValidation.hasErrors) return;
 
     const supportedProviders =
       createPluginForm.supportedProviders.length > 0
         ? createPluginForm.supportedProviders
         : DEFAULT_CREATE_PLUGIN_FORM.supportedProviders;
-    const preferredProvider = supportedProviders.includes(createPluginForm.preferredProvider)
-      ? createPluginForm.preferredProvider
-      : supportedProviders[0];
+    const preferredProvider = supportedProviders[0];
 
     setCreating(true);
     setError(null);
@@ -978,6 +1158,7 @@ export function PostDownloadPluginsCard() {
         input: {
           name: trimmedName,
           destinationRoot: trimmedDestinationRoot,
+          icon: createPluginForm.icon || null,
           id: createPluginForm.id.trim() || null,
           slug: createPluginForm.slug.trim() || null,
           version: createPluginForm.version.trim() || null,
@@ -1002,6 +1183,8 @@ export function PostDownloadPluginsCard() {
       });
       setCreatedWorkspace(result);
       setCreatePluginForm(DEFAULT_CREATE_PLUGIN_FORM);
+      setCreatePluginConfigTouched({});
+      setCreatePluginSubmitAttempted(false);
       setCreateOpen(false);
     } catch (err) {
       console.error('Failed to create plugin:', err);
@@ -1029,16 +1212,12 @@ export function PostDownloadPluginsCard() {
         return {
           ...current,
           supportedProviders,
-          preferredProvider: DEFAULT_CREATE_PLUGIN_FORM.preferredProvider,
         };
       }
 
       return {
         ...current,
         supportedProviders,
-        preferredProvider: supportedProviders.includes(current.preferredProvider)
-          ? current.preferredProvider
-          : supportedProviders[0],
       };
     });
   };
@@ -1061,6 +1240,10 @@ export function PostDownloadPluginsCard() {
     }));
   };
 
+  const markCreatePluginConfigFieldTouched = (clientId: string) => {
+    setCreatePluginConfigTouched((current) => ({ ...current, [clientId]: true }));
+  };
+
   const addCreatePluginConfigField = () => {
     setCreatePluginForm((current) => ({
       ...current,
@@ -1069,10 +1252,18 @@ export function PostDownloadPluginsCard() {
   };
 
   const removeCreatePluginConfigField = (index: number) => {
+    const clientId = createPluginForm.configFields[index]?.clientId;
     setCreatePluginForm((current) => ({
       ...current,
       configFields: current.configFields.filter((_, fieldIndex) => fieldIndex !== index),
     }));
+    if (clientId) {
+      setCreatePluginConfigTouched((current) => {
+        const next = { ...current };
+        delete next[clientId];
+        return next;
+      });
+    }
   };
 
   const updateCreatePluginConfigField = <K extends keyof CreatePluginConfigFieldDraft>(
@@ -1080,6 +1271,10 @@ export function PostDownloadPluginsCard() {
     key: K,
     value: CreatePluginConfigFieldDraft[K],
   ) => {
+    const clientId = createPluginForm.configFields[index]?.clientId;
+    if (clientId) {
+      markCreatePluginConfigFieldTouched(clientId);
+    }
     setCreatePluginForm((current) => ({
       ...current,
       configFields: current.configFields.map((field, fieldIndex) => {
@@ -1102,6 +1297,10 @@ export function PostDownloadPluginsCard() {
   };
 
   const addCreatePluginConfigOption = (fieldIndex: number) => {
+    const clientId = createPluginForm.configFields[fieldIndex]?.clientId;
+    if (clientId) {
+      markCreatePluginConfigFieldTouched(clientId);
+    }
     setCreatePluginForm((current) => ({
       ...current,
       configFields: current.configFields.map((field, index) =>
@@ -1113,6 +1312,10 @@ export function PostDownloadPluginsCard() {
   };
 
   const removeCreatePluginConfigOption = (fieldIndex: number, optionIndex: number) => {
+    const clientId = createPluginForm.configFields[fieldIndex]?.clientId;
+    if (clientId) {
+      markCreatePluginConfigFieldTouched(clientId);
+    }
     setCreatePluginForm((current) => ({
       ...current,
       configFields: current.configFields.map((field, index) => {
@@ -1144,6 +1347,10 @@ export function PostDownloadPluginsCard() {
     key: K,
     value: CreatePluginConfigOptionDraft[K],
   ) => {
+    const clientId = createPluginForm.configFields[fieldIndex]?.clientId;
+    if (clientId) {
+      markCreatePluginConfigFieldTouched(clientId);
+    }
     setCreatePluginForm((current) => ({
       ...current,
       configFields: current.configFields.map((field, index) =>
@@ -1740,7 +1947,7 @@ export function PostDownloadPluginsCard() {
           onClick={() => setRuntimeGuideOpen(true)}
         >
           <Info className="h-4 w-4" />
-          {t('download.pluginRuntimeGuideButton')}
+          {t('download.pluginOverviewGuideButton')}
         </Button>
         <Button
           variant="outline"
@@ -1748,7 +1955,7 @@ export function PostDownloadPluginsCard() {
           className="border-dashed"
           onClick={() => handleAttachWorkspace()}
         >
-          <Braces className="h-4 w-4" />
+          <Atom className="h-4 w-4" />
           {t('download.pluginAttachWorkspace')}
         </Button>
         <Button
@@ -1761,37 +1968,17 @@ export function PostDownloadPluginsCard() {
           <PackageOpen className="h-4 w-4" />
           {t('download.pluginImportPlugin')}
         </Button>
-        <Button size="sm" onClick={() => setCreateOpen(true)}>
+        <Button
+          size="sm"
+          onClick={() => {
+            setCreatePluginConfigTouched({});
+            setCreatePluginSubmitAttempted(false);
+            setCreateOpen(true);
+          }}
+        >
           <Plus className="h-4 w-4" />
           {t('download.pluginCreateWorkspace')}
         </Button>
-      </div>
-
-      <div className="rounded-xl border border-dashed border-border/70 bg-muted/20 p-4">
-        <div className="space-y-2">
-          <p className="text-sm font-medium">{t('download.pluginWorkspaceFlowTitle')}</p>
-          <p className="text-xs text-muted-foreground">{t('download.pluginWorkspaceFlowDesc')}</p>
-        </div>
-        <div className="mt-3 grid gap-3 md:grid-cols-3">
-          <div className="rounded-lg border border-border/60 bg-background/70 p-3">
-            <p className="text-xs font-medium">{t('download.pluginWorkspaceStep1Title')}</p>
-            <p className="mt-1 text-[11px] text-muted-foreground">
-              {t('download.pluginWorkspaceStep1Desc')}
-            </p>
-          </div>
-          <div className="rounded-lg border border-border/60 bg-background/70 p-3">
-            <p className="text-xs font-medium">{t('download.pluginWorkspaceStep2Title')}</p>
-            <p className="mt-1 text-[11px] text-muted-foreground">
-              {t('download.pluginWorkspaceStep2Desc')}
-            </p>
-          </div>
-          <div className="rounded-lg border border-border/60 bg-background/70 p-3">
-            <p className="text-xs font-medium">{t('download.pluginWorkspaceStep3Title')}</p>
-            <p className="mt-1 text-[11px] text-muted-foreground">
-              {t('download.pluginWorkspaceStep3Desc')}
-            </p>
-          </div>
-        </div>
       </div>
 
       {createdWorkspace && (
@@ -1829,7 +2016,7 @@ export function PostDownloadPluginsCard() {
                 variant="outline"
                 onClick={() => handleAttachWorkspace(createdWorkspace.path)}
               >
-                <Braces className="h-4 w-4" />
+                <Atom className="h-4 w-4" />
                 {t('download.pluginAttachWorkspace')}
               </Button>
               <Button variant="outline" onClick={() => setCreatedWorkspace(null)}>
@@ -1855,7 +2042,10 @@ export function PostDownloadPluginsCard() {
           <div className="rounded-xl border border-dashed border-amber-500/40 bg-amber-500/5 p-4">
             <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
               <div className="space-y-2">
-                <div className="flex flex-wrap items-center gap-2">
+                <div className="flex flex-wrap items-center gap-3">
+                  <div className="rounded-xl bg-purple-500/10 p-2 text-purple-500">
+                    {renderPluginManifestIcon(inspection.manifest.icon)}
+                  </div>
                   <p className="text-sm font-semibold">{inspection.manifest.name}</p>
                   <span className="rounded bg-muted px-2 py-0.5 text-[10px] tracking-wide text-muted-foreground">
                     v{inspection.manifest.version}
@@ -1949,6 +2139,21 @@ export function PostDownloadPluginsCard() {
               </div>
 
               <div className="flex gap-2">
+                {inspection.readmeContent && (
+                  <Button
+                    variant="outline"
+                    onClick={() =>
+                      setPluginGuideDialog({
+                        title: inspection.manifest.name,
+                        content: inspection.readmeContent ?? '',
+                      })
+                    }
+                    disabled={installing}
+                  >
+                    <Info className="h-4 w-4" />
+                    {t('download.pluginGuideButton')}
+                  </Button>
+                )}
                 <Button
                   variant="outline"
                   onClick={() => {
@@ -2001,7 +2206,7 @@ export function PostDownloadPluginsCard() {
                           className="flex min-w-0 flex-1 items-center gap-3 text-left"
                         >
                           <div className="rounded-xl bg-purple-500/10 p-2 text-purple-500">
-                            <Braces className="h-4 w-4" />
+                            {renderPluginManifestIcon(plugin.manifest.icon)}
                           </div>
 
                           <div className="min-w-0 flex-1">
@@ -2070,10 +2275,26 @@ export function PostDownloadPluginsCard() {
                             variant="outline"
                             size="sm"
                             onClick={() => handleRefreshPlugin(plugin.manifest.id)}
+                            aria-label={t('download.pluginRefreshInfo')}
+                            title={t('download.pluginRefreshInfo')}
                           >
                             <RefreshCw className="h-4 w-4" />
-                            {t('download.pluginRefreshInfo')}
                           </Button>
+                          {plugin.readmeContent && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() =>
+                                setPluginGuideDialog({
+                                  title: plugin.manifest.name,
+                                  content: plugin.readmeContent ?? '',
+                                })
+                              }
+                            >
+                              <Info className="h-4 w-4" />
+                              {t('download.pluginGuideButton')}
+                            </Button>
+                          )}
                           <Button
                             variant="outline"
                             size="sm"
@@ -2105,7 +2326,7 @@ export function PostDownloadPluginsCard() {
                           </Button>
                         </div>
 
-                        <div className="grid gap-3 lg:grid-cols-2">
+                        <div className="space-y-3">
                           <div className="rounded-xl bg-muted/30 p-3">
                             <div className="flex items-center gap-2 text-xs font-medium">
                               <Info className="h-4 w-4 text-purple-500" />
@@ -3048,6 +3269,8 @@ export function PostDownloadPluginsCard() {
           setCreateOpen(open);
           if (!open) {
             setCreatePluginForm(DEFAULT_CREATE_PLUGIN_FORM);
+            setCreatePluginConfigTouched({});
+            setCreatePluginSubmitAttempted(false);
           }
         }}
       >
@@ -3129,6 +3352,34 @@ export function PostDownloadPluginsCard() {
                     placeholder="MIT"
                   />
                 </div>
+              </div>
+
+              <div className="space-y-2">
+                <p className="text-sm font-medium">{t('download.pluginCreateIconLabel')}</p>
+                <Select
+                  value={createPluginForm.icon || '__default__'}
+                  onValueChange={(value) =>
+                    updateCreatePluginForm(
+                      'icon',
+                      value === '__default__' ? '' : (value as PluginManifestIconName),
+                    )
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder={t('download.pluginCreateIconPlaceholder')} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="__default__">{t('download.pluginIconDefault')}</SelectItem>
+                    {PLUGIN_ICON_OPTIONS.map((icon) => (
+                      <SelectItem key={icon} value={icon}>
+                        {getPluginIconLabel(icon, t)}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground">
+                  {t('download.pluginCreateIconHelp')}
+                </p>
               </div>
 
               <div className="space-y-2">
@@ -3214,30 +3465,6 @@ export function PostDownloadPluginsCard() {
                     );
                   })}
                 </div>
-              </div>
-
-              <div className="space-y-2">
-                <p className="text-sm font-medium">{t('download.pluginProviderTitle')}</p>
-                <Select
-                  value={createPluginForm.preferredProvider}
-                  onValueChange={(value) =>
-                    updateCreatePluginForm('preferredProvider', value as PluginProvider)
-                  }
-                >
-                  <SelectTrigger className="h-10 text-sm">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {(createPluginForm.supportedProviders.length > 0
-                      ? createPluginForm.supportedProviders
-                      : DEFAULT_CREATE_PLUGIN_FORM.supportedProviders
-                    ).map((provider) => (
-                      <SelectItem key={provider} value={provider}>
-                        {PROVIDER_LABELS[provider]}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
               </div>
 
               <div className="space-y-2">
@@ -3781,7 +4008,7 @@ export function PostDownloadPluginsCard() {
               {t('download.pluginDismiss')}
             </Button>
             <Button onClick={handleConfirmAttachWorkspace}>
-              <Braces className="h-4 w-4" />
+              <Atom className="h-4 w-4" />
               {t('download.pluginAttachWorkspace')}
             </Button>
           </div>
@@ -3845,11 +4072,51 @@ export function PostDownloadPluginsCard() {
       <Dialog open={runtimeGuideOpen} onOpenChange={setRuntimeGuideOpen}>
         <DialogContent className="sm:max-w-[640px]">
           <DialogHeader>
-            <DialogTitle>{t('download.pluginRuntimeGuideTitle')}</DialogTitle>
+            <DialogTitle>{t('download.pluginOverviewGuideTitle')}</DialogTitle>
           </DialogHeader>
 
           <div className="space-y-4">
-            <p className="text-sm text-muted-foreground">{t('download.pluginRuntimeGuideDesc')}</p>
+            <p className="text-sm text-muted-foreground">{t('download.pluginOverviewGuideDesc')}</p>
+
+            <div className="space-y-2">
+              <p className="text-sm font-medium">{t('download.pluginWorkspaceFlowTitle')}</p>
+              <p className="text-xs text-muted-foreground">
+                {t('download.pluginWorkspaceFlowDesc')}
+              </p>
+            </div>
+
+            <div className="grid gap-3 md:grid-cols-3">
+              <div className="rounded-lg border border-border/60 bg-background/70 p-3">
+                <p className="text-xs font-medium">{t('download.pluginWorkspaceStep1Title')}</p>
+                <p className="mt-1 text-[11px] text-muted-foreground">
+                  {t('download.pluginWorkspaceStep1Desc')}
+                </p>
+              </div>
+              <div className="rounded-lg border border-border/60 bg-background/70 p-3">
+                <p className="text-xs font-medium">{t('download.pluginWorkspaceStep2Title')}</p>
+                <p className="mt-1 text-[11px] text-muted-foreground">
+                  {t('download.pluginWorkspaceStep2Desc')}
+                </p>
+              </div>
+              <div className="rounded-lg border border-border/60 bg-background/70 p-3">
+                <p className="text-xs font-medium">{t('download.pluginWorkspaceStep3Title')}</p>
+                <p className="mt-1 text-[11px] text-muted-foreground">
+                  {t('download.pluginWorkspaceStep3Desc')}
+                </p>
+              </div>
+            </div>
+
+            <div className="rounded-xl bg-muted/30 p-3 text-[11px] text-muted-foreground">
+              <p>{t('download.pluginOverviewGuideNotePrimary')}</p>
+              <p className="mt-1">{t('download.pluginOverviewGuideNoteSecondary')}</p>
+            </div>
+
+            <div className="space-y-2">
+              <p className="text-sm font-medium">{t('download.pluginRuntimeGuideTitle')}</p>
+              <p className="text-xs text-muted-foreground">
+                {t('download.pluginRuntimeGuideDesc')}
+              </p>
+            </div>
 
             <div className="grid gap-3 lg:grid-cols-2">
               {(['javascript', 'python'] as PluginRuntimeLanguage[]).map((language) => {
@@ -3920,6 +4187,70 @@ export function PostDownloadPluginsCard() {
             <div className="rounded-xl bg-muted/30 p-3 text-[11px] text-muted-foreground">
               <p>{t('download.pluginRuntimeGuideNotePrimary')}</p>
               <p className="mt-1">{t('download.pluginRuntimeGuideNoteSecondary')}</p>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={pluginGuideDialog != null}
+        onOpenChange={(open) => {
+          if (!open) {
+            setPluginGuideDialog(null);
+          }
+        }}
+      >
+        <DialogContent className="sm:max-w-[720px]">
+          <DialogHeader>
+            <DialogTitle>{t('download.pluginGuideTitle')}</DialogTitle>
+          </DialogHeader>
+
+          {pluginGuideDialog && (
+            <div className="space-y-4">
+              <p className="text-sm text-muted-foreground">{t('download.pluginGuideDesc')}</p>
+              <div className="rounded-xl bg-muted/30 px-3 py-2 text-sm font-medium">
+                {pluginGuideDialog.title}
+              </div>
+              <SimpleMarkdown
+                content={pluginGuideDialog.content}
+                className="max-h-[60vh] overflow-y-auto text-sm text-muted-foreground"
+              />
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={importDisclaimerOpen} onOpenChange={setImportDisclaimerOpen}>
+        <DialogContent className="sm:max-w-[640px]">
+          <DialogHeader>
+            <DialogTitle>{t('download.pluginImportDisclaimerTitle')}</DialogTitle>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            <p className="text-sm text-muted-foreground">
+              {t('download.pluginImportDisclaimerIntro')}
+            </p>
+
+            <div className="rounded-xl bg-amber-500/5 p-4 text-sm text-muted-foreground">
+              <p>{t('download.pluginImportDisclaimerBody')}</p>
+            </div>
+
+            <div className="rounded-xl bg-muted/30 p-4 text-sm text-muted-foreground">
+              <p>{t('download.pluginImportDisclaimerSignature')}</p>
+            </div>
+
+            <div className="rounded-xl bg-muted/30 p-4 text-sm text-muted-foreground">
+              <p>{t('download.pluginImportDisclaimerRecommendation')}</p>
+            </div>
+
+            <div className="flex justify-end gap-2">
+              <Button variant="outline" onClick={() => setImportDisclaimerOpen(false)}>
+                {t('download.pluginDismiss')}
+              </Button>
+              <Button onClick={handleConfirmImportPackage}>
+                <Download className="h-4 w-4" />
+                {t('download.pluginImportPlugin')}
+              </Button>
             </div>
           </div>
         </DialogContent>
@@ -4080,6 +4411,30 @@ export function PostDownloadPluginsCard() {
           </div>
         </DialogContent>
       </Dialog>
+
+      {pluginReminderToast && (
+        <div className="fixed bottom-6 right-6 z-50 max-w-sm rounded-2xl border border-border/70 bg-background/95 p-4 shadow-xl backdrop-blur-sm">
+          <div className="flex items-start gap-3">
+            <div className="rounded-xl bg-amber-500/10 p-2 text-amber-600 dark:text-amber-400">
+              {renderPluginManifestIcon(pluginReminderToast.pluginIcon)}
+            </div>
+            <div className="min-w-0 flex-1 space-y-1">
+              <p className="text-sm font-medium">{pluginReminderToast.pluginName}</p>
+              <p className="text-xs text-muted-foreground">
+                {t('download.pluginWorkflowReminderToast')}
+              </p>
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              className="shrink-0"
+              onClick={clearPluginReminderToast}
+            >
+              {t('download.pluginDismiss')}
+            </Button>
+          </div>
+        </div>
+      )}
     </>
   );
 }

@@ -311,6 +311,13 @@ describe('youwee-sdk manifest helpers', () => {
 
     expect(slugifyPluginName('GG Drive Upload')).toBe('gg-drive-upload');
     expect(packageJson).toContain(`"youwee-sdk": "^${SDK_VERSION}"`);
+    expect(packageJson).toContain(`"build": "bunx youwee-sdk build"`);
+    expect(packageJson).toContain(
+      `"pack": "bunx youwee-sdk pack --private-key ./plugin.youwee-plugin-key.json"`,
+    );
+    expect(packageJson).toContain(
+      `"keygen": "bunx youwee-sdk keygen ./plugin.youwee-plugin-key.json"`,
+    );
     expect(packageJson).toContain('YOUWEE_PLUGIN_MAIN=src/plugin.js');
     expect(packageJson).toContain('deno run');
   });

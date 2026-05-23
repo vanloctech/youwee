@@ -209,6 +209,19 @@ export interface DownloadProgress {
 export type PluginRuntimeLanguage = 'javascript' | 'python';
 export type PluginProvider = 'deno' | 'python';
 export type PluginPackageSourceKind = 'workspace' | 'package-ywp';
+export type PluginManifestIconName =
+  | 'puzzle'
+  | 'atom'
+  | 'plug'
+  | 'blocks'
+  | 'package-open'
+  | 'bot'
+  | 'shield'
+  | 'wrench'
+  | 'globe'
+  | 'folder-open'
+  | 'terminal-square'
+  | 'info';
 export type PluginFilesystemPermission =
   | 'fs.plugin.read'
   | 'fs.plugin.write'
@@ -286,6 +299,7 @@ export interface PluginManifest {
   slug: string;
   name: string;
   version: string;
+  icon?: PluginManifestIconName | null;
   description?: string | null;
   author?: string | null;
   homepage?: string | null;
@@ -343,12 +357,14 @@ export interface PluginSummary {
   manifest: PluginManifest;
   installation: PluginInstallation;
   warnings: string[];
+  readmeContent?: string | null;
 }
 
 export interface PluginPackageInspection {
   manifest: PluginManifest;
   source: PluginPackageSource;
   warnings: string[];
+  readmeContent?: string | null;
   packageFormat?: string | null;
   packageFormatVersion?: number | null;
   builderSdkVersion?: string | null;

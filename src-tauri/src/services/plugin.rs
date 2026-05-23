@@ -94,6 +94,8 @@ pub struct AttachPluginWorkspaceInput {
 pub struct CreatePluginWorkspaceInput {
     pub name: String,
     #[serde(default)]
+    pub icon: Option<String>,
+    #[serde(default)]
     pub id: Option<String>,
     #[serde(default)]
     pub slug: Option<String>,
@@ -293,8 +295,102 @@ fn read_registry(app: &AppHandle) -> Result<PluginRegistry, String> {
 
     let raw = std::fs::read_to_string(&path)
         .map_err(|e| format!("Failed to read plugin registry {}: {}", path.display(), e))?;
-    serde_json::from_str(&raw)
-        .map_err(|e| format!("Failed to parse plugin registry {}: {}", path.display(), e))
+    match serde_json::from_str(&raw) {
+        Ok(registry) => Ok(registry),
+        Err(original_error) => {
+            let mut raw_json: Value = serde_json::from_str(&raw)
+                .map_err(|e| format!("Failed to parse plugin registry {}: {}", path.display(), e))?;
+
+            if !normalize_legacy_registry_json(&mut raw_json) {
+                return Err(format!(
+                    "Failed to parse plugin registry {}: {}",
+                    path.display(),
+                    original_error
+                ));
+            }
+
+            let registry: PluginRegistry = serde_json::from_value(raw_json).map_err(|e| {
+                format!(
+                    "Failed to parse normalized plugin registry {}: {}",
+                    path.display(),
+                    e
+                )
+            })?;
+
+            write_registry(app, &registry)?;
+            Ok(registry)
+        }
+    }
+}
+
+fn normalize_provider_value(value: &mut Value) -> bool {
+    match value {
+        Value::String(provider) if provider == "node" || provider == "bun" => {
+            *provider = "deno".to_string();
+            true
+        }
+        _ => false,
+    }
+}
+
+fn normalize_source_kind_value(value: &mut Value) -> bool {
+    match value {
+        Value::String(kind) if kind == "app-scaffold" || kind == "local-folder" => {
+            *kind = "workspace".to_string();
+            true
+        }
+        Value::String(kind) if kind == "local-zip" || kind == "remote-url" => {
+            *kind = "package-ywp".to_string();
+            true
+        }
+        _ => false,
+    }
+}
+
+fn normalize_legacy_registry_json(root: &mut Value) -> bool {
+    let mut changed = false;
+
+    let Some(root_object) = root.as_object_mut() else {
+        return false;
+    };
+
+    if let Some(default_providers) = root_object
+        .get_mut("defaultProviders")
+        .and_then(Value::as_object_mut)
+    {
+        for value in default_providers.values_mut() {
+            changed |= normalize_provider_value(value);
+        }
+    }
+
+    if let Some(installations) = root_object
+        .get_mut("installations")
+        .and_then(Value::as_object_mut)
+    {
+        for installation in installations.values_mut() {
+            let Some(installation_object) = installation.as_object_mut() else {
+                continue;
+            };
+
+            if let Some(value) = installation_object.get_mut("selectedProvider") {
+                changed |= normalize_provider_value(value);
+            }
+            if let Some(value) = installation_object.get_mut("lastResolvedProvider") {
+                changed |= normalize_provider_value(value);
+            }
+
+            if let Some(source_object) = installation_object
+                .get_mut("source")
+                .and_then(Value::as_object_mut)
+            {
+                if let Some(kind_value) = source_object.get_mut("kind") {
+                    changed |= normalize_source_kind_value(kind_value);
+                }
+            }
+        }
+    }
+
+    changed
 }
 
 fn write_registry(app: &AppHandle, registry: &PluginRegistry) -> Result<(), String> {
@@ -618,6 +714,29 @@ fn validate_manifest(manifest: &PluginManifest, manifest_path: &Path) -> Result<
             manifest_path.display()
         ));
     }
+    if let Some(icon) = manifest.icon.as_ref() {
+        if !matches!(
+            icon.as_str(),
+            "puzzle"
+                | "atom"
+                | "plug"
+                | "blocks"
+                | "package-open"
+                | "bot"
+                | "shield"
+                | "wrench"
+                | "globe"
+                | "folder-open"
+                | "terminal-square"
+                | "info"
+        ) {
+            return Err(format!(
+                "Plugin manifest {} declares unsupported icon {}",
+                manifest_path.display(),
+                icon
+            ));
+        }
+    }
     if manifest.runtime.entrypoint.trim().is_empty() {
         return Err(format!(
             "Plugin manifest {} is missing runtime.entrypoint",
@@ -828,7 +947,7 @@ fn current_sdk_version() -> String {
     serde_json::from_str::<serde_json::Value>(SDK_JS_PACKAGE_JSON)
         .ok()
         .and_then(|value| value.get("version").and_then(|value| value.as_str()).map(str::to_string))
-        .unwrap_or_else(|| "1.0.1".to_string())
+        .unwrap_or_else(|| "1.0.2".to_string())
 }
 
 fn build_scaffold_compatibility_range(version: &str) -> String {
@@ -1453,11 +1572,109 @@ fn manifest_summary(
     manifest: PluginManifest,
     installation: PluginInstallation,
     warnings: Vec<String>,
+    readme_content: Option<String>,
 ) -> PluginSummary {
     PluginSummary {
         manifest,
         installation,
         warnings,
+        readme_content,
+    }
+}
+
+fn append_locale_before_extension(path: &Path, locale: &str) -> PathBuf {
+    let file_name = path
+        .file_name()
+        .and_then(|value| value.to_str())
+        .unwrap_or("README.md");
+    let localized_name = match file_name.rsplit_once('.') {
+        Some((stem, ext)) => format!("{}.{}.{}", stem, locale, ext),
+        None => format!("{}.{}", file_name, locale),
+    };
+
+    match path.parent() {
+        Some(parent) => parent.join(localized_name),
+        None => PathBuf::from(localized_name),
+    }
+}
+
+fn build_readme_locale_preferences(
+    app_locale: Option<&str>,
+    fallback_locale: Option<&str>,
+) -> Vec<String> {
+    let mut locales = Vec::<String>::new();
+    let mut push_locale = |value: &str| {
+        let trimmed = value.trim();
+        if trimmed.is_empty() {
+            return;
+        }
+        if !locales.iter().any(|entry| entry == trimmed) {
+            locales.push(trimmed.to_string());
+        }
+        if let Some((language, _)) = trimmed.split_once('-') {
+            if !language.is_empty() && !locales.iter().any(|entry| entry == language) {
+                locales.push(language.to_string());
+            }
+        }
+    };
+
+    if let Some(value) = app_locale {
+        push_locale(value);
+    }
+    if let Some(value) = fallback_locale {
+        push_locale(value);
+    }
+
+    locales
+}
+
+fn resolve_readme_path(
+    root: &Path,
+    manifest: &PluginManifest,
+    preferred_locales: &[String],
+) -> Option<PathBuf> {
+    let manifest_readme = manifest
+        .readme
+        .as_deref()
+        .map(str::trim)
+        .filter(|value| !value.is_empty())
+        .map(PathBuf::from);
+
+    let candidate = manifest_readme.unwrap_or_else(|| PathBuf::from("README.md"));
+    let base_path = if candidate.is_absolute() {
+        candidate
+    } else {
+        root.join(candidate)
+    };
+
+    for locale in preferred_locales {
+        let localized = append_locale_before_extension(&base_path, locale);
+        if localized.is_file() {
+            return Some(localized);
+        }
+    }
+
+    if base_path.is_file() {
+        Some(base_path)
+    } else {
+        None
+    }
+}
+
+fn load_plugin_readme_content(
+    root: &Path,
+    manifest: &PluginManifest,
+    app_locale: Option<&str>,
+    fallback_locale: Option<&str>,
+) -> Option<String> {
+    let preferred_locales = build_readme_locale_preferences(app_locale, fallback_locale);
+    let path = resolve_readme_path(root, manifest, &preferred_locales)?;
+    let content = std::fs::read_to_string(path).ok()?;
+    let trimmed = content.trim();
+    if trimmed.is_empty() {
+        None
+    } else {
+        Some(trimmed.to_string())
     }
 }
 
@@ -1815,6 +2032,8 @@ fn validate_install_compatibility(manifest: &PluginManifest) -> Result<(), Strin
 pub fn list_plugins_internal(app: &AppHandle) -> Result<Vec<PluginSummary>, String> {
     let root = ensure_plugins_root(app)?;
     let registry = read_registry(app)?;
+    let registry_locale = registry.app_locale.clone();
+    let registry_fallback_locale = registry.app_fallback_locale.clone();
     let mut plugins_by_id = BTreeMap::<String, PluginSummary>::new();
 
     for entry in std::fs::read_dir(&root)
@@ -1841,6 +2060,12 @@ pub fn list_plugins_internal(app: &AppHandle) -> Result<Vec<PluginSummary>, Stri
                 continue;
             }
         };
+        let readme_content = load_plugin_readme_content(
+            &path,
+            &manifest,
+            registry_locale.as_deref(),
+            registry_fallback_locale.as_deref(),
+        );
         let checksum = compute_dir_checksum(&path).ok();
         let build_info = if path.join("build.json").is_file() {
             load_packaged_build_info(&path).ok()
@@ -1879,7 +2104,7 @@ pub fn list_plugins_internal(app: &AppHandle) -> Result<Vec<PluginSummary>, Stri
         let warnings = collect_compatibility_issues(&manifest).unwrap_or_else(|error| vec![error]);
         plugins_by_id.insert(
             manifest.plugin_id.clone(),
-            manifest_summary(manifest, installation, warnings),
+            manifest_summary(manifest, installation, warnings, readme_content),
         );
     }
 
@@ -1903,6 +2128,12 @@ pub fn list_plugins_internal(app: &AppHandle) -> Result<Vec<PluginSummary>, Stri
                 continue;
             }
         };
+        let readme_content = load_plugin_readme_content(
+            &workspace_path,
+            &manifest,
+            registry_locale.as_deref(),
+            registry_fallback_locale.as_deref(),
+        );
         let checksum = compute_dir_checksum(&workspace_path).ok();
         let installation = build_installation_from_registry(
             &registry,
@@ -1925,7 +2156,7 @@ pub fn list_plugins_internal(app: &AppHandle) -> Result<Vec<PluginSummary>, Stri
         let warnings = collect_compatibility_issues(&manifest).unwrap_or_else(|error| vec![error]);
         plugins_by_id.insert(
             manifest.plugin_id.clone(),
-            manifest_summary(manifest, installation, warnings),
+            manifest_summary(manifest, installation, warnings, readme_content),
         );
     }
 
@@ -1953,8 +2184,8 @@ pub async fn inspect_plugin_package_internal(
     path: String,
 ) -> Result<PluginPackageInspection, String> {
     let mut package = inspect_ywp_file(Path::new(&path))?;
+    let registry = read_registry(app)?;
     if package.signature_status.as_deref() == Some("signed") {
-        let registry = read_registry(app)?;
         if let Some(existing) = registry.installations.get(&package.manifest.plugin_id) {
             if let (Some(existing_fingerprint), Some(next_fingerprint)) = (
                 existing.signer_fingerprint.as_deref(),
@@ -1973,10 +2204,17 @@ pub async fn inspect_plugin_package_internal(
     }
     let mut warnings = package.warnings;
     warnings.extend(collect_compatibility_issues(&package.manifest)?);
+    let readme_content = load_plugin_readme_content(
+        &package.package_root,
+        &package.manifest,
+        registry.app_locale.as_deref(),
+        registry.app_fallback_locale.as_deref(),
+    );
     Ok(PluginPackageInspection {
         manifest: package.manifest,
         source: package.source,
         warnings,
+        readme_content,
         package_format: package.package_format,
         package_format_version: package.package_format_version,
         builder_sdk_version: package.builder_sdk_version,
@@ -2006,6 +2244,8 @@ pub async fn install_plugin_internal(
         return Err(error);
     }
     let mut registry = read_registry(app)?;
+    let registry_locale = registry.app_locale.clone();
+    let registry_fallback_locale = registry.app_fallback_locale.clone();
     if let Some(existing) = registry.installations.get(&package.manifest.plugin_id) {
         let existing_fingerprint = existing.signer_fingerprint.as_deref();
         let next_fingerprint = package.signer_fingerprint.as_deref();
@@ -2075,6 +2315,12 @@ pub async fn install_plugin_internal(
         package.source,
         destination.to_string_lossy().to_string(),
     );
+    let readme_content = load_plugin_readme_content(
+        &destination,
+        &package.manifest,
+        registry_locale.as_deref(),
+        registry_fallback_locale.as_deref(),
+    );
 
     add_log_internal(
         "info",
@@ -2084,7 +2330,12 @@ pub async fn install_plugin_internal(
     )
     .ok();
 
-    Ok(manifest_summary(package.manifest, installation, Vec::new()))
+    Ok(manifest_summary(
+        package.manifest,
+        installation,
+        Vec::new(),
+        readme_content,
+    ))
 }
 
 pub async fn install_plugin_package_internal(
@@ -2125,6 +2376,8 @@ pub fn attach_plugin_workspace_internal(
 
     let checksum = compute_dir_checksum(&workspace_path).ok();
     let mut registry = read_registry(app)?;
+    let registry_locale = registry.app_locale.clone();
+    let registry_fallback_locale = registry.app_fallback_locale.clone();
     let existing = registry.installations.get(&manifest.plugin_id).cloned();
     registry.installations.insert(
         manifest.plugin_id.clone(),
@@ -2205,10 +2458,18 @@ pub fn attach_plugin_workspace_internal(
         workspace_path.to_string_lossy().to_string(),
     );
 
+    let warnings = collect_compatibility_issues(&manifest).unwrap_or_default();
+    let readme_content = load_plugin_readme_content(
+        &workspace_path,
+        &manifest,
+        registry_locale.as_deref(),
+        registry_fallback_locale.as_deref(),
+    );
     Ok(manifest_summary(
-        manifest.clone(),
+        manifest,
         installation,
-        collect_compatibility_issues(&manifest).unwrap_or_default(),
+        warnings,
+        readme_content,
     ))
 }
 
@@ -2259,6 +2520,7 @@ pub fn create_plugin_workspace_internal(
 ) -> Result<crate::types::PluginWorkspaceSummary, String> {
     let CreatePluginWorkspaceInput {
         name,
+        icon,
         id,
         slug,
         version,
@@ -2315,6 +2577,11 @@ pub fn create_plugin_workspace_internal(
             .filter(|value| !value.is_empty())
             .unwrap_or("0.1.0")
             .to_string(),
+        icon: icon
+            .as_deref()
+            .map(str::trim)
+            .filter(|value| !value.is_empty())
+            .map(ToString::to_string),
         description: Some(
             description
                 .as_deref()
@@ -4291,6 +4558,7 @@ This plugin scaffold targets the Youwee JavaScript plugin runtime.
 Identity:
 - `id`: `{plugin_id}`
 - `slug`: `{slug}`
+- `icon`: `{icon}`
 - `language`: `{language}`
 - `supportedProviders`: `{providers}`
 - `preferredProvider`: `{preferred}`
@@ -4302,6 +4570,8 @@ Package layout:
 - `package.json`: package metadata and local test scripts
 - `src/plugin.js`: plugin module and hook implementations
 - `locales/en.json`: default translation file for plugin messages
+- `README.md`: default documentation shown inside Youwee
+- `README.vi.md` / `README.zh-CN.md`: optional localized plugin guides shown when the app language matches
 - `dist/`: bundled runtime output generated by the build command
 - `release/`: packaged `.ywp` output generated by the pack command
 - `examples/`: sample payload and result files
@@ -4524,6 +4794,7 @@ Edit `src/plugin.js` first and replace the example hook body with your actual lo
         name = manifest.name,
         plugin_id = manifest.plugin_id,
         slug = manifest.slug,
+        icon = manifest.icon.as_deref().unwrap_or("puzzle"),
         language = manifest.runtime.language.as_str(),
         providers = manifest
             .runtime
@@ -4620,6 +4891,7 @@ mod tests {
             slug: "slug".to_string(),
             name: "Name".to_string(),
             version: "0.1.0".to_string(),
+            icon: None,
             description: None,
             author: None,
             homepage: None,
@@ -4655,6 +4927,7 @@ mod tests {
             slug: "slug".to_string(),
             name: "Name".to_string(),
             version: "0.1.0".to_string(),
+            icon: None,
             description: None,
             author: None,
             homepage: None,
@@ -4687,6 +4960,7 @@ mod tests {
             slug: "slug".to_string(),
             name: "Name".to_string(),
             version: "0.1.0".to_string(),
+            icon: None,
             description: None,
             author: None,
             homepage: None,
@@ -4719,6 +4993,7 @@ mod tests {
             slug: "slug".to_string(),
             name: "Name".to_string(),
             version: "0.1.0".to_string(),
+            icon: None,
             description: None,
             author: None,
             homepage: None,
@@ -4766,6 +5041,7 @@ mod tests {
             slug: "gg-drive".to_string(),
             name: "GG Drive".to_string(),
             version: "0.1.0".to_string(),
+            icon: None,
             description: Some("Upload files to Drive".to_string()),
             author: None,
             homepage: None,
@@ -4822,6 +5098,7 @@ mod tests {
             slug: "slug".to_string(),
             name: "Name".to_string(),
             version: "0.1.0".to_string(),
+            icon: None,
             description: None,
             author: None,
             homepage: None,

@@ -6,6 +6,19 @@ export type PluginTrigger =
 
 export type PluginRuntimeLanguage = 'javascript' | 'python';
 export type PluginProvider = 'deno' | 'python';
+export type PluginManifestIconName =
+  | 'puzzle'
+  | 'atom'
+  | 'plug'
+  | 'blocks'
+  | 'package-open'
+  | 'bot'
+  | 'shield'
+  | 'wrench'
+  | 'globe'
+  | 'folder-open'
+  | 'terminal-square'
+  | 'info';
 
 export interface ParsedSemver {
   major: number;
@@ -426,6 +439,7 @@ export interface PluginManifest {
   slug: string;
   name: string;
   version: string;
+  icon?: PluginManifestIconName;
   description?: string;
   author?: string;
   homepage?: string;

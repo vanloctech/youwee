@@ -6,6 +6,15 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [1.0.2] - 2026-05-23
+
+### Added
+- **Plugin icon manifest support** - Added optional `icon` metadata for plugins so Youwee can render a declared plugin icon and fall back cleanly to the default icon when none is provided.
+
+### Fixed
+- **Workspace package helper** - Updated `createPluginPackageJson()` so generated plugin workspaces include the same `build`, `pack`, `keygen`, and `test:deno` scripts as the app scaffold.
+- **Workspace CLI pack flow** - Fixed the SDK CLI argument parsing so `youwee-sdk pack --private-key ...` no longer treats the private key path as the plugin root.
+
 ## [1.0.1] - 2026-05-23
 
 ### Fixed

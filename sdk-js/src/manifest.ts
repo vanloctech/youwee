@@ -21,6 +21,21 @@ const ALLOWED_TRIGGERS = new Set([
   'download.failed',
 ]);
 
+const ALLOWED_PLUGIN_ICONS = new Set([
+  'puzzle',
+  'atom',
+  'plug',
+  'blocks',
+  'package-open',
+  'bot',
+  'shield',
+  'wrench',
+  'globe',
+  'folder-open',
+  'terminal-square',
+  'info',
+]);
+
 const ALLOWED_CONFIG_INPUT_TYPES = new Set([
   'text',
   'textarea',
@@ -206,6 +221,10 @@ export function getManifestValidationErrors(manifest: PluginManifest): string[] 
     errors.push('version is required.');
   }
 
+  if (manifest.icon && !ALLOWED_PLUGIN_ICONS.has(manifest.icon)) {
+    errors.push(`icon "${manifest.icon}" is not supported.`);
+  }
+
   if (!manifest.runtime) {
     errors.push('runtime is required.');
     return errors;
@@ -364,6 +383,9 @@ export function createPluginPackageDefinition(
     type: 'commonjs',
     main,
     scripts: {
+      build: 'bunx youwee-sdk build',
+      pack: 'bunx youwee-sdk pack --private-key ./plugin.youwee-plugin-key.json',
+      keygen: 'bunx youwee-sdk keygen ./plugin.youwee-plugin-key.json',
       'test:deno':
         'YOUWEE_PLUGIN_MAIN=src/plugin.js deno run --quiet --unstable-detect-cjs --allow-env --allow-read=. --allow-write=. node_modules/youwee-sdk/dist/runtime-cli.js',
     },

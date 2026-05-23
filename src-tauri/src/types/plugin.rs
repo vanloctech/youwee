@@ -177,6 +177,8 @@ pub struct PluginManifest {
     pub name: String,
     pub version: String,
     #[serde(default)]
+    pub icon: Option<String>,
+    #[serde(default)]
     pub description: Option<String>,
     #[serde(default)]
     pub author: Option<String>,
@@ -291,6 +293,8 @@ pub struct PluginSummary {
     pub installation: PluginInstallation,
     #[serde(default)]
     pub warnings: Vec<String>,
+    #[serde(default)]
+    pub readme_content: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -300,6 +304,8 @@ pub struct PluginPackageInspection {
     pub source: PluginPackageSource,
     #[serde(default)]
     pub warnings: Vec<String>,
+    #[serde(default)]
+    pub readme_content: Option<String>,
     #[serde(default)]
     pub package_format: Option<String>,
     #[serde(default)]

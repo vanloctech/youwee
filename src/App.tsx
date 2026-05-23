@@ -334,7 +334,7 @@ function AppContent() {
         pluginNotificationRef.current.set(notificationKey, { status, at: now });
         const statusMessage =
           normalizedMessage || `Plugin ${normalizedPluginName ?? pluginId} is running`;
-        void notify('Youwee', statusMessage);
+        void notify('Youwee Plugin', statusMessage);
         pushPluginToast(
           pluginId,
           status,
@@ -357,7 +357,7 @@ function AppContent() {
           resolvedProvider || resolvedSource
             ? `${statusMessage}\n${resolvedProvider || ''} ${resolvedSource || ''}`.trim()
             : statusMessage;
-        void notify('Youwee', statusMessage);
+        void notify('Youwee Plugin', statusMessage);
         pushPluginToast(
           pluginId,
           status,
@@ -376,7 +376,7 @@ function AppContent() {
         pluginNotificationRef.current.set(notificationKey, { status, at: now });
         const statusMessage =
           normalizedMessage || `Plugin ${normalizedPluginName ?? pluginId} finished successfully`;
-        void notify('Youwee', statusMessage);
+        void notify('Youwee Plugin', statusMessage);
         pushPluginToast(
           pluginId,
           status,

@@ -1,6 +1,6 @@
 import {
   ArrowDownToLine,
-  Braces,
+  Atom,
   Globe,
   Info,
   Package,
@@ -21,7 +21,7 @@ const SECTION_ICONS: Record<SettingsSectionId, React.ReactNode> = {
   general: <Palette className="w-4 h-4" />,
   dependencies: <Package className="w-4 h-4" />,
   download: <ArrowDownToLine className="w-4 h-4" />,
-  plugins: <Braces className="w-4 h-4" />,
+  plugins: <Atom className="w-4 h-4" />,
   extension: <Puzzle className="w-4 h-4" />,
   ai: <Sparkles className="w-4 h-4" />,
   network: <Globe className="w-4 h-4" />,
