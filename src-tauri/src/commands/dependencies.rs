@@ -910,10 +910,85 @@ pub async fn detect_installed_browsers() -> Result<Vec<DetectedBrowser>, String>
     Ok(browsers)
 }
 
+/// Parse Firefox profiles.ini and return profiles sorted with the active profile first.
+///
+/// Firefox's profiles.ini has three relevant section types:
+///   [Install<hex>]  — contains `Default=<relative-path>` identifying the active profile
+///   [Profile<N>]    — contains `Name=<name>`, `Path=<relative-path>`, `IsRelative=1`
+///
+/// yt-dlp's `--cookies-from-browser firefox:<name>` expects the `Name` field value.
+/// It internally resolves the name to the path via profiles.ini.
+///
+/// The bug this fixes: previously we returned profiles in file order, causing the UI
+/// to auto-select the first profile (often the unused legacy "default" profile) instead
+/// of the active profile where the user's cookies actually live (e.g. "default-release").
+fn parse_firefox_profiles(profiles_ini_path: &str) -> Vec<BrowserProfile> {
+    let content = match std::fs::read_to_string(profiles_ini_path) {
+        Ok(c) => c,
+        Err(_) => return Vec::new(),
+    };
+
+    // Find the active profile path from [Install*] section
+    let mut active_path: Option<String> = None;
+    for line in content.lines() {
+        // [Install*] sections have `Default=<path>` pointing to the active profile
+        if line.starts_with("Default=") && active_path.is_none() {
+            let path = line.trim_start_matches("Default=").trim();
+            if !path.is_empty() && !path.eq_ignore_ascii_case("1") && !path.eq_ignore_ascii_case("0") {
+                // Distinguish `Default=1` (boolean in [Profile*]) from `Default=<path>` (in [Install*])
+                active_path = Some(path.to_string());
+            }
+        }
+    }
+
+    // Parse [Profile*] sections to collect Name and Path pairs
+    struct ProfileEntry {
+        name: String,
+        path: String,
+    }
+    let mut entries: Vec<ProfileEntry> = Vec::new();
+    let mut current_name: Option<String> = None;
+    let mut current_path: Option<String> = None;
+
+    for line in content.lines() {
+        let line = line.trim();
+        if line.starts_with('[') {
+            // Flush previous section
+            if let (Some(name), Some(path)) = (current_name.take(), current_path.take()) {
+                entries.push(ProfileEntry { name, path });
+            }
+        } else if line.starts_with("Name=") {
+            current_name = Some(line.trim_start_matches("Name=").to_string());
+        } else if line.starts_with("Path=") {
+            current_path = Some(line.trim_start_matches("Path=").to_string());
+        }
+    }
+    // Flush final section
+    if let (Some(name), Some(path)) = (current_name, current_path) {
+        entries.push(ProfileEntry { name, path });
+    }
+
+    // Sort: active profile first (matching Install section Default path), then alphabetical
+    entries.sort_by(|a, b| {
+        let a_is_active = active_path.as_ref().map(|ap| a.path == *ap).unwrap_or(false);
+        let b_is_active = active_path.as_ref().map(|ap| b.path == *ap).unwrap_or(false);
+        match (a_is_active, b_is_active) {
+            (true, false) => std::cmp::Ordering::Less,
+            (false, true) => std::cmp::Ordering::Greater,
+            _ => a.name.cmp(&b.name),
+        }
+    });
+
+    entries.into_iter().map(|e| BrowserProfile {
+        folder_name: e.name.clone(),
+        display_name: e.name,
+    }).collect()
+}
+
 #[tauri::command]
 pub async fn get_browser_profiles(browser: String) -> Result<Vec<BrowserProfile>, String> {
     let mut profiles = Vec::new();
-    
+
     // Helper function to read display name from Chrome/Chromium Preferences file
     fn get_chromium_profile_name(prefs_path: &std::path::Path) -> Option<String> {
         if let Ok(content) = std::fs::read_to_string(prefs_path) {
@@ -956,22 +1031,8 @@ pub async fn get_browser_profiles(browser: String) -> Result<Vec<BrowserProfile>
             "vivaldi" => format!("{}/Library/Application Support/Vivaldi", home),
             "opera" => format!("{}/Library/Application Support/com.operasoftware.Opera", home),
             "firefox" => {
-                // Firefox uses profiles.ini - display name is the same as folder name
                 let profiles_ini = format!("{}/Library/Application Support/Firefox/profiles.ini", home);
-                if let Ok(content) = std::fs::read_to_string(&profiles_ini) {
-                    for line in content.lines() {
-                        if line.starts_with("Name=") {
-                            let name = line.trim_start_matches("Name=");
-                            if !name.is_empty() {
-                                profiles.push(BrowserProfile {
-                                    folder_name: name.to_string(),
-                                    display_name: name.to_string(),
-                                });
-                            }
-                        }
-                    }
-                }
-                return Ok(profiles);
+                return Ok(parse_firefox_profiles(&profiles_ini));
             }
             "safari" => return Ok(profiles), // Safari has no profiles
             _ => return Ok(profiles),
@@ -1030,20 +1091,7 @@ pub async fn get_browser_profiles(browser: String) -> Result<Vec<BrowserProfile>
             "opera" => format!("{}\\Opera Software\\Opera Stable", app_data),
             "firefox" => {
                 let profiles_ini = format!("{}\\Mozilla\\Firefox\\profiles.ini", app_data);
-                if let Ok(content) = std::fs::read_to_string(&profiles_ini) {
-                    for line in content.lines() {
-                        if line.starts_with("Name=") {
-                            let name = line.trim_start_matches("Name=");
-                            if !name.is_empty() {
-                                profiles.push(BrowserProfile {
-                                    folder_name: name.to_string(),
-                                    display_name: name.to_string(),
-                                });
-                            }
-                        }
-                    }
-                }
-                return Ok(profiles);
+                return Ok(parse_firefox_profiles(&profiles_ini));
             }
             _ => return Ok(profiles),
         };
@@ -1088,20 +1136,7 @@ pub async fn get_browser_profiles(browser: String) -> Result<Vec<BrowserProfile>
             "opera" => format!("{}/.config/opera", home),
             "firefox" => {
                 let profiles_ini = format!("{}/.mozilla/firefox/profiles.ini", home);
-                if let Ok(content) = std::fs::read_to_string(&profiles_ini) {
-                    for line in content.lines() {
-                        if line.starts_with("Name=") {
-                            let name = line.trim_start_matches("Name=");
-                            if !name.is_empty() {
-                                profiles.push(BrowserProfile {
-                                    folder_name: name.to_string(),
-                                    display_name: name.to_string(),
-                                });
-                            }
-                        }
-                    }
-                }
-                return Ok(profiles);
+                return Ok(parse_firefox_profiles(&profiles_ini));
             }
             _ => return Ok(profiles),
         };

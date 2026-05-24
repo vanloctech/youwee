@@ -27,7 +27,8 @@ use crate::services::{
 };
 use crate::types::{BackendError, DependencySource, DownloadProgress};
 use crate::utils::{
-    build_format_string, format_size, parse_progress, sanitize_output_path, CommandExt,
+    build_format_string, format_size, parse_ffmpeg_progress, parse_progress,
+    sanitize_output_path, CommandExt,
 };
 
 pub static CANCEL_FLAG: AtomicBool = AtomicBool::new(false);
@@ -1096,6 +1097,29 @@ async fn handle_tokio_download(
                         filepath: None,
                         downloaded_size,
                         elapsed_time,
+                    };
+                    stderr_app.emit("download-progress", progress).ok();
+                } else if let Some((size, speed, time)) = parse_ffmpeg_progress(&line) {
+                    // ffmpeg mux/merge progress (e.g. during --download-sections)
+                    let progress = DownloadProgress {
+                        id: stderr_id.clone(),
+                        percent: 0.0,
+                        speed,
+                        eta: String::new(),
+                        status: "muxing".to_string(),
+                        title: None,
+                        playlist_index: None,
+                        playlist_count: None,
+                        filesize: None,
+                        resolution: None,
+                        format_ext: None,
+                        error_message: None,
+                        error_code: None,
+                        error_params: None,
+                        history_id: None,
+                        filepath: None,
+                        downloaded_size: Some(size),
+                        elapsed_time: Some(time),
                     };
                     stderr_app.emit("download-progress", progress).ok();
                 }
