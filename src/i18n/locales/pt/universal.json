@@ -96,7 +96,8 @@
       "completed": "Concluído",
       "failed": "Falhou",
       "failedHint": "Visualize a página de Registros para detalhes",
-      "retrying": "Tentando {{current}}/{{total}} em {{seconds}}s"
+      "retrying": "Tentando {{current}}/{{total}} em {{seconds}}s",
+      "muxing": "Mesclando"
     },
     "summarize": "Resumir",
     "fetchingTranscript": "Buscando transcrição...",

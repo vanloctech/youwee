@@ -18,7 +18,7 @@ import {
   X,
   XCircle,
 } from 'lucide-react';
-import { type ChangeEvent, useCallback, useMemo, useState } from 'react';
+import { type ChangeEvent, useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { SimpleMarkdown } from '@/components/ui/simple-markdown';
 import { useAI } from '@/contexts/AIContext';
@@ -78,6 +78,12 @@ function formatFileSize(bytes: number): string {
   return `${bytes} B`;
 }
 
+// Extract YouTube video ID from URL for thumbnail fallback
+function getYouTubeVideoId(url: string): string | null {
+  const match = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([^&?]+)/);
+  return match ? match[1] : null;
+}
+
 // Helper to format quality display
 function formatQuality(quality: string): string {
   const qualityMap: Record<string, string> = {
@@ -115,6 +121,20 @@ export function UniversalQueueItem({
   const ai = useAI();
   const [showFullSummary, setShowFullSummary] = useState(false);
   const [thumbError, setThumbError] = useState(false);
+
+  // Reset thumb error when the thumbnail source changes (e.g. metadata fetch completes)
+  // biome-ignore lint/correctness/useExhaustiveDependencies: intentional re-run when thumbnail changes
+  useEffect(() => {
+    setThumbError(false);
+  }, [item.thumbnail]);
+
+  const videoId = getYouTubeVideoId(item.url);
+  const thumbnailUrl =
+    item.thumbnail && !thumbError
+      ? item.thumbnail
+      : videoId
+        ? `https://img.youtube.com/vi/${videoId}/mqdefault.jpg`
+        : null;
   const [showTimeRange, setShowTimeRange] = useState(false);
   const [timeStart, setTimeStart] = useState('');
   const [timeEnd, setTimeEnd] = useState('');
@@ -268,9 +288,9 @@ export function UniversalQueueItem({
     >
       {/* Thumbnail Placeholder */}
       <div className="relative flex-shrink-0 w-28 h-[72px] sm:w-36 sm:h-20 rounded-lg overflow-hidden bg-muted">
-        {item.thumbnail && !thumbError ? (
+        {thumbnailUrl ? (
           <img
-            src={item.thumbnail}
+            src={thumbnailUrl}
             alt=""
             className={cn(
               'w-full h-full object-cover transition-all duration-300',
@@ -296,8 +316,8 @@ export function UniversalQueueItem({
             {/* Progress Bar at bottom */}
             <div className="absolute bottom-0 left-0 right-0 p-2">
               <div className="h-1.5 rounded-full overflow-hidden bg-white/20 mb-1 backdrop-blur-sm">
-                {/* Live stream: indeterminate shimmer progress bar */}
-                {item.isLive && item.progress === 0 ? (
+                {/* Indeterminate shimmer: live streams or ffmpeg muxing */}
+                {(item.isLive || item.isMuxing) && item.progress === 0 ? (
                   <div
                     className="h-full w-full rounded-full animate-shimmer"
                     style={{
@@ -328,7 +348,7 @@ export function UniversalQueueItem({
                 )}
               </div>
               <div className="flex items-center justify-between text-[10px] text-white/90 font-medium">
-                {/* Live stream: show "LIVE • elapsed time" only */}
+                {/* Live stream: show "LIVE • elapsed time" */}
                 {item.isLive && item.progress === 0 ? (
                   <div className="flex items-center gap-1.5">
                     <span className="flex items-center gap-1 text-red-400">
@@ -339,6 +359,22 @@ export function UniversalQueueItem({
                       <>
                         <span className="text-white/50">•</span>
                         <span>{item.elapsedTime}</span>
+                      </>
+                    )}
+                  </div>
+                ) : item.isMuxing && item.progress === 0 ? (
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-blue-300">{t('queue.status.muxing')}</span>
+                    {item.elapsedTime && (
+                      <>
+                        <span className="text-white/50">•</span>
+                        <span>{item.elapsedTime}</span>
+                      </>
+                    )}
+                    {item.speed && (
+                      <>
+                        <span className="text-white/50">•</span>
+                        <span>{item.speed}</span>
                       </>
                     )}
                   </div>
