@@ -56,6 +56,7 @@ import {
 import { Switch } from '@/components/ui/switch';
 import { useAI } from '@/contexts/AIContext';
 import { useDownload } from '@/contexts/DownloadContext';
+import { useTheme } from '@/contexts/ThemeContext';
 import { useUpdater } from '@/contexts/UpdaterContext';
 import type { AIProvider, SummaryStyle } from '@/lib/types';
 import { DEFAULT_TRANSCRIPT_LANGUAGES, LANGUAGE_OPTIONS } from '@/lib/types';
@@ -786,6 +787,7 @@ function AboutSettingsContent({
 }) {
   const { t } = useTranslation('settings');
   const { settings, updateAutoCheckUpdate } = useDownload();
+  const { mode } = useTheme();
   const [copied, setCopied] = useState(false);
 
   const appUrl = 'https://github.com/vanloctech/youwee';
@@ -793,8 +795,7 @@ function AboutSettingsContent({
   const redditUrl = 'https://www.reddit.com/r/youwee/';
   const productHuntUrl =
     'https://www.producthunt.com/products/youwee/reviews/new?utm_source=badge-product_review&utm_medium=badge&utm_source=badge-youwee';
-  const productHuntBadgeUrl =
-    'https://api.producthunt.com/widgets/embed-image/v1/product_review.svg?product_id=1154224&theme=light';
+  const productHuntBadgeUrl = `https://api.producthunt.com/widgets/embed-image/v1/product_review.svg?product_id=1154224&theme=${mode}`;
   const shareText = t('about.shareText');
   const encodedUrl = encodeURIComponent(appUrl);
   const encodedText = encodeURIComponent(shareText);
