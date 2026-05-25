@@ -52,7 +52,7 @@ function isYouTubeUrl(url: string) {
 export function SummaryPage() {
   const { t } = useTranslation('pages');
   const ai = useAI();
-  const { cookieSettings, getProxyUrl } = useDownload();
+  const { cookieSettings, getProxyUrl, settings } = useDownload();
 
   // URL input
   const [url, setUrl] = useState('');
@@ -120,6 +120,7 @@ export function SummaryPage() {
         cookieBrowserProfile: cookieSettings.browserProfile || null,
         cookieFilePath: cookieSettings.filePath || null,
         proxyUrl: getProxyUrl() || null,
+        customYtdlpArgs: settings.customYtdlpArgs || null,
       });
 
       if (isCancelledRef.current) return;
@@ -142,6 +143,7 @@ export function SummaryPage() {
         cookieBrowserProfile: cookieSettings.browserProfile || null,
         cookieFilePath: cookieSettings.filePath || null,
         proxyUrl: getProxyUrl() || null,
+        customYtdlpArgs: settings.customYtdlpArgs || null,
       });
 
       if (isCancelledRef.current) return;

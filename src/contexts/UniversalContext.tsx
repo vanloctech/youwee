@@ -453,6 +453,7 @@ export function UniversalProvider({ children }: { children: ReactNode }) {
   const fetchMetadataForItems = useCallback((items: DownloadItem[]) => {
     const cookieSettings = loadCookieSettings();
     const proxySettings = loadProxySettings();
+    const dlSettings = loadAria2Settings();
 
     for (const item of items) {
       invoke<VideoInfoResponse>('get_video_info', {
@@ -462,6 +463,7 @@ export function UniversalProvider({ children }: { children: ReactNode }) {
         cookieBrowserProfile: cookieSettings.browserProfile || null,
         cookieFilePath: cookieSettings.filePath || null,
         proxyUrl: buildProxyUrl(proxySettings) || null,
+        customYtdlpArgs: dlSettings.customYtdlpArgs || null,
       })
         .then((response) => {
           const info = response.info;

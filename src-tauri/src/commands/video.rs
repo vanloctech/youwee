@@ -43,6 +43,7 @@ pub async fn get_video_transcript(
     cookie_browser_profile: Option<String>,
     cookie_file_path: Option<String>,
     proxy_url: Option<String>,
+    custom_ytdlp_args: Option<String>,
 ) -> Result<String, String> {
     // Log the URL being processed
     #[cfg(debug_assertions)]
@@ -136,6 +137,17 @@ pub async fn get_video_transcript(
             "30".to_string(),
         ];
         subtitle_args.extend(deno_args.clone());
+
+        // Custom yt-dlp arguments
+        if let Some(ref raw) = custom_ytdlp_args {
+            let trimmed = raw.trim();
+            if !trimmed.is_empty() {
+                for token in super::download::shell_split_args(trimmed) {
+                    subtitle_args.push(token);
+                }
+            }
+        }
+
         subtitle_args.push("--".to_string());
         subtitle_args.push(url_for_subs.clone());
 
@@ -763,6 +775,7 @@ pub async fn get_video_info(
     cookie_browser_profile: Option<String>,
     cookie_file_path: Option<String>,
     proxy_url: Option<String>,
+    custom_ytdlp_args: Option<String>,
 ) -> Result<VideoInfoResponse, String> {
     validate_url(&url).map_err(|e| BackendError::from_message(e).to_wire_string())?;
     let url = normalize_url(&url);
@@ -794,6 +807,16 @@ pub async fn get_video_info(
         cookie_file_path.as_deref(),
     );
     extra_args.extend(build_proxy_args(proxy_url.as_deref()));
+
+    // Custom yt-dlp arguments
+    if let Some(ref raw) = custom_ytdlp_args {
+        let trimmed = raw.trim();
+        if !trimmed.is_empty() {
+            for token in super::download::shell_split_args(trimmed) {
+                extra_args.push(token);
+            }
+        }
+    }
 
     if let Some(separator_index) = args.iter().position(|arg| arg == "--") {
         args.splice(separator_index..separator_index, extra_args);
@@ -954,6 +977,7 @@ pub async fn get_playlist_entries(
     cookie_browser_profile: Option<String>,
     cookie_file_path: Option<String>,
     proxy_url: Option<String>,
+    custom_ytdlp_args: Option<String>,
 ) -> Result<Vec<PlaylistVideoEntry>, String> {
     validate_url(&url).map_err(|e| BackendError::from_message(e).to_wire_string())?;
     let url = normalize_url(&url);
@@ -995,6 +1019,16 @@ pub async fn get_playlist_entries(
         if !proxy.is_empty() {
             args.push("--proxy".to_string());
             args.push(proxy.clone());
+        }
+    }
+
+    // Custom yt-dlp arguments
+    if let Some(ref raw) = custom_ytdlp_args {
+        let trimmed = raw.trim();
+        if !trimmed.is_empty() {
+            for token in super::download::shell_split_args(trimmed) {
+                args.push(token);
+            }
         }
     }
 

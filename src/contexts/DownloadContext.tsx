@@ -780,6 +780,7 @@ export function DownloadProvider({ children }: { children: ReactNode }) {
           cookieBrowserProfile: cookieSettings.browserProfile || null,
           cookieFilePath: cookieSettings.filePath || null,
           proxyUrl: buildProxyUrl(proxySettings) || null,
+          customYtdlpArgs: settings.customYtdlpArgs || null,
         });
 
         // Snapshot current settings for these items

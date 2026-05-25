@@ -361,7 +361,7 @@ fn is_aria2_not_found_line(line: &str) -> bool {
 
 /// Split a raw argument string into tokens, respecting single and double quotes.
 /// e.g. `--no-check-certificates --add-header "X-Foo:bar"` → 3 tokens.
-fn shell_split_args(s: &str) -> Vec<String> {
+pub(crate) fn shell_split_args(s: &str) -> Vec<String> {
     let mut tokens = Vec::new();
     let mut current = String::new();
     let mut in_single = false;
