@@ -2051,100 +2051,126 @@ export function PostDownloadPluginsCard() {
         {error && <p className="text-xs text-destructive">{error}</p>}
 
         {inspection && installSource && (
-          <div className="rounded-xl border border-dashed border-amber-500/40 bg-amber-500/5 p-4">
-            <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
-              <div className="space-y-2">
-                <div className="flex flex-wrap items-center gap-3">
-                  <div className="rounded-xl bg-purple-500/10 p-2 text-purple-500">
-                    {renderPluginManifestIcon(inspection.manifest.icon)}
+          <div className="relative overflow-hidden rounded-[1.4rem] bg-background/78 backdrop-blur-2xl transition-all duration-500">
+            <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_left,_hsl(var(--primary)/0.10),_transparent_32%),radial-gradient(circle_at_bottom_right,_hsl(var(--gradient-via)/0.08),_transparent_34%)]" />
+            <div className="relative space-y-3 p-4">
+              {/* Header: Icon + Name + Badges */}
+              <div className="flex items-start gap-3">
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-purple-500/10 text-purple-500">
+                  {renderPluginManifestIcon(inspection.manifest.icon, 'h-5 w-5')}
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <p className="text-sm font-semibold">{inspection.manifest.name}</p>
+                    <span className="rounded-md bg-muted/60 px-1.5 py-0.5 text-[10px] tracking-wide text-muted-foreground">
+                      v{inspection.manifest.version}
+                    </span>
+                    <span className="rounded-md bg-blue-500/10 px-1.5 py-0.5 text-[10px] uppercase tracking-wide text-blue-600 dark:text-blue-400">
+                      {LANGUAGE_LABELS[inspection.manifest.runtime.language]}
+                    </span>
                   </div>
-                  <p className="text-sm font-semibold">{inspection.manifest.name}</p>
-                  <span className="rounded bg-muted px-2 py-0.5 text-[10px] tracking-wide text-muted-foreground">
-                    v{inspection.manifest.version}
-                  </span>
-                  <span className="rounded bg-blue-500/10 px-2 py-0.5 text-[10px] uppercase tracking-wide text-blue-600 dark:text-blue-400">
-                    {LANGUAGE_LABELS[inspection.manifest.runtime.language]}
-                  </span>
-                </div>
-                <p className="text-xs text-muted-foreground">
-                  {inspection.manifest.description || t('download.pluginNoDescription')}
-                </p>
-                <div className="flex flex-wrap gap-2 text-[11px] text-muted-foreground">
-                  <span>{inspection.manifest.id}</span>
-                  <span>•</span>
-                  <span>{formatSourceKind(inspection.source.kind, t)}</span>
-                </div>
-                <div className="space-y-1 text-[11px] text-muted-foreground">
-                  <p className="font-medium text-foreground/80">
-                    {t('download.pluginCompatibilityTitle')}
+                  <p className="mt-0.5 text-xs text-muted-foreground">
+                    {inspection.manifest.description || t('download.pluginNoDescription')}
                   </p>
-                  <p>
-                    {t('download.pluginSignatureTitle')}:{' '}
-                    {formatSignatureStatus(inspection.signatureStatus, t)}
-                  </p>
-                  {inspection.signerFingerprint && (
-                    <p>
-                      {t('download.pluginSignerFingerprintLabel')}:{' '}
-                      {formatSignerFingerprint(inspection.signerFingerprint)}
-                    </p>
-                  )}
-                  {inspection.signedAt && (
-                    <p>
-                      {t('download.pluginSignedAtLabel')}: {inspection.signedAt}
-                    </p>
-                  )}
-                  {inspection.packageFormat && (
-                    <p>
-                      {t('download.pluginPackageFormatLabel')}:{' '}
-                      {formatPackageFormat(
-                        inspection.packageFormat,
-                        inspection.packageFormatVersion,
-                      )}
-                    </p>
-                  )}
-                  {inspection.builderSdkVersion && (
-                    <p>
-                      {t('download.pluginBuilderSdkVersionLabel')}: v{inspection.builderSdkVersion}
-                    </p>
-                  )}
-                  {inspection.packageChecksum && (
-                    <p className="break-all">
-                      {t('download.pluginPackageChecksumLabel')}: {inspection.packageChecksum}
-                    </p>
-                  )}
-                  {inspectionCompatibilityEntries.length > 0 ? (
-                    inspectionCompatibilityEntries.map((entry) => <p key={entry}>{entry}</p>)
-                  ) : (
-                    <p>{t('download.pluginCompatibilityNone')}</p>
-                  )}
-                </div>
-                {inspection.warnings.length > 0 && (
-                  <div className="flex flex-wrap gap-2">
-                    {inspection.warnings.map((warning) => (
-                      <span
-                        key={warning}
-                        className="rounded bg-amber-500/10 px-2 py-1 text-[11px] text-amber-600 dark:text-amber-400"
-                      >
-                        {warning}
-                      </span>
-                    ))}
-                  </div>
-                )}
-                <div className="rounded-lg border border-border/60 bg-background/60 px-3 py-3">
-                  <ToggleChoiceCard
-                    checked={installAcknowledged}
-                    onToggle={() => setInstallAcknowledged((current) => !current)}
-                    label={t('download.pluginInstallConfirmLabel')}
-                    description={t('download.pluginInstallConfirmHelp')}
-                    className="border-border/50 bg-background/80"
-                  />
                 </div>
               </div>
 
-              <div className="flex gap-2">
+              {/* Metadata grid */}
+              <div className="grid gap-x-4 gap-y-1 rounded-xl bg-muted/20 px-3 py-2.5 text-[11px] text-muted-foreground sm:grid-cols-2">
+                <p>
+                  <span className="text-foreground/70">{t('download.pluginIdentifierLabel')}:</span>{' '}
+                  {inspection.manifest.id}
+                </p>
+                <p>
+                  <span className="text-foreground/70">{t('download.pluginSourceLabel')}:</span>{' '}
+                  {formatSourceKind(inspection.source.kind, t)}
+                </p>
+                <p>
+                  <span className="text-foreground/70">{t('download.pluginSignatureTitle')}:</span>{' '}
+                  <span
+                    className={cn(
+                      inspectionSigned
+                        ? 'text-emerald-600 dark:text-emerald-400'
+                        : 'text-amber-600 dark:text-amber-400',
+                    )}
+                  >
+                    {formatSignatureStatus(inspection.signatureStatus, t)}
+                  </span>
+                </p>
+                {inspection.signerFingerprint && (
+                  <p>
+                    <span className="text-foreground/70">
+                      {t('download.pluginSignerFingerprintLabel')}:
+                    </span>{' '}
+                    {formatSignerFingerprint(inspection.signerFingerprint)}
+                  </p>
+                )}
+                {inspection.signedAt && (
+                  <p>
+                    <span className="text-foreground/70">{t('download.pluginSignedAtLabel')}:</span>{' '}
+                    {inspection.signedAt}
+                  </p>
+                )}
+                {inspection.packageFormat && (
+                  <p>
+                    <span className="text-foreground/70">
+                      {t('download.pluginPackageFormatLabel')}:
+                    </span>{' '}
+                    {formatPackageFormat(inspection.packageFormat, inspection.packageFormatVersion)}
+                  </p>
+                )}
+                {inspection.builderSdkVersion && (
+                  <p>
+                    <span className="text-foreground/70">
+                      {t('download.pluginBuilderSdkVersionLabel')}:
+                    </span>{' '}
+                    v{inspection.builderSdkVersion}
+                  </p>
+                )}
+                {inspection.packageChecksum && (
+                  <p className="break-all sm:col-span-2">
+                    <span className="text-foreground/70">
+                      {t('download.pluginPackageChecksumLabel')}:
+                    </span>{' '}
+                    {inspection.packageChecksum}
+                  </p>
+                )}
+                {inspectionCompatibilityEntries.length > 0 ? (
+                  inspectionCompatibilityEntries.map((entry) => <p key={entry}>{entry}</p>)
+                ) : (
+                  <p>{t('download.pluginCompatibilityNone')}</p>
+                )}
+              </div>
+
+              {/* Warnings */}
+              {inspection.warnings.length > 0 && (
+                <div className="flex flex-wrap gap-1.5">
+                  {inspection.warnings.map((warning) => (
+                    <span
+                      key={warning}
+                      className="rounded-md bg-amber-500/10 px-2 py-0.5 text-[10px] text-amber-600 dark:text-amber-400"
+                    >
+                      {warning}
+                    </span>
+                  ))}
+                </div>
+              )}
+
+              {/* Acknowledge checkbox */}
+              <ToggleChoiceCard
+                checked={installAcknowledged}
+                onToggle={() => setInstallAcknowledged((current) => !current)}
+                label={t('download.pluginInstallConfirmLabel')}
+                description={t('download.pluginInstallConfirmHelp')}
+                className="border-border/40 bg-background/50"
+              />
+
+              {/* Actions */}
+              <div className="flex items-center gap-2">
                 {inspection.readmeContent && (
                   <Button
                     variant="outline"
+                    size="sm"
                     onClick={() =>
                       setPluginGuideDialog({
                         title: inspection.manifest.name,
@@ -2153,12 +2179,13 @@ export function PostDownloadPluginsCard() {
                     }
                     disabled={installing}
                   >
-                    <Info className="h-4 w-4" />
+                    <Info className="h-3.5 w-3.5" />
                     {t('download.pluginGuideButton')}
                   </Button>
                 )}
                 <Button
                   variant="outline"
+                  size="sm"
                   onClick={() => {
                     setInspection(null);
                     setInstallAcknowledged(false);
@@ -2168,10 +2195,11 @@ export function PostDownloadPluginsCard() {
                   {t('download.pluginDismiss')}
                 </Button>
                 <Button
+                  size="sm"
                   onClick={handleInstallInspection}
                   disabled={installing || !installAcknowledged || !inspectionSigned}
                 >
-                  <Download className="h-4 w-4" />
+                  <Download className="h-3.5 w-3.5" />
                   {installing ? t('download.pluginInstalling') : t('download.pluginInstall')}
                 </Button>
               </div>
