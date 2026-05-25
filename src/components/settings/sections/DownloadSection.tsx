@@ -1,4 +1,4 @@
-import { Film, Gauge, Radio, Rocket, RotateCcw, ShieldCheck } from 'lucide-react';
+import { Film, Gauge, Radio, Rocket, RotateCcw, ShieldCheck, Terminal } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { Input } from '@/components/ui/input';
 import {
@@ -34,6 +34,7 @@ export function DownloadSection({ highlightId }: DownloadSectionProps) {
     updateSpeedLimit,
     updateUseAria2,
     updateAria2Args,
+    updateCustomYtdlpArgs,
     updateAutoRetry,
     updateSponsorBlock,
     updateSponsorBlockMode,
@@ -379,6 +380,32 @@ export function DownloadSection({ highlightId }: DownloadSectionProps) {
               />
             </SettingsRow>
           )}
+        </SettingsCard>
+      </SettingsSection>
+
+      <SettingsDivider />
+
+      {/* Custom yt-dlp Arguments */}
+      <SettingsSection
+        title={t('download.customYtdlpArgs')}
+        description={t('download.customYtdlpArgsDesc')}
+        icon={<Terminal className="w-5 h-5 text-white" />}
+        iconClassName="bg-gradient-to-br from-zinc-500 to-slate-600 shadow-zinc-500/20"
+      >
+        <SettingsCard>
+          <SettingsRow
+            id="custom-ytdlp-args"
+            label={t('download.customYtdlpArgsLabel')}
+            description={t('download.customYtdlpArgsLabelDesc')}
+            highlight={highlightId === 'custom-ytdlp-args'}
+          >
+            <Input
+              value={settings.customYtdlpArgs}
+              onChange={(e) => updateCustomYtdlpArgs(e.target.value)}
+              placeholder={t('download.customYtdlpArgsPlaceholder')}
+              className="h-9 w-full bg-background md:w-[340px]"
+            />
+          </SettingsRow>
         </SettingsCard>
       </SettingsSection>
     </div>

@@ -359,6 +359,40 @@ fn is_aria2_not_found_line(line: &str) -> bool {
             || lower.contains("is not recognized"))
 }
 
+/// Split a raw argument string into tokens, respecting single and double quotes.
+/// e.g. `--no-check-certificates --add-header "X-Foo:bar"` → 3 tokens.
+fn shell_split_args(s: &str) -> Vec<String> {
+    let mut tokens = Vec::new();
+    let mut current = String::new();
+    let mut in_single = false;
+    let mut in_double = false;
+    let mut chars = s.chars().peekable();
+
+    while let Some(c) = chars.next() {
+        match c {
+            '\'' if !in_double => {
+                in_single = !in_single;
+            }
+            '"' if !in_single => {
+                in_double = !in_double;
+            }
+            ' ' | '\t' if !in_single && !in_double => {
+                if !current.is_empty() {
+                    tokens.push(current.clone());
+                    current.clear();
+                }
+            }
+            _ => {
+                current.push(c);
+            }
+        }
+    }
+    if !current.is_empty() {
+        tokens.push(current);
+    }
+    tokens
+}
+
 fn normalize_aria2_args(raw_args: &str) -> Option<String> {
     let trimmed = raw_args.trim();
     if trimmed.is_empty() {
@@ -459,6 +493,8 @@ pub async fn download_video(
     // External downloader settings
     use_aria2: Option<bool>,
     aria2_args: Option<String>,
+    // Custom yt-dlp arguments (raw extra args appended to every invocation)
+    custom_ytdlp_args: Option<String>,
     // SponsorBlock settings
     sponsorblock_remove: Option<String>, // comma-separated categories to remove
     sponsorblock_mark: Option<String>,   // comma-separated categories to mark as chapters
@@ -705,6 +741,17 @@ pub async fn download_video(
         if !sections.is_empty() {
             args.push("--download-sections".to_string());
             args.push(sections.clone());
+        }
+    }
+
+    // Custom yt-dlp arguments (appended last, before the URL separator)
+    if let Some(ref raw) = custom_ytdlp_args {
+        let trimmed = raw.trim();
+        if !trimmed.is_empty() {
+            // Split on whitespace, respecting simple quoted tokens
+            for token in shell_split_args(trimmed) {
+                args.push(token);
+            }
         }
     }
 

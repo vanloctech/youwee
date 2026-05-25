@@ -196,6 +196,7 @@ function saveSettings(settings: DownloadSettings) {
         speedLimitUnit: settings.speedLimitUnit,
         useAria2: settings.useAria2,
         aria2Args: settings.aria2Args,
+        customYtdlpArgs: settings.customYtdlpArgs,
         autoRetryEnabled: settings.autoRetryEnabled,
         autoRetryMaxAttempts: settings.autoRetryMaxAttempts,
         autoRetryDelaySeconds: settings.autoRetryDelaySeconds,
@@ -275,6 +276,8 @@ interface DownloadContextType {
   // External downloader settings
   updateUseAria2: (enabled: boolean) => void;
   updateAria2Args: (args: string) => void;
+  // Custom yt-dlp arguments
+  updateCustomYtdlpArgs: (args: string) => void;
   // Auto retry settings
   updateAutoRetry: (enabled: boolean, maxAttempts: number, delaySeconds: number) => void;
   // SponsorBlock settings
@@ -337,6 +340,8 @@ export function DownloadProvider({ children }: { children: ReactNode }) {
       // External downloader settings
       useAria2: saved.useAria2 === true, // Default to false
       aria2Args: saved.aria2Args || '',
+      // Custom yt-dlp arguments
+      customYtdlpArgs: saved.customYtdlpArgs || '',
       // Auto retry settings
       autoRetryEnabled: saved.autoRetryEnabled === true, // Default to false
       autoRetryMaxAttempts: clampAutoRetryMaxAttempts(
@@ -649,6 +654,7 @@ export function DownloadProvider({ children }: { children: ReactNode }) {
         audioBitrate: currentSettings.audioBitrate,
         useAria2: currentSettings.useAria2,
         aria2Args: currentSettings.aria2Args,
+        customYtdlpArgs: currentSettings.customYtdlpArgs,
         subtitleMode: currentSettings.subtitleMode,
         subtitleLangs: [...currentSettings.subtitleLangs],
         subtitleEmbed: currentSettings.subtitleEmbed,
@@ -727,6 +733,7 @@ export function DownloadProvider({ children }: { children: ReactNode }) {
         audioBitrate: mediaType === 'audio' ? audioBitrate : currentSettings.audioBitrate,
         useAria2: currentSettings.useAria2,
         aria2Args: currentSettings.aria2Args,
+        customYtdlpArgs: currentSettings.customYtdlpArgs,
         subtitleMode: currentSettings.subtitleMode,
         subtitleLangs: [...currentSettings.subtitleLangs],
         subtitleEmbed: currentSettings.subtitleEmbed,
@@ -785,6 +792,7 @@ export function DownloadProvider({ children }: { children: ReactNode }) {
           audioBitrate: settingsRef.current.audioBitrate,
           useAria2: settingsRef.current.useAria2,
           aria2Args: settingsRef.current.aria2Args,
+          customYtdlpArgs: settingsRef.current.customYtdlpArgs,
           subtitleMode: settingsRef.current.subtitleMode,
           subtitleLangs: [...settingsRef.current.subtitleLangs],
           subtitleEmbed: settingsRef.current.subtitleEmbed,
@@ -1088,6 +1096,8 @@ export function DownloadProvider({ children }: { children: ReactNode }) {
             // External downloader settings
             useAria2: itemSettings?.useAria2 ?? settings.useAria2,
             aria2Args: itemSettings?.aria2Args ?? settings.aria2Args,
+            // Custom yt-dlp arguments
+            customYtdlpArgs: itemSettings?.customYtdlpArgs ?? settings.customYtdlpArgs,
             // SponsorBlock settings
             sponsorblockRemove: sponsorBlockArgs.remove,
             sponsorblockMark: sponsorBlockArgs.mark,
@@ -1459,6 +1469,14 @@ export function DownloadProvider({ children }: { children: ReactNode }) {
     });
   }, []);
 
+  const updateCustomYtdlpArgs = useCallback((customYtdlpArgs: string) => {
+    setSettings((s) => {
+      const newSettings = { ...s, customYtdlpArgs };
+      saveSettings(newSettings);
+      return newSettings;
+    });
+  }, []);
+
   const updateAutoRetry = useCallback(
     (autoRetryEnabled: boolean, autoRetryMaxAttempts: number, autoRetryDelaySeconds: number) => {
       setSettings((s) => {
@@ -1575,6 +1593,7 @@ export function DownloadProvider({ children }: { children: ReactNode }) {
     updateSpeedLimit,
     updateUseAria2,
     updateAria2Args,
+    updateCustomYtdlpArgs,
     updateAutoRetry,
     // SponsorBlock settings
     updateSponsorBlock,

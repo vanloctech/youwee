@@ -191,7 +191,7 @@ function loadSponsorBlockArgs(): { remove: string | null; mark: string | null } 
   return { remove: null, mark: null };
 }
 
-function loadAria2Settings(): { useAria2: boolean; aria2Args: string } {
+function loadAria2Settings(): { useAria2: boolean; aria2Args: string; customYtdlpArgs: string } {
   try {
     const saved = localStorage.getItem(DOWNLOAD_STORAGE_KEY);
     if (saved) {
@@ -199,12 +199,13 @@ function loadAria2Settings(): { useAria2: boolean; aria2Args: string } {
       return {
         useAria2: parsed.useAria2 === true,
         aria2Args: typeof parsed.aria2Args === 'string' ? parsed.aria2Args : '',
+        customYtdlpArgs: typeof parsed.customYtdlpArgs === 'string' ? parsed.customYtdlpArgs : '',
       };
     }
   } catch (e) {
     console.error('Failed to load aria2 settings:', e);
   }
-  return { useAria2: false, aria2Args: '' };
+  return { useAria2: false, aria2Args: '', customYtdlpArgs: '' };
 }
 
 // Save settings to localStorage
@@ -581,6 +582,7 @@ export function UniversalProvider({ children }: { children: ReactNode }) {
         audioBitrate: currentSettings.audioBitrate,
         useAria2: aria2Settings.useAria2,
         aria2Args: aria2Settings.aria2Args,
+        customYtdlpArgs: aria2Settings.customYtdlpArgs,
         pluginWorkflowSnapshots: workflowSnapshots,
         postDownloadWorkflowSteps: loadPostDownloadWorkflowSteps(),
         autoRetryEnabled: currentSettings.autoRetryEnabled,
@@ -653,6 +655,7 @@ export function UniversalProvider({ children }: { children: ReactNode }) {
         audioBitrate: mediaType === 'audio' ? audioBitrate : currentSettings.audioBitrate,
         useAria2: aria2Settings.useAria2,
         aria2Args: aria2Settings.aria2Args,
+        customYtdlpArgs: aria2Settings.customYtdlpArgs,
         pluginWorkflowSnapshots: workflowSnapshots,
         postDownloadWorkflowSteps: loadPostDownloadWorkflowSteps(),
         autoRetryEnabled: currentSettings.autoRetryEnabled,
@@ -894,6 +897,8 @@ export function UniversalProvider({ children }: { children: ReactNode }) {
             // External downloader settings (from item snapshot, fallback to global settings)
             useAria2: itemSettings?.useAria2 ?? aria2Settings.useAria2,
             aria2Args: itemSettings?.aria2Args ?? aria2Settings.aria2Args,
+            // Custom yt-dlp arguments
+            customYtdlpArgs: itemSettings?.customYtdlpArgs ?? aria2Settings.customYtdlpArgs,
             // SponsorBlock settings
             sponsorblockRemove: sponsorBlockArgs.remove,
             sponsorblockMark: sponsorBlockArgs.mark,
