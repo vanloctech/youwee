@@ -4231,34 +4231,42 @@ export function PostDownloadPluginsCard() {
       </Dialog>
 
       <Dialog open={importDisclaimerOpen} onOpenChange={setImportDisclaimerOpen}>
-        <DialogContent className="sm:max-w-[640px]">
+        <DialogContent className="sm:max-w-[480px]">
           <DialogHeader>
-            <DialogTitle>{t('download.pluginImportDisclaimerTitle')}</DialogTitle>
+            <DialogTitle className="flex items-center gap-2.5">
+              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-amber-500/10">
+                <ShieldCheck className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+              </div>
+              {t('download.pluginImportDisclaimerTitle')}
+            </DialogTitle>
           </DialogHeader>
 
-          <div className="space-y-4">
-            <p className="text-sm text-muted-foreground">
+          <div className="space-y-3">
+            <p className="text-sm leading-relaxed text-muted-foreground">
               {t('download.pluginImportDisclaimerIntro')}
             </p>
 
-            <div className="rounded-xl bg-amber-500/5 p-4 text-sm text-muted-foreground">
-              <p>{t('download.pluginImportDisclaimerBody')}</p>
+            <div className="space-y-2 rounded-xl bg-muted/30 p-3">
+              <div className="flex gap-2.5 text-xs leading-relaxed text-muted-foreground">
+                <span className="mt-0.5 shrink-0 text-amber-500">•</span>
+                <span>{t('download.pluginImportDisclaimerBody')}</span>
+              </div>
+              <div className="flex gap-2.5 text-xs leading-relaxed text-muted-foreground">
+                <span className="mt-0.5 shrink-0 text-amber-500">•</span>
+                <span>{t('download.pluginImportDisclaimerSignature')}</span>
+              </div>
+              <div className="flex gap-2.5 text-xs leading-relaxed text-muted-foreground">
+                <span className="mt-0.5 shrink-0 text-amber-500">•</span>
+                <span>{t('download.pluginImportDisclaimerRecommendation')}</span>
+              </div>
             </div>
 
-            <div className="rounded-xl bg-muted/30 p-4 text-sm text-muted-foreground">
-              <p>{t('download.pluginImportDisclaimerSignature')}</p>
-            </div>
-
-            <div className="rounded-xl bg-muted/30 p-4 text-sm text-muted-foreground">
-              <p>{t('download.pluginImportDisclaimerRecommendation')}</p>
-            </div>
-
-            <div className="flex justify-end gap-2">
-              <Button variant="outline" onClick={() => setImportDisclaimerOpen(false)}>
+            <div className="flex justify-end gap-2 pt-1">
+              <Button variant="outline" size="sm" onClick={() => setImportDisclaimerOpen(false)}>
                 {t('download.pluginDismiss')}
               </Button>
-              <Button onClick={handleConfirmImportPackage}>
-                <Download className="h-4 w-4" />
+              <Button size="sm" onClick={handleConfirmImportPackage}>
+                <Download className="h-3.5 w-3.5" />
                 {t('download.pluginImportPlugin')}
               </Button>
             </div>
