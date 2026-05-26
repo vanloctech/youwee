@@ -209,36 +209,36 @@ export function AISection({ highlightId }: AISectionProps) {
 
   const handleProviderSelect = (providerId: AIProvider) => {
     const defaultModels: Record<string, string> = {
-      gemini: 'gemini-2.0-flash',
-      openai: 'gpt-4o-mini',
-      deepseek: 'deepseek-chat',
-      qwen: 'qwen-turbo',
-      ollama: 'llama3.2',
-      lmstudio: 'local-model',
-      proxy: 'gpt-4o-mini',
+      gemini: 'gemini-3.5-flash',
+      openai: 'gpt-5.5',
+      deepseek: 'deepseek-v4-flash',
+      qwen: 'qwen3.5-plus',
+      ollama: 'gpt-oss:20b',
+      lmstudio: 'openai/gpt-oss-20b',
+      proxy: 'gpt-5.5',
     };
     ai.updateConfig({
       provider: providerId,
-      model: defaultModels[providerId] || 'gpt-4o-mini',
+      model: defaultModels[providerId] || 'gpt-5.5',
     });
   };
 
   const getProviderModelChips = (provider: AIProvider): string[] => {
     switch (provider) {
       case 'gemini':
-        return ['gemini-2.0-flash', 'gemini-1.5-flash', 'gemini-1.5-pro'];
+        return ['gemini-3.5-flash', 'gemini-3.1-flash-lite', 'gemini-2.5-pro'];
       case 'openai':
-        return ['gpt-4o-mini', 'gpt-4o', 'gpt-3.5-turbo'];
+        return ['gpt-5.5', 'gpt-5.4', 'gpt-5.4-mini'];
       case 'deepseek':
-        return ['deepseek-chat', 'deepseek-reasoner'];
+        return ['deepseek-v4-flash', 'deepseek-v4-pro'];
       case 'qwen':
-        return ['qwen-turbo', 'qwen-plus', 'qwen-max'];
+        return ['qwen3-max', 'qwen3.5-plus', 'qwen3.5-flash'];
       case 'ollama':
-        return ['llama3.2', 'llama3', 'mistral', 'gemma2'];
+        return ['gpt-oss:20b', 'qwen3:8b', 'gemma3:12b'];
       case 'lmstudio':
-        return ['local-model'];
+        return ['openai/gpt-oss-20b', 'qwen/qwen3-8b', 'google/gemma-3-12b'];
       default:
-        return ['gpt-4o-mini'];
+        return ['gpt-5.5', 'gpt-5.4', 'gpt-5.4-mini'];
     }
   };
 
@@ -1020,10 +1020,10 @@ export function AISection({ highlightId }: AISectionProps) {
                       />
                     </div>
 
-                    <p className="text-[10px] text-muted-foreground leading-normal flex items-start gap-1 p-1">
-                      <Info className="w-3.5 h-3.5 text-primary flex-shrink-0 mt-0.5" />
-                      <span>{t('ai.whisperCompatible')}</span>
-                    </p>
+                    <div className="flex items-start gap-1.5 rounded-md bg-background/40 px-2 py-1.5 text-[10px] leading-normal text-muted-foreground">
+                      <Info className="mt-px h-3.5 w-3.5 flex-shrink-0 text-primary" />
+                      <div className="min-w-0 flex-1">{t('ai.whisperCompatible')}</div>
+                    </div>
                   </div>
                 ) : (
                   // Default OpenAI Whisper

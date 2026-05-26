@@ -70,7 +70,7 @@ impl Default for AIConfig {
             enabled: false,
             provider: AIProvider::Gemini,
             api_key: None,
-            model: "gemini-2.0-flash".to_string(),
+            model: "gemini-3.5-flash".to_string(),
             ollama_url: Some("http://localhost:11434".to_string()),
             lmstudio_url: Some("http://localhost:1234".to_string()),
             proxy_url: Some("https://api.openai.com".to_string()),

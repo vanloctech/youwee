@@ -598,7 +598,7 @@
     "getApiKeyHere": "Lấy API Key ở đây",
     "testingConnection": "Đang kiểm tra...",
     "exampleUrl": "Ví dụ: {{url}}",
-    "ollamaHelp": "Đảm bảo rằng Ollama đang chạy trên máy tính (ví dụ: `ollama serve`) và mô hình đã được tải xuống trước khi kiểm tra (ví dụ: `ollama run llama3.2`).",
+    "ollamaHelp": "Đảm bảo rằng Ollama đang chạy trên máy tính (ví dụ: `ollama serve`) và mô hình đã được tải xuống trước khi kiểm tra (ví dụ: `ollama run gpt-oss:20b`).",
     "lmStudioHelp": "LM Studio cần phải được mở, kích hoạt Server API tại tab Local Server và mô hình phải được tải sẵn vào bộ nhớ.",
     "recommended": "Đề xuất:",
     "summaryCustomization": "Tùy biến hiển thị Tóm tắt",

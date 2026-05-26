@@ -598,7 +598,7 @@
     "getApiKeyHere": "Get API Key here",
     "testingConnection": "Testing connection...",
     "exampleUrl": "Example: {{url}}",
-    "ollamaHelp": "Make sure Ollama is running on your computer (e.g. `ollama serve`) and the model has been downloaded before testing (e.g. `ollama run llama3.2`).",
+    "ollamaHelp": "Make sure Ollama is running on your computer (e.g. `ollama serve`) and the model has been downloaded before testing (e.g. `ollama run gpt-oss:20b`).",
     "lmStudioHelp": "LM Studio must be open, Local Server API enabled, and the model loaded into memory.",
     "recommended": "Recommended:",
     "summaryCustomization": "Summary Customization",

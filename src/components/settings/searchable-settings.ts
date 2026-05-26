@@ -262,7 +262,7 @@ export const SEARCHABLE_SETTINGS: SearchableSetting[] = [
     id: 'ai-model',
     labelKey: 'ai.model',
     descriptionKey: 'ai.modelDesc',
-    keywords: ['model', 'gpt-4', 'gemini', 'llama', 'mistral'],
+    keywords: ['model', 'gpt-5', 'gemini', 'ollama', 'qwen'],
     section: 'ai',
   },
   {

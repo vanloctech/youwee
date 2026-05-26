@@ -598,7 +598,7 @@
     "getApiKeyHere": "在此获取 API Key",
     "testingConnection": "正在测试连接...",
     "exampleUrl": "示例: {{url}}",
-    "ollamaHelp": "请确保 Ollama 正在您的电脑上运行 (例如 `ollama serve`)，并且在测试前已经下载了该模型 (例如 `ollama run llama3.2`)。",
+    "ollamaHelp": "请确保 Ollama 正在您的电脑上运行 (例如 `ollama serve`)，并且在测试前已经下载了该模型 (例如 `ollama run gpt-oss:20b`)。",
     "lmStudioHelp": "LM Studio 必须处于打开状态，在 Local Server 标签页中启用 Server API，并且模型必须已加载到内存中。",
     "recommended": "推荐:",
     "summaryCustomization": "摘要自定义",

@@ -68,7 +68,7 @@ const defaultConfig: AIConfig = {
   enabled: false,
   provider: 'gemini',
   api_key: undefined,
-  model: 'gemini-2.0-flash',
+  model: 'gemini-3.5-flash',
   ollama_url: 'http://localhost:11434',
   lmstudio_url: 'http://localhost:1234',
   proxy_url: 'https://api.openai.com',

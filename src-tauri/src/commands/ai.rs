@@ -124,196 +124,108 @@ pub fn get_ai_models(provider: String) -> Vec<ModelOption> {
     match provider.to_lowercase().as_str() {
         "gemini" => vec![
             ModelOption {
-                value: "gemini-3-pro-preview".to_string(),
-                label: "Gemini 3 Pro".to_string(),
+                value: "gemini-3.5-flash".to_string(),
+                label: "Gemini 3.5 Flash (Recommended)".to_string(),
             },
             ModelOption {
-                value: "gemini-3-flash-preview".to_string(),
-                label: "Gemini 3 Flash (Recommended)".to_string(),
+                value: "gemini-3.1-flash-lite".to_string(),
+                label: "Gemini 3.1 Flash Lite".to_string(),
             },
             ModelOption {
-                value: "gemini-2.5-flash".to_string(),
-                label: "Gemini 2.5 Flash".to_string(),
-            },
-            ModelOption {
-                value: "gemini-2.0-flash".to_string(),
-                label: "Gemini 2.0 Flash".to_string(),
-            },
-            ModelOption {
-                value: "gemini-2.0-flash-lite".to_string(),
-                label: "Gemini 2.0 Flash Lite".to_string(),
+                value: "gemini-2.5-pro".to_string(),
+                label: "Gemini 2.5 Pro".to_string(),
             },
         ],
         "openai" => vec![
             ModelOption {
-                value: "gpt-4.1-nano".to_string(),
-                label: "GPT-4.1 Nano (Recommended)".to_string(),
+                value: "gpt-5.5".to_string(),
+                label: "GPT-5.5 (Recommended)".to_string(),
             },
             ModelOption {
-                value: "gpt-4.1-mini".to_string(),
-                label: "GPT-4.1 Mini".to_string(),
+                value: "gpt-5.4".to_string(),
+                label: "GPT-5.4".to_string(),
             },
             ModelOption {
-                value: "gpt-4.1".to_string(),
-                label: "GPT-4.1".to_string(),
-            },
-            ModelOption {
-                value: "gpt-5-nano".to_string(),
-                label: "GPT-5 Nano".to_string(),
-            },
-            ModelOption {
-                value: "gpt-5-mini".to_string(),
-                label: "GPT-5 Mini".to_string(),
-            },
-            ModelOption {
-                value: "gpt-5".to_string(),
-                label: "GPT-5".to_string(),
-            },
-            ModelOption {
-                value: "gpt-5.1".to_string(),
-                label: "GPT-5.1".to_string(),
-            },
-            ModelOption {
-                value: "gpt-5.2".to_string(),
-                label: "GPT-5.2".to_string(),
-            },
-            ModelOption {
-                value: "gpt-4o-mini".to_string(),
-                label: "GPT-4o Mini".to_string(),
-            },
-            ModelOption {
-                value: "gpt-4o".to_string(),
-                label: "GPT-4o".to_string(),
-            },
-            ModelOption {
-                value: "gpt-4-turbo".to_string(),
-                label: "GPT-4 Turbo".to_string(),
+                value: "gpt-5.4-mini".to_string(),
+                label: "GPT-5.4 Mini".to_string(),
             },
         ],
         "ollama" => vec![
             ModelOption {
-                value: "llama3.2".to_string(),
-                label: "Llama 3.2 (Recommended)".to_string(),
+                value: "gpt-oss:20b".to_string(),
+                label: "GPT-OSS 20B (Recommended)".to_string(),
             },
             ModelOption {
-                value: "llama3.1".to_string(),
-                label: "Llama 3.1".to_string(),
+                value: "qwen3:8b".to_string(),
+                label: "Qwen 3 8B".to_string(),
             },
             ModelOption {
-                value: "gemma2".to_string(),
-                label: "Gemma 2".to_string(),
-            },
-            ModelOption {
-                value: "qwen2.5".to_string(),
-                label: "Qwen 2.5".to_string(),
-            },
-            ModelOption {
-                value: "mistral".to_string(),
-                label: "Mistral".to_string(),
-            },
-            ModelOption {
-                value: "phi3".to_string(),
-                label: "Phi 3".to_string(),
-            },
-            ModelOption {
-                value: "deepseek-coder-v2".to_string(),
-                label: "DeepSeek Coder V2".to_string(),
+                value: "gemma3:12b".to_string(),
+                label: "Gemma 3 12B".to_string(),
             },
         ],
         "lmstudio" => vec![
             ModelOption {
-                value: "local-model".to_string(),
-                label: "Local Model (Recommended)".to_string(),
+                value: "openai/gpt-oss-20b".to_string(),
+                label: "GPT-OSS 20B (Recommended)".to_string(),
             },
             ModelOption {
-                value: "llama-3.2-3b-instruct".to_string(),
-                label: "Llama 3.2 3B Instruct".to_string(),
+                value: "qwen/qwen3-8b".to_string(),
+                label: "Qwen 3 8B".to_string(),
             },
             ModelOption {
-                value: "qwen2.5-7b-instruct".to_string(),
-                label: "Qwen 2.5 7B Instruct".to_string(),
-            },
-            ModelOption {
-                value: "mistral-7b-instruct".to_string(),
-                label: "Mistral 7B Instruct".to_string(),
+                value: "google/gemma-3-12b".to_string(),
+                label: "Gemma 3 12B".to_string(),
             },
         ],
         "deepseek" => vec![
             ModelOption {
-                value: "deepseek-chat".to_string(),
-                label: "DeepSeek Chat (Recommended)".to_string(),
+                value: "deepseek-v4-flash".to_string(),
+                label: "DeepSeek V4 Flash (Recommended)".to_string(),
             },
             ModelOption {
-                value: "deepseek-reasoner".to_string(),
-                label: "DeepSeek Reasoner (R1)".to_string(),
+                value: "deepseek-v4-pro".to_string(),
+                label: "DeepSeek V4 Pro".to_string(),
             },
         ],
         "qwen" => vec![
             ModelOption {
-                value: "qwen-turbo".to_string(),
-                label: "Qwen Turbo (Recommended)".to_string(),
+                value: "qwen3-max".to_string(),
+                label: "Qwen 3 Max (Recommended)".to_string(),
             },
             ModelOption {
-                value: "qwen-plus".to_string(),
-                label: "Qwen Plus".to_string(),
+                value: "qwen3.5-plus".to_string(),
+                label: "Qwen 3.5 Plus".to_string(),
             },
             ModelOption {
-                value: "qwen-max".to_string(),
-                label: "Qwen Max".to_string(),
-            },
-            ModelOption {
-                value: "qwen-long".to_string(),
-                label: "Qwen Long".to_string(),
+                value: "qwen3.5-flash".to_string(),
+                label: "Qwen 3.5 Flash".to_string(),
             },
         ],
         "proxy" => vec![
             ModelOption {
-                value: "gpt-4.1-nano".to_string(),
-                label: "GPT-4.1 Nano".to_string(),
+                value: "gpt-5.5".to_string(),
+                label: "GPT-5.5 (Recommended)".to_string(),
             },
             ModelOption {
-                value: "gpt-4.1-mini".to_string(),
-                label: "GPT-4.1 Mini".to_string(),
+                value: "gpt-5.4".to_string(),
+                label: "GPT-5.4".to_string(),
             },
             ModelOption {
-                value: "gpt-4.1".to_string(),
-                label: "GPT-4.1".to_string(),
+                value: "gpt-5.4-mini".to_string(),
+                label: "GPT-5.4 Mini".to_string(),
             },
             ModelOption {
-                value: "gpt-5-nano".to_string(),
-                label: "GPT-5 Nano".to_string(),
+                value: "gemini-3.5-flash".to_string(),
+                label: "Gemini 3.5 Flash".to_string(),
             },
             ModelOption {
-                value: "gpt-5-mini".to_string(),
-                label: "GPT-5 Mini".to_string(),
+                value: "deepseek-v4-flash".to_string(),
+                label: "DeepSeek V4 Flash".to_string(),
             },
             ModelOption {
-                value: "gpt-5".to_string(),
-                label: "GPT-5".to_string(),
-            },
-            ModelOption {
-                value: "gpt-4o-mini".to_string(),
-                label: "GPT-4o Mini".to_string(),
-            },
-            ModelOption {
-                value: "gpt-4o".to_string(),
-                label: "GPT-4o".to_string(),
-            },
-            ModelOption {
-                value: "claude-3-5-sonnet-20241022".to_string(),
-                label: "Claude 3.5 Sonnet".to_string(),
-            },
-            ModelOption {
-                value: "claude-3-5-haiku-20241022".to_string(),
-                label: "Claude 3.5 Haiku".to_string(),
-            },
-            ModelOption {
-                value: "deepseek-chat".to_string(),
-                label: "DeepSeek Chat".to_string(),
-            },
-            ModelOption {
-                value: "deepseek-reasoner".to_string(),
-                label: "DeepSeek Reasoner".to_string(),
+                value: "qwen3.5-plus".to_string(),
+                label: "Qwen 3.5 Plus".to_string(),
             },
         ],
         _ => vec![],
