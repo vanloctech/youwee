@@ -1,12 +1,17 @@
 use std::path::{Path, PathBuf};
 
 use crate::database::{
-    add_history_internal, add_history_with_summary, clear_history_from_db, delete_history_from_db,
+    add_history_internal, add_history_with_summary, assign_history_collections_in_db,
+    assign_history_tags_in_db, clear_history_from_db, create_collection_in_db,
+    delete_collection_from_db, delete_history_from_db, get_collections_from_db,
     get_history_count_from_db, get_history_entries_by_ids_from_db, get_history_from_db,
-    update_history_filepath_and_title, update_history_filepath_and_title_by_id,
-    update_history_summary,
+    get_tags_from_db, remove_history_from_collection_in_db, remove_history_tag_from_db,
+    rename_collection_in_db, update_history_filepath_and_title,
+    update_history_filepath_and_title_by_id, update_history_summary,
 };
-use crate::types::{HistoryAdvancedFilters, HistoryEntry, HistorySort};
+use crate::types::{
+    HistoryAdvancedFilters, HistoryCollection, HistoryEntry, HistorySort, HistoryTag,
+};
 
 #[tauri::command]
 pub fn add_history(
@@ -77,6 +82,57 @@ pub fn get_history_count(
     filters: Option<HistoryAdvancedFilters>,
 ) -> Result<i64, String> {
     get_history_count_from_db(source, search, filters)
+}
+
+#[tauri::command]
+pub fn get_tags() -> Result<Vec<HistoryTag>, String> {
+    get_tags_from_db()
+}
+
+#[tauri::command]
+pub fn get_collections() -> Result<Vec<HistoryCollection>, String> {
+    get_collections_from_db()
+}
+
+#[tauri::command]
+pub fn create_collection(name: String, color: Option<String>) -> Result<HistoryCollection, String> {
+    create_collection_in_db(name, color)
+}
+
+#[tauri::command]
+pub fn rename_collection(id: String, name: String) -> Result<(), String> {
+    rename_collection_in_db(id, name)
+}
+
+#[tauri::command]
+pub fn delete_collection(id: String) -> Result<(), String> {
+    delete_collection_from_db(id)
+}
+
+#[tauri::command]
+pub fn assign_history_tags(history_id: String, tags: Vec<String>) -> Result<(), String> {
+    assign_history_tags_in_db(history_id, tags)
+}
+
+#[tauri::command]
+pub fn assign_history_collections(
+    history_id: String,
+    collection_ids: Vec<String>,
+) -> Result<(), String> {
+    assign_history_collections_in_db(history_id, collection_ids)
+}
+
+#[tauri::command]
+pub fn remove_history_tag(history_id: String, tag_id: String) -> Result<(), String> {
+    remove_history_tag_from_db(history_id, tag_id)
+}
+
+#[tauri::command]
+pub fn remove_history_from_collection(
+    history_id: String,
+    collection_id: String,
+) -> Result<(), String> {
+    remove_history_from_collection_in_db(history_id, collection_id)
 }
 
 #[tauri::command]
@@ -179,7 +235,11 @@ pub fn rename_downloaded_file(
 }
 
 #[tauri::command]
-pub fn sync_history_renamed_entry(id: String, filepath: String, title: String) -> Result<(), String> {
+pub fn sync_history_renamed_entry(
+    id: String,
+    filepath: String,
+    title: String,
+) -> Result<(), String> {
     let trimmed_title = title.trim();
     if trimmed_title.is_empty() {
         return Err("File name cannot be empty".to_string());
@@ -275,12 +335,10 @@ pub async fn open_macos_privacy_settings() -> Result<(), String> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::database::{get_db, DB_CONNECTION};
+    use crate::database::{db_test_guard, get_db, DB_CONNECTION};
     use rusqlite::params;
     use std::fs;
-    use std::sync::{Mutex, OnceLock};
-
-    static HISTORY_TEST_LOCK: OnceLock<Mutex<()>> = OnceLock::new();
+    use std::sync::Mutex;
 
     fn make_temp_file(name: &str) -> PathBuf {
         let dir =
@@ -361,16 +419,9 @@ mod tests {
             .expect("clear history table");
     }
 
-    fn history_test_guard() -> std::sync::MutexGuard<'static, ()> {
-        HISTORY_TEST_LOCK
-            .get_or_init(|| Mutex::new(()))
-            .lock()
-            .expect("lock history test mutex")
-    }
-
     #[test]
     fn rename_downloaded_file_updates_history_by_id() {
-        let _guard = history_test_guard();
+        let _guard = db_test_guard();
         ensure_test_history_table();
         let old = make_temp_file("video.mp4");
         let old_path = old.to_string_lossy().to_string();
@@ -416,7 +467,7 @@ mod tests {
 
     #[test]
     fn rename_downloaded_file_updates_history_by_filepath_fallback() {
-        let _guard = history_test_guard();
+        let _guard = db_test_guard();
         ensure_test_history_table();
         let old = make_temp_file("movie.mkv");
         let old_path = old.to_string_lossy().to_string();

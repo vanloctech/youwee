@@ -4,7 +4,7 @@ use tauri::{AppHandle, Emitter};
 
 use crate::database;
 use crate::services::{build_cookie_args, get_deno_path, run_ytdlp_with_stderr};
-use crate::types::{FollowedChannel, ChannelVideo};
+use crate::types::{ChannelVideo, FollowedChannel};
 
 /// Cookie/proxy configuration synced from the frontend for background polling.
 #[derive(Clone, Default)]
@@ -16,14 +16,13 @@ pub struct PollingNetworkConfig {
     pub proxy_url: Option<String>,
 }
 
-static POLLING_NETWORK_CONFIG: Mutex<PollingNetworkConfig> =
-    Mutex::new(PollingNetworkConfig {
-        cookie_mode: None,
-        cookie_browser: None,
-        cookie_browser_profile: None,
-        cookie_file_path: None,
-        proxy_url: None,
-    });
+static POLLING_NETWORK_CONFIG: Mutex<PollingNetworkConfig> = Mutex::new(PollingNetworkConfig {
+    cookie_mode: None,
+    cookie_browser: None,
+    cookie_browser_profile: None,
+    cookie_file_path: None,
+    proxy_url: None,
+});
 
 /// Update the cookie/proxy config used by the background polling loop.
 /// Called from the frontend whenever settings change.
@@ -140,12 +139,15 @@ pub fn start_polling(app: AppHandle) {
                             let total_new = database::get_new_videos_count_db(None).unwrap_or(0);
 
                             // Emit event to frontend
-                            let _ = app.emit("channel-new-videos", NewVideosEvent {
-                                channel_id: channel.id.clone(),
-                                channel_name: channel.name.clone(),
-                                new_count,
-                                total_new,
-                            });
+                            let _ = app.emit(
+                                "channel-new-videos",
+                                NewVideosEvent {
+                                    channel_id: channel.id.clone(),
+                                    channel_name: channel.name.clone(),
+                                    new_count,
+                                    total_new,
+                                },
+                            );
 
                             // Update tray menu with new counts
                             crate::rebuild_tray_menu(&app);
@@ -155,15 +157,18 @@ pub fn start_polling(app: AppHandle) {
 
                             // Auto-download if enabled
                             if channel.auto_download {
-                                let _ = app.emit("channel-auto-download", AutoDownloadEvent {
-                                    channel_id: channel.id.clone(),
-                                    channel_name: channel.name.clone(),
-                                    quality: channel.download_quality.clone(),
-                                    format: channel.download_format.clone(),
-                                    video_codec: channel.download_video_codec.clone(),
-                                    audio_bitrate: channel.download_audio_bitrate.clone(),
-                                    download_threads: channel.download_threads,
-                                });
+                                let _ = app.emit(
+                                    "channel-auto-download",
+                                    AutoDownloadEvent {
+                                        channel_id: channel.id.clone(),
+                                        channel_name: channel.name.clone(),
+                                        quality: channel.download_quality.clone(),
+                                        format: channel.download_format.clone(),
+                                        video_codec: channel.download_video_codec.clone(),
+                                        audio_bitrate: channel.download_audio_bitrate.clone(),
+                                        download_threads: channel.download_threads,
+                                    },
+                                );
                             }
                         } else {
                             // Still update last checked time
@@ -218,8 +223,10 @@ async fn check_channel_for_new_videos(
     let mut args = vec![
         "--dump-json".to_string(),
         "--no-warnings".to_string(),
-        "--socket-timeout".to_string(), "30".to_string(),
-        "--playlist-end".to_string(), limit.to_string(),
+        "--socket-timeout".to_string(),
+        "30".to_string(),
+        "--playlist-end".to_string(),
+        limit.to_string(),
     ];
 
     // Only use --flat-playlist for YouTube; other platforms (Bilibili, etc.)
@@ -279,7 +286,11 @@ async fn check_channel_for_new_videos(
         }
 
         if let Ok(json) = serde_json::from_str::<serde_json::Value>(line) {
-            let id = json.get("id").and_then(|v| v.as_str()).unwrap_or("").to_string();
+            let id = json
+                .get("id")
+                .and_then(|v| v.as_str())
+                .unwrap_or("")
+                .to_string();
             if id.is_empty() {
                 continue;
             }
@@ -291,15 +302,25 @@ async fn check_channel_for_new_videos(
                 }
             }
 
-            let title = json.get("title").and_then(|v| v.as_str()).unwrap_or("Unknown").to_string();
-            let video_url = json.get("url")
+            let title = json
+                .get("title")
+                .and_then(|v| v.as_str())
+                .unwrap_or("Unknown")
+                .to_string();
+            let video_url = json
+                .get("url")
                 .or_else(|| json.get("webpage_url"))
                 .and_then(|v| v.as_str())
                 .map(|s| s.to_string())
                 .unwrap_or_else(|| build_fallback_video_url(&channel.url, &id));
 
-            let thumbnail = json.get("thumbnail")
-                .or_else(|| json.get("thumbnails").and_then(|t| t.as_array()).and_then(|arr| arr.first()))
+            let thumbnail = json
+                .get("thumbnail")
+                .or_else(|| {
+                    json.get("thumbnails")
+                        .and_then(|t| t.as_array())
+                        .and_then(|arr| arr.first())
+                })
                 .and_then(|v| {
                     if v.is_string() {
                         v.as_str().map(|s| s.to_string())
@@ -311,7 +332,8 @@ async fn check_channel_for_new_videos(
                 .map(|u| u.replace("http://", "https://"));
 
             let duration = json.get("duration").and_then(|v| v.as_f64());
-            let upload_date = json.get("upload_date")
+            let upload_date = json
+                .get("upload_date")
                 .and_then(|v| v.as_str())
                 .map(|s| s.to_string());
 
@@ -336,7 +358,10 @@ async fn check_channel_for_new_videos(
                 if !include_kw.is_empty() {
                     let keywords: Vec<&str> = include_kw.split(',').map(|s| s.trim()).collect();
                     let title_lower = title.to_lowercase();
-                    if !keywords.iter().any(|kw| title_lower.contains(&kw.to_lowercase())) {
+                    if !keywords
+                        .iter()
+                        .any(|kw| title_lower.contains(&kw.to_lowercase()))
+                    {
                         continue;
                     }
                 }
@@ -345,7 +370,10 @@ async fn check_channel_for_new_videos(
                 if !exclude_kw.is_empty() {
                     let keywords: Vec<&str> = exclude_kw.split(',').map(|s| s.trim()).collect();
                     let title_lower = title.to_lowercase();
-                    if keywords.iter().any(|kw| title_lower.contains(&kw.to_lowercase())) {
+                    if keywords
+                        .iter()
+                        .any(|kw| title_lower.contains(&kw.to_lowercase()))
+                    {
                         continue;
                     }
                 }
@@ -375,10 +403,7 @@ async fn check_channel_for_new_videos(
 
     // Update last_video_id to the first (newest) video
     let first_video_id = new_videos.first().map(|v| v.video_id.clone());
-    let _ = database::update_channel_last_checked_db(
-        channel.id.clone(),
-        first_video_id,
-    );
+    let _ = database::update_channel_last_checked_db(channel.id.clone(), first_video_id);
 
     let _ = database::save_channel_videos_db(channel.id.clone(), new_videos);
 
@@ -396,9 +421,5 @@ fn send_notification(app: &AppHandle, channel_name: &str, new_count: usize) {
         format!("{}: {} new videos", channel_name, new_count)
     };
 
-    let _ = app.notification()
-        .builder()
-        .title(title)
-        .body(&body)
-        .show();
+    let _ = app.notification().builder().title(title).body(&body).show();
 }

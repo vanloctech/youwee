@@ -2,11 +2,13 @@
 
 <div align="center">
 
-  [![English](https://img.shields.io/badge/lang-English-blue)](../README.md)
-  [![Tiếng Việt](https://img.shields.io/badge/lang-Tiếng_Việt-red)](README.vi.md)
-  [![简体中文](https://img.shields.io/badge/lang-简体中文-green)](README.zh-CN.md)
-  [![Français](https://img.shields.io/badge/lang-Français-0055A4)](README.fr.md)
-  [![Русский](https://img.shields.io/badge/lang-Русский-1F5FBF)](README.ru.md)
+  ![English](https://img.shields.io/badge/lang-English-blue)
+  ![Tiếng Việt](https://img.shields.io/badge/lang-Tiếng_Việt-red)
+  ![简体中文](https://img.shields.io/badge/lang-简体中文-green)
+  ![Français](https://img.shields.io/badge/lang-Français-0055A4)
+  ![Русский](https://img.shields.io/badge/lang-Русский-1F5FBF)
+  ![العربية](https://img.shields.io/badge/lang-%D8%A7%D9%84%D8%B9%D8%B1%D8%A8%D9%8A%D8%A9-0A8F6A)
+  ![ไทย](https://img.shields.io/badge/lang-%E0%B9%84%E0%B8%97%E0%B8%A2-7B1FA2)
   [![Vote for next language](https://img.shields.io/badge/Vote-Ngôn_ngữ_tiếp_theo-orange?logo=github)](https://github.com/vanloctech/youwee/discussions/18)
 
   <img src="../src-tauri/icons/icon.png" alt="Youwee Logo" width="128" height="128">
@@ -26,6 +28,7 @@
 
 - **Tải Video** — YouTube, TikTok, Facebook, Instagram, Bilibili, Youku, và hơn 1800 trang web khác
 - **Tiện ích mở rộng trình duyệt** — Extension cho Chromium + Firefox với nút nổi, chọn media/chất lượng, và gửi nhanh `Download now` / `Add to queue` sang Youwee
+- **Plugin & Tự động hóa workflow** — Cài plugin đã ký, cấu hình field riêng, gán vào workflow tải xuống, và mở rộng Youwee với thông báo, upload, hoặc automation sau khi tải xong
 - **Theo dõi Kênh** — Theo dõi kênh YouTube, Bilibili & Youku, nhận thông báo video mới, tự động tải xuống, và quản lý từ system tray
 - **Tóm tắt Video bằng AI** — Tóm tắt video với Gemini, OpenAI, hoặc Ollama
 - **Xử lý Video bằng AI** — Chỉnh sửa video bằng ngôn ngữ tự nhiên (cắt, chuyển đổi, thay đổi kích thước, trích xuất âm thanh)
@@ -103,6 +106,13 @@
 - Popup hoạt động với mọi tab HTTP/HTTPS hợp lệ
 - Hướng dẫn: [docs/browser-extension.vi.md](browser-extension.vi.md)
 
+### Plugin
+
+- Cài plugin `.ywp` đã ký để mở rộng workflow sau khi tải xong với các tác vụ như gửi thông báo, upload file hoặc tích hợp dịch vụ bên thứ ba
+- Tạo plugin workspace ngay trong Youwee, attach để debug trực tiếp, rồi build và ký gói plugin cuối cùng bằng `youwee-sdk`
+- Plugin có thể cung cấp hướng dẫn đa ngôn ngữ, field cấu hình có kiểu dữ liệu rõ ràng, quyền truy cập cần duyệt và các bước workflow theo trigger
+- Hướng dẫn SDK: [sdk-js/README.md](../sdk-js/README.md)
+
 ### Xây dựng từ mã nguồn
 
 #### Yêu cầu
@@ -179,7 +189,4 @@ Dự án này được cấp phép theo MIT License - xem file [LICENSE](../LICE
     src="https://api.star-history.com/svg?repos=vanloctech/youwee&type=Date"
   />
 </picture>
-
-<div align="center">
-  Made with ❤️ by Việt Nam
-</div>
+`

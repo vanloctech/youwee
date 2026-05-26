@@ -47,9 +47,9 @@
   },
   "urlInput": {
     "single": "รายการเดียว",
-    "singleHint": "เพิ่ม URL แกลเลอรีหนึ่งรายการ",
+    "singleHint": "วาง URL แกลเลอรีหนึ่งรายการ",
     "multiple": "หลายรายการ",
-    "multipleHint": "เพิ่มหลาย URL พร้อมกัน",
+    "multipleHint": "เพิ่มหลาย URL ของแกลเลอรี (หนึ่งบรรทัดต่อหนึ่งรายการ)",
     "paste": "วาง",
     "import": "นำเข้า",
     "detectedMultiple": "ตรวจพบ URL {{count}} รายการ",
@@ -57,6 +57,6 @@
     "placeholderMultiple": "หนึ่ง URL ต่อหนึ่งบรรทัด บรรทัดที่ขึ้นต้นด้วย # จะถูกละเว้น",
     "urlCount": "{{count}} URL",
     "urlCount_plural": "{{count}} URLs",
-    "addToQueue": "เพิ่มเข้าคิว"
+    "addToQueue": "เพิ่ม"
   }
 }

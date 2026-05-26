@@ -25,11 +25,17 @@ fn candidate_scope_directory(path: &Path) -> Option<PathBuf> {
     }
 
     if path.is_file() {
-        return path.parent().map(Path::to_path_buf).or_else(|| Some(path.to_path_buf()));
+        return path
+            .parent()
+            .map(Path::to_path_buf)
+            .or_else(|| Some(path.to_path_buf()));
     }
 
     if path.extension().is_some() {
-        return path.parent().map(Path::to_path_buf).or_else(|| Some(path.to_path_buf()));
+        return path
+            .parent()
+            .map(Path::to_path_buf)
+            .or_else(|| Some(path.to_path_buf()));
     }
 
     Some(path.to_path_buf())
@@ -57,9 +63,13 @@ pub fn allow_asset_file(app: AppHandle, path: String) -> Result<(), String> {
     let scopes = app.state::<Scopes>();
 
     if normalized.is_dir() {
-        scopes
-            .allow_directory(&normalized, true)
-            .map_err(|e| format!("Failed to allow asset directory {}: {}", normalized.display(), e))?;
+        scopes.allow_directory(&normalized, true).map_err(|e| {
+            format!(
+                "Failed to allow asset directory {}: {}",
+                normalized.display(),
+                e
+            )
+        })?;
     } else {
         scopes
             .allow_file(&normalized)
@@ -75,9 +85,13 @@ pub fn sync_asset_scope_paths(app: AppHandle, paths: Vec<String>) -> Result<usiz
     let directories = collect_scope_directories(&paths);
 
     for directory in &directories {
-        scopes
-            .allow_directory(directory, true)
-            .map_err(|e| format!("Failed to allow asset directory {}: {}", directory.display(), e))?;
+        scopes.allow_directory(directory, true).map_err(|e| {
+            format!(
+                "Failed to allow asset directory {}: {}",
+                directory.display(),
+                e
+            )
+        })?;
     }
 
     Ok(directories.len())

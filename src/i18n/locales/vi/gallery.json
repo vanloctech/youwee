@@ -46,10 +46,10 @@
     }
   },
   "urlInput": {
-    "single": "Một URL",
-    "singleHint": "Thêm một URL gallery",
-    "multiple": "Hàng loạt",
-    "multipleHint": "Thêm nhiều URL cùng lúc",
+    "single": "Đơn",
+    "singleHint": "Dán một URL gallery",
+    "multiple": "Nhiều",
+    "multipleHint": "Thêm nhiều URL gallery (mỗi dòng một URL)",
     "paste": "Dán",
     "import": "Nhập file",
     "detectedMultiple": "Phát hiện {{count}} URL",
@@ -57,6 +57,6 @@
     "placeholderMultiple": "Mỗi dòng một URL. Dòng bắt đầu bằng # sẽ bị bỏ qua.",
     "urlCount": "{{count}} URL",
     "urlCount_plural": "{{count}} URL",
-    "addToQueue": "Thêm vào hàng đợi"
+    "addToQueue": "Thêm"
   }
 }

@@ -4,6 +4,11 @@ export type VideoCodec = 'h264' | 'vp9' | 'av1' | 'auto';
 export type AudioBitrate = 'auto' | '128';
 export type SubtitleMode = 'off' | 'auto' | 'manual';
 export type SubtitleFormat = 'srt' | 'vtt' | 'ass';
+export type PluginTrigger =
+  | 'download.queued'
+  | 'download.beforeStart'
+  | 'download.completed'
+  | 'download.failed';
 
 // SponsorBlock types
 export type SponsorBlockMode = 'remove' | 'mark' | 'custom';
@@ -62,6 +67,8 @@ export interface ItemDownloadSettings {
   subtitleFormat: SubtitleFormat;
   timeRangeStart?: string;
   timeRangeEnd?: string;
+  pluginWorkflowSnapshots?: PluginWorkflowSnapshotMap;
+  postDownloadWorkflowSteps?: PluginWorkflowStepSnapshot[];
   autoRetryEnabled: boolean;
   autoRetryMaxAttempts: number;
   autoRetryDelaySeconds: number;
@@ -77,6 +84,8 @@ export interface ItemUniversalSettings {
   aria2Args: string;
   timeRangeStart?: string;
   timeRangeEnd?: string;
+  pluginWorkflowSnapshots?: PluginWorkflowSnapshotMap;
+  postDownloadWorkflowSteps?: PluginWorkflowStepSnapshot[];
   autoRetryEnabled: boolean;
   autoRetryMaxAttempts: number;
   autoRetryDelaySeconds: number;
@@ -197,6 +206,353 @@ export interface DownloadProgress {
   elapsed_time?: string; // e.g. "00:00:07"
 }
 
+export type PluginRuntimeLanguage = 'javascript' | 'python';
+export type PluginProvider = 'deno' | 'python';
+export type PluginPackageSourceKind = 'workspace' | 'package-ywp';
+export type PluginManifestIconName = string;
+export type PluginFilesystemPermission =
+  | 'fs.plugin.read'
+  | 'fs.plugin.write'
+  | 'fs.payload-file.read'
+  | 'fs.payload-directory.read'
+  | 'fs.payload-directory.write'
+  | 'fs.temp.read'
+  | 'fs.temp.write'
+  | 'fs.user-selected.read'
+  | 'fs.user-selected.write';
+
+export interface PluginPermissionSet {
+  network: boolean;
+  fs: PluginFilesystemPermission[];
+}
+
+export interface PluginPermissionApproval {
+  network: boolean;
+  fs: PluginFilesystemPermission[];
+}
+
+export type PluginConfigFieldInputType =
+  | 'text'
+  | 'textarea'
+  | 'password'
+  | 'number'
+  | 'boolean'
+  | 'file'
+  | 'directory'
+  | 'select'
+  | 'multi-select';
+
+export interface PluginConfigFieldOption {
+  value: string;
+  label: string;
+}
+
+export type PluginConfigFieldValue = string | number | boolean | string[];
+
+export interface PluginConfigField {
+  key: string;
+  inputType: PluginConfigFieldInputType;
+  label: string;
+  description?: string | null;
+  placeholder?: string | null;
+  required: boolean;
+  defaultValue?: PluginConfigFieldValue | null;
+  sensitive: boolean;
+  options: PluginConfigFieldOption[];
+  min?: number | null;
+  max?: number | null;
+  step?: number | null;
+}
+
+export interface PluginRuntimeSpec {
+  language: PluginRuntimeLanguage;
+  supportedProviders: PluginProvider[];
+  preferredProvider?: PluginProvider | null;
+  entrypoint: string;
+}
+
+export interface PluginCompatibilitySpec {
+  appVersion?: string | null;
+  sdkVersion?: string | null;
+}
+
+export interface PluginI18nSpec {
+  defaultLocale?: string | null;
+  supportedLocales: string[];
+  directory?: string | null;
+}
+
+export interface PluginManifest {
+  id: string;
+  slug: string;
+  name: string;
+  version: string;
+  icon?: PluginManifestIconName | null;
+  description?: string | null;
+  author?: string | null;
+  homepage?: string | null;
+  repository?: string | null;
+  license?: string | null;
+  runtime: PluginRuntimeSpec;
+  compatibility?: PluginCompatibilitySpec | null;
+  triggers: string[];
+  permissions: PluginPermissionSet;
+  configFields: PluginConfigField[];
+  timeoutSec: number;
+  readme?: string | null;
+  checksum?: string | null;
+  publishedAt?: string | null;
+  i18n?: PluginI18nSpec | null;
+}
+
+export interface PluginPackageSource {
+  kind: PluginPackageSourceKind;
+  value: string;
+  checksum?: string | null;
+  packageFormat?: string | null;
+  packageFormatVersion?: number | null;
+  builderSdkVersion?: string | null;
+  signatureStatus?: string | null;
+  signerKeyId?: string | null;
+  signerFingerprint?: string | null;
+  signatureAlgorithm?: string | null;
+  signedAt?: string | null;
+}
+
+export interface PluginInstallation {
+  pluginId: string;
+  enabled: boolean;
+  trusted: boolean;
+  approvedPermissions: PluginPermissionApproval;
+  selectedProvider?: PluginProvider | null;
+  timeoutSecOverride?: number | null;
+  installedPath: string;
+  source: PluginPackageSource;
+  lastResolvedProvider?: PluginProvider | null;
+  lastResolvedSource?: string | null;
+  lastExecutionStatus?: string | null;
+  lastError?: string | null;
+  configValues: Record<string, unknown>;
+  configValueStatus: Record<string, boolean>;
+  signatureStatus?: string | null;
+  signerKeyId?: string | null;
+  signerFingerprint?: string | null;
+  signatureAlgorithm?: string | null;
+  signedAt?: string | null;
+}
+
+export interface PluginSummary {
+  manifest: PluginManifest;
+  installation: PluginInstallation;
+  warnings: string[];
+  readmeContent?: string | null;
+}
+
+export interface PluginPackageInspection {
+  manifest: PluginManifest;
+  source: PluginPackageSource;
+  warnings: string[];
+  readmeContent?: string | null;
+  packageFormat?: string | null;
+  packageFormatVersion?: number | null;
+  builderSdkVersion?: string | null;
+  packageChecksum?: string | null;
+  signatureStatus?: string | null;
+  signerKeyId?: string | null;
+  signerFingerprint?: string | null;
+  signatureAlgorithm?: string | null;
+  signedAt?: string | null;
+}
+
+export interface PluginWorkspaceSummary {
+  pluginId: string;
+  slug: string;
+  name: string;
+  path: string;
+  manifestPath: string;
+  packageJsonPath: string;
+  readmePath: string;
+}
+
+export interface PackagedPluginBuildInfo {
+  packageFormat: string;
+  packageFormatVersion: number;
+  packagedAt: string;
+  builder: {
+    tool: string;
+    version: string;
+  };
+  bundle: {
+    entrypoint: string;
+    bundled: boolean;
+    includesDependencies: boolean;
+    moduleFormat: string;
+  };
+}
+
+export interface PackagedPluginChecksums {
+  algorithm: string;
+  files: Record<string, string>;
+}
+
+export interface PluginSignaturePayload {
+  checksumsPath: string;
+  checksumsSha256: string;
+  pluginId: string;
+  pluginVersion: string;
+  packageFormat: string;
+  packageFormatVersion: number;
+}
+
+export interface PackagedPluginSignature {
+  version: number;
+  algorithm: string;
+  keyId: string;
+  fingerprint: string;
+  publicKey: string;
+  signedAt: string;
+  payload: PluginSignaturePayload;
+  signature: string;
+}
+
+export interface RuntimeProviderStatus {
+  provider: PluginProvider;
+  available: boolean;
+  resolvedPath?: string | null;
+  resolvedSource?: string | null;
+  details?: string | null;
+}
+
+export interface PluginExecutionResult {
+  pluginId: string;
+  success: boolean;
+  message?: string | null;
+  artifacts?: Record<string, unknown> | null;
+  metadata?: Record<string, unknown> | null;
+  mutations?: PluginChainMutation | null;
+  stdout?: string | null;
+  stderr?: string | null;
+}
+
+export type PluginWorkflowFailurePolicy = 'continue' | 'stop-chain';
+
+export interface PluginWorkflowStepConfig {
+  pluginId: string;
+  failurePolicy: PluginWorkflowFailurePolicy;
+}
+
+export interface PluginWorkflowStepSnapshot {
+  pluginId: string;
+  pluginName: string;
+  pluginVersion: string;
+  selectedProvider?: PluginProvider | null;
+  timeoutSecOverride?: number | null;
+  approvedPermissions: PluginPermissionApproval;
+  failurePolicy: PluginWorkflowFailurePolicy;
+}
+
+export type PluginWorkflowSnapshotMap = Partial<
+  Record<PluginTrigger, PluginWorkflowStepSnapshot[]>
+>;
+
+export interface PluginTriggerWorkflow {
+  trigger: string;
+  steps: PluginWorkflowStepConfig[];
+}
+
+export type PluginWorkflowRunStatus =
+  | 'queued'
+  | 'running'
+  | 'completed'
+  | 'partial-failed'
+  | 'failed';
+
+export interface PluginChainMutation {
+  activeFilepath?: string | null;
+  activeFilename?: string | null;
+  extraFiles: string[];
+  metadataPatch?: Record<string, unknown> | null;
+}
+
+export interface PluginChainState {
+  jobId: string;
+  source?: string | null;
+  downloadKind: string;
+  url: string;
+  title?: string | null;
+  thumbnail?: string | null;
+  historyId?: string | null;
+  timeRange?: string | null;
+  activeFilepath: string;
+  activeFilename: string;
+  directory: string;
+  filesize?: number | null;
+  format?: string | null;
+  quality?: string | null;
+  extraFiles: string[];
+  metadata?: Record<string, unknown> | null;
+}
+
+export interface PluginWorkflowRun {
+  runId: string;
+  trigger: string;
+  status: PluginWorkflowRunStatus;
+  initialPayload: PostDownloadPluginPayload;
+  currentChainState: PluginChainState;
+  steps: PluginWorkflowStepSnapshot[];
+  currentStepIndex?: number | null;
+  failedStepPluginId?: string | null;
+}
+
+export interface PluginExecutionStatusEvent {
+  pluginId: string;
+  runId?: string | null;
+  pluginName?: string | null;
+  runtime?: string | null;
+  provider?: string | null;
+  resolvedProvider?: string | null;
+  resolvedSource?: string | null;
+  status: string;
+  message?: string | null;
+  details?: string | null;
+  mediaTitle?: string | null;
+  filename?: string | null;
+  mediaUrl?: string | null;
+}
+
+export interface PluginExecutionOutputEvent {
+  pluginId: string;
+  runId?: string | null;
+  pluginName?: string | null;
+  stream: 'stdout' | 'stderr';
+  chunk: string;
+  mediaTitle?: string | null;
+  filename?: string | null;
+  mediaUrl?: string | null;
+}
+
+export interface PostDownloadPluginPayload {
+  jobId: string;
+  source?: string | null;
+  trigger: string;
+  filepath: string;
+  filename: string;
+  directory: string;
+  filesize?: number | null;
+  format?: string | null;
+  quality?: string | null;
+  url: string;
+  title?: string | null;
+  thumbnail?: string | null;
+  historyId?: string | null;
+  timeRange?: string | null;
+  downloadKind: string;
+  workflowRunId?: string | null;
+  workflowStepIndex?: number | null;
+  workflowStepPluginId?: string | null;
+  chainState?: PluginChainState | null;
+}
+
 export interface VideoInfo {
   id: string;
   title: string;
@@ -277,9 +633,28 @@ export interface LogEntry {
   url?: string;
 }
 
-export type LogFilter = 'all' | 'command' | 'success' | 'error' | 'stderr';
+export interface PluginLogsPage {
+  items: LogEntry[];
+  total: number;
+  has_more: boolean;
+}
+
+export type LogFilter = 'all' | 'command' | 'success' | 'error' | 'stderr' | 'info';
 
 // History types
+export interface HistoryTag {
+  id: string;
+  name: string;
+  itemCount?: number | null;
+}
+
+export interface HistoryCollection {
+  id: string;
+  name: string;
+  color?: string | null;
+  itemCount?: number | null;
+}
+
 export interface HistoryEntry {
   id: string;
   url: string;
@@ -295,6 +670,8 @@ export interface HistoryEntry {
   file_exists: boolean;
   summary?: string; // AI-generated summary
   time_range?: string; // Time range cut (e.g. "00:10-01:00")
+  tags: HistoryTag[];
+  collections: HistoryCollection[];
 }
 
 export type HistoryFilter =
@@ -309,6 +686,7 @@ export type HistoryFilter =
 export type HistoryMediaType = 'all' | 'video' | 'audio';
 export type HistoryDatePreset = 'all' | 'today' | 'last7days' | 'last30days' | 'custom';
 export type HistorySort = 'recent' | 'oldest' | 'title' | 'size';
+export type HistoryFilterMatchMode = 'any' | 'all';
 
 export interface HistoryAdvancedFilters {
   mediaType: HistoryMediaType;
@@ -319,6 +697,9 @@ export interface HistoryAdvancedFilters {
   customDateTo?: string | null;
   formats: string[];
   qualities: string[];
+  tagIds: string[];
+  collectionIds: string[];
+  matchMode: HistoryFilterMatchMode;
 }
 
 // AI types

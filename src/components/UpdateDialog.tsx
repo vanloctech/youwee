@@ -10,8 +10,6 @@ function getLocalizedBody(updateInfo: UpdateInfo | null, lang: string): string |
   if (!updateInfo) return undefined;
   if (lang.startsWith('vi')) return updateInfo.bodyVi || updateInfo.body;
   if (lang.startsWith('zh')) return updateInfo.bodyZhCN || updateInfo.body;
-  if (lang.startsWith('fr')) return updateInfo.bodyFr || updateInfo.body;
-  if (lang.startsWith('ru')) return updateInfo.bodyRu || updateInfo.body;
   return updateInfo.body;
 }
 

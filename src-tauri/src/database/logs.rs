@@ -1,5 +1,5 @@
 use super::{get_db, MAX_LOG_ENTRIES};
-use crate::types::LogEntry;
+use crate::types::{LogEntry, PluginLogsPage};
 use chrono::Utc;
 use rusqlite::params;
 
@@ -138,6 +138,75 @@ pub fn get_logs_from_db(
     };
 
     Ok(logs)
+}
+
+pub fn get_plugin_logs_from_db(
+    plugin_id: String,
+    limit: Option<i64>,
+    offset: Option<i64>,
+) -> Result<PluginLogsPage, String> {
+    let conn = get_db()?;
+    let limit = limit.unwrap_or(100).min(500);
+    let offset = offset.unwrap_or(0).max(0);
+    let mut stmt = conn
+        .prepare(
+            "SELECT id, timestamp, log_type, message, details, url
+             FROM logs
+             WHERE details LIKE ?1 OR details LIKE ?2
+             ORDER BY created_at DESC
+             LIMIT ?3 OFFSET ?4",
+        )
+        .map_err(|e| format!("Failed to prepare plugin log query: {}", e))?;
+
+    let legacy_pattern = format!("%Plugin ID: {}%", plugin_id);
+    let runtime_pattern = format!("%pluginId: {}%", plugin_id);
+    let total: i64 = conn
+        .query_row(
+            "SELECT COUNT(*)
+             FROM logs
+             WHERE details LIKE ?1 OR details LIKE ?2",
+            params![legacy_pattern, runtime_pattern],
+            |row| row.get(0),
+        )
+        .map_err(|e| format!("Failed to count plugin logs: {}", e))?;
+
+    let logs = stmt
+        .query_map(
+            params![legacy_pattern, runtime_pattern, limit, offset],
+            |row| {
+                Ok(LogEntry {
+                    id: row.get(0)?,
+                    timestamp: row.get(1)?,
+                    log_type: row.get(2)?,
+                    message: row.get(3)?,
+                    details: row.get(4)?,
+                    url: row.get(5)?,
+                })
+            },
+        )
+        .map_err(|e| format!("Plugin log query failed: {}", e))?
+        .filter_map(|row| row.ok())
+        .collect();
+
+    Ok(PluginLogsPage {
+        items: logs,
+        total,
+        has_more: offset + limit < total,
+    })
+}
+
+pub fn clear_plugin_logs_from_db(plugin_id: String) -> Result<(), String> {
+    let conn = get_db()?;
+    let legacy_pattern = format!("%Plugin ID: {}%", plugin_id);
+    let runtime_pattern = format!("%pluginId: {}%", plugin_id);
+
+    conn.execute(
+        "DELETE FROM logs WHERE details LIKE ?1 OR details LIKE ?2",
+        params![legacy_pattern, runtime_pattern],
+    )
+    .map_err(|e| format!("Failed to clear plugin logs: {}", e))?;
+
+    Ok(())
 }
 
 /// Clear all logs

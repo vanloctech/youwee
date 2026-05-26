@@ -47,9 +47,9 @@
   },
   "urlInput": {
     "single": "单个",
-    "singleHint": "添加一个图库 URL",
+    "singleHint": "粘贴单个图库链接",
     "multiple": "批量",
-    "multipleHint": "一次添加多个 URL",
+    "multipleHint": "添加多个图库链接（每行一个）",
     "paste": "粘贴",
     "import": "导入",
     "detectedMultiple": "检测到 {{count}} 个 URL",
@@ -57,6 +57,6 @@
     "placeholderMultiple": "每行一个 URL。以 # 开头的行会被忽略。",
     "urlCount": "{{count}} 个 URL",
     "urlCount_plural": "{{count}} 个 URL",
-    "addToQueue": "加入队列"
+    "addToQueue": "添加"
   }
 }

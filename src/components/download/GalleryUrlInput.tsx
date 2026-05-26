@@ -1,4 +1,4 @@
-import { ClipboardPaste, FileText, ImageDown, List, Loader2, Plus } from 'lucide-react';
+import { ClipboardPaste, FileText, Link, Link2, List, Loader2, Plus } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
@@ -99,6 +99,10 @@ export function GalleryUrlInput({
     }
   };
 
+  const handleInputChange = (event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    setValue(event.target.value);
+  };
+
   const setMode = (expanded: boolean) => {
     setIsExpanded(expanded);
     setTimeout(() => {
@@ -157,7 +161,7 @@ export function GalleryUrlInput({
             )}
             title={t('urlInput.singleHint')}
           >
-            <ImageDown className="w-3.5 h-3.5" />
+            <Link2 className="w-3.5 h-3.5" />
             <span>{t('urlInput.single')}</span>
           </button>
           <button
@@ -208,27 +212,16 @@ export function GalleryUrlInput({
         </div>
       </div>
 
-      {value.trim() && urlCount > 1 && (
-        <div className="flex items-center justify-between gap-2 rounded-lg border border-border/60 bg-muted/25 px-2.5 py-1.5">
-          <div className="min-w-0 text-xs text-muted-foreground">
-            <span className="inline-flex items-center gap-1 rounded bg-blue-500/10 px-1.5 py-0.5 text-blue-600 dark:text-blue-400">
-              <List className="h-3 w-3" />
-              {t('urlInput.detectedMultiple', { count: urlCount })}
-            </span>
-          </div>
-        </div>
-      )}
-
       <div className="relative">
         {!isExpanded ? (
           <div className="relative flex items-center gap-2">
             <div className="relative flex-1">
-              <ImageDown className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              <Link className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
               <Input
                 ref={inputRef}
                 placeholder={t('urlInput.placeholder')}
                 value={value}
-                onChange={(event) => setValue(event.target.value)}
+                onChange={handleInputChange}
                 onKeyDown={handleKeyDown}
                 disabled={disabled}
                 className={cn(
@@ -246,10 +239,11 @@ export function GalleryUrlInput({
                 </span>
               )}
             </div>
-            <Button
-              onClick={() => void handleAdd()}
+            <button
+              type="button"
+              onClick={handleAdd}
               disabled={disabled || isAdding || urlCount === 0}
-              className="h-11 px-4 gap-2"
+              className="h-11 rounded-md px-4 text-sm font-medium btn-gradient flex items-center gap-2 disabled:cursor-not-allowed disabled:opacity-50"
             >
               {isAdding ? (
                 <Loader2 className="w-4 h-4 animate-spin" />
@@ -257,39 +251,60 @@ export function GalleryUrlInput({
                 <Plus className="w-4 h-4" />
               )}
               <span className="hidden sm:inline">{t('urlInput.addToQueue')}</span>
-            </Button>
+            </button>
           </div>
         ) : (
-          <div className="space-y-2">
+          <div className="relative">
             <Textarea
               ref={textareaRef}
               placeholder={t('urlInput.placeholderMultiple')}
               value={value}
-              onChange={(event) => setValue(event.target.value)}
+              onChange={handleInputChange}
               onKeyDown={handleKeyDown}
               disabled={disabled}
               className={cn(
-                'min-h-[120px] resize-none text-sm',
+                'min-h-[100px] resize-none text-sm',
                 'bg-background/50 border-border/50',
                 'focus:bg-background transition-colors',
                 'placeholder:text-muted-foreground/50',
               )}
             />
-            <div className="flex justify-end">
-              <Button
-                onClick={() => void handleAdd()}
-                disabled={disabled || isAdding || urlCount === 0}
-                className="h-10 px-4 gap-2"
-              >
-                {isAdding ? (
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                ) : (
-                  <Plus className="w-4 h-4" />
-                )}
-                {t('urlInput.addToQueue')}
-              </Button>
-            </div>
+            {urlCount > 0 && (
+              <div className="absolute bottom-2 right-2">
+                <span className="text-xs text-muted-foreground bg-background/80 px-2 py-1 rounded">
+                  {urlCount !== 1
+                    ? t('urlInput.urlCount_plural', { count: urlCount })
+                    : t('urlInput.urlCount', { count: urlCount })}
+                </span>
+              </div>
+            )}
           </div>
+        )}
+      </div>
+
+      {value.trim() && urlCount > 1 && (
+        <div className="flex items-center justify-between gap-2 rounded-lg border border-border/60 bg-muted/25 px-2.5 py-1.5">
+          <div className="min-w-0 text-xs text-muted-foreground">
+            <span className="inline-flex items-center gap-1 rounded bg-blue-500/10 px-1.5 py-0.5 text-blue-600 dark:text-blue-400">
+              <List className="h-3 w-3" />
+              {t('urlInput.detectedMultiple', { count: urlCount })}
+            </span>
+          </div>
+        </div>
+      )}
+
+      <div className="flex items-center gap-2 flex-wrap">
+        {isExpanded && (
+          <button
+            type="button"
+            className="h-9 px-4 rounded-md font-medium text-sm btn-gradient flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+            onClick={handleAdd}
+            disabled={disabled || !value.trim() || isAdding}
+            title={t('urlInput.addToQueue')}
+          >
+            {isAdding ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
+            {t('urlInput.addToQueue')} {urlCount > 0 ? `(${urlCount})` : ''}
+          </button>
         )}
       </div>
     </section>

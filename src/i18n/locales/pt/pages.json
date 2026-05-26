@@ -237,6 +237,8 @@
       "dateTo": "Até",
       "formats": "Formatos",
       "qualities": "Qualidades",
+      "tags": "Tags",
+      "collections": "Coleções",
       "activeFilters": "{{count}} filtros ativos",
       "clearFilters": "Limpar filtros",
       "refresh": "Testar ambiente original e refazer coletas.",
@@ -259,7 +261,13 @@
       "generatingSummary": "Se as engrenagens andarem corretamente, virá conteúdo textual sobre um vídeo que duraria bastante na linha original. E lá se vai uma criação AI!",
       "downloading": "Seu pedido de coleta digital encontra-se operante. Por gentileza tenha um instante adicional!",
       "openFolder": "Visite a Raíz!",
+      "rename": "Renomear",
+      "renamePlaceholder": "Digite o novo nome do arquivo",
+      "renameSave": "Salvar",
+      "renameCancel": "Cancelar",
+      "renameFailed": "Falha ao renomear o arquivo",
       "redownload": "A mÍdia evaporou? Faça de novo",
+      "manageTagsCollections": "Gerenciar tags e coleções",
       "openUrl": "Aponte num ambiente visual",
       "copy": "Reter item visual num ponteiro de cópia",
       "copied": "Prontinho.",
@@ -274,6 +282,41 @@
         "twitter": "Rede X. (Ou similar via domínio).",
         "bilibili": "Ambiente CHN conectado!",
         "other": "Múltiplos e gerais!"
+      }
+    },
+    "collections": {
+      "title": "Coleções",
+      "manage": "Gerenciar coleções",
+      "assignHint": "Use coleções para agrupar vídeos em pastas virtuais.",
+      "managerTitle": "Gerenciador de coleções",
+      "managerDescription": "Crie, renomeie ou exclua coleções virtuais para sua biblioteca.",
+      "newPlaceholder": "Nome da nova coleção",
+      "create": "Criar",
+      "rename": "Renomear",
+      "delete": "Excluir",
+      "empty": "Nenhuma coleção ainda",
+      "itemCount": "{{count}} itens",
+      "deleteConfirm": "Excluir a coleção \"{{name}}\"?",
+      "errors": {
+        "create": "Falha ao criar coleção",
+        "rename": "Falha ao renomear coleção",
+        "delete": "Falha ao excluir coleção"
+      }
+    },
+    "tagging": {
+      "dialogTitle": "Gerenciar tags e coleções",
+      "dialogDescription": "Organize este item da biblioteca com tags livres e coleções virtuais.",
+      "tags": "Tags",
+      "tagsHint": "Digite uma tag e pressione Enter para criar ou atribuir.",
+      "tagPlaceholder": "Adicione uma tag como #Estudo ou #Entretenimento",
+      "addTag": "Adicionar tag",
+      "noTags": "Nenhuma tag selecionada",
+      "existingTags": "Tags existentes",
+      "noTagsYet": "Ainda não há tags",
+      "cancel": "Cancelar",
+      "save": "Salvar",
+      "errors": {
+        "save": "Falha ao salvar tags ou coleções"
       }
     }
   }

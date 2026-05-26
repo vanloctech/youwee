@@ -1,10 +1,10 @@
-use std::collections::HashSet;
-use std::process::Stdio;
-use std::path::PathBuf;
-use tauri::{AppHandle, Manager};
-use tokio::process::Command;
 use crate::types::{DependencySource, FfmpegStatus};
 use crate::utils::CommandExt;
+use std::collections::HashSet;
+use std::path::PathBuf;
+use std::process::Stdio;
+use tauri::{AppHandle, Manager};
+use tokio::process::Command;
 
 const SOURCE_CONFIG_FILE: &str = "ffmpeg-source.txt";
 
@@ -28,7 +28,10 @@ pub fn system_ffmpeg_upgrade_message() -> String {
 }
 
 fn get_ffmpeg_source_config_path(app: &AppHandle) -> Option<PathBuf> {
-    app.path().app_data_dir().ok().map(|p| p.join("bin").join(SOURCE_CONFIG_FILE))
+    app.path()
+        .app_data_dir()
+        .ok()
+        .map(|p| p.join("bin").join(SOURCE_CONFIG_FILE))
 }
 
 pub async fn get_ffmpeg_source(app: &AppHandle) -> DependencySource {
@@ -41,15 +44,16 @@ pub async fn get_ffmpeg_source(app: &AppHandle) -> DependencySource {
 }
 
 pub async fn set_ffmpeg_source(app: &AppHandle, source: &DependencySource) -> Result<(), String> {
-    let config_path = get_ffmpeg_source_config_path(app)
-        .ok_or("Failed to get config path")?;
+    let config_path = get_ffmpeg_source_config_path(app).ok_or("Failed to get config path")?;
 
     if let Some(parent) = config_path.parent() {
-        tokio::fs::create_dir_all(parent).await
+        tokio::fs::create_dir_all(parent)
+            .await
             .map_err(|e| format!("Failed to create bin directory: {}", e))?;
     }
 
-    tokio::fs::write(&config_path, source.as_str()).await
+    tokio::fs::write(&config_path, source.as_str())
+        .await
         .map_err(|e| format!("Failed to save source config: {}", e))?;
 
     Ok(())
@@ -128,10 +132,7 @@ pub async fn check_ffmpeg_internal(app: &AppHandle) -> Result<FfmpegStatus, Stri
                 let stdout = String::from_utf8_lossy(&output.stdout);
                 let version = parse_ffmpeg_version(&stdout);
                 let app_path = get_app_ffmpeg_path(app);
-                let is_system = app_path
-                    .as_ref()
-                    .map(|p| p != &ffmpeg_path)
-                    .unwrap_or(true);
+                let is_system = app_path.as_ref().map(|p| p != &ffmpeg_path).unwrap_or(true);
 
                 return Ok(FfmpegStatus {
                     installed: true,
@@ -155,7 +156,11 @@ pub async fn check_ffmpeg_internal(app: &AppHandle) -> Result<FfmpegStatus, Stri
 pub fn parse_ffmpeg_version(output: &str) -> String {
     if let Some(line) = output.lines().next() {
         if let Some(version_part) = line.strip_prefix("ffmpeg version ") {
-            return version_part.split_whitespace().next().unwrap_or("unknown").to_string();
+            return version_part
+                .split_whitespace()
+                .next()
+                .unwrap_or("unknown")
+                .to_string();
         }
     }
     "unknown".to_string()
@@ -290,7 +295,7 @@ fn get_ffmpeg_release_api_url() -> &'static str {
 pub async fn check_ffmpeg_update_internal(app: &AppHandle) -> Result<FfmpegUpdateInfo, String> {
     // Get current installed version
     let current_status = check_ffmpeg_internal(app).await?;
-    
+
     if !current_status.installed {
         return Ok(FfmpegUpdateInfo {
             has_update: false,
@@ -299,9 +304,9 @@ pub async fn check_ffmpeg_update_internal(app: &AppHandle) -> Result<FfmpegUpdat
             release_url: None,
         });
     }
-    
+
     let current_version = current_status.version.clone();
-    
+
     // Only check updates for bundled FFmpeg (not system)
     if current_status.is_system {
         return Ok(FfmpegUpdateInfo {
@@ -311,41 +316,47 @@ pub async fn check_ffmpeg_update_internal(app: &AppHandle) -> Result<FfmpegUpdat
             release_url: Some("System FFmpeg - update via package manager".to_string()),
         });
     }
-    
+
     let api_url = get_ffmpeg_release_api_url();
     if api_url.is_empty() {
         return Err("Unsupported platform".to_string());
     }
-    
+
     // Fetch latest release from GitHub API
     let client = reqwest::Client::builder()
         .user_agent("Youwee/0.4.1")
         .timeout(std::time::Duration::from_secs(30))
         .build()
         .map_err(|e| format!("Failed to create HTTP client: {}", e))?;
-    
-    let response = client.get(api_url).send().await
+
+    let response = client
+        .get(api_url)
+        .send()
+        .await
         .map_err(|e| format!("Failed to fetch release info: {}", e))?;
-    
+
     if !response.status().is_success() {
-        return Err(format!("Failed to fetch release info: HTTP {}", response.status()));
+        return Err(format!(
+            "Failed to fetch release info: HTTP {}",
+            response.status()
+        ));
     }
-    
-    let json: serde_json::Value = response.json().await
+
+    let json: serde_json::Value = response
+        .json()
+        .await
         .map_err(|e| format!("Failed to parse release info: {}", e))?;
-    
-    let tag_name = json["tag_name"].as_str()
-        .ok_or("No tag_name in release")?;
-    
-    let html_url = json["html_url"].as_str()
-        .map(|s| s.to_string());
-    
+
+    let tag_name = json["tag_name"].as_str().ok_or("No tag_name in release")?;
+
+    let html_url = json["html_url"].as_str().map(|s| s.to_string());
+
     // Extract version from tag (remove 'v' or 'ffmpeg-' prefix if present)
     let latest_version = tag_name
         .trim_start_matches('v')
         .trim_start_matches("ffmpeg-")
         .to_string();
-    
+
     // Compare versions by extracting date parts
     // Current version format: "git-2026-01-25-1e1dde8" -> extract "2026-01-25"
     // Latest version format: "2026.01.25" or "ffmpeg-2026.01.25" -> extract "2026.01.25"
@@ -355,7 +366,7 @@ pub async fn check_ffmpeg_update_internal(app: &AppHandle) -> Result<FfmpegUpdat
         // Normalize latest version (replace . with -)
         let latest_normalized = latest_version.replace('.', "-");
         let latest_date = extract_date_from_version(&latest_normalized);
-        
+
         // Compare dates - if latest is newer, there's an update
         match (current_date, latest_date) {
             (Some(curr), Some(lat)) => lat > curr,
@@ -364,7 +375,7 @@ pub async fn check_ffmpeg_update_internal(app: &AppHandle) -> Result<FfmpegUpdat
     } else {
         false
     };
-    
+
     Ok(FfmpegUpdateInfo {
         has_update,
         current_version,

@@ -38,6 +38,7 @@ export function LogToolbar() {
     { value: 'all', label: t('logs.toolbar.filterAll') },
     { value: 'command', label: t('logs.toolbar.filterCommands') },
     { value: 'success', label: t('logs.toolbar.filterSuccess') },
+    { value: 'info', label: t('logs.toolbar.filterInfo') },
     { value: 'error', label: t('logs.toolbar.filterErrors') },
     { value: 'stderr', label: t('logs.toolbar.filterDetail') },
   ];

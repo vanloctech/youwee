@@ -30,6 +30,15 @@ static TRAY_LANG: Mutex<String> = Mutex::new(String::new());
 /// Schedule status text for tray menu (empty = no schedule active)
 static TRAY_SCHEDULE_STATUS: Mutex<String> = Mutex::new(String::new());
 
+#[cfg(target_os = "linux")]
+fn configure_linux_webkit_env() {
+    // Work around WebKitGTK/GBM crashes seen on some Arch-based systems.
+    // Let advanced users override this manually if they want to re-enable GBM.
+    if std::env::var_os("WEBKIT_DMABUF_RENDERER_DISABLE_GBM").is_none() {
+        std::env::set_var("WEBKIT_DMABUF_RENDERER_DISABLE_GBM", "1");
+    }
+}
+
 /// Show the main window and restore dock icon if needed
 fn show_main_window(app_handle: &tauri::AppHandle) {
     if let Some(window) = app_handle.get_webview_window("main") {
@@ -70,6 +79,9 @@ fn update_tray_schedule(app: tauri::AppHandle, status: String) {
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
+    #[cfg(target_os = "linux")]
+    configure_linux_webkit_env();
+
     tauri::Builder::default()
         .plugin(tauri_plugin_single_instance::init(|app, argv, _cwd| {
             let links = commands::extract_external_links_from_argv(&argv);
@@ -180,6 +192,8 @@ pub fn run() {
             commands::get_browser_profiles,
             // Log commands
             commands::get_logs,
+            commands::get_plugin_logs,
+            commands::clear_plugin_logs,
             commands::add_log,
             commands::clear_logs,
             commands::export_logs,
@@ -190,6 +204,15 @@ pub fn run() {
             commands::delete_history,
             commands::clear_history,
             commands::get_history_count,
+            commands::get_tags,
+            commands::get_collections,
+            commands::create_collection,
+            commands::rename_collection,
+            commands::delete_collection,
+            commands::assign_history_tags,
+            commands::assign_history_collections,
+            commands::remove_history_tag,
+            commands::remove_history_from_collection,
             commands::open_file_location,
             commands::check_file_exists,
             // Asset scope & history helpers
@@ -237,6 +260,27 @@ pub fn run() {
             commands::generate_subtitles_with_whisper,
             // Metadata commands
             commands::fetch_metadata,
+            // Plugin commands
+            commands::list_plugins,
+            commands::get_plugin_details,
+            commands::inspect_plugin_package,
+            commands::install_plugin_package,
+            commands::uninstall_plugin,
+            commands::attach_plugin_workspace,
+            commands::create_plugin_workspace,
+            commands::update_plugin_state,
+            commands::get_plugin_trigger_workflow,
+            commands::update_plugin_trigger_workflow,
+            commands::enqueue_plugin_workflow_trigger,
+            commands::approve_plugin_permissions,
+            commands::update_plugin_config_values,
+            commands::set_plugin_provider,
+            commands::set_plugin_timeout,
+            commands::open_plugin_directory,
+            commands::list_runtime_providers,
+            commands::get_runtime_provider_status,
+            commands::set_default_provider_for_language,
+            commands::set_plugin_runtime_locale,
             commands::cancel_metadata_fetch,
             // Channel commands
             commands::get_channel_videos,

@@ -165,6 +165,7 @@
       "searchPlaceholder": "搜索日志...",
       "filterAll": "全部",
       "filterCommands": "命令",
+      "filterInfo": "信息",
       "filterSuccess": "成功",
       "filterErrors": "错误",
       "filterDetail": "详情",
@@ -237,6 +238,8 @@
       "dateTo": "结束日期",
       "formats": "格式",
       "qualities": "质量",
+      "tags": "标签",
+      "collections": "合集",
       "activeFilters": "已启用 {{count}} 个筛选",
       "clearFilters": "清除筛选",
       "refresh": "刷新",
@@ -265,6 +268,7 @@
       "renameCancel": "取消",
       "renameFailed": "重命名文件失败",
       "redownload": "重新下载",
+      "manageTagsCollections": "管理标签和合集",
       "openUrl": "打开链接",
       "copy": "复制",
       "copied": "已复制",
@@ -279,6 +283,41 @@
         "twitter": "Twitter",
         "bilibili": "Bilibili",
         "other": "其他"
+      }
+    },
+    "collections": {
+      "title": "合集",
+      "manage": "管理合集",
+      "assignHint": "使用合集把视频归入虚拟文件夹。",
+      "managerTitle": "合集管理",
+      "managerDescription": "为你的媒体库创建、重命名或删除虚拟合集。",
+      "newPlaceholder": "新合集名称",
+      "create": "创建",
+      "rename": "重命名",
+      "delete": "删除",
+      "empty": "还没有合集",
+      "itemCount": "{{count}} 个项目",
+      "deleteConfirm": "删除合集“{{name}}”？",
+      "errors": {
+        "create": "创建合集失败",
+        "rename": "重命名合集失败",
+        "delete": "删除合集失败"
+      }
+    },
+    "tagging": {
+      "dialogTitle": "管理标签和合集",
+      "dialogDescription": "使用自由标签和虚拟合集来整理这个媒体库项目。",
+      "tags": "标签",
+      "tagsHint": "输入标签后按 Enter 即可创建或分配。",
+      "tagPlaceholder": "添加类似 #学习 或 #娱乐 的标签",
+      "addTag": "添加标签",
+      "noTags": "尚未选择标签",
+      "existingTags": "现有标签",
+      "noTagsYet": "还没有标签",
+      "cancel": "取消",
+      "save": "保存",
+      "errors": {
+        "save": "保存标签或合集失败"
       }
     }
   },

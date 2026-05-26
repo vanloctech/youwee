@@ -11,12 +11,19 @@ import {
   useState,
 } from 'react';
 import { localizeProgressError, localizeUnknownError } from '@/lib/backend-error';
+import {
+  enqueuePluginWorkflowTrigger,
+  loadPluginWorkflowSnapshots,
+  loadPostDownloadWorkflowSteps,
+  refreshPostDownloadWorkflowSteps,
+} from '@/lib/post-download-plugins';
 import type {
   ChannelVideo,
   DownloadProgress,
   DownloadSettings,
   FollowedChannel,
   PlaylistVideoEntry,
+  PostDownloadPluginPayload,
 } from '@/lib/types';
 import { DEFAULT_SPONSORBLOCK_CATEGORIES } from '@/lib/types';
 
@@ -31,6 +38,12 @@ const SUPPORTED_PLATFORMS = [
 const CHANNEL_BROWSE_BATCH_SIZE = 100;
 
 export type Platform = (typeof SUPPORTED_PLATFORMS)[number]['platform'] | 'other';
+
+type ChannelFetchProgress = {
+  requestId: number | null;
+  fetched: number;
+  limit: number | null;
+};
 
 /** Detect which platform a URL belongs to */
 export function detectPlatform(url: string): Platform {
@@ -191,7 +204,7 @@ interface ChannelsContextType {
   browseError: string | null;
   browseChannelName: string | null;
   browseChannelAvatar: string | null;
-  browseFetchProgress: { fetched: number; limit: number | null } | null;
+  browseFetchProgress: ChannelFetchProgress | null;
   browseHasMore: boolean;
   browseLoadingMore: boolean;
   fetchChannelVideos: (url: string, limit?: number | null) => Promise<void>;
@@ -243,10 +256,7 @@ export function ChannelsProvider({ children }: { children: ReactNode }) {
   const [browseChannelAvatar, setBrowseChannelAvatar] = useState<string | null>(null);
 
   // Fetch progress (for non-flat-playlist platforms like Bilibili)
-  const [browseFetchProgress, setBrowseFetchProgress] = useState<{
-    fetched: number;
-    limit: number | null;
-  } | null>(null);
+  const [browseFetchProgress, setBrowseFetchProgress] = useState<ChannelFetchProgress | null>(null);
   const [browseHasMore, setBrowseHasMore] = useState(false);
   const [browseLoadingMore, setBrowseLoadingMore] = useState(false);
 
@@ -254,6 +264,10 @@ export function ChannelsProvider({ children }: { children: ReactNode }) {
   const [selectedVideoIds, setSelectedVideoIds] = useState<Set<string>>(new Set());
   const [downloadingIds, setDownloadingIds] = useState<Set<string>>(new Set());
   const [isDownloading, setIsDownloading] = useState(false);
+
+  useEffect(() => {
+    refreshPostDownloadWorkflowSteps();
+  }, []);
 
   // Per-video download progress: videoId -> state
   const [videoStates, setVideoStates] = useState<Map<string, VideoDownloadState>>(new Map());
@@ -281,6 +295,11 @@ export function ChannelsProvider({ children }: { children: ReactNode }) {
 
   // Ref for followedChannels to avoid stale closures
   const followedChannelsRef = useRef<FollowedChannel[]>([]);
+  const browseVideosRef = useRef<PlaylistVideoEntry[]>([]);
+
+  useEffect(() => {
+    browseVideosRef.current = browseVideos;
+  }, [browseVideos]);
 
   // Select output folder
   const selectOutputFolder = useCallback(async () => {
@@ -359,11 +378,12 @@ export function ChannelsProvider({ children }: { children: ReactNode }) {
     async (
       channelId: string,
       videos: PlaylistVideoEntry[],
-      options?: { updateLastVideoId?: boolean },
+      options?: { updateLastVideoId?: boolean; initialStatus?: ChannelVideo['status'] },
     ) => {
       if (videos.length === 0) return;
 
       const now = new Date().toISOString();
+      const initialStatus = options?.initialStatus ?? 'new';
       const channelVideos: ChannelVideo[] = videos.map((v) => ({
         id: crypto.randomUUID(),
         channel_id: channelId,
@@ -373,7 +393,7 @@ export function ChannelsProvider({ children }: { children: ReactNode }) {
         thumbnail: v.thumbnail,
         duration: v.duration,
         upload_date: v.upload_date,
-        status: 'new',
+        status: initialStatus,
         created_at: now,
       }));
 
@@ -530,7 +550,7 @@ export function ChannelsProvider({ children }: { children: ReactNode }) {
       const requestId = ++fetchRequestIdRef.current;
       const effectiveLimit = options?.limit ?? CHANNEL_BROWSE_BATCH_SIZE;
       const isLoadMore = options?.append ?? false;
-      const start = isLoadMore ? browseVideos.length + 1 : 1;
+      const start = isLoadMore ? browseVideosRef.current.length + 1 : 1;
 
       if (isLoadMore) {
         setBrowseLoadingMore(true);
@@ -557,6 +577,7 @@ export function ChannelsProvider({ children }: { children: ReactNode }) {
           url,
           limit: effectiveLimit,
           start,
+          requestId: requestId,
           cookieMode,
           cookieBrowser,
           cookieBrowserProfile,
@@ -615,6 +636,7 @@ export function ChannelsProvider({ children }: { children: ReactNode }) {
         if (followedChannel && videos.length > 0) {
           await syncVideosToDb(followedChannel.id, videos, {
             updateLastVideoId: !isLoadMore,
+            initialStatus: isLoadMore ? 'skipped' : 'new',
           });
           await refreshChannelNewCounts();
 
@@ -667,7 +689,7 @@ export function ChannelsProvider({ children }: { children: ReactNode }) {
         }
       }
     },
-    [browseVideos.length, getCookieSettings, getProxyUrl, syncVideosToDb, refreshChannelNewCounts],
+    [getCookieSettings, getProxyUrl, syncVideosToDb, refreshChannelNewCounts],
   );
 
   const fetchChannelVideos = useCallback(
@@ -688,6 +710,7 @@ export function ChannelsProvider({ children }: { children: ReactNode }) {
   // Clear browse state
   const clearBrowse = useCallback(() => {
     fetchRequestIdRef.current += 1;
+    browseVideosRef.current = [];
     setBrowseUrl('');
     setBrowseVideos([]);
     setBrowseError(null);
@@ -798,6 +821,11 @@ export function ChannelsProvider({ children }: { children: ReactNode }) {
       // Determine concurrency from followed channel settings
       const followedCh = followedChannelsRef.current.find((c) => c.url === browseUrl);
       const maxConcurrent = Math.max(1, followedCh?.download_threads ?? 1);
+      const workflowSnapshots = loadPluginWorkflowSnapshots();
+      const queuedDownloads = videosToDownload.map((video) => ({
+        video,
+        downloadId: `channel-${video.id}-${Date.now()}-${crypto.randomUUID()}`,
+      }));
 
       setIsDownloading(true);
 
@@ -810,8 +838,42 @@ export function ChannelsProvider({ children }: { children: ReactNode }) {
         return next;
       });
 
-      const downloadOne = async (video: PlaylistVideoEntry) => {
-        const downloadId = `channel-${video.id}-${Date.now()}`;
+      for (const { video, downloadId } of queuedDownloads) {
+        const payload: PostDownloadPluginPayload = {
+          jobId: downloadId,
+          source: detectPlatform(browseUrl) || 'youtube',
+          trigger: 'download.queued',
+          filepath: '',
+          filename: video.title || video.url,
+          directory: currentOutputPath,
+          filesize: null,
+          format,
+          quality,
+          url: video.url,
+          title: video.title || null,
+          thumbnail: video.thumbnail || null,
+          historyId: null,
+          timeRange: null,
+          downloadKind: 'channel-manual',
+          workflowRunId: null,
+          workflowStepIndex: null,
+          workflowStepPluginId: null,
+          chainState: null,
+        };
+        void enqueuePluginWorkflowTrigger('download.queued', payload, workflowSnapshots).catch(
+          (error) => {
+            console.error('Failed to enqueue channel manual download.queued workflow:', error);
+          },
+        );
+      }
+
+      const downloadOne = async ({
+        video,
+        downloadId,
+      }: {
+        video: PlaylistVideoEntry;
+        downloadId: string;
+      }) => {
         downloadIdMapRef.current.set(downloadId, { videoId: video.id, channelUrl: browseUrl });
 
         setDownloadingIds((prev) => new Set([...prev, video.id]));
@@ -858,6 +920,9 @@ export function ChannelsProvider({ children }: { children: ReactNode }) {
             title: video.title || null,
             thumbnail: video.thumbnail || null,
             source: detectPlatform(browseUrl) || 'youtube',
+            pluginWorkflowSnapshots: workflowSnapshots,
+            postDownloadWorkflowSteps: loadPostDownloadWorkflowSteps(),
+            downloadKind: 'channel-manual',
           });
         } catch (error) {
           const msg = localizeUnknownError(error);
@@ -872,15 +937,15 @@ export function ChannelsProvider({ children }: { children: ReactNode }) {
 
       try {
         // Concurrency pool: run up to maxConcurrent downloads at once
-        const queue = [...videosToDownload];
+        const queue = [...queuedDownloads];
         const running: Promise<void>[] = [];
 
         while (queue.length > 0 || running.length > 0) {
           // Fill up to maxConcurrent slots
           while (running.length < maxConcurrent && queue.length > 0) {
-            const video = queue.shift();
-            if (!video) break;
-            const promise = downloadOne(video).then(() => {
+            const queuedDownload = queue.shift();
+            if (!queuedDownload) break;
+            const promise = downloadOne(queuedDownload).then(() => {
               running.splice(running.indexOf(promise), 1);
             });
             running.push(promise);
@@ -1099,12 +1164,10 @@ export function ChannelsProvider({ children }: { children: ReactNode }) {
 
   // Listen for fetch progress events (non-flat-playlist platforms)
   useEffect(() => {
-    const unlisten = listen<{ fetched: number; limit: number | null }>(
-      'channel-fetch-progress',
-      (event) => {
-        setBrowseFetchProgress(event.payload);
-      },
-    );
+    const unlisten = listen<ChannelFetchProgress>('channel-fetch-progress', (event) => {
+      if (event.payload.requestId !== fetchRequestIdRef.current) return;
+      setBrowseFetchProgress(event.payload);
+    });
 
     return () => {
       unlisten.then((fn) => fn());
@@ -1189,10 +1252,48 @@ export function ChannelsProvider({ children }: { children: ReactNode }) {
         const proxyUrl = getProxyUrl();
 
         const maxConcurrent = Math.max(1, download_threads || 1);
+        const workflowSnapshots = loadPluginWorkflowSnapshots();
+        const queuedAutoDownloads = newVideos.map((video) => ({
+          video,
+          downloadId: `auto-${video.video_id}-${Date.now()}-${crypto.randomUUID()}`,
+        }));
 
-        const downloadOneAuto = async (video: ChannelVideo) => {
-          const downloadId = `auto-${video.video_id}-${Date.now()}`;
+        for (const { video, downloadId } of queuedAutoDownloads) {
+          const payload: PostDownloadPluginPayload = {
+            jobId: downloadId,
+            source: detectPlatform(video.url) || 'youtube',
+            trigger: 'download.queued',
+            filepath: '',
+            filename: video.title || video.url,
+            directory: autoOutputPath,
+            filesize: null,
+            format,
+            quality,
+            url: video.url,
+            title: video.title || null,
+            thumbnail: video.thumbnail || null,
+            historyId: null,
+            timeRange: null,
+            downloadKind: 'channel-auto',
+            workflowRunId: null,
+            workflowStepIndex: null,
+            workflowStepPluginId: null,
+            chainState: null,
+          };
+          void enqueuePluginWorkflowTrigger('download.queued', payload, workflowSnapshots).catch(
+            (error) => {
+              console.error('Failed to enqueue channel auto download.queued workflow:', error);
+            },
+          );
+        }
 
+        const downloadOneAuto = async ({
+          video,
+          downloadId,
+        }: {
+          video: ChannelVideo;
+          downloadId: string;
+        }) => {
           await invoke('update_channel_video_status', { id: video.id, status: 'downloading' });
 
           try {
@@ -1220,6 +1321,9 @@ export function ChannelsProvider({ children }: { children: ReactNode }) {
               proxyUrl,
               useAria2,
               aria2Args,
+              pluginWorkflowSnapshots: workflowSnapshots,
+              postDownloadWorkflowSteps: loadPostDownloadWorkflowSteps(),
+              downloadKind: 'channel-auto',
             });
 
             await invoke('update_channel_video_status', { id: video.id, status: 'downloaded' });
@@ -1230,14 +1334,14 @@ export function ChannelsProvider({ children }: { children: ReactNode }) {
         };
 
         // Concurrency pool for auto-download
-        const queue = [...newVideos];
+        const queue = [...queuedAutoDownloads];
         const running: Promise<void>[] = [];
 
         while (queue.length > 0 || running.length > 0) {
           while (running.length < maxConcurrent && queue.length > 0) {
-            const video = queue.shift();
-            if (!video) break;
-            const promise = downloadOneAuto(video).then(() => {
+            const queuedDownload = queue.shift();
+            if (!queuedDownload) break;
+            const promise = downloadOneAuto(queuedDownload).then(() => {
               running.splice(running.indexOf(promise), 1);
             });
             running.push(promise);

@@ -2,11 +2,13 @@
 
 <div align="center">
 
-  [![English](https://img.shields.io/badge/lang-English-blue)](../README.md)
-  [![Tiếng Việt](https://img.shields.io/badge/lang-Tiếng_Việt-red)](README.vi.md)
-  [![简体中文](https://img.shields.io/badge/lang-简体中文-green)](README.zh-CN.md)
-  [![Français](https://img.shields.io/badge/lang-Français-0055A4)](README.fr.md)
-  [![Русский](https://img.shields.io/badge/lang-Русский-1F5FBF)](README.ru.md)
+  ![English](https://img.shields.io/badge/lang-English-blue)
+  ![Tiếng Việt](https://img.shields.io/badge/lang-Tiếng_Việt-red)
+  ![简体中文](https://img.shields.io/badge/lang-简体中文-green)
+  ![Français](https://img.shields.io/badge/lang-Français-0055A4)
+  ![Русский](https://img.shields.io/badge/lang-Русский-1F5FBF)
+  ![العربية](https://img.shields.io/badge/lang-%D8%A7%D9%84%D8%B9%D8%B1%D8%A8%D9%8A%D8%A9-0A8F6A)
+  ![ไทย](https://img.shields.io/badge/lang-%E0%B9%84%E0%B8%97%E0%B8%A2-7B1FA2)
   [![Vote for next language](https://img.shields.io/badge/Vote-下一个语言-orange?logo=github)](https://github.com/vanloctech/youwee/discussions/18)
 
   <img src="../src-tauri/icons/icon.png" alt="Youwee Logo" width="128" height="128">
@@ -26,6 +28,7 @@
 
 - **视频下载** — 支持 YouTube、TikTok、Facebook、Instagram、Bilibili、Youku 及 1800+ 网站
 - **浏览器扩展桥接** — Chromium + Firefox 扩展，支持悬浮按钮、媒体/清晰度选择，以及 `Download now` / `Add to queue` 一键发送到 Youwee
+- **插件与工作流自动化** — 安装已签名插件、配置自定义字段、将其加入下载工作流，并用通知、上传或下载后自动化扩展 Youwee
 - **频道关注** — 关注 YouTube、Bilibili 和优酷频道，接收新视频通知，自动下载，通过系统托盘管理
 - **AI 视频摘要** — 使用 Gemini、OpenAI 或 Ollama 进行视频摘要
 - **AI 视频处理** — 使用自然语言编辑视频（剪切、转换、调整大小、提取音频）
@@ -103,6 +106,13 @@
 - 弹窗可用于所有有效 HTTP/HTTPS 标签页
 - 说明文档：[docs/browser-extension.zh-CN.md](browser-extension.zh-CN.md)
 
+### 插件
+
+- 安装已签名的 `.ywp` 插件，为下载后工作流增加通知、文件上传或第三方集成等自定义动作
+- 可直接在 Youwee 中创建插件 workspace，附加到应用进行实时调试，然后使用 `youwee-sdk` 构建并签名最终插件包
+- 插件支持多语言说明文档、强类型配置字段、可审批权限，以及基于触发器的工作流步骤
+- SDK 文档：[sdk-js/README.md](../sdk-js/README.md)
+
 ### 从源码构建
 
 #### 环境要求
@@ -179,7 +189,3 @@ bun run tauri build
     src="https://api.star-history.com/svg?repos=vanloctech/youwee&type=Date"
   />
 </picture>
-
-<div align="center">
-  Made with ❤️ by 越南
-</div>

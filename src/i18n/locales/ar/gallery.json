@@ -47,9 +47,9 @@
   },
   "urlInput": {
     "single": "واحد",
-    "singleHint": "أضف رابط معرض واحد",
-    "multiple": "دفعة",
-    "multipleHint": "أضف عدة روابط دفعة واحدة",
+    "singleHint": "الصق رابط معرض واحد",
+    "multiple": "متعدد",
+    "multipleHint": "أضف عدة روابط معرض (رابط في كل سطر)",
     "paste": "لصق",
     "import": "استيراد",
     "detectedMultiple": "تم اكتشاف {{count}} رابطًا",
@@ -57,6 +57,6 @@
     "placeholderMultiple": "رابط واحد في كل سطر. سيتم تجاهل الأسطر التي تبدأ بـ #.",
     "urlCount": "{{count}} رابط",
     "urlCount_plural": "{{count}} روابط",
-    "addToQueue": "أضف إلى الطابور"
+    "addToQueue": "أضف"
   }
 }

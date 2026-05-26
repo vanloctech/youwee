@@ -4,19 +4,15 @@ use tauri_plugin_shell::process::CommandEvent;
 use tauri_plugin_shell::ShellExt;
 use tokio::process::Command;
 
-use crate::types::DependencySource;
-use crate::types::{BackendError, ChannelInfo, FollowedChannel, ChannelVideo, PlaylistVideoEntry};
+use crate::database;
 use crate::services::{
-    build_cookie_args,
-    get_deno_path,
-    get_ytdlp_path,
-    get_ytdlp_source,
+    build_cookie_args, get_deno_path, get_ytdlp_path, get_ytdlp_source, run_ytdlp_with_stderr,
     system_ytdlp_not_found_message,
-    run_ytdlp_with_stderr,
 };
+use crate::types::DependencySource;
+use crate::types::{BackendError, ChannelInfo, ChannelVideo, FollowedChannel, PlaylistVideoEntry};
 use crate::utils::CommandExt;
 use crate::utils::{normalize_url, validate_url};
-use crate::database;
 
 /// Build a fallback video URL based on the channel's platform.
 /// Used when yt-dlp doesn't return a `url` or `webpage_url` field.
@@ -38,6 +34,7 @@ pub async fn get_channel_videos(
     url: String,
     limit: Option<u32>,
     start: Option<u32>,
+    request_id: Option<u32>,
     cookie_mode: Option<String>,
     cookie_browser: Option<String>,
     cookie_browser_profile: Option<String>,
@@ -58,16 +55,28 @@ pub async fn get_channel_videos(
             tokio::time::sleep(std::time::Duration::from_secs(2)).await;
         }
 
-        match fetch_channel_videos_once(&app, &url, limit, start, is_youtube,
-            cookie_mode.as_deref(), cookie_browser.as_deref(),
-            cookie_browser_profile.as_deref(), cookie_file_path.as_deref(),
+        match fetch_channel_videos_once(
+            &app,
+            &url,
+            limit,
+            start,
+            request_id,
+            is_youtube,
+            cookie_mode.as_deref(),
+            cookie_browser.as_deref(),
+            cookie_browser_profile.as_deref(),
+            cookie_file_path.as_deref(),
             proxy_url.as_deref(),
-        ).await {
+        )
+        .await
+        {
             Ok(entries) => return Ok(entries),
             Err(e) => {
                 last_error = e;
                 // Only retry for non-YouTube (Bilibili rate-limiting)
-                if is_youtube { break; }
+                if is_youtube {
+                    break;
+                }
             }
         }
     }
@@ -81,6 +90,7 @@ async fn fetch_channel_videos_once(
     url: &str,
     limit: Option<u32>,
     start: Option<u32>,
+    request_id: Option<u32>,
     is_youtube: bool,
     cookie_mode: Option<&str>,
     cookie_browser: Option<&str>,
@@ -91,7 +101,8 @@ async fn fetch_channel_videos_once(
     let mut args = vec![
         "--dump-json".to_string(),
         "--no-warnings".to_string(),
-        "--socket-timeout".to_string(), "30".to_string(),
+        "--socket-timeout".to_string(),
+        "30".to_string(),
     ];
 
     // Only use --flat-playlist for YouTube; other platforms (Bilibili, etc.)
@@ -164,10 +175,14 @@ async fn fetch_channel_videos_once(
                             let new_count = output.matches('\n').count() as u32;
                             if new_count > fetched_count {
                                 fetched_count = new_count;
-                                let _ = app.emit("channel-fetch-progress", serde_json::json!({
-                                    "fetched": fetched_count,
-                                    "limit": limit
-                                }));
+                                let _ = app.emit(
+                                    "channel-fetch-progress",
+                                    serde_json::json!({
+                                        "requestId": request_id,
+                                        "fetched": fetched_count,
+                                        "limit": limit
+                                    }),
+                                );
                             }
                         }
                         CommandEvent::Stderr(bytes) => {
@@ -181,7 +196,8 @@ async fn fetch_channel_videos_once(
                                 let detail = if stderr_output.is_empty() {
                                     "yt-dlp exited with error".to_string()
                                 } else {
-                                    stderr_output.lines()
+                                    stderr_output
+                                        .lines()
                                         .rev()
                                         .find(|l| !l.trim().is_empty())
                                         .unwrap_or("yt-dlp exited with error")
@@ -219,7 +235,9 @@ async fn fetch_channel_videos_once(
             .stderr(Stdio::piped());
         cmd.hide_window();
 
-        let output_result = cmd.output().await
+        let output_result = cmd
+            .output()
+            .await
             .map_err(|e| format!("Failed to run yt-dlp: {}", e))?;
 
         if !output_result.status.success() && output_result.stdout.is_empty() {
@@ -234,14 +252,25 @@ async fn fetch_channel_videos_once(
 
         String::from_utf8_lossy(&output_result.stdout).to_string()
     } else {
-        return Err(BackendError::new(crate::types::code::YTDLP_SYSTEM_NOT_FOUND, system_ytdlp_not_found_message()).to_wire_string());
+        return Err(BackendError::new(
+            crate::types::code::YTDLP_SYSTEM_NOT_FOUND,
+            system_ytdlp_not_found_message(),
+        )
+        .to_wire_string());
     };
 
-    let fetched_count = output.lines().filter(|line| !line.trim().is_empty()).count() as u32;
-    let _ = app.emit("channel-fetch-progress", serde_json::json!({
-        "fetched": fetched_count,
-        "limit": limit
-    }));
+    let fetched_count = output
+        .lines()
+        .filter(|line| !line.trim().is_empty())
+        .count() as u32;
+    let _ = app.emit(
+        "channel-fetch-progress",
+        serde_json::json!({
+            "requestId": request_id,
+            "fetched": fetched_count,
+            "limit": limit
+        }),
+    );
 
     let mut entries: Vec<PlaylistVideoEntry> = Vec::new();
 
@@ -252,21 +281,35 @@ async fn fetch_channel_videos_once(
         }
 
         if let Ok(json) = serde_json::from_str::<serde_json::Value>(line) {
-            let id = json.get("id").and_then(|v| v.as_str()).unwrap_or("").to_string();
+            let id = json
+                .get("id")
+                .and_then(|v| v.as_str())
+                .unwrap_or("")
+                .to_string();
 
             if id.is_empty() {
                 continue;
             }
 
-            let title = json.get("title").and_then(|v| v.as_str()).unwrap_or("Unknown").to_string();
-            let video_url = json.get("url")
+            let title = json
+                .get("title")
+                .and_then(|v| v.as_str())
+                .unwrap_or("Unknown")
+                .to_string();
+            let video_url = json
+                .get("url")
                 .or_else(|| json.get("webpage_url"))
                 .and_then(|v| v.as_str())
                 .map(|s| s.to_string())
                 .unwrap_or_else(|| build_fallback_video_url(url, &id));
 
-            let thumbnail = json.get("thumbnail")
-                .or_else(|| json.get("thumbnails").and_then(|t| t.as_array()).and_then(|arr| arr.first()))
+            let thumbnail = json
+                .get("thumbnail")
+                .or_else(|| {
+                    json.get("thumbnails")
+                        .and_then(|t| t.as_array())
+                        .and_then(|arr| arr.first())
+                })
                 .and_then(|v| {
                     if v.is_string() {
                         v.as_str().map(|s| s.to_string())
@@ -278,12 +321,14 @@ async fn fetch_channel_videos_once(
                 .map(|u| u.replace("http://", "https://"));
 
             let duration = json.get("duration").and_then(|v| v.as_f64());
-            let channel = json.get("channel")
+            let channel = json
+                .get("channel")
                 .or_else(|| json.get("uploader"))
                 .and_then(|v| v.as_str())
                 .map(|s| s.to_string());
 
-            let upload_date = json.get("upload_date")
+            let upload_date = json
+                .get("upload_date")
                 .and_then(|v| v.as_str())
                 .map(|s| s.to_string());
 
@@ -388,10 +433,12 @@ pub async fn get_channel_info(
 
     let mut args = vec![
         "-J".to_string(),
-        "--playlist-items".to_string(), "1".to_string(),
+        "--playlist-items".to_string(),
+        "1".to_string(),
         "--no-download".to_string(),
         "--no-warnings".to_string(),
-        "--socket-timeout".to_string(), "30".to_string(),
+        "--socket-timeout".to_string(),
+        "30".to_string(),
     ];
 
     // Only use --flat-playlist for YouTube; other platforms return
@@ -440,41 +487,52 @@ pub async fn get_channel_info(
         .map_err(|e| format!("Failed to parse channel info: {}", e))?;
 
     // For non-flat-playlist output, data may be inside entries[0]
-    let first_entry = json.get("entries")
+    let first_entry = json
+        .get("entries")
         .and_then(|e| e.as_array())
         .and_then(|arr| arr.first());
 
     // Extract channel name: top-level → entries[0] → fallback
-    let name = json.get("channel")
+    let name = json
+        .get("channel")
         .or_else(|| json.get("uploader"))
         .and_then(|v| v.as_str())
         .filter(|s| !s.is_empty())
         // Fallback: look inside entries[0]
         .or_else(|| {
-            first_entry
-                .and_then(|entry| {
-                    entry.get("channel")
-                        .or_else(|| entry.get("uploader"))
-                        .and_then(|v| v.as_str())
-                        .filter(|s| !s.is_empty())
-                })
+            first_entry.and_then(|entry| {
+                entry
+                    .get("channel")
+                    .or_else(|| entry.get("uploader"))
+                    .and_then(|v| v.as_str())
+                    .filter(|s| !s.is_empty())
+            })
         })
         // Last resort: top-level title
-        .or_else(|| json.get("title").and_then(|v| v.as_str()).filter(|s| !s.is_empty()))
+        .or_else(|| {
+            json.get("title")
+                .and_then(|v| v.as_str())
+                .filter(|s| !s.is_empty())
+        })
         .unwrap_or("Channel")
         .to_string();
 
     // Extract avatar URL from thumbnails array
     // YouTube-specific: "avatar_uncropped" > 900x900 > yt3.googleusercontent.com
     // Generic fallback: largest thumbnail or first available
-    let avatar_url = json.get("thumbnails")
+    let avatar_url = json
+        .get("thumbnails")
         .and_then(|t| t.as_array())
         .and_then(|thumbnails| {
             // First: look for avatar_uncropped (YouTube)
-            if let Some(avatar) = thumbnails.iter().find(|t| {
-                t.get("id").and_then(|v| v.as_str()) == Some("avatar_uncropped")
-            }) {
-                return avatar.get("url").and_then(|v| v.as_str()).map(|s| s.to_string());
+            if let Some(avatar) = thumbnails
+                .iter()
+                .find(|t| t.get("id").and_then(|v| v.as_str()) == Some("avatar_uncropped"))
+            {
+                return avatar
+                    .get("url")
+                    .and_then(|v| v.as_str())
+                    .map(|s| s.to_string());
             }
 
             // Second: look for 900x900 (YouTube channel avatar)
@@ -482,7 +540,10 @@ pub async fn get_channel_info(
                 t.get("width").and_then(|v| v.as_i64()) == Some(900)
                     && t.get("height").and_then(|v| v.as_i64()) == Some(900)
             }) {
-                return avatar.get("url").and_then(|v| v.as_str()).map(|s| s.to_string());
+                return avatar
+                    .get("url")
+                    .and_then(|v| v.as_str())
+                    .map(|s| s.to_string());
             }
 
             // Third: look for any yt3.googleusercontent.com URL (YouTube avatar host)
@@ -495,7 +556,8 @@ pub async fn get_channel_info(
             }
 
             // Generic fallback: pick the largest thumbnail by width, or the last one
-            let best = thumbnails.iter()
+            let best = thumbnails
+                .iter()
                 .filter_map(|t| {
                     let url = t.get("url").and_then(|v| v.as_str())?;
                     let w = t.get("width").and_then(|v| v.as_i64()).unwrap_or(0);
@@ -510,7 +572,8 @@ pub async fn get_channel_info(
                 .and_then(|entry| entry.get("thumbnails"))
                 .and_then(|t| t.as_array())
                 .and_then(|thumbnails| {
-                    let best = thumbnails.iter()
+                    let best = thumbnails
+                        .iter()
                         .filter_map(|t| {
                             let url = t.get("url").and_then(|v| v.as_str())?;
                             let w = t.get("width").and_then(|v| v.as_i64()).unwrap_or(0);
@@ -556,7 +619,16 @@ pub async fn follow_channel(
     let download_format = download_format.unwrap_or_else(|| "mp4".to_string());
     let download_video_codec = download_video_codec.unwrap_or_else(|| "h264".to_string());
     let download_audio_bitrate = download_audio_bitrate.unwrap_or_else(|| "192".to_string());
-    database::follow_channel_db(url, name, thumbnail, platform, download_quality, download_format, download_video_codec, download_audio_bitrate)
+    database::follow_channel_db(
+        url,
+        name,
+        thumbnail,
+        platform,
+        download_quality,
+        download_format,
+        download_video_codec,
+        download_audio_bitrate,
+    )
 }
 
 /// Unfollow a channel
@@ -626,10 +698,7 @@ pub async fn get_saved_channel_videos(
 
 /// Update a channel video's status
 #[tauri::command]
-pub async fn update_channel_video_status(
-    id: String,
-    status: String,
-) -> Result<(), String> {
+pub async fn update_channel_video_status(id: String, status: String) -> Result<(), String> {
     database::update_channel_video_status_db(id, status)
 }
 
@@ -648,9 +717,7 @@ pub async fn update_channel_video_status_by_video_id(
 
 /// Get count of new (unwatched) videos across all channels
 #[tauri::command]
-pub async fn get_new_videos_count(
-    channel_id: Option<String>,
-) -> Result<i64, String> {
+pub async fn get_new_videos_count(channel_id: Option<String>) -> Result<i64, String> {
     database::get_new_videos_count_db(channel_id)
 }
 
@@ -682,7 +749,7 @@ pub async fn set_polling_network_config(
     cookie_file_path: Option<String>,
     proxy_url: Option<String>,
 ) -> Result<(), String> {
-    use crate::services::polling::{PollingNetworkConfig, set_network_config};
+    use crate::services::polling::{set_network_config, PollingNetworkConfig};
 
     set_network_config(PollingNetworkConfig {
         cookie_mode,

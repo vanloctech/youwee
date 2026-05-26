@@ -1,6 +1,6 @@
 [package]
 name = "youwee"
-version = "0.13.0"
+version = "0.14.1"
 description = "Youwee - Modern YouTube Video Downloader"
 authors = ["locnguyen"]
 license = "MIT"
@@ -44,3 +44,5 @@ chrono = "0.4"
 tauri-plugin-opener = "2.5.3"
 tauri-plugin-notification = "2"
 image = { version = "0.25", default-features = false, features = ["png", "jpeg", "webp", "gif"] }
+base64 = "0.22"
+ed25519-dalek = "2"

@@ -46,10 +46,10 @@
     }
   },
   "urlInput": {
-    "single": "Single",
-    "singleHint": "Add one gallery URL",
-    "multiple": "Batch",
-    "multipleHint": "Add multiple URLs at once",
+    "single": "Único",
+    "singleHint": "Cole uma única URL de galeria",
+    "multiple": "Múltiplos",
+    "multipleHint": "Adicione várias URLs de galeria (uma por linha)",
     "paste": "Paste",
     "import": "Import",
     "detectedMultiple": "{{count}} URLs detected",
@@ -57,6 +57,6 @@
     "placeholderMultiple": "One URL per line. Lines starting with # are ignored.",
     "urlCount": "{{count}} URL",
     "urlCount_plural": "{{count}} URLs",
-    "addToQueue": "Add to queue"
+    "addToQueue": "Adicionar"
   }
 }

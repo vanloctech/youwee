@@ -1,7 +1,24 @@
 use serde::{Deserialize, Serialize};
 
+#[derive(Clone, Serialize, Deserialize, Debug, Default)]
+#[serde(rename_all = "camelCase")]
+pub struct HistoryTag {
+    pub id: String,
+    pub name: String,
+    pub item_count: Option<i64>,
+}
+
+#[derive(Clone, Serialize, Deserialize, Debug, Default)]
+#[serde(rename_all = "camelCase")]
+pub struct HistoryCollection {
+    pub id: String,
+    pub name: String,
+    pub color: Option<String>,
+    pub item_count: Option<i64>,
+}
+
 /// History entry structure
-#[derive(Clone, Serialize, Deserialize, Debug)]
+#[derive(Clone, Serialize, Deserialize, Debug, Default)]
 pub struct HistoryEntry {
     pub id: String,
     pub url: String,
@@ -17,6 +34,8 @@ pub struct HistoryEntry {
     pub file_exists: bool,
     pub summary: Option<String>,    // AI-generated summary
     pub time_range: Option<String>, // Time range cut (e.g. "00:10-01:00")
+    pub tags: Vec<HistoryTag>,
+    pub collections: Vec<HistoryCollection>,
 }
 
 #[derive(Clone, Serialize, Deserialize, Debug, PartialEq, Eq, Default)]
@@ -37,6 +56,14 @@ pub enum HistoryMediaType {
     Audio,
 }
 
+#[derive(Clone, Serialize, Deserialize, Debug, PartialEq, Eq, Default)]
+#[serde(rename_all = "lowercase")]
+pub enum HistoryFilterMatchMode {
+    #[default]
+    Any,
+    All,
+}
+
 #[derive(Clone, Serialize, Deserialize, Debug, Default)]
 #[serde(rename_all = "camelCase")]
 pub struct HistoryAdvancedFilters {
@@ -45,4 +72,7 @@ pub struct HistoryAdvancedFilters {
     pub downloaded_at_to: Option<i64>,
     pub formats: Option<Vec<String>>,
     pub qualities: Option<Vec<String>>,
+    pub tag_ids: Option<Vec<String>>,
+    pub collection_ids: Option<Vec<String>>,
+    pub match_mode: Option<HistoryFilterMatchMode>,
 }

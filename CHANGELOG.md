@@ -7,8 +7,43 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.14.1] - 2026-05-24
+
+### Changed
+- **Plugin workflow guidance and permissions flow** - Refined plugin import, permission approval, workspace guide, and configuration UI so plugin setup, workflow assignment, and plugin guides are clearer inside Settings
+- **Plugin authoring flexibility** - Updated workspace and SDK integration to support flexible Lucide plugin icons and a cleaner Deno runtime test flow for plugin authors
+
+### Fixed
+- **Plugin runtime logs and output summaries** - Reduced duplicated plugin log noise, skipped storing raw result protocol output, and highlighted follow-up output file paths more clearly in post-processing step logs
+- **Plugin guide rendering and localized docs** - Fixed guide dialog overflow and preserved localized `README.<locale>.md` files for installed plugins
+- **Plugin configuration polish** - Improved multi-select configuration controls, validation timing, and plugin enable/import prompts to better match the rest of the app UI
+
+## [0.14.0] - 2026-05-24
+
 ### Added
-- **LM Studio AI provider** - Added LM Studio as a local OpenAI-compatible AI provider with a configurable local endpoint and no API key requirement
+- **Library tagging and collections** - Added free-form tags and virtual collections for Library items, including item-level assignment, quick chip filters, collection management, and advanced filtering by tags or collections
+- **Signed plugin system and SDK workflow** - Added signed `.ywp` plugins with workspace attach/debug flow, typed configuration fields, localized plugin guides, permission review, workflow assignment, logs, and `youwee-sdk` packaging/signing support
+
+### Changed
+- **Gallery URL input alignment** - Updated the Gallery input to match the YouTube single/multiple flow more closely, including the Add button style, batch layout, URL hints, and language copy across locales
+
+### Fixed
+- **Arch Linux startup crash with GBM EGL display** - Added a Linux WebKitGTK fallback that disables the GBM renderer by default to avoid startup aborts on some Arch-based systems
+
+## [0.13.3] - 2026-05-14
+
+### Added
+
+### Changed
+
+### Fixed
+- **Followed channel video fetching loop** - Fixed a pagination regression that could leave followed channels stuck in a continuous fetching cycle and prevent loading channel video lists reliably
+- **Channel fetch progress race** - Channel browse progress now ignores stale events from previous requests when switching channels or refetching quickly
+- **Load More inflating new-video counts** - Older videos loaded from additional channel pages are no longer saved as new items, preventing incorrect new-video badges and tray counts
+
+## [0.13.2] - 2026-05-10
+
+### Added
 - **Channel video pagination with Load More** - Channels now load the first 100 videos by default and let you fetch additional batches on demand from the browse and detail views
 - **Thai language support** - Added full Thai localization across the app, including UI screens, settings, subtitle tools, download flows, and language selectors
 - **Arabic language support** - Added full Arabic localization across the app, including UI screens, settings, subtitle tools, download flows, plus RTL document direction handling
@@ -16,9 +51,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 ### Fixed
-- **4K WebM post-processing** - Fixed WebM downloads selecting MP4/H.264-compatible streams that could make FFmpeg fail during post-processing conversion
 - **Channel browse capped at 50 videos** - Fixed channel and playlist browsing incorrectly stopping at 50 videos when more items were available
 - **Cookie error dialog classification** - Fixed fresh-login cookie requirements being shown as a browser DB lock error, and now route DB-lock vs authenticated-cookie issues to different dialogs
+
+## [0.13.1] - 2026-04-26
+
+### Added
+- **LM Studio AI provider** - Added LM Studio as a local OpenAI-compatible AI provider with a configurable local endpoint and no API key requirement
+
+### Changed
+
+### Fixed
+- **4K WebM post-processing** - Fixed WebM downloads selecting MP4/H.264-compatible streams that could make FFmpeg fail during post-processing conversion
 
 ## [0.13.0] - 2026-04-15
 

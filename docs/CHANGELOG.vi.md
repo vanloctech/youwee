@@ -7,8 +7,43 @@ và dự án tuân theo [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+## [0.14.1] - 2026-05-24
+
+### Thay đổi
+- **Luồng hướng dẫn plugin và cấp quyền** - Tinh chỉnh luồng import plugin, duyệt quyền, hướng dẫn workspace, và giao diện cấu hình để việc cài plugin, gán workflow, và đọc guide trong Settings rõ ràng hơn
+- **Tăng độ linh hoạt cho plugin author** - Cập nhật tích hợp workspace và SDK để hỗ trợ icon Lucide linh hoạt hơn và luồng test Deno gọn hơn cho người viết plugin
+
+### Sửa lỗi
+- **Log runtime plugin và tóm tắt output** - Giảm log plugin bị lặp, bỏ lưu raw protocol output của kết quả plugin, và hiển thị rõ hơn các đường dẫn file đầu ra sẽ được dùng cho step tiếp theo trong log post-processing
+- **Hiển thị guide plugin và tài liệu đa ngôn ngữ** - Sửa lỗi dialog guide bị tràn nội dung và giữ lại các file `README.<locale>.md` cho plugin đã cài
+- **Hoàn thiện giao diện cấu hình plugin** - Cải thiện control multi-select, thời điểm hiển thị validation, và các prompt khi import/bật plugin để đồng bộ hơn với giao diện chung của ứng dụng
+
+## [0.14.0] - 2026-05-24
+
 ### Thêm mới
-- **Nhà cung cấp AI LM Studio** - Thêm LM Studio làm nhà cung cấp AI nội bộ tương thích OpenAI, có endpoint local tùy chỉnh và không yêu cầu khóa API
+- **Tag và bộ sưu tập cho Thư viện** - Thêm tag tự do và bộ sưu tập ảo cho các mục trong Thư viện, bao gồm gán ngay trên từng item, filter nhanh bằng chip, quản lý bộ sưu tập và lọc nâng cao theo tag hoặc bộ sưu tập
+- **Hệ thống plugin có ký và luồng SDK** - Thêm plugin `.ywp` có chữ ký với luồng attach/debug workspace, field cấu hình có kiểu dữ liệu rõ ràng, hướng dẫn plugin đa ngôn ngữ, duyệt quyền, gán vào workflow, xem log, và hỗ trợ đóng gói/ký bằng `youwee-sdk`
+
+### Thay đổi
+- **Đồng bộ ô nhập URL của Gallery** - Cập nhật ô nhập Gallery để bám sát hơn luồng single/multiple của YouTube, gồm style nút Add, layout batch, hint URL và wording đa ngôn ngữ
+
+### Sửa lỗi
+- **Crash khởi động trên Arch Linux với GBM EGL display** - Thêm fallback cho WebKitGTK trên Linux, mặc định tắt GBM renderer để tránh app bị abort khi khởi động trên một số hệ Arch-based
+
+## [0.13.3] - 2026-05-14
+
+### Thêm mới
+
+### Thay đổi
+
+### Sửa lỗi
+- **Vòng lặp tải video ở kênh đã theo dõi** - Sửa regression từ tính năng phân trang khiến kênh đã theo dõi có thể bị kẹt trong trạng thái tải liên tục và không lấy danh sách video ổn định
+- **Race condition ở progress khi tải kênh** - Progress duyệt kênh giờ bỏ qua event cũ từ request trước khi người dùng đổi kênh hoặc bấm tải lại liên tục
+- **Tải thêm làm tăng sai số video mới** - Các video cũ được nạp từ những trang bổ sung của kênh sẽ không còn bị lưu là video mới, tránh sai badge và tray count
+
+## [0.13.2] - 2026-05-10
+
+### Thêm mới
 - **Phân trang video kênh với Tải thêm** - Trang Kênh giờ tải mặc định 100 video đầu tiên và cho phép tải thêm theo từng đợt trong cả màn hình duyệt và màn hình chi tiết
 - **Hỗ trợ tiếng Thái** - Bổ sung bản địa hóa đầy đủ tiếng Thái cho toàn bộ ứng dụng, bao gồm màn hình giao diện, cài đặt, công cụ phụ đề, luồng tải xuống và bộ chọn ngôn ngữ
 - **Hỗ trợ tiếng Ả Rập** - Bổ sung bản địa hóa đầy đủ tiếng Ả Rập cho toàn bộ ứng dụng, bao gồm màn hình giao diện, cài đặt, công cụ phụ đề, luồng tải xuống, đồng thời thêm xử lý hướng chữ RTL
@@ -16,9 +51,18 @@ và dự án tuân theo [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ### Thay đổi
 
 ### Sửa lỗi
-- **Hậu xử lý WebM 4K** - Sửa lỗi tải WebM có thể chọn nhầm stream tương thích MP4/H.264 khiến FFmpeg thất bại ở bước post-processing conversion
 - **Giới hạn duyệt kênh ở 50 video** - Sửa lỗi duyệt kênh và playlist bị dừng sai ở 50 video dù vẫn còn thêm video
 - **Phân loại sai dialog lỗi cookie** - Sửa lỗi yêu cầu cookie đăng nhập mới bị hiển thị nhầm như lỗi khóa DB cookie của trình duyệt; giờ app tách riêng dialog cho lỗi DB lock và lỗi cần cookie xác thực
+
+## [0.13.1] - 2026-04-26
+
+### Thêm mới
+- **Nhà cung cấp AI LM Studio** - Thêm LM Studio làm nhà cung cấp AI nội bộ tương thích OpenAI, có endpoint local tùy chỉnh và không yêu cầu khóa API
+
+### Thay đổi
+
+### Sửa lỗi
+- **Hậu xử lý WebM 4K** - Sửa lỗi tải WebM có thể chọn nhầm stream tương thích MP4/H.264 khiến FFmpeg thất bại ở bước post-processing conversion
 
 ## [0.13.0] - 2026-04-15
 

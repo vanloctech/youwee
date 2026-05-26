@@ -237,6 +237,8 @@
       "dateTo": "إلى",
       "formats": "الصيغ",
       "qualities": "الجودات",
+      "tags": "الوسوم",
+      "collections": "المجموعات",
       "activeFilters": "{{count}} فلتر نشط",
       "clearFilters": "مسح الفلاتر",
       "refresh": "تحديث",
@@ -265,6 +267,7 @@
       "renameCancel": "إلغاء",
       "renameFailed": "فشل إعادة تسمية الملف",
       "redownload": "إعادة التنزيل",
+      "manageTagsCollections": "إدارة الوسوم والمجموعات",
       "openUrl": "فتح الرابط",
       "copy": "نسخ",
       "copied": "تم النسخ",
@@ -279,6 +282,41 @@
         "twitter": "Twitter",
         "bilibili": "Bilibili",
         "other": "أخرى"
+      }
+    },
+    "collections": {
+      "title": "المجموعات",
+      "manage": "إدارة المجموعات",
+      "assignHint": "استخدم المجموعات لتجميع الفيديوهات في مجلدات افتراضية.",
+      "managerTitle": "مدير المجموعات",
+      "managerDescription": "أنشئ أو أعد تسمية أو احذف مجموعات افتراضية لمكتبتك.",
+      "newPlaceholder": "اسم مجموعة جديدة",
+      "create": "إنشاء",
+      "rename": "إعادة تسمية",
+      "delete": "حذف",
+      "empty": "لا توجد مجموعات بعد",
+      "itemCount": "{{count}} عناصر",
+      "deleteConfirm": "حذف المجموعة \"{{name}}\"؟",
+      "errors": {
+        "create": "فشل إنشاء المجموعة",
+        "rename": "فشل إعادة تسمية المجموعة",
+        "delete": "فشل حذف المجموعة"
+      }
+    },
+    "tagging": {
+      "dialogTitle": "إدارة الوسوم والمجموعات",
+      "dialogDescription": "نظّم هذا العنصر في المكتبة باستخدام وسوم حرة ومجموعات افتراضية.",
+      "tags": "الوسوم",
+      "tagsHint": "اكتب وسمًا ثم اضغط Enter لإنشائه أو إسناده.",
+      "tagPlaceholder": "أضف وسمًا مثل #دراسة أو #ترفيه",
+      "addTag": "إضافة وسم",
+      "noTags": "لم يتم اختيار أي وسوم",
+      "existingTags": "الوسوم الحالية",
+      "noTagsYet": "لا توجد وسوم بعد",
+      "cancel": "إلغاء",
+      "save": "حفظ",
+      "errors": {
+        "save": "فشل حفظ الوسوم أو المجموعات"
       }
     }
   },

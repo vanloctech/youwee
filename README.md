@@ -2,11 +2,13 @@
 
 <div align="center">
 
-  [![English](https://img.shields.io/badge/lang-English-blue)](README.md)
-  [![Tiếng Việt](https://img.shields.io/badge/lang-Tiếng_Việt-red)](docs/README.vi.md)
-  [![简体中文](https://img.shields.io/badge/lang-简体中文-green)](docs/README.zh-CN.md)
-  [![Français](https://img.shields.io/badge/lang-Français-0055A4)](docs/README.fr.md)
-  [![Русский](https://img.shields.io/badge/lang-Русский-1F5FBF)](docs/README.ru.md)
+  ![English](https://img.shields.io/badge/lang-English-blue)
+  ![Tiếng Việt](https://img.shields.io/badge/lang-Tiếng_Việt-red)
+  ![简体中文](https://img.shields.io/badge/lang-简体中文-green)
+  ![Français](https://img.shields.io/badge/lang-Français-0055A4)
+  ![Русский](https://img.shields.io/badge/lang-Русский-1F5FBF)
+  ![العربية](https://img.shields.io/badge/lang-%D8%A7%D9%84%D8%B9%D8%B1%D8%A8%D9%8A%D8%A9-0A8F6A)
+  ![ไทย](https://img.shields.io/badge/lang-%E0%B9%84%E0%B8%97%E0%B8%A2-7B1FA2)
   [![Vote for next language](https://img.shields.io/badge/Vote-Next_Language-orange?logo=github)](https://github.com/vanloctech/youwee/discussions/18)
 
   <img src="src-tauri/icons/icon.png" alt="Youwee Logo" width="128" height="128">
@@ -18,6 +20,8 @@
   [![Reddit](https://img.shields.io/badge/Reddit-r%2Fyouwee-FF4500?logo=reddit&logoColor=white)](https://www.reddit.com/r/youwee)
   [![Tauri](https://img.shields.io/badge/Tauri-2.0-FFC131?logo=tauri&logoColor=white)](https://tauri.app/)
   [![React](https://img.shields.io/badge/React-19-61DAFB?logo=react&logoColor=white)](https://react.dev/)
+
+<a href="https://www.producthunt.com/products/youwee/reviews/new?utm_source=badge-product_review&utm_medium=badge&utm_source=badge-youwee" target="_blank"><img src="https://api.producthunt.com/widgets/embed-image/v1/product_review.svg?product_id=1154224&theme=light" alt="Youwee - A modern YouTube downloader @yt-dlp GUI for cross-platform | Product Hunt" width="250" height="54"></a>
 </div>
 
 ---
@@ -26,6 +30,7 @@
 
 - **Video Downloads** — YouTube, TikTok, Facebook, Instagram, Bilibili, Youku, and 1800+ sites
 - **Browser Extension Bridge** — Chromium + Firefox extension with floating button, media/quality picker, and one-click `Download now` / `Add to queue` send to Youwee app
+- **Plugins & Workflow Automation** — Install signed plugins, configure custom fields, assign them to download workflows, and extend Youwee with notifications, uploads, and post-download automations
 - **Channel Follow** — Follow YouTube, Bilibili & Youku channels, get notified of new videos, auto-download, and manage from system tray
 - **Metadata Fetcher** — Download video info, descriptions, comments, and thumbnails without the video
 - **Live Stream Support** — Download live streams with dedicated toggle
@@ -105,6 +110,13 @@
 - Popup works on any valid HTTP/HTTPS tab
 - Guide: [docs/browser-extension.md](docs/browser-extension.md)
 
+### Plugins
+
+- Install signed `.ywp` plugins to extend post-download workflows with custom actions such as notifications, uploads, and third-party integrations
+- Create a plugin workspace from Youwee, attach it for live debugging, then build and sign the final plugin package with `youwee-sdk`
+- Plugins can provide localized guides, typed configuration fields, requested permissions, and trigger-based workflow steps inside the app
+- SDK guide: [sdk-js/README.md](sdk-js/README.md)
+
 ### Build from Source
 
 #### Prerequisites
@@ -181,7 +193,3 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
     src="https://api.star-history.com/svg?repos=vanloctech/youwee&type=Date"
   />
 </picture>
-
-<div align="center">
-  Made with ❤️ by VietNam
-</div>

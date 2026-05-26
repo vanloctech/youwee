@@ -113,14 +113,12 @@ pub async fn download_gallery(
     let url = normalize_url(&url);
 
     let Some(binary_path) = get_system_gallerydl_path() else {
-        return Err(
-            BackendError::new(
-                crate::types::code::GALLERYDL_NOT_FOUND,
-                system_gallerydl_not_found_message(),
-            )
-            .with_retryable(false)
-            .to_wire_string(),
-        );
+        return Err(BackendError::new(
+            crate::types::code::GALLERYDL_NOT_FOUND,
+            system_gallerydl_not_found_message(),
+        )
+        .with_retryable(false)
+        .to_wire_string());
     };
 
     let sanitized_path = sanitize_output_path(&output_path)

@@ -46,10 +46,10 @@
     }
   },
   "urlInput": {
-    "single": "Single",
-    "singleHint": "Add one gallery URL",
-    "multiple": "Batch",
-    "multipleHint": "Add multiple URLs at once",
+    "single": "Одиночный",
+    "singleHint": "Вставьте один URL галереи",
+    "multiple": "Несколько",
+    "multipleHint": "Добавьте несколько URL галереи (по одному на строку)",
     "paste": "Paste",
     "import": "Import",
     "detectedMultiple": "{{count}} URLs detected",
@@ -57,6 +57,6 @@
     "placeholderMultiple": "One URL per line. Lines starting with # are ignored.",
     "urlCount": "{{count}} URL",
     "urlCount_plural": "{{count}} URLs",
-    "addToQueue": "Add to queue"
+    "addToQueue": "Добавить"
   }
 }
