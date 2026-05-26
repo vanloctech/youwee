@@ -1,6 +1,7 @@
 import { invoke } from '@tauri-apps/api/core';
 import {
   AlertCircle,
+  ArrowRight,
   Check,
   ChevronDown,
   ChevronUp,
@@ -33,6 +34,10 @@ import { localizeUnknownError } from '@/lib/backend-error';
 import { LANGUAGE_OPTIONS, type SummaryStyle } from '@/lib/types';
 import { cn } from '@/lib/utils';
 
+interface SummaryPageProps {
+  onNavigateToSettings?: (section?: string) => void;
+}
+
 interface VideoInfo {
   url: string;
   title: string;
@@ -49,10 +54,16 @@ function isYouTubeUrl(url: string) {
   return /^(https?:\/\/)?(www\.)?(youtube\.com|youtu\.be)\/.+/.test(url);
 }
 
-export function SummaryPage() {
+function providerRequiresApiKey(provider: string) {
+  return provider !== 'ollama' && provider !== 'lmstudio';
+}
+
+export function SummaryPage({ onNavigateToSettings }: SummaryPageProps) {
   const { t } = useTranslation('pages');
   const ai = useAI();
   const { cookieSettings, getProxyUrl } = useDownload();
+  const requiresApiKey = providerRequiresApiKey(ai.config.provider);
+  const missingSummaryConfig = !ai.config.enabled || (requiresApiKey && !ai.config.api_key);
 
   // URL input
   const [url, setUrl] = useState('');
@@ -93,7 +104,7 @@ export function SummaryPage() {
       return;
     }
 
-    if (!ai.config.api_key) {
+    if (requiresApiKey && !ai.config.api_key) {
       setError(t('summary.errors.noApiKey'));
       return;
     }
@@ -183,6 +194,7 @@ export function SummaryPage() {
   }, [
     url,
     ai.config,
+    requiresApiKey,
     summaryStyle,
     summaryLanguage,
     transcriptLanguages,
@@ -280,7 +292,24 @@ export function SummaryPage() {
       {/* Header */}
       <header className="flex-shrink-0 flex items-center justify-between h-12 sm:h-14 px-4 sm:px-6">
         <h1 className="text-base sm:text-lg font-semibold">{t('summary.title')}</h1>
-        <ThemePicker />
+        <div className="flex items-center gap-2">
+          {onNavigateToSettings && (
+            <button
+              type="button"
+              onClick={() => onNavigateToSettings('ai')}
+              className={cn(
+                'flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium',
+                'text-muted-foreground hover:text-foreground hover:bg-muted/50',
+                'transition-all duration-200',
+              )}
+              title={t('summary.configureAI')}
+            >
+              <Settings2 className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">{t('summary.aiSettings')}</span>
+            </button>
+          )}
+          <ThemePicker />
+        </div>
       </header>
 
       {/* Subtle divider */}
@@ -493,7 +522,23 @@ export function SummaryPage() {
         {error && (
           <div className="flex items-start gap-2 p-3 rounded-lg bg-destructive/10 border border-destructive/20 text-destructive">
             <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5" />
-            <p className="text-sm">{error}</p>
+            <div className="flex-1 flex items-center justify-between gap-3">
+              <p className="text-sm">{error}</p>
+              {missingSummaryConfig && onNavigateToSettings && (
+                <button
+                  type="button"
+                  onClick={() => onNavigateToSettings('ai')}
+                  className={cn(
+                    'flex-shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium',
+                    'bg-primary text-primary-foreground hover:bg-primary/90',
+                    'transition-colors',
+                  )}
+                >
+                  {t('summary.goToSettings')}
+                  <ArrowRight className="w-3 h-3" />
+                </button>
+              )}
+            </div>
           </div>
         )}
 
@@ -606,6 +651,38 @@ export function SummaryPage() {
             <p className="text-sm text-muted-foreground max-w-md">
               {t('summary.emptyDescription')}
             </p>
+
+            {/* AI not configured banner */}
+            {missingSummaryConfig && onNavigateToSettings && (
+              <div className="mt-6 max-w-sm w-full">
+                <div className={cn('relative overflow-hidden rounded-xl p-4', 'bg-primary/5')}>
+                  <div className="text-center">
+                    <p className="text-sm font-medium text-foreground">
+                      {!ai.config.enabled
+                        ? t('summary.aiNotEnabledTitle')
+                        : t('summary.apiKeyMissingTitle')}
+                    </p>
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      {!ai.config.enabled
+                        ? t('summary.aiNotEnabledHint')
+                        : t('summary.apiKeyMissingHint')}
+                    </p>
+                    <button
+                      type="button"
+                      onClick={() => onNavigateToSettings('ai')}
+                      className={cn(
+                        'mt-2.5 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium',
+                        'bg-primary/10 text-primary',
+                        'hover:bg-primary/20 transition-colors',
+                      )}
+                    >
+                      {t('summary.enableAI')}
+                      <ArrowRight className="w-3 h-3" />
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         )}
       </div>

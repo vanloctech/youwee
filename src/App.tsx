@@ -97,6 +97,11 @@ function AppContent() {
   const pluginRuntimeNameRef = useRef(new Map<string, string>());
   const [pluginToasts, setPluginToasts] = useState<PluginToastState[]>([]);
 
+  const openSettingsPage = useCallback((section: SettingsSectionId = 'general') => {
+    setSettingsInitialSection(section);
+    setCurrentPage('settings');
+  }, []);
+
   useEffect(() => {
     const locale = i18n.resolvedLanguage || i18n.language || 'en';
     const direction =
@@ -262,39 +267,36 @@ function AppContent() {
   // Check app updates from system tray action
   useEffect(() => {
     const unlisten = listen('tray-check-update', () => {
-      setCurrentPage('settings');
-      setSettingsInitialSection('about');
+      openSettingsPage('about');
       void updater.checkForUpdate();
     });
 
     return () => {
       unlisten.then((fn) => fn());
     };
-  }, [updater.checkForUpdate]);
+  }, [openSettingsPage, updater.checkForUpdate]);
 
   // Open settings page from system tray action
   useEffect(() => {
     const unlisten = listen('tray-open-settings', () => {
-      setCurrentPage('settings');
-      setSettingsInitialSection('general');
+      openSettingsPage('general');
     });
 
     return () => {
       unlisten.then((fn) => fn());
     };
-  }, []);
+  }, [openSettingsPage]);
 
   // Open extension section from system tray action
   useEffect(() => {
     const unlisten = listen('tray-open-extension', () => {
-      setCurrentPage('settings');
-      setSettingsInitialSection('extension');
+      openSettingsPage('extension');
     });
 
     return () => {
       unlisten.then((fn) => fn());
     };
-  }, []);
+  }, [openSettingsPage]);
 
   // Show desktop notifications when plugins start / finish / fail
   useEffect(() => {
@@ -585,16 +587,22 @@ function AppContent() {
     <>
       <MainLayout currentPage={currentPage} onPageChange={setCurrentPage}>
         {currentPage === 'youtube' && (
-          <DownloadPage onNavigateToSettings={() => setCurrentPage('settings')} />
+          <DownloadPage onNavigateToSettings={() => openSettingsPage('general')} />
         )}
         {currentPage === 'universal' && (
-          <UniversalPage onNavigateToSettings={() => setCurrentPage('settings')} />
+          <UniversalPage onNavigateToSettings={() => openSettingsPage('general')} />
         )}
         {currentPage === 'gallery' && (
-          <GalleryPage onNavigateToSettings={() => setCurrentPage('settings')} />
+          <GalleryPage onNavigateToSettings={() => openSettingsPage('general')} />
         )}
         {currentPage === 'channels' && <ChannelsPage />}
-        {currentPage === 'summary' && <SummaryPage />}
+        {currentPage === 'summary' && (
+          <SummaryPage
+            onNavigateToSettings={(section) => {
+              openSettingsPage(section === 'ai' ? 'ai' : 'general');
+            }}
+          />
+        )}
         {currentPage === 'processing' && (
           <ErrorBoundary
             fallbackTitle="Processing Error"
