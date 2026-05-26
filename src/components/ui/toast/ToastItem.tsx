@@ -44,6 +44,7 @@ export function ToastItem({ toast, onDismiss, onPause, onResume }: ToastItemProp
   const { t } = useTranslation(['download', 'settings']);
   const { icon, badgeClassName } = getVariantStyles(toast.variant);
   const pluginRun = toast.layout === 'plugin-run' ? toast.pluginRun : null;
+  const hasPermissionError = pluginRun?.status === 'error' && Boolean(pluginRun.errorKind);
   const mediaLabel = pluginRun
     ? pluginRun.mediaTitle || pluginRun.filename || pluginRun.mediaUrl
     : null;
@@ -52,7 +53,9 @@ export function ToastItem({ toast, onDismiss, onPause, onResume }: ToastItemProp
       ? t('download.pluginToastRunning', { ns: 'settings' })
       : pluginRun.status === 'success'
         ? t('download.pluginToastSuccess', { ns: 'settings' })
-        : t('download.pluginToastError', { ns: 'settings' })
+        : hasPermissionError
+          ? t('download.pluginToastPermissionError', { ns: 'settings' })
+          : t('download.pluginToastError', { ns: 'settings' })
     : null;
   const title = pluginRun
     ? pluginRun.pluginName ||
@@ -108,6 +111,34 @@ export function ToastItem({ toast, onDismiss, onPause, onResume }: ToastItemProp
 
           {toast.message ? (
             <p className="break-words text-xs leading-5 text-muted-foreground">{toast.message}</p>
+          ) : null}
+
+          {hasPermissionError ? (
+            <div className="rounded-xl bg-red-500/10 px-2.5 py-2 text-xs">
+              <p className="font-medium text-red-600 dark:text-red-400">
+                {t('download.pluginToastPermissionNeeded', { ns: 'settings' })}
+              </p>
+              <p className="mt-1 break-words text-red-700/80 dark:text-red-300/80">
+                {t('download.pluginToastPermissionScope', {
+                  ns: 'settings',
+                  permission: pluginRun?.errorKind ?? 'runtime',
+                  resource:
+                    pluginRun?.errorResource ||
+                    t('download.pluginToastPermissionUnknownResource', { ns: 'settings' }),
+                })}
+              </p>
+            </div>
+          ) : null}
+
+          {hasPermissionError && pluginRun?.details ? (
+            <details className="rounded-xl bg-muted/60 px-2.5 py-2 text-xs text-muted-foreground">
+              <summary className="cursor-pointer select-none font-medium text-foreground">
+                {t('download.pluginToastTechnicalDetails', { ns: 'settings' })}
+              </summary>
+              <pre className="mt-2 max-h-28 overflow-auto whitespace-pre-wrap break-words font-mono text-[11px] leading-4">
+                {pluginRun.details}
+              </pre>
+            </details>
           ) : null}
 
           {toast.action ? (

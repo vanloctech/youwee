@@ -4,6 +4,14 @@ use tokio::io::{AsyncRead, AsyncReadExt};
 use crate::database::add_log_internal;
 use crate::types::{PluginExecutionOutputEvent, PluginExecutionResult};
 
+#[derive(Debug, Clone)]
+pub(super) struct PluginRuntimeError {
+    pub(super) kind: String,
+    pub(super) resource: Option<String>,
+    pub(super) user_message: String,
+    pub(super) technical_details: String,
+}
+
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub(super) struct PluginScriptOutput {
     pub(super) success: Option<bool>,
@@ -127,6 +135,9 @@ pub(super) fn emit_plugin_runtime_output(
     let chunk = String::from_utf8_lossy(bytes).to_string();
     let trimmed = chunk.trim_end_matches(&['\n', '\r'][..]).trim();
     if trimmed.is_empty() {
+        return;
+    }
+    if stream == "stderr" && classify_plugin_runtime_error(trimmed).is_some() {
         return;
     }
 
@@ -257,6 +268,91 @@ pub(super) fn parse_plugin_result(stdout: &str) -> Option<PluginScriptOutput> {
         .map(str::trim)
         .find(|line| !line.is_empty())
         .and_then(|line| serde_json::from_str::<PluginScriptOutput>(line).ok())
+}
+
+pub(super) fn classify_plugin_runtime_error(stderr: &str) -> Option<PluginRuntimeError> {
+    let line = stderr
+        .lines()
+        .map(str::trim)
+        .find(|line| line.starts_with("Requires "))?;
+
+    let (kind, resource, user_message) =
+        if let Some(resource) = extract_quoted_resource(line, "Requires env access to ") {
+            let user_message = if resource.starts_with("YOUWEE_AI_") {
+                format!(
+                    "Plugin AI helpers are disabled for security. The plugin tried to read internal Youwee AI setting {resource} directly."
+                )
+            } else {
+                format!(
+                    "This plugin tried to read environment variable {resource}, but Youwee did not allow that access."
+                )
+            };
+            ("env".to_string(), Some(resource), user_message)
+        } else if let Some(resource) = extract_prefixed_resource(line, "Requires read access to ") {
+            (
+                "read".to_string(),
+                Some(resource.clone()),
+                format!(
+                    "This plugin tried to read {resource}, but that path is outside its approved read permissions."
+                ),
+            )
+        } else if let Some(resource) = extract_prefixed_resource(line, "Requires write access to ") {
+            (
+                "write".to_string(),
+                Some(resource.clone()),
+                format!(
+                    "This plugin tried to write to {resource}, but that path is outside its approved write permissions."
+                ),
+            )
+        } else if let Some(resource) = extract_prefixed_resource(line, "Requires run access to ") {
+            (
+                "run".to_string(),
+                Some(resource.clone()),
+                format!(
+                    "This plugin tried to run {resource}, but that command or tool is not approved."
+                ),
+            )
+        } else if line.starts_with("Requires net access") {
+            (
+                "net".to_string(),
+                None,
+                "This plugin tried to access the network, but network permission is not approved."
+                    .to_string(),
+            )
+        } else {
+            return None;
+        };
+
+    Some(PluginRuntimeError {
+        kind,
+        resource,
+        user_message,
+        technical_details: format!("Deno runtime permission error:\n{line}"),
+    })
+}
+
+fn extract_quoted_resource(line: &str, prefix: &str) -> Option<String> {
+    let rest = line.strip_prefix(prefix)?.trim_start();
+    let rest = rest.strip_prefix('"')?;
+    let (resource, _) = rest.split_once('"')?;
+    Some(resource.to_string())
+}
+
+fn extract_prefixed_resource(line: &str, prefix: &str) -> Option<String> {
+    let rest = line.strip_prefix(prefix)?.trim();
+    let resource = rest
+        .split_once(". Run again")
+        .map(|(value, _)| value)
+        .or_else(|| rest.split_once(", run again").map(|(value, _)| value))
+        .unwrap_or(rest)
+        .trim()
+        .trim_matches('"')
+        .to_string();
+    if resource.is_empty() {
+        None
+    } else {
+        Some(resource)
+    }
 }
 
 #[cfg(unix)]

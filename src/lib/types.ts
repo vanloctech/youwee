@@ -518,6 +518,8 @@ export interface PluginExecutionStatusEvent {
   status: string;
   message?: string | null;
   details?: string | null;
+  errorKind?: string | null;
+  errorResource?: string | null;
   mediaTitle?: string | null;
   filename?: string | null;
   mediaUrl?: string | null;

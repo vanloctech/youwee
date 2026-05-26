@@ -1,7 +1,7 @@
 use std::fs;
 use std::path::Path;
 
-use super::logging::should_persist_plugin_runtime_output;
+use super::logging::{classify_plugin_runtime_error, should_persist_plugin_runtime_output};
 use super::{
     build_plugin_completion_details, build_scaffold_ci_workflow, build_scaffold_package_json,
     build_scaffold_readme, build_scaffold_release_workflow, collect_compatibility_issues,
@@ -19,6 +19,33 @@ fn sanitize_slug_normalizes_values() {
         sanitize_slug(" Google Drive Upload "),
         "google-drive-upload"
     );
+}
+
+#[test]
+fn classify_plugin_runtime_error_formats_env_error_for_users() {
+    let err = classify_plugin_runtime_error(
+        r#"Requires env access to "YOUWEE_AI_PROXY_URL", run again with the --allow-env flag"#,
+    )
+    .expect("expected runtime permission error");
+
+    assert_eq!(err.kind, "env");
+    assert_eq!(err.resource.as_deref(), Some("YOUWEE_AI_PROXY_URL"));
+    assert!(err.user_message.contains("AI helpers are disabled"));
+    assert!(!err.user_message.contains("--allow-env"));
+    assert!(err.technical_details.contains("Deno runtime permission error"));
+}
+
+#[test]
+fn classify_plugin_runtime_error_formats_run_error_for_users() {
+    let err = classify_plugin_runtime_error(
+        r#"Requires run access to "/bin/sh". Run again with the --allow-run flag"#,
+    )
+    .expect("expected runtime permission error");
+
+    assert_eq!(err.kind, "run");
+    assert_eq!(err.resource.as_deref(), Some("/bin/sh"));
+    assert!(err.user_message.contains("not approved"));
+    assert!(!err.user_message.contains("--allow-run"));
 }
 
 #[test]

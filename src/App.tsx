@@ -161,6 +161,11 @@ function AppContent() {
       filename?: string,
       mediaUrl?: string,
       durationMs?: number,
+      runtimeError?: {
+        errorKind?: string | null;
+        errorResource?: string | null;
+        details?: string | null;
+      },
     ) => {
       const normalizedRunId = runId ?? 'unknown';
       const toastId = createPluginToastId(pluginId, normalizedRunId);
@@ -194,6 +199,9 @@ function AppContent() {
           filename,
           mediaUrl,
           status: toastStatus,
+          errorKind: runtimeError?.errorKind,
+          errorResource: runtimeError?.errorResource,
+          details: runtimeError?.details,
         },
       });
     },
@@ -295,6 +303,9 @@ function AppContent() {
         message,
         resolvedProvider,
         resolvedSource,
+        details,
+        errorKind,
+        errorResource,
         mediaTitle,
         filename,
         mediaUrl,
@@ -342,7 +353,7 @@ function AppContent() {
         const statusMessage =
           normalizedMessage || `Plugin ${normalizedPluginName ?? pluginId} failed`;
         const toastMessage =
-          resolvedProvider || resolvedSource
+          !errorKind && (resolvedProvider || resolvedSource)
             ? `${statusMessage}\n${resolvedProvider || ''} ${resolvedSource || ''}`.trim()
             : statusMessage;
         void notify('Youwee Plugin', statusMessage);
@@ -356,6 +367,7 @@ function AppContent() {
           filename ?? undefined,
           mediaUrl ?? undefined,
           7000,
+          { errorKind, errorResource, details },
         );
         return;
       }

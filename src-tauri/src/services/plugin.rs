@@ -42,8 +42,8 @@ use compatibility::{
 };
 use logging::{
     build_plugin_completion_details, capture_process_stream, capture_process_stream_err,
-    combine_plugin_event_details, output_to_string, parse_plugin_result, plugin_exit_reason,
-    plugin_output_details, shorten_for_event,
+    classify_plugin_runtime_error, combine_plugin_event_details, output_to_string,
+    parse_plugin_result, plugin_exit_reason, plugin_output_details, shorten_for_event,
 };
 #[cfg(test)]
 use manifest::validate_manifest;
@@ -89,6 +89,58 @@ use workflow::{
 pub use workspace::create_plugin_workspace_internal;
 #[cfg(test)]
 use workspace::sanitize_slug;
+
+#[derive(Debug, Clone)]
+struct PluginExecutionError {
+    message: String,
+    details: Option<String>,
+    error_kind: Option<String>,
+    error_resource: Option<String>,
+}
+
+impl PluginExecutionError {
+    fn new(message: impl Into<String>) -> Self {
+        Self {
+            message: message.into(),
+            details: None,
+            error_kind: None,
+            error_resource: None,
+        }
+    }
+
+    fn runtime_permission(
+        message: String,
+        details: String,
+        error_kind: String,
+        error_resource: Option<String>,
+    ) -> Self {
+        Self {
+            message,
+            details: Some(details),
+            error_kind: Some(error_kind),
+            error_resource,
+        }
+    }
+}
+
+impl From<String> for PluginExecutionError {
+    fn from(message: String) -> Self {
+        Self::new(message)
+    }
+}
+
+impl From<&str> for PluginExecutionError {
+    fn from(message: &str) -> Self {
+        Self::new(message)
+    }
+}
+
+fn format_plugin_execution_error_details(error: &PluginExecutionError) -> String {
+    match error.details.as_ref().filter(|details| !details.trim().is_empty()) {
+        Some(details) => format!("{}\n\n{}", error.message, details),
+        None => error.message.clone(),
+    }
+}
 
 const PLUGINS_DIR_NAME: &str = "plugins";
 const REGISTRY_FILE_NAME: &str = "registry.json";
@@ -821,7 +873,7 @@ async fn execute_plugin(
     plugin: &PluginSummary,
     run_id: &str,
     payload: &PostDownloadPluginPayload,
-) -> Result<(PluginExecutionResult, PluginProvider, Option<String>), String> {
+) -> Result<(PluginExecutionResult, PluginProvider, Option<String>), PluginExecutionError> {
     let timeout_sec = plugin
         .installation
         .timeout_sec_override
@@ -840,10 +892,10 @@ async fn execute_plugin(
         .iter()
         .any(|provider| provider == &selected_provider)
     {
-        return Err(format!(
+        return Err(PluginExecutionError::new(format!(
             "Plugin does not support provider {}",
             selected_provider.as_str()
-        ));
+        )));
     }
 
     let missing_permissions = collect_missing_permissions(
@@ -851,10 +903,10 @@ async fn execute_plugin(
         &plugin.installation.approved_permissions,
     );
     if !missing_permissions.is_empty() {
-        return Err(format!(
+        return Err(PluginExecutionError::new(format!(
             "Plugin requires unapproved permissions: {}",
             missing_permissions.join(", ")
-        ));
+        )));
     }
 
     validate_execution_compatibility(&plugin.manifest)?;
@@ -1217,7 +1269,7 @@ async fn execute_plugin(
                 if !stdout.is_empty() {
                     message.push_str(&format!("\n\nstdout:\n{}", stdout));
                 }
-                return Err(message);
+                return Err(PluginExecutionError::new(message));
             }
         };
 
@@ -1225,12 +1277,22 @@ async fn execute_plugin(
     let stderr = output_to_string(&stderr_task.await.unwrap_or_default());
 
     if !status.success() {
+        if let Some(runtime_error) = classify_plugin_runtime_error(&stderr) {
+            return Err(PluginExecutionError::runtime_permission(
+                runtime_error.user_message,
+                runtime_error.technical_details,
+                runtime_error.kind,
+                runtime_error.resource,
+            ));
+        }
+
         let details = plugin_output_details(&stdout, &stderr);
-        return Err(format!(
-            "Plugin exited with {}.\n{}",
-            plugin_exit_reason(&status),
-            details
-        ));
+        return Err(PluginExecutionError {
+            message: format!("Plugin exited with {}.", plugin_exit_reason(&status)),
+            details: Some(details),
+            error_kind: None,
+            error_resource: None,
+        });
     }
 
     let parsed_output = parse_plugin_result(&stdout);
@@ -1409,6 +1471,8 @@ async fn execute_plugin_workflow_run(
                     step_index + 1,
                     workflow_run.steps.len()
                 )),
+                error_kind: None,
+                error_resource: None,
                 media_title: step_payload.title.clone(),
                 filename: Some(step_payload.filename.clone()),
                 media_url: Some(step_payload.url.clone()),
@@ -1459,6 +1523,8 @@ async fn execute_plugin_workflow_run(
                             result.stdout.as_ref(),
                             result.stderr.as_ref(),
                         )),
+                        error_kind: None,
+                        error_resource: None,
                         media_title: step_payload.title.clone(),
                         filename: Some(step_payload.filename.clone()),
                         media_url: Some(step_payload.url.clone()),
@@ -1492,7 +1558,7 @@ async fn execute_plugin_workflow_run(
             Err(error) => {
                 if let Some(entry) = registry.installations.get_mut(&plugin.manifest.plugin_id) {
                     entry.last_execution_status = Some("error".to_string());
-                    entry.last_error = Some(error.clone());
+                    entry.last_error = Some(error.message.clone());
                 }
                 app.emit(
                     "plugin-execution-status",
@@ -1505,8 +1571,10 @@ async fn execute_plugin_workflow_run(
                         resolved_provider: Some(selected_provider.as_str().to_string()),
                         resolved_source: None,
                         status: "error".to_string(),
-                        message: Some(error.clone()),
-                        details: shorten_for_event(Some(error.clone())),
+                        message: Some(error.message.clone()),
+                        details: shorten_for_event(error.details.clone()),
+                        error_kind: error.error_kind.clone(),
+                        error_resource: error.error_resource.clone(),
                         media_title: step_payload.title.clone(),
                         filename: Some(step_payload.filename.clone()),
                         media_url: Some(step_payload.url.clone()),
@@ -1521,7 +1589,7 @@ async fn execute_plugin_workflow_run(
                         workflow_run.run_id,
                         step_index + 1,
                         workflow_run.steps.len(),
-                        error
+                        format_plugin_execution_error_details(&error)
                     )),
                     Some(&step_payload.url),
                 )
@@ -1530,12 +1598,12 @@ async fn execute_plugin_workflow_run(
                 results.push(PluginExecutionResult {
                     plugin_id: plugin.manifest.plugin_id.clone(),
                     success: false,
-                    message: Some(error),
+                    message: Some(error.message),
                     artifacts: None,
                     metadata: None,
                     mutations: None,
                     stdout: None,
-                    stderr: None,
+                    stderr: error.details,
                 });
                 if step.failure_policy == PluginWorkflowFailurePolicy::StopChain {
                     stopped_early = true;

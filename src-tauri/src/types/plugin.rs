@@ -584,6 +584,10 @@ pub struct PluginExecutionStatusEvent {
     pub message: Option<String>,
     #[serde(default)]
     pub details: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub error_kind: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub error_resource: Option<String>,
     #[serde(default)]
     pub media_title: Option<String>,
     #[serde(default)]

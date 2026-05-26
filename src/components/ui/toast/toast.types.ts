@@ -26,6 +26,9 @@ export interface PluginRunToastData {
   filename?: string;
   mediaUrl?: string;
   status: PluginRunToastStatus;
+  errorKind?: string | null;
+  errorResource?: string | null;
+  details?: string | null;
 }
 
 export interface DefaultToastInput extends BaseToastInput {
