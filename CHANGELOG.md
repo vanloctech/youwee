@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.15.0] - 2026-05-27
+
+### Changed
+- **UI and UX refinements** - Improved the app's overall UI and UX across AI Features, metadata, plugin settings, guide dialogs, and shared notification flows for a more consistent Youwee experience
+- **Plugin SDK v2.0.0 support** - Upgraded plugin support to `youwee-sdk` `v2.0.0` with stricter read/write/AI permission enforcement and TypeScript-first plugin workspaces
+
 ## [0.14.1] - 2026-05-24
 
 ### Changed
