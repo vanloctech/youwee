@@ -7,7 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [0.15.0] - 2026-05-27
+## [0.15.1] - 2026-05-27
 
 ### Changed
 - **UI and UX refinements** - Improved the app's overall UI and UX across AI Features, metadata, plugin settings, guide dialogs, and shared notification flows for a more consistent Youwee experience
