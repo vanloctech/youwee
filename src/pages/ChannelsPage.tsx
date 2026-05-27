@@ -23,7 +23,10 @@ import {
 } from 'lucide-react';
 import { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ThumbnailCompletedBadge } from '@/components/download/ThumbnailStatusBadge';
+import {
+  ThumbnailCompletedBadge,
+  ThumbnailFailedBadge,
+} from '@/components/download/ThumbnailStatusBadge';
 import { FFmpegRequiredDialog } from '@/components/FFmpegRequiredDialog';
 import { ThemePicker } from '@/components/settings/ThemePicker';
 import { Button } from '@/components/ui/button';
@@ -422,13 +425,7 @@ function VideoListItem({
         {isCompleted && <ThumbnailCompletedBadge />}
 
         {/* Error overlay */}
-        {isError && (
-          <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
-            <div className="w-10 h-10 rounded-full bg-red-500 flex items-center justify-center shadow-lg">
-              <XCircle className="w-6 h-6 text-white" />
-            </div>
-          </div>
-        )}
+        {isError && <ThumbnailFailedBadge />}
       </div>
 
       {/* Content */}

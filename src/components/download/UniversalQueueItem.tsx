@@ -25,7 +25,7 @@ import { useAI } from '@/contexts/AIContext';
 import type { DownloadItem, ItemUniversalSettings } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import { SourceBadge } from './SourceBadge';
-import { ThumbnailCompletedBadge } from './ThumbnailStatusBadge';
+import { ThumbnailCompletedBadge, ThumbnailFailedBadge } from './ThumbnailStatusBadge';
 
 // Parse a duration string like "5:30" or "1:05:30" to total seconds
 function parseDurationString(dur: string): number {
@@ -358,13 +358,7 @@ export function UniversalQueueItem({
         {isCompleted && <ThumbnailCompletedBadge />}
 
         {/* Error Overlay */}
-        {isError && (
-          <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
-            <div className="w-10 h-10 rounded-full bg-red-500 flex items-center justify-center shadow-lg">
-              <XCircle className="w-6 h-6 text-white" />
-            </div>
-          </div>
-        )}
+        {isError && <ThumbnailFailedBadge />}
 
         {/* Pending Overlay */}
         {isPending && (
