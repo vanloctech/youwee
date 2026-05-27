@@ -24,6 +24,7 @@ import { SimpleMarkdown } from '@/components/ui/simple-markdown';
 import { useAI } from '@/contexts/AIContext';
 import type { DownloadItem, ItemDownloadSettings } from '@/lib/types';
 import { cn } from '@/lib/utils';
+import { ThumbnailCompletedBadge } from './ThumbnailStatusBadge';
 
 // Parse a duration string like "5:30" or "1:05:30" to total seconds
 function parseDurationString(dur: string): number {
@@ -282,7 +283,7 @@ export function QueueItem({
             alt=""
             className={cn(
               'w-full h-full object-cover transition-all duration-300',
-              isCompleted && 'opacity-60',
+              isCompleted && 'brightness-90 saturate-95',
             )}
             loading="lazy"
             referrerPolicy="no-referrer"
@@ -357,13 +358,7 @@ export function QueueItem({
         )}
 
         {/* Completed Overlay */}
-        {isCompleted && (
-          <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
-            <div className="w-10 h-10 rounded-full bg-emerald-500 flex items-center justify-center shadow-lg">
-              <CheckCircle2 className="w-6 h-6 text-white" />
-            </div>
-          </div>
-        )}
+        {isCompleted && <ThumbnailCompletedBadge />}
 
         {/* Error Overlay */}
         {isError && (

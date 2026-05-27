@@ -23,6 +23,7 @@ import {
 } from 'lucide-react';
 import { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { ThumbnailCompletedBadge } from '@/components/download/ThumbnailStatusBadge';
 import { FFmpegRequiredDialog } from '@/components/FFmpegRequiredDialog';
 import { ThemePicker } from '@/components/settings/ThemePicker';
 import { Button } from '@/components/ui/button';
@@ -368,7 +369,7 @@ function VideoListItem({
             alt=""
             className={cn(
               'w-full h-full object-cover transition-all duration-300',
-              isCompleted && 'opacity-60',
+              isCompleted && 'brightness-90 saturate-95',
             )}
             loading="lazy"
             referrerPolicy="no-referrer"
@@ -418,13 +419,7 @@ function VideoListItem({
         )}
 
         {/* Completed overlay */}
-        {isCompleted && (
-          <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
-            <div className="w-10 h-10 rounded-full bg-emerald-500 flex items-center justify-center shadow-lg">
-              <CheckCircle2 className="w-6 h-6 text-white" />
-            </div>
-          </div>
-        )}
+        {isCompleted && <ThumbnailCompletedBadge />}
 
         {/* Error overlay */}
         {isError && (
