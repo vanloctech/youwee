@@ -138,13 +138,6 @@ bun run tauri dev
 bun run tauri build
 ```
 
-## Công nghệ sử dụng
-
-- **Frontend**: React 19, TypeScript, Tailwind CSS, shadcn/ui
-- **Backend**: Rust, Tauri 2.0
-- **Downloader**: yt-dlp (tích hợp sẵn)
-- **Build**: Bun, Vite
-
 ## Đóng góp
 
 Chúng tôi hoan nghênh mọi đóng góp. Xem [Hướng dẫn Đóng góp](CONTRIBUTING.vi.md).
@@ -152,15 +145,6 @@ Chúng tôi hoan nghênh mọi đóng góp. Xem [Hướng dẫn Đóng góp](CON
 ## Giấy phép
 
 Dự án này được cấp phép theo MIT License - xem file [LICENSE](../LICENSE) để biết chi tiết.
-
-## Lời cảm ơn
-
-- [yt-dlp](https://github.com/yt-dlp/yt-dlp) - Trình tải video mạnh mẽ
-- [FFmpeg](https://ffmpeg.org/) - Framework đa phương tiện cho xử lý audio/video
-- [Bun](https://bun.sh/) - JavaScript runtime nhanh cho trích xuất YouTube
-- [Tauri](https://tauri.app/) - Xây dựng ứng dụng desktop nhỏ hơn, nhanh hơn và bảo mật hơn
-- [shadcn/ui](https://ui.shadcn.com/) - Các component UI đẹp mắt
-- [Lucide Icons](https://lucide.dev/) - Bộ icon mã nguồn mở đẹp
 
 ## Liên hệ
 

@@ -138,13 +138,6 @@ bun run tauri dev
 bun run tauri build
 ```
 
-## 技术栈
-
-- **前端**: React 19、TypeScript、Tailwind CSS、shadcn/ui
-- **后端**: Rust、Tauri 2.0
-- **下载器**: yt-dlp（内置）
-- **构建**: Bun、Vite
-
 ## 贡献
 
 欢迎贡献，详情见[贡献指南](CONTRIBUTING.zh-CN.md)。
@@ -152,15 +145,6 @@ bun run tauri build
 ## 许可证
 
 本项目采用 MIT 许可证 - 详见 [LICENSE](../LICENSE) 文件。
-
-## 致谢
-
-- [yt-dlp](https://github.com/yt-dlp/yt-dlp) - 强大的视频下载器
-- [FFmpeg](https://ffmpeg.org/) - 音视频处理多媒体框架
-- [Bun](https://bun.sh/) - 用于 YouTube 提取的快速 JavaScript 运行时
-- [Tauri](https://tauri.app/) - 构建更小、更快、更安全的桌面应用
-- [shadcn/ui](https://ui.shadcn.com/) - 精美的 UI 组件
-- [Lucide Icons](https://lucide.dev/) - 精美的开源图标
 
 ## 联系方式
 

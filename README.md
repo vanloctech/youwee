@@ -142,13 +142,6 @@ bun run tauri dev
 bun run tauri build
 ```
 
-## Tech Stack
-
-- **Frontend**: React 19, TypeScript, Tailwind CSS, shadcn/ui
-- **Backend**: Rust, Tauri 2.0
-- **Downloader**: yt-dlp (bundled)
-- **Build**: Bun, Vite
-
 ## Contributing
 
 We welcome contributions. See [Contributing Guide](CONTRIBUTING.md).
@@ -156,15 +149,6 @@ We welcome contributions. See [Contributing Guide](CONTRIBUTING.md).
 ## License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
-## Acknowledgments
-
-- [yt-dlp](https://github.com/yt-dlp/yt-dlp) - The powerful video downloader
-- [FFmpeg](https://ffmpeg.org/) - Multimedia framework for audio/video processing
-- [Deno](https://deno.com/) - JavaScript runtime for YouTube extraction
-- [Tauri](https://tauri.app/) - Build smaller, faster, and more secure desktop apps
-- [shadcn/ui](https://ui.shadcn.com/) - Beautiful UI components
-- [Lucide Icons](https://lucide.dev/) - Beautiful open-source icons
 
 ## Contact
 
