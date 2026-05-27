@@ -292,6 +292,10 @@ function createFileSystemBridge(): PluginFileSystemBridge {
       assertSafePluginWritePath(path);
       await bridgeRequest<null>('/fs/writeText', { path, content });
     },
+    async removeFile(path) {
+      assertSafePluginWritePath(path);
+      await bridgeRequest<null>('/fs/removeFile', { path });
+    },
     async ensureDir(path) {
       if (isDangerousPath(path)) {
         throw new Error(`Blocked unsafe plugin directory path: ${path}`);

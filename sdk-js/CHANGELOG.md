@@ -6,6 +6,15 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [2.1.0] - 2026-05-27
+
+### Added
+- **Safe plugin cleanup API** - Added `ctx.youwee.fs.removeFile(...)` for deleting files created during the current plugin run or files inside Youwee-managed plugin temp directories.
+
+### Changed
+- **Filesystem cleanup policy** - Documented that plugin cleanup still goes through Youwee's runtime bridge and cannot delete pre-existing user files, directories, symlinks, or unsafe output paths.
+- **Compatibility baseline** - Updated SDK examples to target Youwee `>=0.15.0`, because `removeFile(...)` requires the newer runtime bridge.
+
 ## [2.0.0] - 2026-05-27
 
 ### Changed

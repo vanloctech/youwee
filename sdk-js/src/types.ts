@@ -192,6 +192,7 @@ export interface PluginFileSystemBridge {
   exists(path: string): Promise<boolean>;
   readText(path: string): Promise<string>;
   writeText(path: string, content: string): Promise<void>;
+  removeFile(path: string): Promise<void>;
   ensureDir(path: string): Promise<void>;
   tempDir(prefix?: string): Promise<string>;
 }

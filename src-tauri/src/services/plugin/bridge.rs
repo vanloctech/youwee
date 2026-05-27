@@ -1,4 +1,4 @@
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use std::time::Duration;
@@ -7,7 +7,7 @@ use serde::{Deserialize, Serialize};
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::{TcpListener, TcpStream};
 use tokio::process::Command;
-use tokio::sync::oneshot;
+use tokio::sync::{oneshot, Mutex};
 
 use crate::utils::CommandExt;
 
@@ -30,6 +30,12 @@ pub(super) struct PluginBridgePolicy {
     pub(super) plugin_dir: PathBuf,
     pub(super) ffmpeg_path: Option<PathBuf>,
     pub(super) ytdlp_path: Option<PathBuf>,
+}
+
+#[derive(Default)]
+struct PluginBridgeRunState {
+    generated_files: BTreeSet<String>,
+    temp_dirs: BTreeSet<String>,
 }
 
 pub(super) struct PluginBridgeServer {
@@ -120,6 +126,7 @@ pub(super) async fn start_plugin_bridge(
         .map_err(|e| format!("Failed to resolve plugin bridge address: {e}"))?;
     let (shutdown_tx, mut shutdown_rx) = oneshot::channel::<()>();
     let policy = Arc::new(policy);
+    let state = Arc::new(Mutex::new(PluginBridgeRunState::default()));
     let server_token = token.clone();
     let tools = {
         let mut values = Vec::new();
@@ -141,9 +148,10 @@ pub(super) async fn start_plugin_bridge(
                         continue;
                     };
                     let policy = policy.clone();
+                    let state = state.clone();
                     let token = server_token.clone();
                     tokio::spawn(async move {
-                        let _ = handle_bridge_connection(stream, &token, policy).await;
+                        let _ = handle_bridge_connection(stream, &token, policy, state).await;
                     });
                 }
             }
@@ -162,6 +170,7 @@ async fn handle_bridge_connection(
     mut stream: TcpStream,
     token: &str,
     policy: Arc<PluginBridgePolicy>,
+    state: Arc<Mutex<PluginBridgeRunState>>,
 ) -> Result<(), String> {
     let mut buffer = Vec::new();
     let mut headers_end = None;
@@ -193,7 +202,7 @@ async fn handle_bridge_connection(
             let total = end + 4 + content_length;
             if buffer.len() >= total {
                 let body = buffer[end + 4..total].to_vec();
-                let status = handle_bridge_request(token, policy, &buffer[..end], body)
+                let status = handle_bridge_request(token, policy, state, &buffer[..end], body)
                     .await
                     .unwrap_or_else(|error| (400, None, Some(error)));
                 write_json_response::<serde_json::Value>(
@@ -212,6 +221,7 @@ async fn handle_bridge_connection(
 async fn handle_bridge_request(
     token: &str,
     policy: Arc<PluginBridgePolicy>,
+    state: Arc<Mutex<PluginBridgeRunState>>,
     headers: &[u8],
     body: Vec<u8>,
 ) -> Result<(u16, Option<serde_json::Value>, Option<String>), String> {
@@ -254,9 +264,22 @@ async fn handle_bridge_request(
             let request: FsWriteTextRequest = parse_body(&body)?;
             let path = PathBuf::from(request.path);
             validate_write_path(&policy, &path)?;
+            let created_by_plugin = !path.exists();
             tokio::fs::write(&path, request.content)
                 .await
                 .map_err(|e| format!("Failed to write {}: {e}", path.display()))?;
+            if created_by_plugin {
+                remember_generated_file(&state, &path).await;
+            }
+            Ok((200, Some(serde_json::Value::Null), None))
+        }
+        "/fs/removeFile" => {
+            let request: FsPathRequest = parse_body(&body)?;
+            let path = PathBuf::from(request.path);
+            validate_remove_file_path(&policy, &state, &path).await?;
+            tokio::fs::remove_file(&path)
+                .await
+                .map_err(|e| format!("Failed to remove {}: {e}", path.display()))?;
             Ok((200, Some(serde_json::Value::Null), None))
         }
         "/fs/ensureDir" => {
@@ -278,11 +301,12 @@ async fn handle_bridge_request(
             tokio::fs::create_dir_all(&path)
                 .await
                 .map_err(|e| format!("Failed to create plugin temp directory: {e}"))?;
+            remember_temp_dir(&state, &path).await;
             Ok((200, Some(serde_json::json!(path.to_string_lossy())), None))
         }
         "/tool/run" => {
             let request: ToolRunRequest = parse_body(&body)?;
-            let response = run_tool(policy, request).await?;
+            let response = run_tool(policy, state, request).await?;
             Ok((
                 200,
                 Some(serde_json::to_value(response).unwrap_or_default()),
@@ -303,6 +327,7 @@ fn parse_body<T: for<'de> Deserialize<'de>>(body: &[u8]) -> Result<T, String> {
 
 async fn run_tool(
     policy: Arc<PluginBridgePolicy>,
+    state: Arc<Mutex<PluginBridgeRunState>>,
     request: ToolRunRequest,
 ) -> Result<ToolRunResponse, String> {
     let command_path = match request.tool.as_str() {
@@ -324,7 +349,13 @@ async fn run_tool(
         .map(PathBuf::from)
         .unwrap_or_else(|| policy.plugin_dir.clone());
     validate_working_directory_path(&policy, &cwd)?;
-    validate_tool_args_with_policy(&policy, &request.tool, &request.args, &cwd)?;
+    let output_candidates =
+        validate_tool_args_with_policy(&policy, &request.tool, &request.args, &cwd)?;
+    let created_by_plugin_candidates = output_candidates
+        .iter()
+        .filter(|path| !path.exists())
+        .cloned()
+        .collect::<Vec<_>>();
 
     let mut command = Command::new(command_path);
     command
@@ -349,6 +380,12 @@ async fn run_tool(
         .map_err(|_| format!("Plugin tool timed out: {}", request.tool))?
         .map_err(|e| format!("Failed to run plugin tool {}: {e}", request.tool))?;
 
+    for path in created_by_plugin_candidates {
+        if path.exists() && path.is_file() {
+            remember_generated_file(&state, &path).await;
+        }
+    }
+
     Ok(ToolRunResponse {
         code: output.status.code(),
         signal: None,
@@ -362,14 +399,17 @@ fn validate_tool_args_with_policy(
     tool_name: &str,
     args: &[String],
     cwd: &Path,
-) -> Result<(), String> {
+) -> Result<Vec<PathBuf>, String> {
     let mut previous_arg = "";
     let mut last_path_candidate: Option<PathBuf> = None;
+    let mut output_candidates = Vec::<PathBuf>::new();
     for arg in args {
         validate_tool_arg(tool_name, arg)?;
         if let Some((name, value)) = arg.split_once('=') {
             if matches!(name, "-o" | "--output") && is_local_path_candidate(value) {
-                validate_write_path(policy, &resolve_arg_path(cwd, value))?;
+                let path = resolve_arg_path(cwd, value);
+                validate_write_path(policy, &path)?;
+                output_candidates.push(path);
             }
         }
         if is_local_path_candidate(arg) {
@@ -378,6 +418,7 @@ fn validate_tool_args_with_policy(
                 validate_read_path(policy, &path)?;
             } else if previous_arg == "-o" || previous_arg == "--output" {
                 validate_write_path(policy, &path)?;
+                output_candidates.push(path);
             } else {
                 last_path_candidate = Some(path);
             }
@@ -387,8 +428,11 @@ fn validate_tool_args_with_policy(
 
     if let Some(output) = last_path_candidate.as_ref() {
         validate_write_path(policy, output)?;
+        output_candidates.push(output.clone());
     }
-    Ok(())
+    output_candidates.sort();
+    output_candidates.dedup();
+    Ok(output_candidates)
 }
 
 fn resolve_arg_path(cwd: &Path, value: &str) -> PathBuf {
@@ -442,6 +486,60 @@ fn validate_write_scope_path(policy: &PluginBridgePolicy, path: &Path) -> Result
         ));
     }
     Ok(())
+}
+
+async fn validate_remove_file_path(
+    policy: &PluginBridgePolicy,
+    state: &Arc<Mutex<PluginBridgeRunState>>,
+    path: &Path,
+) -> Result<(), String> {
+    validate_write_path(policy, path)?;
+    let metadata = tokio::fs::symlink_metadata(path).await.map_err(|e| {
+        format!(
+            "Failed to inspect {} before removing it: {e}",
+            path.display()
+        )
+    })?;
+    let file_type = metadata.file_type();
+    if file_type.is_symlink() {
+        return Err(format!(
+            "Plugin cleanup cannot remove symlinks: {}",
+            path.display()
+        ));
+    }
+    if !file_type.is_file() {
+        return Err(format!(
+            "Plugin cleanup can only remove files, not directories: {}",
+            path.display()
+        ));
+    }
+    if !is_removable_plugin_file(state, path).await {
+        return Err(
+            "This plugin can only delete files it created during this run or files inside its Youwee-managed temp directory."
+                .to_string(),
+        );
+    }
+    Ok(())
+}
+
+async fn remember_generated_file(state: &Arc<Mutex<PluginBridgeRunState>>, path: &Path) {
+    let normalized = normalize_existing_or_parent(path);
+    state.lock().await.generated_files.insert(normalized);
+}
+
+async fn remember_temp_dir(state: &Arc<Mutex<PluginBridgeRunState>>, path: &Path) {
+    let normalized = normalize_existing_or_parent(path);
+    state.lock().await.temp_dirs.insert(normalized);
+}
+
+async fn is_removable_plugin_file(state: &Arc<Mutex<PluginBridgeRunState>>, path: &Path) -> bool {
+    let normalized = normalize_existing_or_parent(path);
+    let state = state.lock().await;
+    state.generated_files.contains(&normalized)
+        || state
+            .temp_dirs
+            .iter()
+            .any(|dir| normalized == *dir || normalized.starts_with(&format!("{dir}/")))
 }
 
 fn path_within_scopes(path: &Path, scopes: &[PathBuf]) -> bool {
@@ -519,6 +617,136 @@ fn parse_content_length(headers: &[u8]) -> Result<usize, String> {
         }
     }
     Ok(0)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn test_dir(name: &str) -> PathBuf {
+        let path = std::env::temp_dir().join(format!(
+            "youwee-plugin-bridge-test-{name}-{}",
+            uuid::Uuid::new_v4()
+        ));
+        std::fs::create_dir_all(&path).expect("create test dir");
+        path
+    }
+
+    fn test_policy(root: &Path) -> PluginBridgePolicy {
+        PluginBridgePolicy {
+            allow_read_scopes: vec![root.to_path_buf()],
+            allow_write_scopes: vec![root.to_path_buf()],
+            plugin_dir: root.to_path_buf(),
+            ffmpeg_path: None,
+            ytdlp_path: None,
+        }
+    }
+
+    #[tokio::test]
+    async fn remove_file_allows_generated_file() {
+        let root = test_dir("generated");
+        let file = root.join("created.txt");
+        std::fs::write(&file, "ok").expect("write generated file");
+        let state = Arc::new(Mutex::new(PluginBridgeRunState::default()));
+        remember_generated_file(&state, &file).await;
+
+        let result = validate_remove_file_path(&test_policy(&root), &state, &file).await;
+
+        std::fs::remove_dir_all(&root).ok();
+        assert!(result.is_ok());
+    }
+
+    #[tokio::test]
+    async fn remove_file_allows_file_inside_run_temp_dir() {
+        let root = test_dir("temp");
+        let temp = root.join("tmp");
+        std::fs::create_dir_all(&temp).expect("create temp dir");
+        let file = temp.join("work.txt");
+        std::fs::write(&file, "ok").expect("write temp file");
+        let state = Arc::new(Mutex::new(PluginBridgeRunState::default()));
+        remember_temp_dir(&state, &temp).await;
+
+        let result = validate_remove_file_path(&test_policy(&root), &state, &file).await;
+
+        std::fs::remove_dir_all(&root).ok();
+        assert!(result.is_ok());
+    }
+
+    #[tokio::test]
+    async fn remove_file_rejects_preexisting_file() {
+        let root = test_dir("preexisting");
+        let file = root.join("user-file.txt");
+        std::fs::write(&file, "keep").expect("write preexisting file");
+        let state = Arc::new(Mutex::new(PluginBridgeRunState::default()));
+
+        let result = validate_remove_file_path(&test_policy(&root), &state, &file).await;
+
+        std::fs::remove_dir_all(&root).ok();
+        assert!(result.is_err());
+    }
+
+    #[tokio::test]
+    async fn remove_file_rejects_directory() {
+        let root = test_dir("directory");
+        let state = Arc::new(Mutex::new(PluginBridgeRunState::default()));
+        remember_temp_dir(&state, &root).await;
+
+        let result = validate_remove_file_path(&test_policy(&root), &state, &root).await;
+
+        std::fs::remove_dir_all(&root).ok();
+        assert!(result.is_err());
+    }
+
+    #[tokio::test]
+    async fn remove_file_rejects_outside_write_scope() {
+        let root = test_dir("scope-root");
+        let outside = test_dir("scope-outside");
+        let file = outside.join("created.txt");
+        std::fs::write(&file, "ok").expect("write outside file");
+        let state = Arc::new(Mutex::new(PluginBridgeRunState::default()));
+        remember_generated_file(&state, &file).await;
+
+        let result = validate_remove_file_path(&test_policy(&root), &state, &file).await;
+
+        std::fs::remove_dir_all(&root).ok();
+        std::fs::remove_dir_all(&outside).ok();
+        assert!(result.is_err());
+    }
+
+    #[tokio::test]
+    async fn remove_file_rejects_dangerous_extension() {
+        let root = test_dir("dangerous-extension");
+        let file = root.join("cleanup.sh");
+        std::fs::write(&file, "echo bad").expect("write dangerous file");
+        let state = Arc::new(Mutex::new(PluginBridgeRunState::default()));
+        remember_generated_file(&state, &file).await;
+
+        let result = validate_remove_file_path(&test_policy(&root), &state, &file).await;
+
+        std::fs::remove_dir_all(&root).ok();
+        assert!(result.is_err());
+    }
+
+    #[cfg(unix)]
+    #[tokio::test]
+    async fn remove_file_rejects_symlink() {
+        use std::os::unix::fs::symlink;
+
+        let root = test_dir("symlink-root");
+        let outside = test_dir("symlink-outside");
+        let target = outside.join("target.txt");
+        let link = root.join("link.txt");
+        std::fs::write(&target, "keep").expect("write symlink target");
+        symlink(&target, &link).expect("create symlink");
+        let state = Arc::new(Mutex::new(PluginBridgeRunState::default()));
+        remember_generated_file(&state, &link).await;
+
+        let result = validate_remove_file_path(&test_policy(&root), &state, &link).await;
+
+        std::fs::remove_dir_all(&root).ok();
+        std::fs::remove_dir_all(&outside).ok();
+        assert!(result.is_err());
+    }
 }
 
 async fn write_json_response<T: Serialize>(

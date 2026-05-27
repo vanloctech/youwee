@@ -358,6 +358,7 @@ Available high-level APIs:
 - `ctx.youwee.tools.ffmpeg`
 - `ctx.youwee.tools.ytdlp`
 - `ctx.youwee.fs.readText(...)`
+- `ctx.youwee.fs.removeFile(...)`
 - `ctx.youwee.http.getJson(...)`
 - `ctx.ok(...)`
 - `ctx.fail(...)`
@@ -445,6 +446,11 @@ Runtime permission mapping:
 Do not call `Deno.Command(...)`, `child_process`, shell wrappers, or direct filesystem write APIs
 for plugin capabilities. They are blocked in the installed runtime. Use the SDK context APIs so
 Youwee can enforce the user's approved permissions.
+
+For cleanup, use `ctx.youwee.fs.removeFile(path)`. It can only remove regular files created during
+the current plugin run or files inside a Youwee-managed temp directory returned by
+`ctx.youwee.fs.tempDir(...)`. It cannot remove directories, symlinks, dangerous output paths, or
+user files that existed before the plugin run started.
 
 This scaffold is optimized for:
 - Deno

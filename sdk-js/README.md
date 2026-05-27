@@ -181,7 +181,7 @@ At minimum, your workspace should depend on:
 ```json
 {
   "dependencies": {
-    "youwee-sdk": "^2.0.0"
+    "youwee-sdk": "^2.1.0"
   }
 }
 ```
@@ -383,8 +383,8 @@ Example:
     "entrypoint": "src/plugin.ts"
   },
   "compatibility": {
-    "appVersion": ">=0.14.1 <0.15.0",
-    "sdkVersion": ">=2.0.0 <3.0.0"
+    "appVersion": ">=0.15.0 <0.16.0",
+    "sdkVersion": ">=2.1.0 <3.0.0"
   },
   "triggers": [
     "download.completed"
@@ -519,6 +519,9 @@ const content = await ctx.youwee.fs.readText(ctx.file.path);
 await ctx.youwee.fs.ensureDir(outputDirectory);
 await ctx.youwee.fs.writeText(`${outputDirectory}/result.txt`, content);
 const tempDirectory = await ctx.youwee.fs.tempDir("my-plugin-");
+const scratchFile = `${tempDirectory}/scratch.txt`;
+await ctx.youwee.fs.writeText(scratchFile, "temporary data");
+await ctx.youwee.fs.removeFile(scratchFile);
 ```
 
 Filesystem calls are mediated by Youwee:
@@ -535,6 +538,10 @@ Write permissions are still constrained even after approval.
 Youwee blocks dangerous write scopes such as the filesystem root, home directory root, startup/autostart locations, shell profile files, SSH/keychain/browser profile areas, application/system folders, and other sensitive OS locations.
 
 Youwee also blocks dangerous output filenames/extensions such as shell scripts, executables, dynamic libraries, launch agents/services, desktop launchers, shortcuts, and similar executable formats.
+
+For cleanup, use `ctx.youwee.fs.removeFile(path)`.
+It can only remove regular files created during the current plugin run or files inside a Youwee-managed temp directory returned by `ctx.youwee.fs.tempDir(...)`.
+It cannot remove directories, symlinks, dangerous output paths, or user files that existed before the plugin run started.
 
 Plugin result mutations are validated too.
 If a plugin returns `mutations.activeFilepath` or `mutations.extraFiles`, those paths must be safe and inside approved write scopes before Youwee passes them to the next workflow step.
@@ -1019,8 +1026,8 @@ Runtime access:
 
 ```ts
 ctx.youwee.sdk.version
-ctx.youwee.sdk.checkAppVersion(">=0.14.1 <0.15.0")
-ctx.youwee.sdk.assertAppVersion(">=0.14.1 <0.15.0")
+ctx.youwee.sdk.checkAppVersion(">=0.15.0 <0.16.0")
+ctx.youwee.sdk.assertAppVersion(">=0.15.0 <0.16.0")
 ```
 
 Use these when your plugin depends on specific app features.
@@ -1109,6 +1116,7 @@ Use:
 
 - `ctx.youwee.fs.readText(...)`
 - `ctx.youwee.fs.writeText(...)`
+- `ctx.youwee.fs.removeFile(...)`
 - `ctx.youwee.fs.ensureDir(...)`
 - `ctx.youwee.tools.ffmpeg.run(...)`
 - `ctx.youwee.tools.ytdlp.run(...)`
