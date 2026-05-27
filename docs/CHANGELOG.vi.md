@@ -7,6 +7,12 @@ và dự án tuân theo [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+## [0.15.0] - 2026-05-27
+
+### Thay đổi
+- **Cải tiến UI và UX** - Hoàn thiện giao diện và trải nghiệm trên AI Features, metadata, phần cài đặt plugin, dialog guide, và hệ thống thông báo dùng chung để trải nghiệm Youwee đồng nhất hơn
+- **Hỗ trợ Plugin SDK v2.0.0** - Nâng cấp phần plugin lên `youwee-sdk` `v2.0.0`, gồm permission `read/write/AI` chặt chẽ hơn và hỗ trợ workspace plugin ưu tiên TypeScript
+
 ## [0.14.1] - 2026-05-24
 
 ### Thay đổi

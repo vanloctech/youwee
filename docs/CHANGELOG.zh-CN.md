@@ -7,6 +7,12 @@ Youwee 的所有重要更改都将记录在此文件中。
 
 ## [Unreleased]
 
+## [0.15.0] - 2026-05-27
+
+### 变更
+- **UI 与 UX 优化** - 打磨了 AI Features、metadata、插件设置、guide 弹窗以及共享通知流程的界面与体验，让 Youwee 整体风格更加一致
+- **支持 Plugin SDK v2.0.0** - 将插件能力升级到 `youwee-sdk` `v2.0.0`，包含更严格的 `read/write/AI` 权限约束，以及 TypeScript 优先的插件工作区支持
+
 ## [0.14.1] - 2026-05-24
 
 ### 变更
