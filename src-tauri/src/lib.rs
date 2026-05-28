@@ -297,6 +297,9 @@ pub fn run() {
             commands::update_channel_last_checked,
             commands::update_channel_info,
             commands::set_polling_network_config,
+            commands::set_telegram_config,
+            commands::get_telegram_status,
+            commands::send_telegram_reply,
             // External deep-link commands
             commands::consume_pending_external_links,
             // System commands

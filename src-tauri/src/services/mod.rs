@@ -4,6 +4,7 @@ mod ffmpeg;
 mod gallerydl;
 mod plugin;
 pub mod polling;
+pub mod telegram;
 mod whisper;
 mod ytdlp;
 

@@ -180,6 +180,15 @@ export interface DownloadSettings {
   sponsorBlock: boolean; // toggle on/off
   sponsorBlockMode: SponsorBlockMode; // 'remove' | 'mark' | 'custom'
   sponsorBlockCategories: Record<SponsorBlockCategory, SponsorBlockAction>; // per-category action (custom mode)
+  // Telegram remote control settings
+  telegramEnabled: boolean;
+  telegramBotToken: string;
+  telegramAllowedChatIds: string;
+}
+
+export interface TelegramStatus {
+  state: 'disabled' | 'running' | 'error';
+  message?: string | null;
 }
 
 export interface DownloadProgress {

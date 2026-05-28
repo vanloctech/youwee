@@ -7,6 +7,9 @@ Youwee 的所有重要更改都将记录在此文件中。
 
 ## [Unreleased]
 
+### 新增
+- **Telegram 远程下载** - 新增 Remote Download 设置区域，支持通过 Telegram long polling 进行控制、以 tag 形式输入允许的 chat ID、命令指南弹窗、`/add`、`/download`、`/status`、`/queue`、`/stop`、`/help` 命令，以及 `720`、`audio`、`mp3` 等简短质量参数
+
 ## [0.15.1] - 2026-05-27
 
 ### 变更

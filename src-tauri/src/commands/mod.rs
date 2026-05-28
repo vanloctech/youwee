@@ -10,6 +10,7 @@ mod logs;
 mod metadata;
 mod plugin;
 mod processing;
+mod telegram;
 mod video;
 mod whisper;
 
@@ -25,5 +26,6 @@ pub use logs::*;
 pub use metadata::*;
 pub use plugin::*;
 pub use processing::*;
+pub use telegram::*;
 pub use video::*;
 pub use whisper::*;

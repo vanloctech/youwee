@@ -58,6 +58,7 @@ import type {
   SponsorBlockMode,
   SubtitleFormat,
   SubtitleMode,
+  TelegramStatus,
   VideoCodec,
 } from '@/lib/types';
 import { DEFAULT_SPONSORBLOCK_CATEGORIES } from '@/lib/types';
@@ -149,6 +150,9 @@ function saveSettings(settings: DownloadSettings) {
         sponsorBlock: settings.sponsorBlock,
         sponsorBlockMode: settings.sponsorBlockMode,
         sponsorBlockCategories: settings.sponsorBlockCategories,
+        telegramEnabled: settings.telegramEnabled,
+        telegramBotToken: settings.telegramBotToken,
+        telegramAllowedChatIds: settings.telegramAllowedChatIds,
       }),
     );
   } catch (e) {
@@ -228,6 +232,13 @@ interface DownloadContextType {
   updateSponsorBlock: (enabled: boolean) => void;
   updateSponsorBlockMode: (mode: SponsorBlockMode) => void;
   updateSponsorBlockCategory: (category: SponsorBlockCategory, action: SponsorBlockAction) => void;
+  updateTelegramSettings: (
+    updates: Pick<
+      Partial<DownloadSettings>,
+      'telegramEnabled' | 'telegramBotToken' | 'telegramAllowedChatIds'
+    >,
+  ) => void;
+  refreshTelegramStatus: () => Promise<TelegramStatus>;
   // Cookie error detection
   cookieError: { show: boolean; itemId?: string; kind: 'db_locked' | 'fresh_cookies' } | null;
   clearCookieError: () => void;
@@ -298,6 +309,10 @@ export function DownloadProvider({ children }: { children: ReactNode }) {
       sponsorBlockCategories: saved.sponsorBlockCategories || {
         ...DEFAULT_SPONSORBLOCK_CATEGORIES,
       },
+      // Telegram remote control settings
+      telegramEnabled: saved.telegramEnabled === true,
+      telegramBotToken: saved.telegramBotToken || '',
+      telegramAllowedChatIds: saved.telegramAllowedChatIds || '',
     };
   });
 
@@ -323,6 +338,27 @@ export function DownloadProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     refreshPostDownloadWorkflowSteps();
   }, []);
+
+  useEffect(() => {
+    const allowedChatIds = settings.telegramAllowedChatIds
+      .split(/[\s,]+/)
+      .map((id) => id.trim())
+      .filter((id) => /^-?\d+$/.test(id));
+
+    const timer = window.setTimeout(() => {
+      invoke('set_telegram_config', {
+        config: {
+          enabled: settings.telegramEnabled,
+          botToken: settings.telegramBotToken,
+          allowedChatIds,
+        },
+      }).catch((e) => console.error('Failed to sync Telegram config:', e));
+    }, 300);
+
+    return () => {
+      window.clearTimeout(timer);
+    };
+  }, [settings.telegramEnabled, settings.telegramBotToken, settings.telegramAllowedChatIds]);
 
   const [currentPlaylistInfo, setCurrentPlaylistInfo] = useState<PlaylistInfo | null>(null);
 
@@ -1438,6 +1474,26 @@ export function DownloadProvider({ children }: { children: ReactNode }) {
     [],
   );
 
+  const updateTelegramSettings = useCallback(
+    (
+      updates: Pick<
+        Partial<DownloadSettings>,
+        'telegramEnabled' | 'telegramBotToken' | 'telegramAllowedChatIds'
+      >,
+    ) => {
+      setSettings((s) => {
+        const newSettings = { ...s, ...updates };
+        saveSettings(newSettings);
+        return newSettings;
+      });
+    },
+    [],
+  );
+
+  const refreshTelegramStatus = useCallback(async () => {
+    return invoke<TelegramStatus>('get_telegram_status');
+  }, []);
+
   // Clear cookie error dialog
   const clearCookieError = useCallback(() => {
     setCookieError(null);
@@ -1513,6 +1569,8 @@ export function DownloadProvider({ children }: { children: ReactNode }) {
     updateSponsorBlock,
     updateSponsorBlockMode,
     updateSponsorBlockCategory,
+    updateTelegramSettings,
+    refreshTelegramStatus,
     // Cookie error detection
     cookieError,
     clearCookieError,

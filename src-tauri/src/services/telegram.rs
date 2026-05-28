@@ -1,0 +1,561 @@
+use std::collections::HashSet;
+use std::sync::atomic::{AtomicU64, Ordering};
+use std::sync::Mutex;
+
+use reqwest::Client;
+use serde::{Deserialize, Serialize};
+use tauri::{AppHandle, Emitter};
+
+const TELEGRAM_API_BASE: &str = "https://api.telegram.org";
+const LONG_POLL_TIMEOUT_SECS: u64 = 30;
+const MAX_BACKOFF_SECS: u64 = 60;
+
+static TELEGRAM_CONFIG: Mutex<TelegramConfig> = Mutex::new(TelegramConfig {
+    enabled: false,
+    bot_token: String::new(),
+    allowed_chat_ids: Vec::new(),
+});
+static TELEGRAM_STATUS: Mutex<TelegramStatus> = Mutex::new(TelegramStatus {
+    state: TelegramStatusState::Disabled,
+    message: None,
+});
+static TELEGRAM_GENERATION: AtomicU64 = AtomicU64::new(0);
+static TELEGRAM_LAST_UPDATE_ID: AtomicU64 = AtomicU64::new(0);
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct TelegramConfig {
+    pub enabled: bool,
+    pub bot_token: String,
+    pub allowed_chat_ids: Vec<String>,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct TelegramStatus {
+    pub state: TelegramStatusState,
+    pub message: Option<String>,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub enum TelegramStatusState {
+    Disabled,
+    Running,
+    Error,
+}
+
+#[derive(Clone, Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+struct TelegramDownloadCommandEvent {
+    command: String,
+    url: Option<String>,
+    quality: Option<String>,
+    chat_id: String,
+}
+
+#[derive(Debug, PartialEq, Eq)]
+pub enum TelegramCommand {
+    Add {
+        url: String,
+        quality: Option<String>,
+    },
+    Download {
+        url: String,
+        quality: Option<String>,
+    },
+    Status,
+    Queue,
+    Stop,
+    Help,
+    Unsupported,
+}
+
+#[derive(Debug, Deserialize)]
+struct TelegramApiResponse<T> {
+    ok: bool,
+    result: Option<T>,
+    description: Option<String>,
+}
+
+#[derive(Debug, Deserialize)]
+struct TelegramUpdate {
+    update_id: u64,
+    message: Option<TelegramMessage>,
+}
+
+#[derive(Debug, Deserialize)]
+struct TelegramMessage {
+    chat: TelegramChat,
+    text: Option<String>,
+}
+
+#[derive(Debug, Deserialize)]
+struct TelegramChat {
+    id: i64,
+}
+
+#[derive(Debug, Serialize)]
+struct GetUpdatesRequest {
+    timeout: u64,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    offset: Option<u64>,
+    allowed_updates: Vec<&'static str>,
+}
+
+#[derive(Debug, Serialize)]
+struct SendMessageRequest<'a> {
+    chat_id: &'a str,
+    text: &'a str,
+    disable_web_page_preview: bool,
+}
+
+#[derive(Debug, Serialize)]
+struct SetMyCommandsRequest {
+    commands: Vec<BotCommand>,
+}
+
+#[derive(Debug, Serialize)]
+struct BotCommand {
+    command: &'static str,
+    description: &'static str,
+}
+
+pub fn set_config(app: AppHandle, config: TelegramConfig) {
+    let sanitized = sanitize_config(config);
+    if let Ok(mut guard) = TELEGRAM_CONFIG.lock() {
+        if guard.bot_token != sanitized.bot_token {
+            TELEGRAM_LAST_UPDATE_ID.store(0, Ordering::SeqCst);
+        }
+        *guard = sanitized.clone();
+    }
+
+    let generation = TELEGRAM_GENERATION.fetch_add(1, Ordering::SeqCst) + 1;
+
+    if !sanitized.enabled {
+        set_status(TelegramStatusState::Disabled, None);
+        return;
+    }
+
+    if sanitized.bot_token.is_empty() {
+        set_status(
+            TelegramStatusState::Error,
+            Some("Telegram bot token is required.".to_string()),
+        );
+        return;
+    }
+
+    if sanitized.allowed_chat_ids.is_empty() {
+        set_status(
+            TelegramStatusState::Error,
+            Some("At least one allowed chat ID is required.".to_string()),
+        );
+        return;
+    }
+
+    set_status(TelegramStatusState::Running, None);
+    let bot_token = sanitized.bot_token.clone();
+    tauri::async_runtime::spawn(async move {
+        if let Err(error) = set_my_commands(&Client::new(), &bot_token).await {
+            set_status(TelegramStatusState::Error, Some(error));
+        }
+    });
+    tauri::async_runtime::spawn(run_polling_loop(app, sanitized, generation));
+}
+
+pub fn get_status() -> TelegramStatus {
+    TELEGRAM_STATUS
+        .lock()
+        .map(|status| status.clone())
+        .unwrap_or(TelegramStatus {
+            state: TelegramStatusState::Error,
+            message: Some("Telegram status is unavailable.".to_string()),
+        })
+}
+
+pub async fn send_reply(chat_id: String, text: String) -> Result<(), String> {
+    let config = TELEGRAM_CONFIG
+        .lock()
+        .map(|guard| guard.clone())
+        .map_err(|_| "Failed to read Telegram config.".to_string())?;
+
+    if !config.enabled || config.bot_token.is_empty() {
+        return Err("Telegram is not configured.".to_string());
+    }
+
+    send_message(&Client::new(), &config.bot_token, &chat_id, &text).await
+}
+
+fn sanitize_config(config: TelegramConfig) -> TelegramConfig {
+    let mut seen = HashSet::new();
+    let allowed_chat_ids = config
+        .allowed_chat_ids
+        .into_iter()
+        .map(|id| id.trim().to_string())
+        .filter(|id| !id.is_empty() && id.parse::<i64>().is_ok())
+        .filter(|id| seen.insert(id.clone()))
+        .collect();
+
+    TelegramConfig {
+        enabled: config.enabled,
+        bot_token: config.bot_token.trim().to_string(),
+        allowed_chat_ids,
+    }
+}
+
+async fn run_polling_loop(app: AppHandle, config: TelegramConfig, generation: u64) {
+    let client = Client::new();
+    let allowed_chat_ids: HashSet<String> = config.allowed_chat_ids.iter().cloned().collect();
+    let mut backoff_secs = 2;
+
+    loop {
+        if TELEGRAM_GENERATION.load(Ordering::SeqCst) != generation {
+            break;
+        }
+
+        let offset = TELEGRAM_LAST_UPDATE_ID
+            .load(Ordering::SeqCst)
+            .checked_add(1)
+            .filter(|value| *value > 1);
+
+        match fetch_updates(&client, &config.bot_token, offset).await {
+            Ok(updates) => {
+                backoff_secs = 2;
+                set_status(TelegramStatusState::Running, None);
+
+                for update in updates {
+                    TELEGRAM_LAST_UPDATE_ID.fetch_max(update.update_id, Ordering::SeqCst);
+                    if TELEGRAM_GENERATION.load(Ordering::SeqCst) != generation {
+                        break;
+                    }
+                    handle_update(&app, &client, &config.bot_token, &allowed_chat_ids, update)
+                        .await;
+                }
+            }
+            Err(error) => {
+                set_status(TelegramStatusState::Error, Some(error));
+                tokio::time::sleep(tokio::time::Duration::from_secs(backoff_secs)).await;
+                backoff_secs = (backoff_secs * 2).min(MAX_BACKOFF_SECS);
+            }
+        }
+    }
+}
+
+async fn fetch_updates(
+    client: &Client,
+    bot_token: &str,
+    offset: Option<u64>,
+) -> Result<Vec<TelegramUpdate>, String> {
+    let url = format!("{}/bot{}/getUpdates", TELEGRAM_API_BASE, bot_token);
+    let request = GetUpdatesRequest {
+        timeout: LONG_POLL_TIMEOUT_SECS,
+        offset,
+        allowed_updates: vec!["message"],
+    };
+
+    let response = client
+        .post(url)
+        .json(&request)
+        .send()
+        .await
+        .map_err(|e| format!("Telegram network error: {}", e))?;
+
+    let body = response
+        .json::<TelegramApiResponse<Vec<TelegramUpdate>>>()
+        .await
+        .map_err(|e| format!("Failed to parse Telegram response: {}", e))?;
+
+    if !body.ok {
+        return Err(body
+            .description
+            .unwrap_or_else(|| "Telegram API returned an error.".to_string()));
+    }
+
+    Ok(body.result.unwrap_or_default())
+}
+
+async fn handle_update(
+    app: &AppHandle,
+    client: &Client,
+    bot_token: &str,
+    allowed_chat_ids: &HashSet<String>,
+    update: TelegramUpdate,
+) {
+    let Some(message) = update.message else {
+        return;
+    };
+    let chat_id = message.chat.id.to_string();
+    if !allowed_chat_ids.contains(&chat_id) {
+        return;
+    }
+
+    let Some(text) = message.text.as_deref() else {
+        return;
+    };
+
+    match parse_command(text) {
+        TelegramCommand::Add { url, quality } => {
+            emit_url_command(app, "add", &url, quality.as_deref(), &chat_id);
+        }
+        TelegramCommand::Download { url, quality } => {
+            emit_url_command(app, "download", &url, quality.as_deref(), &chat_id);
+        }
+        TelegramCommand::Status => {
+            emit_simple_command(app, "status", &chat_id);
+        }
+        TelegramCommand::Queue => {
+            emit_simple_command(app, "queue", &chat_id);
+        }
+        TelegramCommand::Stop => {
+            emit_simple_command(app, "stop", &chat_id);
+        }
+        TelegramCommand::Help => {
+            let _ = send_message(client, bot_token, &chat_id, help_text()).await;
+        }
+        TelegramCommand::Unsupported => {
+            let _ = send_message(
+                client,
+                bot_token,
+                &chat_id,
+                "Unsupported command. Use /help to see available commands.",
+            )
+            .await;
+        }
+    }
+}
+
+fn emit_url_command(app: &AppHandle, command: &str, url: &str, quality: Option<&str>, chat_id: &str) {
+    let _ = app.emit(
+        "telegram-download-command",
+        TelegramDownloadCommandEvent {
+            command: command.to_string(),
+            url: Some(url.to_string()),
+            quality: quality.map(ToString::to_string),
+            chat_id: chat_id.to_string(),
+        },
+    );
+}
+
+fn emit_simple_command(app: &AppHandle, command: &str, chat_id: &str) {
+    let _ = app.emit(
+        "telegram-download-command",
+        TelegramDownloadCommandEvent {
+            command: command.to_string(),
+            url: None,
+            quality: None,
+            chat_id: chat_id.to_string(),
+        },
+    );
+}
+
+async fn send_message(
+    client: &Client,
+    bot_token: &str,
+    chat_id: &str,
+    text: &str,
+) -> Result<(), String> {
+    let url = format!("{}/bot{}/sendMessage", TELEGRAM_API_BASE, bot_token);
+    let response = client
+        .post(url)
+        .json(&SendMessageRequest {
+            chat_id,
+            text,
+            disable_web_page_preview: true,
+        })
+        .send()
+        .await
+        .map_err(|e| format!("Telegram network error: {}", e))?;
+
+    let body = response
+        .json::<TelegramApiResponse<serde_json::Value>>()
+        .await
+        .map_err(|e| format!("Failed to parse Telegram response: {}", e))?;
+
+    if body.ok {
+        Ok(())
+    } else {
+        Err(body
+            .description
+            .unwrap_or_else(|| "Telegram API returned an error.".to_string()))
+    }
+}
+
+async fn set_my_commands(client: &Client, bot_token: &str) -> Result<(), String> {
+    let url = format!("{}/bot{}/setMyCommands", TELEGRAM_API_BASE, bot_token);
+    let response = client
+        .post(url)
+        .json(&SetMyCommandsRequest {
+            commands: vec![
+                BotCommand {
+                    command: "add",
+                    description: "Add a URL to the queue",
+                },
+                BotCommand {
+                    command: "download",
+                    description: "Add a URL and start downloading",
+                },
+                BotCommand {
+                    command: "status",
+                    description: "Show download status",
+                },
+                BotCommand {
+                    command: "queue",
+                    description: "Show recent queue items",
+                },
+                BotCommand {
+                    command: "stop",
+                    description: "Stop the current download",
+                },
+                BotCommand {
+                    command: "help",
+                    description: "Show available commands",
+                },
+            ],
+        })
+        .send()
+        .await
+        .map_err(|e| format!("Telegram network error: {}", e))?;
+
+    let body = response
+        .json::<TelegramApiResponse<serde_json::Value>>()
+        .await
+        .map_err(|e| format!("Failed to parse Telegram response: {}", e))?;
+
+    if body.ok {
+        Ok(())
+    } else {
+        Err(body
+            .description
+            .unwrap_or_else(|| "Telegram API returned an error.".to_string()))
+    }
+}
+
+fn set_status(state: TelegramStatusState, message: Option<String>) {
+    if let Ok(mut status) = TELEGRAM_STATUS.lock() {
+        *status = TelegramStatus { state, message };
+    }
+}
+
+fn help_text() -> &'static str {
+    "Youwee Telegram commands:\n/add <url> [quality] - Add a URL to the queue.\n/download <url> [quality] - Add a URL and start downloading when idle.\n/status - Show download status.\n/queue - Show recent queue items.\n/stop - Stop the current download.\n/help - Show this help.\n\nQuality: best, 8k, 4k, 2k, 1080, 720, 480, 360, audio, mp3."
+}
+
+pub fn parse_command(text: &str) -> TelegramCommand {
+    let trimmed = text.trim();
+    if trimmed.is_empty() {
+        return TelegramCommand::Unsupported;
+    }
+
+    let mut parts = trimmed.split_whitespace();
+    let command = parts.next().unwrap_or_default();
+    let command = command.split('@').next().unwrap_or(command).to_lowercase();
+
+    match command.as_str() {
+        "/help" | "help" => TelegramCommand::Help,
+        "/status" | "status" => TelegramCommand::Status,
+        "/queue" | "queue" => TelegramCommand::Queue,
+        "/stop" | "stop" => TelegramCommand::Stop,
+        "/add" | "add" => parts
+            .next()
+            .map(|url| TelegramCommand::Add {
+                url: url.to_string(),
+                quality: parts.next().map(|quality| quality.to_string()),
+            })
+            .unwrap_or(TelegramCommand::Unsupported),
+        "/download" | "download" => parts
+            .next()
+            .map(|url| TelegramCommand::Download {
+                url: url.to_string(),
+                quality: parts.next().map(|quality| quality.to_string()),
+            })
+            .unwrap_or(TelegramCommand::Unsupported),
+        _ => TelegramCommand::Unsupported,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn parses_help_commands() {
+        assert_eq!(parse_command("/help"), TelegramCommand::Help);
+        assert_eq!(parse_command("/help@youwee_bot"), TelegramCommand::Help);
+    }
+
+    #[test]
+    fn parses_control_commands() {
+        assert_eq!(parse_command("/status"), TelegramCommand::Status);
+        assert_eq!(parse_command("/queue@youwee_bot"), TelegramCommand::Queue);
+        assert_eq!(parse_command("stop"), TelegramCommand::Stop);
+    }
+
+    #[test]
+    fn parses_add_command() {
+        assert_eq!(
+            parse_command("  /add   https://example.com/video  "),
+            TelegramCommand::Add {
+                url: "https://example.com/video".to_string(),
+                quality: None
+            }
+        );
+        assert_eq!(
+            parse_command("/add https://example.com/video 720"),
+            TelegramCommand::Add {
+                url: "https://example.com/video".to_string(),
+                quality: Some("720".to_string())
+            }
+        );
+    }
+
+    #[test]
+    fn parses_download_command() {
+        assert_eq!(
+            parse_command("/download https://example.com/video"),
+            TelegramCommand::Download {
+                url: "https://example.com/video".to_string(),
+                quality: None
+            }
+        );
+        assert_eq!(
+            parse_command("/download https://example.com/video audio"),
+            TelegramCommand::Download {
+                url: "https://example.com/video".to_string(),
+                quality: Some("audio".to_string())
+            }
+        );
+    }
+
+    #[test]
+    fn rejects_missing_url() {
+        assert_eq!(parse_command("/add"), TelegramCommand::Unsupported);
+        assert_eq!(parse_command("/download"), TelegramCommand::Unsupported);
+    }
+
+    #[test]
+    fn sanitizes_allowed_chat_ids() {
+        let config = sanitize_config(TelegramConfig {
+            enabled: true,
+            bot_token: " token ".to_string(),
+            allowed_chat_ids: vec![
+                "123".to_string(),
+                "abc".to_string(),
+                "123".to_string(),
+                "-456".to_string(),
+            ],
+        });
+
+        assert_eq!(config.bot_token, "token");
+        assert_eq!(config.allowed_chat_ids, vec!["123", "-456"]);
+    }
+
+    #[test]
+    fn computes_next_update_offset() {
+        TELEGRAM_LAST_UPDATE_ID.store(41, Ordering::SeqCst);
+        let offset = TELEGRAM_LAST_UPDATE_ID
+            .load(Ordering::SeqCst)
+            .checked_add(1)
+            .filter(|value| *value > 1);
+        assert_eq!(offset, Some(42));
+    }
+}

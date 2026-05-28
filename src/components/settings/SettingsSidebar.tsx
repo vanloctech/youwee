@@ -3,6 +3,7 @@ import {
   Atom,
   Globe,
   Info,
+  MessageCircleCode,
   Package,
   Palette,
   Puzzle,
@@ -21,6 +22,7 @@ const SECTION_ICONS: Record<SettingsSectionId, React.ReactNode> = {
   general: <Palette className="w-4 h-4" />,
   dependencies: <Package className="w-4 h-4" />,
   download: <ArrowDownToLine className="w-4 h-4" />,
+  'remote-download': <MessageCircleCode className="w-4 h-4" />,
   plugins: <Atom className="w-4 h-4" />,
   extension: <Puzzle className="w-4 h-4" />,
   ai: <Sparkles className="w-4 h-4" />,
@@ -38,6 +40,7 @@ export function SettingsSidebar({ activeSection, onSectionChange }: SettingsSide
     { id: 'ai', labelKey: 'sections.ai' },
     { id: 'network', labelKey: 'sections.network' },
     { id: 'plugins', labelKey: 'sections.plugins' },
+    { id: 'remote-download', labelKey: 'sections.remoteDownload' },
     { id: 'extension', labelKey: 'sections.extension' },
     { id: 'about', labelKey: 'sections.about' },
   ];
@@ -50,7 +53,7 @@ export function SettingsSidebar({ activeSection, onSectionChange }: SettingsSide
           type="button"
           onClick={() => onSectionChange(section.id)}
           className={cn(
-            'w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200',
+            'w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-left text-sm font-medium transition-all duration-200',
             activeSection === section.id
               ? 'bg-primary/10 text-primary'
               : 'text-muted-foreground hover:text-foreground hover:bg-muted/50',
@@ -64,7 +67,7 @@ export function SettingsSidebar({ activeSection, onSectionChange }: SettingsSide
           >
             {SECTION_ICONS[section.id]}
           </span>
-          {t(section.labelKey)}
+          <span className="min-w-0 leading-tight">{t(section.labelKey)}</span>
         </button>
       ))}
     </nav>
