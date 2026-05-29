@@ -20,6 +20,8 @@ static TELEGRAM_STATUS: Mutex<TelegramStatus> = Mutex::new(TelegramStatus {
     state: TelegramStatusState::Disabled,
     message: None,
 });
+static TELEGRAM_POLLING_TASK: Mutex<Option<tauri::async_runtime::JoinHandle<()>>> =
+    Mutex::new(None);
 static TELEGRAM_GENERATION: AtomicU64 = AtomicU64::new(0);
 static TELEGRAM_LAST_UPDATE_ID: AtomicU64 = AtomicU64::new(0);
 
@@ -159,6 +161,7 @@ pub fn set_config(app: AppHandle, config: TelegramConfig) {
     }
 
     let generation = TELEGRAM_GENERATION.fetch_add(1, Ordering::SeqCst) + 1;
+    abort_polling_task();
 
     if !sanitized.enabled {
         set_status(TelegramStatusState::Disabled, None);
@@ -188,7 +191,9 @@ pub fn set_config(app: AppHandle, config: TelegramConfig) {
             set_status(TelegramStatusState::Error, Some(error));
         }
     });
-    tauri::async_runtime::spawn(run_polling_loop(app, sanitized, generation));
+    replace_polling_task(tauri::async_runtime::spawn(run_polling_loop(
+        app, sanitized, generation,
+    )));
 }
 
 pub fn get_status() -> TelegramStatus {
@@ -229,6 +234,22 @@ fn sanitize_config(config: TelegramConfig) -> TelegramConfig {
         bot_token: config.bot_token.trim().to_string(),
         allowed_chat_ids,
         plain_url_action: config.plain_url_action,
+    }
+}
+
+fn abort_polling_task() {
+    if let Ok(mut task) = TELEGRAM_POLLING_TASK.lock() {
+        if let Some(handle) = task.take() {
+            handle.abort();
+        }
+    }
+}
+
+fn replace_polling_task(handle: tauri::async_runtime::JoinHandle<()>) {
+    if let Ok(mut task) = TELEGRAM_POLLING_TASK.lock() {
+        if let Some(previous) = task.replace(handle) {
+            previous.abort();
+        }
     }
 }
 
