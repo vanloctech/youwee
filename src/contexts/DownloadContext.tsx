@@ -270,7 +270,7 @@ export function DownloadProvider({ children }: { children: ReactNode }) {
       format: saved.format || 'mp4',
       outputPath: saved.outputPath || '',
       downloadPlaylist: saved.downloadPlaylist || false,
-      videoCodec: saved.videoCodec || 'h264',
+      videoCodec: saved.videoCodec || 'auto',
       audioBitrate: saved.audioBitrate || 'auto',
       concurrentDownloads: saved.concurrentDownloads || 1,
       playlistLimit: saved.playlistLimit || 0, // 0 = unlimited

@@ -541,7 +541,7 @@ export function HistoryProvider({ children }: { children: ReactNode }) {
           quality,
           format,
           downloadPlaylist: false,
-          videoCodec: 'h264',
+          videoCodec: 'auto',
           audioBitrate: '192',
           playlistLimit: null,
           subtitleMode: 'off',

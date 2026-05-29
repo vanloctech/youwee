@@ -431,7 +431,7 @@ export function useChannelsController(): ChannelsContextType {
         platform: detectPlatform(url),
         downloadQuality: downloadSettings?.quality || 'best',
         downloadFormat: downloadSettings?.format || 'mp4',
-        downloadVideoCodec: downloadSettings?.videoCodec || 'h264',
+        downloadVideoCodec: downloadSettings?.videoCodec || 'auto',
         downloadAudioBitrate: downloadSettings?.audioBitrate || '192',
       });
       await refreshChannels();
@@ -488,7 +488,7 @@ export function useChannelsController(): ChannelsContextType {
         autoDownload: settings.autoDownload,
         downloadQuality: settings.downloadQuality,
         downloadFormat: settings.downloadFormat,
-        downloadVideoCodec: settings.downloadVideoCodec ?? 'h264',
+        downloadVideoCodec: settings.downloadVideoCodec ?? 'auto',
         downloadAudioBitrate: settings.downloadAudioBitrate ?? '192',
         filterMinDuration: settings.filterMinDuration ?? null,
         filterMaxDuration: settings.filterMaxDuration ?? null,

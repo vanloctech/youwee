@@ -10,6 +10,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - **Telegram Remote Download** - Added a Remote Download settings section with Telegram long-polling control, allowed chat ID tags, bot command guide, `/add`, `/download`, `/status`, `/queue`, `/stop`, and `/help` support, plus optional quality shortcuts such as `720`, `audio`, and `mp3`
 
+### Changed
+- **YouTube format selection** - Changed the default YouTube video codec to Auto so new downloads no longer force H.264-only format selection and better match Universal downloads for videos without matching AVC streams
+
 ## [0.15.1] - 2026-05-27
 
 ### Changed

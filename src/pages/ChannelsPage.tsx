@@ -129,7 +129,7 @@ function loadInitialSettings(): {
       const parsed = JSON.parse(saved);
       const quality: Quality = parsed.quality || 'best';
       const format: Format = parsed.format || 'mp4';
-      const videoCodec: VideoCodec = parsed.videoCodec || 'h264';
+      const videoCodec: VideoCodec = parsed.videoCodec || 'auto';
       const isAudioMode = quality === 'audio' || ['mp3', 'm4a', 'opus'].includes(format);
 
       // Normalize: if not audio mode but format is audio, reset to mp4
@@ -153,7 +153,7 @@ function loadInitialSettings(): {
   } catch {
     /* ignore */
   }
-  return { quality: 'best', format: 'mp4', videoCodec: 'h264', isAudioMode: false };
+  return { quality: 'best', format: 'mp4', videoCodec: 'auto', isAudioMode: false };
 }
 
 // ── Helpers ──────────────────────────────────────────────────────────
