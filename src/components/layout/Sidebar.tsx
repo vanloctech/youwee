@@ -1,7 +1,6 @@
 import {
   ChevronLeft,
   ChevronRight,
-  FileJson,
   FolderDown,
   Globe,
   Images,
@@ -11,6 +10,7 @@ import {
   Sparkles,
   Subtitles,
   Sun,
+  TableProperties,
   Tv,
   Wand2,
   Youtube,
@@ -84,7 +84,7 @@ const navItems: NavItem[] = [
   {
     id: 'metadata',
     labelKey: 'sidebar.metadata',
-    icon: <FileJson className="w-5 h-5" />,
+    icon: <TableProperties className="w-5 h-5" />,
   },
   {
     id: 'library',

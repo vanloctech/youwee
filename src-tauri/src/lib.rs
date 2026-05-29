@@ -260,6 +260,8 @@ pub fn run() {
             commands::generate_subtitles_with_whisper,
             // Metadata commands
             commands::fetch_metadata,
+            commands::extract_data_rows,
+            commands::export_data_rows_sqlite,
             // Plugin commands
             commands::list_plugins,
             commands::get_plugin_details,
@@ -282,6 +284,7 @@ pub fn run() {
             commands::set_default_provider_for_language,
             commands::set_plugin_runtime_locale,
             commands::cancel_metadata_fetch,
+            commands::cancel_data_export,
             // Channel commands
             commands::get_channel_videos,
             commands::get_channel_info,

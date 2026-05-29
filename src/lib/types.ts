@@ -636,6 +636,48 @@ export interface PlaylistVideoEntry {
   upload_date?: string;
 }
 
+export type ExportSource = 'auto' | 'youtube_playlist' | 'youtube_channel' | 'url_list';
+
+export type ExportFormat =
+  | 'csv'
+  | 'excel'
+  | 'text'
+  | 'bookmark_html'
+  | 'json'
+  | 'markdown'
+  | 'xml'
+  | 'html'
+  | 'yaml'
+  | 'sqlite'
+  | 'word';
+
+export interface ExportRow {
+  id: string;
+  title?: string | null;
+  url?: string | null;
+  platform?: string | null;
+  uploader?: string | null;
+  thumbnail?: string | null;
+  durationSeconds?: number | null;
+  uploadDate?: string | null;
+  timestamp?: number | null;
+  viewCount?: number | null;
+  likeCount?: number | null;
+  commentCount?: number | null;
+  shareCount?: number | null;
+  description?: string | null;
+  tags?: string[] | null;
+  playlistIndex?: number | null;
+  extractor?: string | null;
+}
+
+export interface ExtractDataRowsOutput {
+  source: ExportSource;
+  title?: string | null;
+  rows: ExportRow[];
+  warnings: string[];
+}
+
 // Log types
 export type LogType = 'command' | 'success' | 'error' | 'stderr' | 'info';
 

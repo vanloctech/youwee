@@ -13,6 +13,7 @@ import { UpdateDialog } from '@/components/UpdateDialog';
 import { ToastProvider } from '@/components/ui/toast';
 import { AIProvider } from '@/contexts/AIContext';
 import { ChannelsProvider } from '@/contexts/ChannelsContext';
+import { DataExportProvider } from '@/contexts/DataExportContext';
 import { DependenciesProvider, useDependencies } from '@/contexts/DependenciesContext';
 import { DownloadProvider, useDownload } from '@/contexts/DownloadContext';
 import { GalleryDlProvider } from '@/contexts/GalleryDlContext';
@@ -216,11 +217,13 @@ export function App() {
                         <ProcessingProvider>
                           <SubtitleProvider>
                             <MetadataProvider>
-                              <ToastProvider>
-                                <UpdaterWrapper>
-                                  <AppContent />
-                                </UpdaterWrapper>
-                              </ToastProvider>
+                              <DataExportProvider>
+                                <ToastProvider>
+                                  <UpdaterWrapper>
+                                    <AppContent />
+                                  </UpdaterWrapper>
+                                </ToastProvider>
+                              </DataExportProvider>
                             </MetadataProvider>
                           </SubtitleProvider>
                         </ProcessingProvider>
