@@ -53,8 +53,8 @@ jobs:
       - name: Create placeholder yt-dlp binary for check
         run: |
           mkdir -p src-tauri/bin
-          touch src-tauri/bin/yt-dlp-x86_64-unknown-linux-gnu
-          chmod +x src-tauri/bin/yt-dlp-x86_64-unknown-linux-gnu
+          touch src-tauri/bin/youwee-yt-dlp-x86_64-unknown-linux-gnu
+          chmod +x src-tauri/bin/youwee-yt-dlp-x86_64-unknown-linux-gnu
 
       - name: Check frontend (Biome)
         run: bun run lint
@@ -80,12 +80,12 @@ jobs:
         include:
           - platform: macos-latest
             target: aarch64-apple-darwin
-            yt_dlp_name: yt-dlp-aarch64-apple-darwin
+            yt_dlp_name: youwee-yt-dlp-aarch64-apple-darwin
             yt_dlp_url: https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp_macos
           
           - platform: ubuntu-22.04
             target: x86_64-unknown-linux-gnu
-            yt_dlp_name: yt-dlp-x86_64-unknown-linux-gnu
+            yt_dlp_name: youwee-yt-dlp-x86_64-unknown-linux-gnu
             yt_dlp_url: https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp_linux
 
     steps:

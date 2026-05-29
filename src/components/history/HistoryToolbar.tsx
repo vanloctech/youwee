@@ -56,6 +56,7 @@ export function HistoryToolbar() {
     { value: 'instagram', label: t('library.toolbar.filterInstagram') },
     { value: 'twitter', label: t('library.toolbar.filterTwitter') },
     { value: 'bilibili', label: t('library.toolbar.filterBilibili') },
+    { value: 'data_export', label: t('library.toolbar.filterDataExport') },
     { value: 'other', label: t('library.toolbar.filterOther') },
   ];
 
@@ -80,7 +81,24 @@ export function HistoryToolbar() {
     { value: 'custom', label: t('library.toolbar.dateCustom') },
   ];
 
-  const formatOptions = ['mp4', 'mkv', 'webm', 'mp3', 'm4a', 'opus'];
+  const formatOptions = [
+    'mp4',
+    'mkv',
+    'webm',
+    'mp3',
+    'm4a',
+    'opus',
+    'csv',
+    'xls',
+    'txt',
+    'html',
+    'json',
+    'md',
+    'xml',
+    'yaml',
+    'sqlite',
+    'doc',
+  ];
   const qualityOptions = ['best', 'audio', '8k', '4k', '2k', '1080', '720', '480', '360'];
 
   const activeAdvancedCount =

@@ -26,6 +26,7 @@ dist-ssr
 # Rust / Tauri
 src-tauri/target/
 src-tauri/bin/yt-dlp*
+src-tauri/bin/youwee-yt-dlp*
 
 # Python (old version)
 *.py

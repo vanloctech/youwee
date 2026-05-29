@@ -230,6 +230,7 @@
       "filterInstagram": "Instagram",
       "filterTwitter": "Twitter",
       "filterBilibili": "Bilibili",
+      "filterDataExport": "Data Export",
       "filterOther": "Other",
       "advancedFilters": "Filters",
       "mediaType": "Media type",

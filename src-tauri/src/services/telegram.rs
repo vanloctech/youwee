@@ -14,20 +14,38 @@ static TELEGRAM_CONFIG: Mutex<TelegramConfig> = Mutex::new(TelegramConfig {
     enabled: false,
     bot_token: String::new(),
     allowed_chat_ids: Vec::new(),
+    plain_url_action: TelegramPlainUrlAction::Download,
 });
 static TELEGRAM_STATUS: Mutex<TelegramStatus> = Mutex::new(TelegramStatus {
     state: TelegramStatusState::Disabled,
     message: None,
 });
+static TELEGRAM_POLLING_TASK: Mutex<Option<tauri::async_runtime::JoinHandle<()>>> =
+    Mutex::new(None);
 static TELEGRAM_GENERATION: AtomicU64 = AtomicU64::new(0);
 static TELEGRAM_LAST_UPDATE_ID: AtomicU64 = AtomicU64::new(0);
 
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct TelegramConfig {
     pub enabled: bool,
     pub bot_token: String,
     pub allowed_chat_ids: Vec<String>,
+    #[serde(default)]
+    pub plain_url_action: TelegramPlainUrlAction,
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub enum TelegramPlainUrlAction {
+    Add,
+    Download,
+}
+
+impl Default for TelegramPlainUrlAction {
+    fn default() -> Self {
+        Self::Download
+    }
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -123,14 +141,27 @@ struct BotCommand {
 
 pub fn set_config(app: AppHandle, config: TelegramConfig) {
     let sanitized = sanitize_config(config);
-    if let Ok(mut guard) = TELEGRAM_CONFIG.lock() {
-        if guard.bot_token != sanitized.bot_token {
-            TELEGRAM_LAST_UPDATE_ID.store(0, Ordering::SeqCst);
+    match TELEGRAM_CONFIG.lock() {
+        Ok(mut guard) => {
+            if *guard == sanitized {
+                return;
+            }
+            if guard.bot_token != sanitized.bot_token {
+                TELEGRAM_LAST_UPDATE_ID.store(0, Ordering::SeqCst);
+            }
+            *guard = sanitized.clone();
         }
-        *guard = sanitized.clone();
+        Err(_) => {
+            set_status(
+                TelegramStatusState::Error,
+                Some("Failed to update Telegram config.".to_string()),
+            );
+            return;
+        }
     }
 
     let generation = TELEGRAM_GENERATION.fetch_add(1, Ordering::SeqCst) + 1;
+    abort_polling_task();
 
     if !sanitized.enabled {
         set_status(TelegramStatusState::Disabled, None);
@@ -160,7 +191,9 @@ pub fn set_config(app: AppHandle, config: TelegramConfig) {
             set_status(TelegramStatusState::Error, Some(error));
         }
     });
-    tauri::async_runtime::spawn(run_polling_loop(app, sanitized, generation));
+    replace_polling_task(tauri::async_runtime::spawn(run_polling_loop(
+        app, sanitized, generation,
+    )));
 }
 
 pub fn get_status() -> TelegramStatus {
@@ -200,6 +233,23 @@ fn sanitize_config(config: TelegramConfig) -> TelegramConfig {
         enabled: config.enabled,
         bot_token: config.bot_token.trim().to_string(),
         allowed_chat_ids,
+        plain_url_action: config.plain_url_action,
+    }
+}
+
+fn abort_polling_task() {
+    if let Ok(mut task) = TELEGRAM_POLLING_TASK.lock() {
+        if let Some(handle) = task.take() {
+            handle.abort();
+        }
+    }
+}
+
+fn replace_polling_task(handle: tauri::async_runtime::JoinHandle<()>) {
+    if let Ok(mut task) = TELEGRAM_POLLING_TASK.lock() {
+        if let Some(previous) = task.replace(handle) {
+            previous.abort();
+        }
     }
 }
 
@@ -228,8 +278,15 @@ async fn run_polling_loop(app: AppHandle, config: TelegramConfig, generation: u6
                     if TELEGRAM_GENERATION.load(Ordering::SeqCst) != generation {
                         break;
                     }
-                    handle_update(&app, &client, &config.bot_token, &allowed_chat_ids, update)
-                        .await;
+                    handle_update(
+                        &app,
+                        &client,
+                        &config.bot_token,
+                        &allowed_chat_ids,
+                        &config.plain_url_action,
+                        update,
+                    )
+                    .await;
                 }
             }
             Err(error) => {
@@ -279,6 +336,7 @@ async fn handle_update(
     client: &Client,
     bot_token: &str,
     allowed_chat_ids: &HashSet<String>,
+    plain_url_action: &TelegramPlainUrlAction,
     update: TelegramUpdate,
 ) {
     let Some(message) = update.message else {
@@ -293,7 +351,7 @@ async fn handle_update(
         return;
     };
 
-    match parse_command(text) {
+    match parse_command_with_plain_url_action(text, plain_url_action) {
         TelegramCommand::Add { url, quality } => {
             emit_url_command(app, "add", &url, quality.as_deref(), &chat_id);
         }
@@ -324,7 +382,13 @@ async fn handle_update(
     }
 }
 
-fn emit_url_command(app: &AppHandle, command: &str, url: &str, quality: Option<&str>, chat_id: &str) {
+fn emit_url_command(
+    app: &AppHandle,
+    command: &str,
+    url: &str,
+    quality: Option<&str>,
+    chat_id: &str,
+) {
     let _ = app.emit(
         "telegram-download-command",
         TelegramDownloadCommandEvent {
@@ -437,10 +501,17 @@ fn set_status(state: TelegramStatusState, message: Option<String>) {
 }
 
 fn help_text() -> &'static str {
-    "Youwee Telegram commands:\n/add <url> [quality] - Add a URL to the queue.\n/download <url> [quality] - Add a URL and start downloading when idle.\n/status - Show download status.\n/queue - Show recent queue items.\n/stop - Stop the current download.\n/help - Show this help.\n\nQuality: best, 8k, 4k, 2k, 1080, 720, 480, 360, audio, mp3."
+    "Youwee Telegram commands:\n/add <url> [quality] - Add a URL to the queue.\n/download <url> [quality] - Add a URL and start downloading when idle.\n/status - Show download status.\n/queue - Show recent queue items.\n/stop - Stop the current download.\n/help - Show this help.\n\nYou can also send a link directly.\nQuality: best, 8k, 4k, 2k, 1080, 720, 480, 360, audio, mp3."
 }
 
 pub fn parse_command(text: &str) -> TelegramCommand {
+    parse_command_with_plain_url_action(text, &TelegramPlainUrlAction::Download)
+}
+
+fn parse_command_with_plain_url_action(
+    text: &str,
+    plain_url_action: &TelegramPlainUrlAction,
+) -> TelegramCommand {
     let trimmed = text.trim();
     if trimmed.is_empty() {
         return TelegramCommand::Unsupported;
@@ -469,8 +540,46 @@ pub fn parse_command(text: &str) -> TelegramCommand {
                 quality: parts.next().map(|quality| quality.to_string()),
             })
             .unwrap_or(TelegramCommand::Unsupported),
-        _ => TelegramCommand::Unsupported,
+        _ => parse_plain_url_command(trimmed, plain_url_action)
+            .unwrap_or(TelegramCommand::Unsupported),
     }
+}
+
+fn parse_plain_url_command(
+    text: &str,
+    plain_url_action: &TelegramPlainUrlAction,
+) -> Option<TelegramCommand> {
+    let tokens: Vec<&str> = text.split_whitespace().collect();
+    let (index, url) = tokens.iter().enumerate().find_map(|(index, token)| {
+        let cleaned = clean_plain_url_token(token);
+        if cleaned.starts_with("http://") || cleaned.starts_with("https://") {
+            Some((index, cleaned.to_string()))
+        } else {
+            None
+        }
+    })?;
+
+    let quality = tokens
+        .get(index + 1)
+        .map(|token| clean_plain_url_token(token))
+        .filter(|token| !token.is_empty())
+        .map(ToString::to_string);
+
+    Some(match plain_url_action {
+        TelegramPlainUrlAction::Add => TelegramCommand::Add { url, quality },
+        TelegramPlainUrlAction::Download => TelegramCommand::Download { url, quality },
+    })
+}
+
+fn clean_plain_url_token(token: &str) -> &str {
+    token
+        .trim_matches(|c: char| {
+            matches!(
+                c,
+                '<' | '>' | '(' | ')' | '[' | ']' | '{' | '}' | '"' | '\'' | ',' | ';'
+            )
+        })
+        .trim_end_matches(|c: char| matches!(c, '.' | '!' | '?'))
 }
 
 #[cfg(test)]
@@ -543,10 +652,43 @@ mod tests {
                 "123".to_string(),
                 "-456".to_string(),
             ],
+            plain_url_action: TelegramPlainUrlAction::Download,
         });
 
         assert_eq!(config.bot_token, "token");
         assert_eq!(config.allowed_chat_ids, vec!["123", "-456"]);
+    }
+
+    #[test]
+    fn parses_plain_url_as_download_by_default() {
+        assert_eq!(
+            parse_command("https://example.com/video 720"),
+            TelegramCommand::Download {
+                url: "https://example.com/video".to_string(),
+                quality: Some("720".to_string())
+            }
+        );
+        assert_eq!(
+            parse_command("Check this https://example.com/video."),
+            TelegramCommand::Download {
+                url: "https://example.com/video".to_string(),
+                quality: None
+            }
+        );
+    }
+
+    #[test]
+    fn parses_plain_url_as_add_when_configured() {
+        assert_eq!(
+            parse_command_with_plain_url_action(
+                "https://example.com/video audio",
+                &TelegramPlainUrlAction::Add,
+            ),
+            TelegramCommand::Add {
+                url: "https://example.com/video".to_string(),
+                quality: Some("audio".to_string())
+            }
+        );
     }
 
     #[test]

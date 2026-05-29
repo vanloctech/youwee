@@ -13,6 +13,14 @@ use tokio::process::Command;
 
 const CHANNEL_CONFIG_FILE: &str = "ytdlp-channel.txt";
 const SOURCE_CONFIG_FILE: &str = "ytdlp-source.txt";
+#[cfg(windows)]
+const BUNDLED_YTDLP_BINARY_NAME: &str = "youwee-yt-dlp.exe";
+#[cfg(not(windows))]
+const BUNDLED_YTDLP_BINARY_NAME: &str = "youwee-yt-dlp";
+#[cfg(windows)]
+const LEGACY_BUNDLED_YTDLP_BINARY_NAME: &str = "yt-dlp.exe";
+#[cfg(not(windows))]
+const LEGACY_BUNDLED_YTDLP_BINARY_NAME: &str = "yt-dlp";
 
 pub fn system_ytdlp_not_found_message() -> String {
     #[cfg(target_os = "macos")]
@@ -206,17 +214,14 @@ fn get_legacy_ytdlp_path(app: &AppHandle) -> Option<PathBuf> {
 
 /// Get the bundled yt-dlp path
 fn get_bundled_ytdlp_path() -> Option<PathBuf> {
-    #[cfg(windows)]
-    let binary_name = "yt-dlp.exe";
-    #[cfg(not(windows))]
-    let binary_name = "yt-dlp";
-
     // Check next to executable first
     if let Ok(exe_path) = std::env::current_exe() {
         if let Some(exe_dir) = exe_path.parent() {
-            let bundled = exe_dir.join(binary_name);
-            if bundled.exists() {
-                return Some(bundled);
+            for binary_name in [BUNDLED_YTDLP_BINARY_NAME, LEGACY_BUNDLED_YTDLP_BINARY_NAME] {
+                let bundled = exe_dir.join(binary_name);
+                if bundled.exists() {
+                    return Some(bundled);
+                }
             }
         }
     }

@@ -180,6 +180,9 @@ fn apply_history_filters(
             Some(HistoryMediaType::Video) => {
                 query.push_str(" AND NOT ");
                 query.push_str(&audio_media_sql_condition(history_alias));
+                query.push_str(&format!(
+                    " AND COALESCE({history_alias}.source, '') != 'data_export'"
+                ));
             }
             _ => {}
         }

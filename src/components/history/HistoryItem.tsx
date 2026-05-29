@@ -99,7 +99,9 @@ export function HistoryItem({ entry }: HistoryItemProps) {
   const redownloadProgress = redownloadTask?.progress || 0;
   const redownloadSpeed = redownloadTask?.speed || '';
 
-  const sourceConfig = detectSource(entry.source);
+  const isDataExport = entry.source === 'data_export' || entry.quality === 'data export';
+  const sourceConfig = detectSource(isDataExport ? 'data_export' : entry.source);
+  const sourceLabel = isDataExport ? t('library.toolbar.filterDataExport') : sourceConfig.label;
   const canPlayAudio = isPlayableAudioEntry(entry);
   const isCurrentAudio = currentEntry?.id === entry.id;
   const isActivePlayback = isCurrentAudio && isPlaying;
@@ -263,7 +265,7 @@ export function HistoryItem({ entry }: HistoryItemProps) {
           )}
         >
           <i className={`fa ${sourceConfig.faIcon} text-[9px]`} aria-hidden="true" />
-          <span className="hidden sm:inline">{sourceConfig.label}</span>
+          <span className="hidden sm:inline">{sourceLabel}</span>
         </div>
 
         {/* File missing indicator */}
@@ -279,7 +281,7 @@ export function HistoryItem({ entry }: HistoryItemProps) {
         )}
 
         {/* Quality badge */}
-        {entry.quality && (
+        {entry.quality && !isDataExport && (
           <div className="absolute bottom-1.5 right-1.5 px-1.5 py-0.5 rounded bg-black/70 text-[10px] text-white font-medium">
             {entry.quality}
           </div>
@@ -367,100 +369,102 @@ export function HistoryItem({ entry }: HistoryItemProps) {
           )}
 
           {/* AI Summary */}
-          <div className="mt-2">
-            {localSummary ? (
-              <div className="p-2 rounded-lg bg-purple-500/5 border border-purple-500/10">
-                <div className="flex items-start gap-2">
-                  <Sparkles className="w-3.5 h-3.5 text-purple-500 flex-shrink-0 mt-0.5" />
-                  <div className="flex-1 min-w-0">
-                    <div
-                      className="text-xs text-muted-foreground overflow-hidden"
-                      style={!showFullSummary ? { maxHeight: '7.5em' } : undefined}
-                    >
-                      <SimpleMarkdown content={localSummary} />
+          {!isDataExport && (
+            <div className="mt-2">
+              {localSummary ? (
+                <div className="p-2 rounded-lg bg-purple-500/5 border border-purple-500/10">
+                  <div className="flex items-start gap-2">
+                    <Sparkles className="w-3.5 h-3.5 text-purple-500 flex-shrink-0 mt-0.5" />
+                    <div className="flex-1 min-w-0">
+                      <div
+                        className="text-xs text-muted-foreground overflow-hidden"
+                        style={!showFullSummary ? { maxHeight: '7.5em' } : undefined}
+                      >
+                        <SimpleMarkdown content={localSummary} />
+                      </div>
+                      {localSummary.length > 200 && (
+                        <button
+                          type="button"
+                          onClick={() => setShowFullSummary(!showFullSummary)}
+                          className="text-xs text-purple-500 hover:text-purple-400 mt-1 flex items-center gap-0.5"
+                        >
+                          {showFullSummary ? (
+                            <>
+                              {t('library.item.showLess')} <ChevronUp className="w-3 h-3" />
+                            </>
+                          ) : (
+                            <>
+                              {t('library.item.showMore')} <ChevronDown className="w-3 h-3" />
+                            </>
+                          )}
+                        </button>
+                      )}
                     </div>
-                    {localSummary.length > 200 && (
+                    <div className="flex flex-col gap-1 flex-shrink-0">
                       <button
                         type="button"
-                        onClick={() => setShowFullSummary(!showFullSummary)}
-                        className="text-xs text-purple-500 hover:text-purple-400 mt-1 flex items-center gap-0.5"
+                        onClick={handleCopySummary}
+                        className="p-1 rounded text-muted-foreground hover:text-purple-500 transition-colors"
+                        title={t('library.item.copySummary')}
                       >
-                        {showFullSummary ? (
-                          <>
-                            {t('library.item.showLess')} <ChevronUp className="w-3 h-3" />
-                          </>
+                        {copiedSummary ? (
+                          <Check className="w-3 h-3 text-green-500" />
                         ) : (
-                          <>
-                            {t('library.item.showMore')} <ChevronDown className="w-3 h-3" />
-                          </>
+                          <Copy className="w-3 h-3" />
                         )}
                       </button>
-                    )}
-                  </div>
-                  <div className="flex flex-col gap-1 flex-shrink-0">
-                    <button
-                      type="button"
-                      onClick={handleCopySummary}
-                      className="p-1 rounded text-muted-foreground hover:text-purple-500 transition-colors"
-                      title={t('library.item.copySummary')}
-                    >
-                      {copiedSummary ? (
-                        <Check className="w-3 h-3 text-green-500" />
-                      ) : (
-                        <Copy className="w-3 h-3" />
-                      )}
-                    </button>
-                    <button
-                      type="button"
-                      onClick={handleGenerateSummary}
-                      disabled={isGeneratingSummary}
-                      className="p-1 rounded text-muted-foreground hover:text-purple-500 transition-colors"
-                      title={t('library.item.regenerateSummary')}
-                    >
-                      {isGeneratingSummary ? (
-                        <Loader2 className="w-3 h-3 animate-spin" />
-                      ) : (
-                        <RefreshCw className="w-3 h-3" />
-                      )}
-                    </button>
+                      <button
+                        type="button"
+                        onClick={handleGenerateSummary}
+                        disabled={isGeneratingSummary}
+                        className="p-1 rounded text-muted-foreground hover:text-purple-500 transition-colors"
+                        title={t('library.item.regenerateSummary')}
+                      >
+                        {isGeneratingSummary ? (
+                          <Loader2 className="w-3 h-3 animate-spin" />
+                        ) : (
+                          <RefreshCw className="w-3 h-3" />
+                        )}
+                      </button>
+                    </div>
                   </div>
                 </div>
-              </div>
-            ) : aiEnabled ? (
-              <button
-                type="button"
-                onClick={handleGenerateSummary}
-                disabled={isGeneratingSummary}
-                className={cn(
-                  'flex items-center gap-1.5 text-sm font-medium text-primary transition-opacity hover:opacity-80',
-                  isGeneratingSummary && 'opacity-50',
-                )}
-              >
-                {isGeneratingSummary ? (
-                  <>
-                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                    <span className="gradient-text">
-                      {task?.status === 'fetching'
-                        ? t('library.item.fetchingTranscript')
-                        : t('library.item.generatingSummary')}
-                    </span>
-                  </>
-                ) : (
-                  <>
-                    <span className="gradient-text inline-flex">
-                      <Sparkles className="w-3.5 h-3.5" />
-                    </span>
-                    <span className="gradient-text">{t('library.item.generateAiSummary')}</span>
-                  </>
-                )}
-              </button>
-            ) : null}
-            {summaryError && <p className="text-xs text-destructive mt-1">{summaryError}</p>}
-          </div>
+              ) : aiEnabled ? (
+                <button
+                  type="button"
+                  onClick={handleGenerateSummary}
+                  disabled={isGeneratingSummary}
+                  className={cn(
+                    'flex items-center gap-1.5 text-sm font-medium text-primary transition-opacity hover:opacity-80',
+                    isGeneratingSummary && 'opacity-50',
+                  )}
+                >
+                  {isGeneratingSummary ? (
+                    <>
+                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                      <span className="gradient-text">
+                        {task?.status === 'fetching'
+                          ? t('library.item.fetchingTranscript')
+                          : t('library.item.generatingSummary')}
+                      </span>
+                    </>
+                  ) : (
+                    <>
+                      <span className="gradient-text inline-flex">
+                        <Sparkles className="w-3.5 h-3.5" />
+                      </span>
+                      <span className="gradient-text">{t('library.item.generateAiSummary')}</span>
+                    </>
+                  )}
+                </button>
+              ) : null}
+              {summaryError && <p className="text-xs text-destructive mt-1">{summaryError}</p>}
+            </div>
+          )}
         </div>
 
         {/* Error message */}
-        {(redownloadError || redownloadTask?.error) && (
+        {!isDataExport && (redownloadError || redownloadTask?.error) && (
           <p className="text-xs text-destructive mt-2">
             {redownloadError || redownloadTask?.error}
           </p>
@@ -468,7 +472,7 @@ export function HistoryItem({ entry }: HistoryItemProps) {
         {renameError && <p className="text-xs text-destructive mt-2">{renameError}</p>}
 
         {/* Re-download progress bar */}
-        {isRedownloading && (
+        {!isDataExport && isRedownloading && (
           <div className="mt-2 space-y-1">
             <div className="flex items-center justify-between text-xs">
               <span className="text-muted-foreground flex items-center gap-1.5">
@@ -520,7 +524,7 @@ export function HistoryItem({ entry }: HistoryItemProps) {
                 {t('library.item.rename')}
               </button>
             </>
-          ) : (
+          ) : !isDataExport ? (
             <button
               type="button"
               onClick={handleRedownload}
@@ -538,41 +542,45 @@ export function HistoryItem({ entry }: HistoryItemProps) {
               )}
               {t('library.item.redownload')}
             </button>
+          ) : null}
+
+          {!isDataExport && (
+            <>
+              <a
+                href={isSafeUrl(entry.url) ? entry.url : '#'}
+                target="_blank"
+                rel="noopener noreferrer"
+                className={cn(
+                  'flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium',
+                  'bg-muted/50 hover:bg-muted text-muted-foreground hover:text-foreground transition-colors',
+                )}
+              >
+                <ExternalLink className="w-3.5 h-3.5" />
+                {t('library.item.openUrl')}
+              </a>
+
+              <button
+                type="button"
+                onClick={handleCopyUrl}
+                className={cn(
+                  'flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium',
+                  'bg-muted/50 hover:bg-muted text-muted-foreground hover:text-foreground transition-colors',
+                )}
+              >
+                {copied ? (
+                  <>
+                    <Check className="w-3.5 h-3.5 text-green-500" />
+                    {t('library.item.copied')}
+                  </>
+                ) : (
+                  <>
+                    <Copy className="w-3.5 h-3.5" />
+                    {t('library.item.copy')}
+                  </>
+                )}
+              </button>
+            </>
           )}
-
-          <a
-            href={isSafeUrl(entry.url) ? entry.url : '#'}
-            target="_blank"
-            rel="noopener noreferrer"
-            className={cn(
-              'flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium',
-              'bg-muted/50 hover:bg-muted text-muted-foreground hover:text-foreground transition-colors',
-            )}
-          >
-            <ExternalLink className="w-3.5 h-3.5" />
-            {t('library.item.openUrl')}
-          </a>
-
-          <button
-            type="button"
-            onClick={handleCopyUrl}
-            className={cn(
-              'flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium',
-              'bg-muted/50 hover:bg-muted text-muted-foreground hover:text-foreground transition-colors',
-            )}
-          >
-            {copied ? (
-              <>
-                <Check className="w-3.5 h-3.5 text-green-500" />
-                {t('library.item.copied')}
-              </>
-            ) : (
-              <>
-                <Copy className="w-3.5 h-3.5" />
-                {t('library.item.copy')}
-              </>
-            )}
-          </button>
 
           <button
             type="button"

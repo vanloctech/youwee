@@ -48,6 +48,14 @@ const TELEGRAM_COMMANDS = [
   { key: 'help', commandName: '/help' },
 ] as const;
 
+const TELEGRAM_SETUP_STEPS = [
+  'createBot',
+  'copyToken',
+  'openChat',
+  'getChatId',
+  'allowChatId',
+] as const;
+
 export function RemoteDownloadSection({ highlightId }: RemoteDownloadSectionProps) {
   const { t } = useTranslation('settings');
   const { settings, updateTelegramSettings, refreshTelegramStatus } = useDownload();
@@ -260,6 +268,97 @@ export function RemoteDownloadSection({ highlightId }: RemoteDownloadSectionProp
         {settings.telegramEnabled && showConfig && (
           <SettingsCard id="telegram-config" highlight={highlightId === 'telegram-config'}>
             <div className="space-y-4">
+              <div className="space-y-2 rounded-lg transition-all duration-500">
+                <div className="flex items-center justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium">{t('remoteDownload.telegramSetupGuide')}</p>
+                    <p className="mt-0.5 text-[11px] text-muted-foreground/70">
+                      {t('remoteDownload.telegramSetupGuideDesc')}
+                    </p>
+                  </div>
+                  <Dialog>
+                    <DialogTrigger asChild>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        type="button"
+                        className="h-8 flex-shrink-0 gap-1.5 text-xs"
+                      >
+                        <BookOpen className="h-3.5 w-3.5" />
+                        {t('remoteDownload.telegramSetupGuideButton')}
+                      </Button>
+                    </DialogTrigger>
+                    <DialogContent className="max-w-lg">
+                      <DialogHeader>
+                        <DialogTitle className="flex items-center gap-2">
+                          <i
+                            className="fa fa-telegram text-[18px] text-blue-500"
+                            aria-hidden="true"
+                          />
+                          {t('remoteDownload.telegramSetupGuideTitle')}
+                        </DialogTitle>
+                        <DialogDescription>
+                          {t('remoteDownload.telegramSetupGuideIntro')}
+                        </DialogDescription>
+                      </DialogHeader>
+
+                      <ol className="space-y-3">
+                        {TELEGRAM_SETUP_STEPS.map((step, index) => (
+                          <li key={step} className="flex gap-3 rounded-lg bg-muted/40 px-3 py-2.5">
+                            <span className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded bg-primary/10 text-xs font-semibold text-primary">
+                              {index + 1}
+                            </span>
+                            <div className="min-w-0">
+                              <p className="text-sm font-medium">
+                                {t(`remoteDownload.telegramSetupStep_${step}`)}
+                              </p>
+                              <p className="mt-0.5 text-xs leading-relaxed text-muted-foreground">
+                                {t(`remoteDownload.telegramSetupStep_${step}_desc`)}
+                              </p>
+                            </div>
+                          </li>
+                        ))}
+                      </ol>
+                    </DialogContent>
+                  </Dialog>
+                </div>
+              </div>
+
+              <SettingsDivider />
+
+              {/* Plain Link Action */}
+              <div className="space-y-2 rounded-lg transition-all duration-500">
+                <div className="flex items-center justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium">
+                      {t('remoteDownload.telegramPlainUrlAction')}
+                    </p>
+                    <p className="mt-0.5 text-[11px] text-muted-foreground/70">
+                      {t('remoteDownload.telegramPlainUrlActionDesc')}
+                    </p>
+                  </div>
+                  <div className="flex flex-shrink-0 rounded-md bg-muted p-0.5">
+                    {(['download', 'add'] as const).map((action) => (
+                      <button
+                        key={action}
+                        type="button"
+                        onClick={() => updateTelegramSettings({ telegramPlainUrlAction: action })}
+                        className={cn(
+                          'rounded px-2.5 py-1 text-xs font-medium transition-colors',
+                          settings.telegramPlainUrlAction === action
+                            ? 'bg-background text-foreground shadow-sm'
+                            : 'text-muted-foreground hover:text-foreground',
+                        )}
+                      >
+                        {t(`remoteDownload.telegramPlainUrlAction_${action}`)}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              <SettingsDivider />
+
               {/* Bot Token */}
               <div
                 id="telegram-bot-token"
