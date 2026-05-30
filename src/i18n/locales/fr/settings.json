@@ -751,6 +751,8 @@
     "telegramCommand_status_desc": "Afficher si Youwee est inactif ou en téléchargement, avec les compteurs de file.",
     "telegramCommand_queue": "/queue",
     "telegramCommand_queue_desc": "Afficher les éléments récents de la file et leur état actuel.",
+    "telegramCommand_start": "/start",
+    "telegramCommand_start_desc": "Démarrer les téléchargements en attente dans la file.",
     "telegramCommand_stop": "/stop",
     "telegramCommand_stop_desc": "Arrêter le téléchargement en cours.",
     "telegramCommand_help": "/help",

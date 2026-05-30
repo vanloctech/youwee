@@ -9,7 +9,7 @@ import type { DownloadItem, ExternalEnqueueOptions, Quality } from '@/lib/types'
 import { isSafeUrl } from '@/lib/utils';
 
 interface TelegramDownloadCommandEvent {
-  command: 'add' | 'download' | 'status' | 'queue' | 'stop';
+  command: 'add' | 'download' | 'status' | 'queue' | 'start' | 'stop';
   url?: string | null;
   quality?: string | null;
   chatId: string;
@@ -104,6 +104,10 @@ function buildQueueReply(youtubeItems: DownloadItem[], universalItems: DownloadI
   ].join('\n');
 }
 
+function hasStartableItems(items: DownloadItem[]) {
+  return items.some((item) => item.status === 'pending' || item.status === 'error');
+}
+
 function parseTelegramQuality(token?: string | null): ExternalEnqueueOptions | null {
   const normalized = token?.trim().toLowerCase();
   if (!normalized) return {};
@@ -167,6 +171,48 @@ export function useTelegramRemoteCommands(
 
       if (payload.command === 'queue') {
         await sendTelegramReply(payload.chatId, buildQueueReply(download.items, universal.items));
+        return;
+      }
+
+      if (payload.command === 'start') {
+        const isBusy =
+          download.isDownloading ||
+          universal.isDownloading ||
+          startLockRef.current.youtube ||
+          startLockRef.current.universal;
+
+        if (isBusy) {
+          await sendTelegramReply(payload.chatId, 'Youwee is already downloading.');
+          return;
+        }
+
+        const shouldStartYoutube = hasStartableItems(download.items);
+        const shouldStartUniversal = hasStartableItems(universal.items);
+
+        if (!shouldStartYoutube && !shouldStartUniversal) {
+          await sendTelegramReply(payload.chatId, 'No pending downloads in the queue.');
+          return;
+        }
+
+        if (shouldStartYoutube) {
+          setCurrentPage('youtube');
+          startLockRef.current.youtube = true;
+          void download.startDownload().finally(() => {
+            startLockRef.current.youtube = false;
+          });
+        }
+
+        if (shouldStartUniversal) {
+          if (!shouldStartYoutube) {
+            setCurrentPage('universal');
+          }
+          startLockRef.current.universal = true;
+          void universal.startDownload().finally(() => {
+            startLockRef.current.universal = false;
+          });
+        }
+
+        await sendTelegramReply(payload.chatId, 'Started pending downloads.');
         return;
       }
 

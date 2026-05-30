@@ -751,6 +751,8 @@
     "telegramCommand_status_desc": "Показать, свободен ли Youwee или загружает, а также счетчики очереди.",
     "telegramCommand_queue": "/queue",
     "telegramCommand_queue_desc": "Показать последние элементы очереди и их текущий статус.",
+    "telegramCommand_start": "/start",
+    "telegramCommand_start_desc": "Запустить ожидающие загрузки в очереди.",
     "telegramCommand_stop": "/stop",
     "telegramCommand_stop_desc": "Остановить текущую загрузку.",
     "telegramCommand_help": "/help",

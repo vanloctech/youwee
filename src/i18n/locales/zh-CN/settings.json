@@ -497,6 +497,8 @@
     "telegramCommand_status_desc": "显示 Youwee 是空闲还是正在下载，以及队列数量。",
     "telegramCommand_queue": "/queue",
     "telegramCommand_queue_desc": "显示最近的队列项目及其当前状态。",
+    "telegramCommand_start": "/start",
+    "telegramCommand_start_desc": "开始下载队列中等待的项目。",
     "telegramCommand_stop": "/stop",
     "telegramCommand_stop_desc": "停止当前下载。",
     "telegramCommand_help": "/help",

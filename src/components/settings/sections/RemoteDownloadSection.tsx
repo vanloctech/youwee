@@ -44,6 +44,7 @@ const TELEGRAM_COMMANDS = [
   { key: 'download', commandName: '/download' },
   { key: 'status', commandName: '/status' },
   { key: 'queue', commandName: '/queue' },
+  { key: 'start', commandName: '/start' },
   { key: 'stop', commandName: '/stop' },
   { key: 'help', commandName: '/help' },
 ] as const;

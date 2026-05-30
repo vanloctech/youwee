@@ -497,6 +497,8 @@
     "telegramCommand_status_desc": "Show whether Youwee is idle or downloading, plus queue counts.",
     "telegramCommand_queue": "/queue",
     "telegramCommand_queue_desc": "Show recent queue items and their current state.",
+    "telegramCommand_start": "/start",
+    "telegramCommand_start_desc": "Start pending downloads in the queue.",
     "telegramCommand_stop": "/stop",
     "telegramCommand_stop_desc": "Stop the current download.",
     "telegramCommand_help": "/help",

@@ -751,6 +751,8 @@
     "telegramCommand_status_desc": "عرض ما إذا كان Youwee خاملاً أو يقوم بالتنزيل، مع أعداد قائمة الانتظار.",
     "telegramCommand_queue": "/queue",
     "telegramCommand_queue_desc": "عرض أحدث عناصر قائمة الانتظار وحالتها الحالية.",
+    "telegramCommand_start": "/start",
+    "telegramCommand_start_desc": "بدء التنزيلات المعلقة في قائمة الانتظار.",
     "telegramCommand_stop": "/stop",
     "telegramCommand_stop_desc": "إيقاف التنزيل الحالي.",
     "telegramCommand_help": "/help",

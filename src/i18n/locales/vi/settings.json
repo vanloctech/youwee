@@ -497,6 +497,8 @@
     "telegramCommand_status_desc": "Xem Youwee đang rảnh hay đang tải, kèm số lượng trong queue.",
     "telegramCommand_queue": "/queue",
     "telegramCommand_queue_desc": "Xem các item gần nhất trong queue và trạng thái hiện tại.",
+    "telegramCommand_start": "/start",
+    "telegramCommand_start_desc": "Bắt đầu tải các item đang chờ trong queue.",
     "telegramCommand_stop": "/stop",
     "telegramCommand_stop_desc": "Dừng lượt tải hiện tại.",
     "telegramCommand_help": "/help",

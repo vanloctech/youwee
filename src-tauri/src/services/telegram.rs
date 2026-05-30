@@ -84,6 +84,7 @@ pub enum TelegramCommand {
     },
     Status,
     Queue,
+    Start,
     Stop,
     Help,
     Unsupported,
@@ -381,6 +382,9 @@ async fn handle_update(
         TelegramCommand::Queue => {
             emit_simple_command(app, "queue", &chat_id);
         }
+        TelegramCommand::Start => {
+            emit_simple_command(app, "start", &chat_id);
+        }
         TelegramCommand::Stop => {
             emit_simple_command(app, "stop", &chat_id);
         }
@@ -484,6 +488,10 @@ async fn set_my_commands(client: &Client, bot_token: &str) -> Result<(), String>
                     description: "Show recent queue items",
                 },
                 BotCommand {
+                    command: "start",
+                    description: "Start pending downloads",
+                },
+                BotCommand {
                     command: "stop",
                     description: "Stop the current download",
                 },
@@ -523,7 +531,7 @@ fn set_status(state: TelegramStatusState, message: Option<String>) -> bool {
 }
 
 fn help_text() -> &'static str {
-    "Youwee Telegram commands:\n/add <url> [quality] - Add a URL to the queue.\n/download <url> [quality] - Add a URL and start downloading when idle.\n/status - Show download status.\n/queue - Show recent queue items.\n/stop - Stop the current download.\n/help - Show this help.\n\nYou can also send a link directly.\nQuality: best, 8k, 4k, 2k, 1080, 720, 480, 360, audio, mp3."
+    "Youwee Telegram commands:\n/add <url> [quality] - Add a URL to the queue.\n/download <url> [quality] - Add a URL and start downloading when idle.\n/status - Show download status.\n/queue - Show recent queue items.\n/start - Start pending downloads.\n/stop - Stop the current download.\n/help - Show this help.\n\nYou can also send a link directly.\nQuality: best, 8k, 4k, 2k, 1080, 720, 480, 360, audio, mp3."
 }
 
 pub fn parse_command(text: &str) -> TelegramCommand {
@@ -547,6 +555,7 @@ fn parse_command_with_plain_url_action(
         "/help" | "help" => TelegramCommand::Help,
         "/status" | "status" => TelegramCommand::Status,
         "/queue" | "queue" => TelegramCommand::Queue,
+        "/start" | "start" => TelegramCommand::Start,
         "/stop" | "stop" => TelegramCommand::Stop,
         "/add" | "add" => parts
             .next()
@@ -618,6 +627,7 @@ mod tests {
     fn parses_control_commands() {
         assert_eq!(parse_command("/status"), TelegramCommand::Status);
         assert_eq!(parse_command("/queue@youwee_bot"), TelegramCommand::Queue);
+        assert_eq!(parse_command("/start"), TelegramCommand::Start);
         assert_eq!(parse_command("stop"), TelegramCommand::Stop);
     }
 

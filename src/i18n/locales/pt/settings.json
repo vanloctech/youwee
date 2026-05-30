@@ -751,6 +751,8 @@
     "telegramCommand_status_desc": "Mostrar se o Youwee está ocioso ou baixando, além dos contadores da fila.",
     "telegramCommand_queue": "/queue",
     "telegramCommand_queue_desc": "Mostrar os itens recentes da fila e o status atual.",
+    "telegramCommand_start": "/start",
+    "telegramCommand_start_desc": "Iniciar os downloads pendentes na fila.",
     "telegramCommand_stop": "/stop",
     "telegramCommand_stop_desc": "Parar o download atual.",
     "telegramCommand_help": "/help",
