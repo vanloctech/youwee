@@ -58,10 +58,7 @@ use permissions::{
 };
 use providers::resolve_provider_command;
 pub use providers::{get_runtime_provider_status_internal, list_runtime_providers_internal};
-use registry::{
-    read_registry, write_registry, PluginRegistry, PluginRegistryEntry,
-    PluginTriggerWorkflowRegistry,
-};
+use registry::{read_registry, write_registry, PluginRegistryEntry};
 #[cfg(test)]
 use scaffold::{
     build_scaffold_ci_workflow, build_scaffold_package_json, build_scaffold_readme,
@@ -75,10 +72,10 @@ use sdk_bundle::write_sdk_package_files;
 use security_policy::validate_plugin_output_path;
 pub use state::{
     approve_plugin_permissions_internal, get_plugin_trigger_workflow_internal,
-    set_default_provider_for_language_internal, set_plugin_provider_internal,
-    set_plugin_runtime_locale_internal, set_plugin_timeout_internal,
+    list_plugin_workflows_internal, set_default_provider_for_language_internal,
+    set_plugin_provider_internal, set_plugin_runtime_locale_internal, set_plugin_timeout_internal,
     update_plugin_config_values_internal, update_plugin_state_internal,
-    update_plugin_trigger_workflow_internal,
+    update_plugin_trigger_workflow_internal, update_plugin_workflows_internal,
 };
 use summary::{
     build_installation_from_registry, default_provider_for_language, load_plugin_readme_content,
@@ -87,6 +84,7 @@ use summary::{
 use workflow::{
     build_chain_state, build_legacy_workflow_snapshots, merge_chain_mutation,
     payload_from_chain_state, resolve_workflow_step_snapshots, workflow_result_status,
+    workflow_steps_for_trigger,
 };
 pub use workspace::create_plugin_workspace_internal;
 #[cfg(test)]
@@ -299,13 +297,6 @@ fn ensure_plugins_root(app: &AppHandle) -> Result<PathBuf, String> {
 
 fn workflow_queue_lock() -> &'static tokio::sync::Mutex<()> {
     PLUGIN_WORKFLOW_QUEUE.get_or_init(|| tokio::sync::Mutex::new(()))
-}
-
-fn workflow_registry_for_trigger<'a>(
-    registry: &'a PluginRegistry,
-    trigger: &str,
-) -> Option<&'a PluginTriggerWorkflowRegistry> {
-    registry.trigger_workflows.get(trigger)
 }
 
 fn install_dir_name(plugin_id: &str, slug: &str) -> String {
@@ -838,6 +829,26 @@ pub fn uninstall_plugin_internal(app: &AppHandle, plugin_id: &str) -> Result<(),
     registry.installations.remove(plugin_id);
     for workflow in registry.trigger_workflows.values_mut() {
         workflow.steps.retain(|step| step.plugin_id != plugin_id);
+    }
+    for workflow in &mut registry.workflows {
+        workflow.nodes.retain(|node| match node {
+            crate::types::PluginWorkflowNode::Plugin {
+                plugin_id: node_plugin_id,
+                ..
+            } => node_plugin_id != plugin_id,
+            crate::types::PluginWorkflowNode::Trigger { .. } => true,
+        });
+        workflow.edges.retain(|edge| {
+            let has_source = workflow.nodes.iter().any(|node| match node {
+                crate::types::PluginWorkflowNode::Trigger { id, .. }
+                | crate::types::PluginWorkflowNode::Plugin { id, .. } => id == &edge.source,
+            });
+            let has_target = workflow.nodes.iter().any(|node| match node {
+                crate::types::PluginWorkflowNode::Trigger { id, .. }
+                | crate::types::PluginWorkflowNode::Plugin { id, .. } => id == &edge.target,
+            });
+            has_source && has_target
+        });
     }
     write_registry(app, &registry)?;
 
@@ -1721,9 +1732,7 @@ pub fn resolve_download_workflow_snapshot(
 
     let workflow = PluginTriggerWorkflow {
         trigger: trigger.to_string(),
-        steps: workflow_registry_for_trigger(&registry, trigger)
-            .map(|workflow| workflow.steps.clone())
-            .unwrap_or_default(),
+        steps: workflow_steps_for_trigger(&registry, trigger),
     };
     resolve_workflow_step_snapshots(&plugins_by_id, &workflow)
 }

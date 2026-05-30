@@ -6,8 +6,10 @@ use tauri::AppHandle;
 
 use crate::types::{
     PluginChainMutation, PluginChainState, PluginExecutionResult, PluginSummary,
-    PluginTriggerWorkflow, PluginWorkflowFailurePolicy, PluginWorkflowRunStatus,
-    PluginWorkflowStepConfig, PluginWorkflowStepSnapshot, PostDownloadPluginPayload,
+    PluginTriggerWorkflow, PluginWorkflowDefinition, PluginWorkflowEdge,
+    PluginWorkflowFailurePolicy, PluginWorkflowNode, PluginWorkflowNodePosition,
+    PluginWorkflowRunStatus, PluginWorkflowStepConfig, PluginWorkflowStepSnapshot,
+    PostDownloadPluginPayload,
 };
 
 use super::registry::{read_registry, PluginRegistry, PluginTriggerWorkflowRegistry};
@@ -26,10 +28,175 @@ pub(super) fn get_trigger_workflow_internal(
     let registry = read_registry(app)?;
     Ok(PluginTriggerWorkflow {
         trigger: trigger.to_string(),
-        steps: workflow_registry_for_trigger(&registry, trigger)
-            .map(|workflow| workflow.steps.clone())
-            .unwrap_or_default(),
+        steps: workflow_steps_for_trigger(&registry, trigger),
     })
+}
+
+pub(super) fn workflow_definitions_from_registry(
+    registry: &PluginRegistry,
+) -> Vec<PluginWorkflowDefinition> {
+    if !registry.workflows.is_empty() {
+        return registry.workflows.clone();
+    }
+
+    registry
+        .trigger_workflows
+        .iter()
+        .filter(|(_, workflow)| !workflow.steps.is_empty())
+        .map(|(trigger, workflow)| legacy_workflow_definition(trigger, &workflow.steps))
+        .collect()
+}
+
+pub(super) fn workflow_steps_for_trigger(
+    registry: &PluginRegistry,
+    trigger: &str,
+) -> Vec<PluginWorkflowStepConfig> {
+    let workflows = workflow_definitions_from_registry(registry);
+    if workflows.is_empty() {
+        return workflow_registry_for_trigger(registry, trigger)
+            .map(|workflow| workflow.steps.clone())
+            .unwrap_or_default();
+    }
+
+    workflows
+        .iter()
+        .filter(|workflow| workflow.enabled)
+        .flat_map(|workflow| workflow_steps_from_definition(workflow, trigger))
+        .collect()
+}
+
+pub(super) fn trigger_workflow_registries_from_definitions(
+    workflows: &[PluginWorkflowDefinition],
+) -> BTreeMap<String, PluginTriggerWorkflowRegistry> {
+    let mut registries = BTreeMap::new();
+    for trigger in [
+        "download.queued",
+        "download.beforeStart",
+        "download.completed",
+        "download.failed",
+    ] {
+        let steps = workflows
+            .iter()
+            .filter(|workflow| workflow.enabled)
+            .flat_map(|workflow| workflow_steps_from_definition(workflow, trigger))
+            .collect::<Vec<_>>();
+        registries.insert(trigger.to_string(), PluginTriggerWorkflowRegistry { steps });
+    }
+    registries
+}
+
+pub(super) fn legacy_workflow_definition(
+    trigger: &str,
+    steps: &[PluginWorkflowStepConfig],
+) -> PluginWorkflowDefinition {
+    let workflow_id = format!("workflow-{}", trigger.replace('.', "-"));
+    let trigger_node_id = format!("{}-trigger", workflow_id);
+    let mut nodes = vec![PluginWorkflowNode::Trigger {
+        id: trigger_node_id.clone(),
+        trigger: trigger.to_string(),
+        position: PluginWorkflowNodePosition { x: 0.0, y: 120.0 },
+    }];
+    let mut edges = Vec::new();
+    let mut previous_node_id = trigger_node_id;
+
+    for (index, step) in steps.iter().enumerate() {
+        let node_id = format!("{}-plugin-{}", workflow_id, index + 1);
+        nodes.push(PluginWorkflowNode::Plugin {
+            id: node_id.clone(),
+            plugin_id: step.plugin_id.clone(),
+            failure_policy: step.failure_policy.clone(),
+            position: PluginWorkflowNodePosition {
+                x: 340.0 + index as f64 * 340.0,
+                y: 90.0,
+            },
+        });
+        edges.push(PluginWorkflowEdge {
+            id: format!("{}-edge-{}", workflow_id, index + 1),
+            source: previous_node_id,
+            target: node_id.clone(),
+        });
+        previous_node_id = node_id;
+    }
+
+    PluginWorkflowDefinition {
+        id: workflow_id,
+        name: trigger.to_string(),
+        enabled: true,
+        nodes,
+        edges,
+    }
+}
+
+fn workflow_steps_from_definition(
+    workflow: &PluginWorkflowDefinition,
+    trigger: &str,
+) -> Vec<PluginWorkflowStepConfig> {
+    let trigger_node_ids = workflow
+        .nodes
+        .iter()
+        .filter_map(|node| match node {
+            PluginWorkflowNode::Trigger {
+                id,
+                trigger: node_trigger,
+                ..
+            } if node_trigger == trigger => Some(id.clone()),
+            _ => None,
+        })
+        .collect::<Vec<_>>();
+
+    trigger_node_ids
+        .iter()
+        .flat_map(|node_id| linear_plugin_steps_from_node(workflow, node_id))
+        .collect()
+}
+
+fn linear_plugin_steps_from_node(
+    workflow: &PluginWorkflowDefinition,
+    start_node_id: &str,
+) -> Vec<PluginWorkflowStepConfig> {
+    let mut steps = Vec::new();
+    let mut current_node_id = start_node_id.to_string();
+    let mut visited = vec![current_node_id.clone()];
+
+    loop {
+        let Some(edge) = workflow
+            .edges
+            .iter()
+            .filter(|edge| edge.source == current_node_id)
+            .min_by(|left, right| left.id.cmp(&right.id))
+        else {
+            break;
+        };
+
+        if visited.iter().any(|node_id| node_id == &edge.target) {
+            break;
+        }
+        visited.push(edge.target.clone());
+
+        let Some(target_node) = workflow.nodes.iter().find(|node| match node {
+            PluginWorkflowNode::Trigger { id, .. } | PluginWorkflowNode::Plugin { id, .. } => {
+                id == &edge.target
+            }
+        }) else {
+            break;
+        };
+
+        if let PluginWorkflowNode::Plugin {
+            plugin_id,
+            failure_policy,
+            ..
+        } = target_node
+        {
+            steps.push(PluginWorkflowStepConfig {
+                plugin_id: plugin_id.clone(),
+                failure_policy: failure_policy.clone(),
+            });
+        }
+
+        current_node_id = edge.target.clone();
+    }
+
+    steps
 }
 
 fn snapshot_step_from_plugin(

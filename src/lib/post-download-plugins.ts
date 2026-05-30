@@ -3,6 +3,7 @@ import type {
   PluginSummary,
   PluginTrigger,
   PluginTriggerWorkflow,
+  PluginWorkflowDefinition,
   PluginWorkflowSnapshotMap,
   PluginWorkflowStepSnapshot,
   PostDownloadPluginPayload,
@@ -63,6 +64,54 @@ function snapshotFromWorkflow(
   }, []);
 }
 
+export function stepsFromWorkflowDefinition(
+  workflow: PluginWorkflowDefinition,
+  trigger: PluginTrigger,
+) {
+  const triggerNodeIds = workflow.nodes
+    .filter((node) => node.kind === 'trigger' && node.trigger === trigger)
+    .map((node) => node.id);
+
+  return triggerNodeIds.flatMap((nodeId) => linearStepsFromNode(workflow, nodeId));
+}
+
+function linearStepsFromNode(workflow: PluginWorkflowDefinition, startNodeId: string) {
+  const steps: PluginTriggerWorkflow['steps'] = [];
+  const visited = new Set([startNodeId]);
+  let currentNodeId = startNodeId;
+
+  while (true) {
+    const edge = workflow.edges
+      .filter((candidate) => candidate.source === currentNodeId)
+      .sort((left, right) => left.id.localeCompare(right.id))[0];
+    if (!edge || visited.has(edge.target)) break;
+
+    visited.add(edge.target);
+    const targetNode = workflow.nodes.find((node) => node.id === edge.target);
+    if (!targetNode) break;
+    if (targetNode.kind === 'plugin') {
+      steps.push({
+        pluginId: targetNode.pluginId,
+        failurePolicy: targetNode.failurePolicy,
+      });
+    }
+    currentNodeId = edge.target;
+  }
+
+  return steps;
+}
+
+export function buildWorkflowsFromDefinitions(
+  definitions: PluginWorkflowDefinition[],
+): PluginTriggerWorkflow[] {
+  return DOWNLOAD_WORKFLOW_TRIGGERS.map((trigger) => ({
+    trigger,
+    steps: definitions
+      .filter((workflow) => workflow.enabled)
+      .flatMap((workflow) => stepsFromWorkflowDefinition(workflow, trigger)),
+  }));
+}
+
 export function buildWorkflowSnapshotMap(
   plugins: PluginSummary[],
   workflows: PluginTriggerWorkflow[],
@@ -108,14 +157,11 @@ export function savePluginWorkflowSnapshots(snapshots: PluginWorkflowSnapshotMap
 
 export async function refreshPluginWorkflowSnapshots(): Promise<PluginWorkflowSnapshotMap> {
   try {
-    const [plugins, workflows] = await Promise.all([
+    const [plugins, definitions] = await Promise.all([
       invoke<PluginSummary[]>('list_plugins'),
-      Promise.all(
-        DOWNLOAD_WORKFLOW_TRIGGERS.map((trigger) =>
-          invoke<PluginTriggerWorkflow>('get_plugin_trigger_workflow', { trigger }),
-        ),
-      ),
+      invoke<PluginWorkflowDefinition[]>('list_plugin_workflows'),
     ]);
+    const workflows = buildWorkflowsFromDefinitions(definitions);
     const snapshots = buildWorkflowSnapshotMap(plugins, workflows);
     savePluginWorkflowSnapshots(snapshots);
     return snapshots;

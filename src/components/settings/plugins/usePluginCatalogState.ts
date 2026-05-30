@@ -3,16 +3,21 @@ import { listen } from '@tauri-apps/api/event';
 import type { TFunction } from 'i18next';
 import type { Dispatch, SetStateAction } from 'react';
 import { useCallback, useEffect, useState } from 'react';
-import { buildWorkflowSnapshotMap, savePluginWorkflowSnapshots } from '@/lib/post-download-plugins';
+import {
+  buildWorkflowSnapshotMap,
+  buildWorkflowsFromDefinitions,
+  savePluginWorkflowSnapshots,
+} from '@/lib/post-download-plugins';
 import type {
   PluginExecutionStatusEvent,
   PluginProvider,
   PluginRuntimeLanguage,
   PluginSummary,
   PluginTriggerWorkflow,
+  PluginWorkflowDefinition,
   RuntimeProviderStatus,
 } from '@/lib/types';
-import { currentProvider, WORKFLOW_TRIGGERS } from './post-download-plugins-shared';
+import { currentProvider } from './post-download-plugins-shared';
 
 export function usePluginCatalogState(
   t: TFunction<'settings'>,
@@ -21,6 +26,7 @@ export function usePluginCatalogState(
   const [plugins, setPlugins] = useState<PluginSummary[]>([]);
   const [providers, setProviders] = useState<RuntimeProviderStatus[]>([]);
   const [workflows, setWorkflows] = useState<Record<string, PluginTriggerWorkflow>>({});
+  const [workflowDefinitions, setWorkflowDefinitions] = useState<PluginWorkflowDefinition[]>([]);
   const [workflowCandidates, setWorkflowCandidates] = useState<Record<string, string>>({});
   const [defaultProviders, setDefaultProviders] = useState<
     Partial<Record<PluginRuntimeLanguage, PluginProvider>>
@@ -34,17 +40,15 @@ export function usePluginCatalogState(
     setLoading(true);
     setError(null);
     try {
-      const [pluginResult, providerResult, workflowResults] = await Promise.all([
+      const [pluginResult, providerResult, workflowDefinitionResults] = await Promise.all([
         invoke<PluginSummary[]>('list_plugins'),
         invoke<RuntimeProviderStatus[]>('list_runtime_providers'),
-        Promise.all(
-          WORKFLOW_TRIGGERS.map((trigger) =>
-            invoke<PluginTriggerWorkflow>('get_plugin_trigger_workflow', { trigger }),
-          ),
-        ),
+        invoke<PluginWorkflowDefinition[]>('list_plugin_workflows'),
       ]);
+      const workflowResults = buildWorkflowsFromDefinitions(workflowDefinitionResults);
       setPlugins(pluginResult);
       setProviders(providerResult);
+      setWorkflowDefinitions(workflowDefinitionResults);
       setWorkflows(
         Object.fromEntries(workflowResults.map((workflow) => [workflow.trigger, workflow])),
       );
@@ -80,12 +84,9 @@ export function usePluginCatalogState(
 
   useEffect(() => {
     savePluginWorkflowSnapshots(
-      buildWorkflowSnapshotMap(
-        plugins,
-        WORKFLOW_TRIGGERS.map((trigger) => workflows[trigger] ?? { trigger, steps: [] }),
-      ),
+      buildWorkflowSnapshotMap(plugins, buildWorkflowsFromDefinitions(workflowDefinitions)),
     );
-  }, [plugins, workflows]);
+  }, [plugins, workflowDefinitions]);
 
   useEffect(() => {
     let isMounted = true;
@@ -128,15 +129,12 @@ export function usePluginCatalogState(
       setPlugins((current) => {
         const next = updater(current);
         savePluginWorkflowSnapshots(
-          buildWorkflowSnapshotMap(
-            next,
-            WORKFLOW_TRIGGERS.map((trigger) => workflows[trigger] ?? { trigger, steps: [] }),
-          ),
+          buildWorkflowSnapshotMap(next, buildWorkflowsFromDefinitions(workflowDefinitions)),
         );
         return next;
       });
     },
-    [workflows],
+    [workflowDefinitions],
   );
 
   return {
@@ -149,10 +147,12 @@ export function usePluginCatalogState(
     setDefaultProviders,
     setPlugins,
     setRuntimeStatuses,
+    setWorkflowDefinitions,
     setWorkflowCandidates,
     setWorkflows,
     updatePluginList,
     workflowCandidates,
+    workflowDefinitions,
     workflows,
   };
 }

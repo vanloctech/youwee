@@ -474,6 +474,40 @@ export interface PluginTriggerWorkflow {
   steps: PluginWorkflowStepConfig[];
 }
 
+export interface PluginWorkflowNodePosition {
+  x: number;
+  y: number;
+}
+
+export type PluginWorkflowNode =
+  | {
+      kind: 'trigger';
+      id: string;
+      trigger: PluginTrigger;
+      position: PluginWorkflowNodePosition;
+    }
+  | {
+      kind: 'plugin';
+      id: string;
+      pluginId: string;
+      failurePolicy: PluginWorkflowFailurePolicy;
+      position: PluginWorkflowNodePosition;
+    };
+
+export interface PluginWorkflowEdge {
+  id: string;
+  source: string;
+  target: string;
+}
+
+export interface PluginWorkflowDefinition {
+  id: string;
+  name: string;
+  enabled: boolean;
+  nodes: PluginWorkflowNode[];
+  edges: PluginWorkflowEdge[];
+}
+
 export type PluginWorkflowRunStatus =
   | 'queued'
   | 'running'

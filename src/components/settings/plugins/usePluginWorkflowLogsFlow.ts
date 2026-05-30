@@ -3,21 +3,20 @@ import type { TFunction } from 'i18next';
 import type { Dispatch, SetStateAction } from 'react';
 import { useCallback, useMemo, useState } from 'react';
 import { localizeUnknownError } from '@/lib/backend-error';
+import { buildWorkflowsFromDefinitions } from '@/lib/post-download-plugins';
 import type {
   LogEntry,
   PluginLogsPage,
   PluginSummary,
   PluginTriggerWorkflow,
-  PluginWorkflowFailurePolicy,
+  PluginWorkflowDefinition,
 } from '@/lib/types';
-import { WORKFLOW_TRIGGERS, type WorkflowTrigger } from './post-download-plugins-shared';
 
 type WorkflowState = {
   plugins: PluginSummary[];
-  workflows: Record<string, PluginTriggerWorkflow>;
+  setWorkflowDefinitions: Dispatch<SetStateAction<PluginWorkflowDefinition[]>>;
   setWorkflows: Dispatch<SetStateAction<Record<string, PluginTriggerWorkflow>>>;
-  workflowCandidates: Record<string, string>;
-  setWorkflowCandidates: Dispatch<SetStateAction<Record<string, string>>>;
+  workflowDefinitions: PluginWorkflowDefinition[];
 };
 
 export function usePluginWorkflowLogsFlow(
@@ -25,7 +24,7 @@ export function usePluginWorkflowLogsFlow(
   setError: Dispatch<SetStateAction<string | null>>,
   state: WorkflowState,
 ) {
-  const { plugins, setWorkflowCandidates, setWorkflows, workflowCandidates, workflows } = state;
+  const { plugins, setWorkflowDefinitions, setWorkflows, workflowDefinitions } = state;
   const [logsOpen, setLogsOpen] = useState(false);
   const [logsLoading, setLogsLoading] = useState(false);
   const [logsLoadingMore, setLogsLoadingMore] = useState(false);
@@ -38,124 +37,34 @@ export function usePluginWorkflowLogsFlow(
   const [pluginLogsError, setPluginLogsError] = useState<string | null>(null);
   const [clearLogsConfirmOpen, setClearLogsConfirmOpen] = useState(false);
 
-  const persistWorkflow = useCallback(
-    async (nextWorkflow: PluginTriggerWorkflow) => {
+  const syncWorkflowState = useCallback(
+    (definitions: PluginWorkflowDefinition[]) => {
+      setWorkflowDefinitions(definitions);
+      setWorkflows(
+        Object.fromEntries(
+          buildWorkflowsFromDefinitions(definitions).map((workflow) => [
+            workflow.trigger,
+            workflow,
+          ]),
+        ),
+      );
+    },
+    [setWorkflowDefinitions, setWorkflows],
+  );
+
+  const persistWorkflowDefinitions = useCallback(
+    async (nextDefinitions: PluginWorkflowDefinition[]) => {
       try {
-        const saved = await invoke<PluginTriggerWorkflow>('update_plugin_trigger_workflow', {
-          workflow: nextWorkflow,
+        const saved = await invoke<PluginWorkflowDefinition[]>('update_plugin_workflows', {
+          workflows: nextDefinitions,
         });
-        setWorkflows((current) => ({
-          ...current,
-          [saved.trigger]: saved,
-        }));
+        syncWorkflowState(saved);
       } catch (err) {
-        console.error('Failed to update plugin workflow:', err);
+        console.error('Failed to update plugin workflows:', err);
         setError(localizeUnknownError(err));
       }
     },
-    [setError, setWorkflows],
-  );
-
-  const handleAddWorkflowPlugin = useCallback(
-    async (trigger: WorkflowTrigger) => {
-      const workflow = workflows[trigger] ?? { trigger, steps: [] };
-      const pluginId = workflowCandidates[trigger] ?? '';
-      if (!pluginId) return;
-      await persistWorkflow({
-        trigger,
-        steps: [...workflow.steps, { pluginId, failurePolicy: 'continue' }],
-      });
-      setWorkflowCandidates((current) => ({ ...current, [trigger]: '' }));
-    },
-    [persistWorkflow, setWorkflowCandidates, workflowCandidates, workflows],
-  );
-
-  const handleRemoveWorkflowStep = useCallback(
-    async (trigger: WorkflowTrigger, pluginId: string) => {
-      const workflow = workflows[trigger] ?? { trigger, steps: [] };
-      await persistWorkflow({
-        trigger: workflow.trigger,
-        steps: workflow.steps.filter((step) => step.pluginId !== pluginId),
-      });
-    },
-    [persistWorkflow, workflows],
-  );
-
-  const handleMoveWorkflowStep = useCallback(
-    async (trigger: WorkflowTrigger, pluginId: string, direction: -1 | 1) => {
-      const workflow = workflows[trigger] ?? { trigger, steps: [] };
-      const index = workflow.steps.findIndex((step) => step.pluginId === pluginId);
-      if (index < 0) return;
-      const nextIndex = index + direction;
-      if (nextIndex < 0 || nextIndex >= workflow.steps.length) return;
-      const steps = [...workflow.steps];
-      const [current] = steps.splice(index, 1);
-      if (!current) return;
-      steps.splice(nextIndex, 0, current);
-      await persistWorkflow({
-        trigger: workflow.trigger,
-        steps,
-      });
-    },
-    [persistWorkflow, workflows],
-  );
-
-  const handleWorkflowFailurePolicy = useCallback(
-    async (
-      trigger: WorkflowTrigger,
-      pluginId: string,
-      failurePolicy: PluginWorkflowFailurePolicy,
-    ) => {
-      const workflow = workflows[trigger] ?? { trigger, steps: [] };
-      await persistWorkflow({
-        trigger: workflow.trigger,
-        steps: workflow.steps.map((step) =>
-          step.pluginId === pluginId ? { ...step, failurePolicy } : step,
-        ),
-      });
-    },
-    [persistWorkflow, workflows],
-  );
-
-  const workflowPluginsByTrigger = useMemo(
-    () =>
-      Object.fromEntries(
-        WORKFLOW_TRIGGERS.map((trigger) => {
-          const workflow = workflows[trigger] ?? { trigger, steps: [] };
-          return [
-            trigger,
-            workflow.steps
-              .map((step) => ({
-                step,
-                plugin: plugins.find((plugin) => plugin.manifest.id === step.pluginId) ?? null,
-              }))
-              .filter((entry) => entry.plugin != null),
-          ];
-        }),
-      ) as Record<
-        WorkflowTrigger,
-        Array<{ step: PluginTriggerWorkflow['steps'][number]; plugin: PluginSummary | null }>
-      >,
-    [plugins, workflows],
-  );
-
-  const availableWorkflowPluginsByTrigger = useMemo(
-    () =>
-      Object.fromEntries(
-        WORKFLOW_TRIGGERS.map((trigger) => {
-          const workflow = workflows[trigger] ?? { trigger, steps: [] };
-          return [
-            trigger,
-            plugins.filter(
-              (plugin) =>
-                plugin.installation.enabled &&
-                plugin.manifest.triggers.includes(trigger) &&
-                !workflow.steps.some((step) => step.pluginId === plugin.manifest.id),
-            ),
-          ];
-        }),
-      ) as Record<WorkflowTrigger, PluginSummary[]>,
-    [plugins, workflows],
+    [setError, syncWorkflowState],
   );
 
   const selectedPlugin =
@@ -255,32 +164,52 @@ export function usePluginWorkflowLogsFlow(
     setPluginLogsError(null);
   }, []);
 
-  return {
-    availableWorkflowPluginsByTrigger,
-    clearLogsConfirmOpen,
-    closeLogsDialog,
-    handleAddWorkflowPlugin,
-    handleClearPluginLogs,
-    handleConfirmClearPluginLogs,
-    handleLoadMorePluginLogs,
-    handleMoveWorkflowStep,
-    handleOpenPluginLogs,
-    handleRemoveWorkflowStep,
-    handleWorkflowFailurePolicy,
-    loadPluginLogs,
-    logsClearing,
-    logsLoading,
-    logsLoadingMore,
-    logsOpen,
-    pluginLogs,
-    pluginLogsError,
-    pluginLogsHasMore,
-    pluginLogsOffset,
-    pluginLogsTotal,
-    selectedPlugin,
-    selectedPluginId,
-    setClearLogsConfirmOpen,
-    setSelectedPluginId,
-    workflowPluginsByTrigger,
-  };
+  return useMemo(
+    () => ({
+      clearLogsConfirmOpen,
+      closeLogsDialog,
+      handleClearPluginLogs,
+      handleConfirmClearPluginLogs,
+      handleLoadMorePluginLogs,
+      handleOpenPluginLogs,
+      loadPluginLogs,
+      logsClearing,
+      logsLoading,
+      logsLoadingMore,
+      logsOpen,
+      persistWorkflowDefinitions,
+      pluginLogs,
+      pluginLogsError,
+      pluginLogsHasMore,
+      pluginLogsOffset,
+      pluginLogsTotal,
+      selectedPlugin,
+      selectedPluginId,
+      setClearLogsConfirmOpen,
+      setSelectedPluginId,
+      workflowDefinitions,
+    }),
+    [
+      clearLogsConfirmOpen,
+      closeLogsDialog,
+      handleClearPluginLogs,
+      handleConfirmClearPluginLogs,
+      handleLoadMorePluginLogs,
+      handleOpenPluginLogs,
+      loadPluginLogs,
+      logsClearing,
+      logsLoading,
+      logsLoadingMore,
+      logsOpen,
+      persistWorkflowDefinitions,
+      pluginLogs,
+      pluginLogsError,
+      pluginLogsHasMore,
+      pluginLogsOffset,
+      pluginLogsTotal,
+      selectedPlugin,
+      selectedPluginId,
+      workflowDefinitions,
+    ],
+  );
 }

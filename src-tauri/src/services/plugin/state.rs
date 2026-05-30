@@ -4,12 +4,16 @@ use tauri::AppHandle;
 
 use crate::types::{
     PluginPermissionApproval, PluginProvider, PluginRuntimeLanguage, PluginTriggerWorkflow,
+    PluginWorkflowDefinition, PluginWorkflowNode,
 };
 
 use super::manifest::default_supported_providers;
 use super::registry::{read_registry, write_registry, PluginTriggerWorkflowRegistry};
 use super::summary::validate_runtime_config_value;
-use super::workflow::get_trigger_workflow_internal;
+use super::workflow::{
+    get_trigger_workflow_internal, legacy_workflow_definition,
+    trigger_workflow_registries_from_definitions, workflow_definitions_from_registry,
+};
 use super::{
     get_plugin_details_internal, list_plugins_internal, PluginConfigValuesInput,
     PluginPermissionApprovalInput, PluginRuntimeLocaleInput,
@@ -34,6 +38,36 @@ pub fn get_plugin_trigger_workflow_internal(
     trigger: &str,
 ) -> Result<PluginTriggerWorkflow, String> {
     get_trigger_workflow_internal(app, trigger)
+}
+
+pub fn list_plugin_workflows_internal(
+    app: &AppHandle,
+) -> Result<Vec<PluginWorkflowDefinition>, String> {
+    let registry = read_registry(app)?;
+    Ok(workflow_definitions_from_registry(&registry))
+}
+
+pub fn update_plugin_workflows_internal(
+    app: &AppHandle,
+    workflows: Vec<PluginWorkflowDefinition>,
+) -> Result<Vec<PluginWorkflowDefinition>, String> {
+    let valid_plugin_ids = list_plugins_internal(app)?
+        .into_iter()
+        .map(|plugin| plugin.manifest.plugin_id)
+        .collect::<Vec<_>>();
+
+    let sanitized_workflows = workflows
+        .into_iter()
+        .map(|workflow| sanitize_workflow_definition(workflow, &valid_plugin_ids))
+        .filter(|workflow| !workflow.nodes.is_empty())
+        .collect::<Vec<_>>();
+
+    let mut registry = read_registry(app)?;
+    registry.trigger_workflows = trigger_workflow_registries_from_definitions(&sanitized_workflows);
+    registry.workflows = sanitized_workflows;
+    write_registry(app, &registry)?;
+
+    Ok(registry.workflows)
 }
 
 pub fn update_plugin_trigger_workflow_internal(
@@ -62,12 +96,71 @@ pub fn update_plugin_trigger_workflow_internal(
             steps: steps.clone(),
         },
     );
+    let mut workflows = workflow_definitions_from_registry(&registry);
+    let migrated_workflow = legacy_workflow_definition(&workflow.trigger, &steps);
+    if let Some(existing) = workflows
+        .iter_mut()
+        .find(|candidate| candidate.id == migrated_workflow.id)
+    {
+        *existing = migrated_workflow;
+    } else {
+        workflows.push(migrated_workflow);
+    }
+    registry.workflows = workflows;
     write_registry(app, &registry)?;
 
     Ok(PluginTriggerWorkflow {
         trigger: workflow.trigger,
         steps,
     })
+}
+
+fn sanitize_workflow_definition(
+    workflow: PluginWorkflowDefinition,
+    valid_plugin_ids: &[String],
+) -> PluginWorkflowDefinition {
+    let valid_nodes = workflow
+        .nodes
+        .into_iter()
+        .filter(|node| match node {
+            PluginWorkflowNode::Trigger { trigger, .. } => matches!(
+                trigger.as_str(),
+                "download.queued"
+                    | "download.beforeStart"
+                    | "download.completed"
+                    | "download.failed"
+            ),
+            PluginWorkflowNode::Plugin { plugin_id, .. } => valid_plugin_ids
+                .iter()
+                .any(|valid_id| valid_id == plugin_id),
+        })
+        .collect::<Vec<_>>();
+    let valid_node_ids = valid_nodes
+        .iter()
+        .map(|node| match node {
+            PluginWorkflowNode::Trigger { id, .. } | PluginWorkflowNode::Plugin { id, .. } => id,
+        })
+        .collect::<Vec<_>>();
+    let edges = workflow
+        .edges
+        .into_iter()
+        .filter(|edge| {
+            valid_node_ids
+                .iter()
+                .any(|node_id| *node_id == &edge.source)
+                && valid_node_ids
+                    .iter()
+                    .any(|node_id| *node_id == &edge.target)
+        })
+        .collect::<Vec<_>>();
+
+    PluginWorkflowDefinition {
+        id: workflow.id.trim().to_string(),
+        name: workflow.name.trim().to_string(),
+        enabled: workflow.enabled,
+        nodes: valid_nodes,
+        edges,
+    }
 }
 
 pub fn approve_plugin_permissions_internal(

@@ -494,6 +494,57 @@ pub struct PluginTriggerWorkflow {
     pub steps: Vec<PluginWorkflowStepConfig>,
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase", tag = "kind")]
+pub enum PluginWorkflowNode {
+    Trigger {
+        id: String,
+        trigger: String,
+        #[serde(default)]
+        position: PluginWorkflowNodePosition,
+    },
+    Plugin {
+        id: String,
+        plugin_id: String,
+        #[serde(default)]
+        failure_policy: PluginWorkflowFailurePolicy,
+        #[serde(default)]
+        position: PluginWorkflowNodePosition,
+    },
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+#[serde(rename_all = "camelCase")]
+pub struct PluginWorkflowNodePosition {
+    pub x: f64,
+    pub y: f64,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+#[serde(rename_all = "camelCase")]
+pub struct PluginWorkflowEdge {
+    pub id: String,
+    pub source: String,
+    pub target: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PluginWorkflowDefinition {
+    pub id: String,
+    pub name: String,
+    #[serde(default = "default_workflow_enabled")]
+    pub enabled: bool,
+    #[serde(default)]
+    pub nodes: Vec<PluginWorkflowNode>,
+    #[serde(default)]
+    pub edges: Vec<PluginWorkflowEdge>,
+}
+
+const fn default_workflow_enabled() -> bool {
+    true
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "kebab-case")]
 pub enum PluginWorkflowRunStatus {

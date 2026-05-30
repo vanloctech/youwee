@@ -13,6 +13,7 @@ import type {
   PluginRuntimeLanguage,
   PluginSummary,
   PluginTriggerWorkflow,
+  PluginWorkflowDefinition,
 } from '@/lib/types';
 import {
   buildRequestedPermissionApproval,
@@ -26,8 +27,9 @@ import {
 
 type DetailsDeps = {
   updatePluginList: (updater: (items: PluginSummary[]) => PluginSummary[]) => void;
-  workflows: Record<string, PluginTriggerWorkflow>;
   setWorkflows: Dispatch<SetStateAction<Record<string, PluginTriggerWorkflow>>>;
+  workflowDefinitions: PluginWorkflowDefinition[];
+  setWorkflowDefinitions: Dispatch<SetStateAction<PluginWorkflowDefinition[]>>;
   runtimeStatuses: Record<string, { status: string; message?: string | null }>;
   setRuntimeStatuses: Dispatch<
     SetStateAction<Record<string, { status: string; message?: string | null }>>
@@ -51,11 +53,12 @@ export function usePluginDetailsFlow(
     runtimeStatuses,
     selectedPluginId,
     setDefaultProviders,
+    setWorkflowDefinitions,
     setRuntimeStatuses,
     setWorkflows,
     showPluginReminderToast,
     updatePluginList,
-    workflows,
+    workflowDefinitions,
   } = deps;
   const [expandedPluginId, setExpandedPluginId] = useState<string | null>(null);
   const [pluginGuideDialog, setPluginGuideDialog] = useState<PluginGuideDialogState>(null);
@@ -71,10 +74,10 @@ export function usePluginDetailsFlow(
 
   const isPluginAssignedToAnyWorkflow = useCallback(
     (pluginId: string) =>
-      Object.values(workflows).some((workflow) =>
-        workflow.steps.some((step) => step.pluginId === pluginId),
+      workflowDefinitions.some((workflow) =>
+        workflow.nodes.some((node) => node.kind === 'plugin' && node.pluginId === pluginId),
       ),
-    [workflows],
+    [workflowDefinitions],
   );
 
   const promptPluginPermissionEnable = useCallback((plugin: PluginSummary) => {
@@ -568,6 +571,21 @@ export function usePluginDetailsFlow(
           ]),
         ),
       );
+      setWorkflowDefinitions((current) =>
+        current.map((workflow) => {
+          const nodes = workflow.nodes.filter(
+            (node) => node.kind !== 'plugin' || node.pluginId !== uninstallTarget.manifest.id,
+          );
+          const nodeIds = new Set(nodes.map((node) => node.id));
+          return {
+            ...workflow,
+            nodes,
+            edges: workflow.edges.filter(
+              (edge) => nodeIds.has(edge.source) && nodeIds.has(edge.target),
+            ),
+          };
+        }),
+      );
       if (selectedPluginId === uninstallTarget.manifest.id) {
         closeLogsDialog();
       }
@@ -581,6 +599,7 @@ export function usePluginDetailsFlow(
     selectedPluginId,
     setError,
     setRuntimeStatuses,
+    setWorkflowDefinitions,
     setWorkflows,
     t,
     uninstallTarget,

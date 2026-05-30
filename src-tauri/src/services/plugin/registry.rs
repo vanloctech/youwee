@@ -6,7 +6,8 @@ use serde_json::Value;
 use tauri::AppHandle;
 
 use crate::types::{
-    PluginPackageSource, PluginPermissionApproval, PluginProvider, PluginWorkflowStepConfig,
+    PluginPackageSource, PluginPermissionApproval, PluginProvider, PluginWorkflowDefinition,
+    PluginWorkflowStepConfig,
 };
 
 use super::{plugins_root, REGISTRY_FILE_NAME};
@@ -61,6 +62,8 @@ pub(super) struct PluginRegistry {
     pub(super) default_providers: BTreeMap<String, PluginProvider>,
     #[serde(default)]
     pub(super) trigger_workflows: BTreeMap<String, PluginTriggerWorkflowRegistry>,
+    #[serde(default)]
+    pub(super) workflows: Vec<PluginWorkflowDefinition>,
     #[serde(default)]
     pub(super) app_locale: Option<String>,
     #[serde(default)]

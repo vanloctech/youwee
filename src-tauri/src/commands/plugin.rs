@@ -4,19 +4,19 @@ use crate::services::{
     approve_plugin_permissions_internal, attach_plugin_workspace_internal,
     create_plugin_workspace_internal, enqueue_plugin_trigger_workflow, get_plugin_details_internal,
     get_plugin_trigger_workflow_internal, get_runtime_provider_status_internal,
-    inspect_plugin_package_internal, install_plugin_package_internal, list_plugins_internal,
-    list_runtime_providers_internal, open_plugin_directory_internal,
-    set_default_provider_for_language_internal, set_plugin_provider_internal,
-    set_plugin_runtime_locale_internal, set_plugin_timeout_internal, uninstall_plugin_internal,
-    update_plugin_config_values_internal, update_plugin_state_internal,
-    update_plugin_trigger_workflow_internal, AttachPluginWorkspaceInput,
-    CreatePluginWorkspaceInput, PluginConfigValuesInput, PluginPermissionApprovalInput,
-    PluginRuntimeLocaleInput,
+    inspect_plugin_package_internal, install_plugin_package_internal,
+    list_plugin_workflows_internal, list_plugins_internal, list_runtime_providers_internal,
+    open_plugin_directory_internal, set_default_provider_for_language_internal,
+    set_plugin_provider_internal, set_plugin_runtime_locale_internal, set_plugin_timeout_internal,
+    uninstall_plugin_internal, update_plugin_config_values_internal, update_plugin_state_internal,
+    update_plugin_trigger_workflow_internal, update_plugin_workflows_internal,
+    AttachPluginWorkspaceInput, CreatePluginWorkspaceInput, PluginConfigValuesInput,
+    PluginPermissionApprovalInput, PluginRuntimeLocaleInput,
 };
 use crate::types::{
     PluginPackageInspection, PluginProvider, PluginRuntimeLanguage, PluginSummary,
-    PluginTriggerWorkflow, PluginWorkflowStepSnapshot, PluginWorkspaceSummary,
-    PostDownloadPluginPayload, RuntimeProviderStatus,
+    PluginTriggerWorkflow, PluginWorkflowDefinition, PluginWorkflowStepSnapshot,
+    PluginWorkspaceSummary, PostDownloadPluginPayload, RuntimeProviderStatus,
 };
 
 #[tauri::command]
@@ -88,6 +88,19 @@ pub fn update_plugin_trigger_workflow(
     workflow: PluginTriggerWorkflow,
 ) -> Result<PluginTriggerWorkflow, String> {
     update_plugin_trigger_workflow_internal(&app, workflow)
+}
+
+#[tauri::command]
+pub fn list_plugin_workflows(app: AppHandle) -> Result<Vec<PluginWorkflowDefinition>, String> {
+    list_plugin_workflows_internal(&app)
+}
+
+#[tauri::command]
+pub fn update_plugin_workflows(
+    app: AppHandle,
+    workflows: Vec<PluginWorkflowDefinition>,
+) -> Result<Vec<PluginWorkflowDefinition>, String> {
+    update_plugin_workflows_internal(&app, workflows)
 }
 
 #[tauri::command]

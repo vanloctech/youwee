@@ -15,15 +15,15 @@ export function usePostDownloadPluginsCard() {
   const reminder = usePluginReminderState();
   const workflowLogs = usePluginWorkflowLogsFlow(t, setError, {
     plugins: catalog.plugins,
-    workflows: catalog.workflows,
+    workflowDefinitions: catalog.workflowDefinitions,
+    setWorkflowDefinitions: catalog.setWorkflowDefinitions,
     setWorkflows: catalog.setWorkflows,
-    workflowCandidates: catalog.workflowCandidates,
-    setWorkflowCandidates: catalog.setWorkflowCandidates,
   });
   const details = usePluginDetailsFlow(t, setError, {
     updatePluginList: catalog.updatePluginList,
-    workflows: catalog.workflows,
     setWorkflows: catalog.setWorkflows,
+    workflowDefinitions: catalog.workflowDefinitions,
+    setWorkflowDefinitions: catalog.setWorkflowDefinitions,
     runtimeStatuses: catalog.runtimeStatuses,
     setRuntimeStatuses: catalog.setRuntimeStatuses,
     setDefaultProviders: catalog.setDefaultProviders,

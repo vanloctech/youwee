@@ -40,6 +40,7 @@ export default defineConfig({
             '@tauri-apps/plugin-updater',
           ],
           'vendor-icons': ['lucide-react'],
+          'vendor-workflow': ['@xyflow/react'],
         },
       },
     },
