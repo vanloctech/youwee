@@ -84,6 +84,7 @@ pub enum TelegramCommand {
     },
     Status,
     Queue,
+    Run,
     Stop,
     Help,
     Unsupported,
@@ -126,6 +127,20 @@ struct SendMessageRequest<'a> {
     chat_id: &'a str,
     text: &'a str,
     disable_web_page_preview: bool,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    reply_markup: Option<ReplyKeyboardMarkup>,
+}
+
+#[derive(Debug, Clone, Serialize)]
+struct ReplyKeyboardMarkup {
+    keyboard: Vec<Vec<KeyboardButton>>,
+    resize_keyboard: bool,
+    is_persistent: bool,
+}
+
+#[derive(Debug, Clone, Serialize)]
+struct KeyboardButton {
+    text: &'static str,
 }
 
 #[derive(Debug, Serialize)]
@@ -229,7 +244,7 @@ pub async fn send_reply(chat_id: String, text: String) -> Result<(), String> {
         return Err("Telegram is not configured.".to_string());
     }
 
-    send_message(&Client::new(), &config.bot_token, &chat_id, &text).await
+    send_message_with_keyboard(&Client::new(), &config.bot_token, &chat_id, &text).await
 }
 
 fn sanitize_config(config: TelegramConfig) -> TelegramConfig {
@@ -381,14 +396,17 @@ async fn handle_update(
         TelegramCommand::Queue => {
             emit_simple_command(app, "queue", &chat_id);
         }
+        TelegramCommand::Run => {
+            emit_simple_command(app, "run", &chat_id);
+        }
         TelegramCommand::Stop => {
             emit_simple_command(app, "stop", &chat_id);
         }
         TelegramCommand::Help => {
-            let _ = send_message(client, bot_token, &chat_id, help_text()).await;
+            let _ = send_message_with_keyboard(client, bot_token, &chat_id, help_text()).await;
         }
         TelegramCommand::Unsupported => {
-            let _ = send_message(
+            let _ = send_message_with_keyboard(
                 client,
                 bot_token,
                 &chat_id,
@@ -429,11 +447,21 @@ fn emit_simple_command(app: &AppHandle, command: &str, chat_id: &str) {
     );
 }
 
-async fn send_message(
+async fn send_message_with_keyboard(
     client: &Client,
     bot_token: &str,
     chat_id: &str,
     text: &str,
+) -> Result<(), String> {
+    send_message_with_reply_markup(client, bot_token, chat_id, text, Some(command_keyboard())).await
+}
+
+async fn send_message_with_reply_markup(
+    client: &Client,
+    bot_token: &str,
+    chat_id: &str,
+    text: &str,
+    reply_markup: Option<ReplyKeyboardMarkup>,
 ) -> Result<(), String> {
     let url = format!("{}/bot{}/sendMessage", TELEGRAM_API_BASE, bot_token);
     let response = client
@@ -442,6 +470,7 @@ async fn send_message(
             chat_id,
             text,
             disable_web_page_preview: true,
+            reply_markup,
         })
         .send()
         .await
@@ -461,12 +490,34 @@ async fn send_message(
     }
 }
 
+fn command_keyboard() -> ReplyKeyboardMarkup {
+    ReplyKeyboardMarkup {
+        keyboard: vec![
+            vec![
+                KeyboardButton { text: "Status" },
+                KeyboardButton { text: "Queue" },
+            ],
+            vec![
+                KeyboardButton { text: "Run Queue" },
+                KeyboardButton { text: "Stop" },
+            ],
+            vec![KeyboardButton { text: "Help" }],
+        ],
+        resize_keyboard: true,
+        is_persistent: true,
+    }
+}
+
 async fn set_my_commands(client: &Client, bot_token: &str) -> Result<(), String> {
     let url = format!("{}/bot{}/setMyCommands", TELEGRAM_API_BASE, bot_token);
     let response = client
         .post(url)
         .json(&SetMyCommandsRequest {
             commands: vec![
+                BotCommand {
+                    command: "start",
+                    description: "Show command keyboard",
+                },
                 BotCommand {
                     command: "add",
                     description: "Add a URL to the queue",
@@ -482,6 +533,10 @@ async fn set_my_commands(client: &Client, bot_token: &str) -> Result<(), String>
                 BotCommand {
                     command: "queue",
                     description: "Show recent queue items",
+                },
+                BotCommand {
+                    command: "run",
+                    description: "Start pending downloads",
                 },
                 BotCommand {
                     command: "stop",
@@ -523,7 +578,7 @@ fn set_status(state: TelegramStatusState, message: Option<String>) -> bool {
 }
 
 fn help_text() -> &'static str {
-    "Youwee Telegram commands:\n/add <url> [quality] - Add a URL to the queue.\n/download <url> [quality] - Add a URL and start downloading when idle.\n/status - Show download status.\n/queue - Show recent queue items.\n/stop - Stop the current download.\n/help - Show this help.\n\nYou can also send a link directly.\nQuality: best, 8k, 4k, 2k, 1080, 720, 480, 360, audio, mp3."
+    "Youwee Telegram commands:\n/start - Show command keyboard.\n/add <url> [quality] - Add a URL to the queue.\n/download <url> [quality] - Add a URL and start downloading when idle.\n/status - Show download status.\n/queue - Show recent queue items.\n/run - Start pending downloads.\n/stop - Stop the current download.\n/help - Show this help.\n\nYou can also send a link directly.\nQuality: best, 8k, 4k, 2k, 1080, 720, 480, 360, audio, mp3."
 }
 
 pub fn parse_command(text: &str) -> TelegramCommand {
@@ -545,8 +600,10 @@ fn parse_command_with_plain_url_action(
 
     match command.as_str() {
         "/help" | "help" => TelegramCommand::Help,
+        "/start" | "start" => TelegramCommand::Help,
         "/status" | "status" => TelegramCommand::Status,
         "/queue" | "queue" => TelegramCommand::Queue,
+        "/run" | "run" => TelegramCommand::Run,
         "/stop" | "stop" => TelegramCommand::Stop,
         "/add" | "add" => parts
             .next()
@@ -612,12 +669,17 @@ mod tests {
     fn parses_help_commands() {
         assert_eq!(parse_command("/help"), TelegramCommand::Help);
         assert_eq!(parse_command("/help@youwee_bot"), TelegramCommand::Help);
+        assert_eq!(parse_command("/start"), TelegramCommand::Help);
     }
 
     #[test]
     fn parses_control_commands() {
         assert_eq!(parse_command("/status"), TelegramCommand::Status);
+        assert_eq!(parse_command("Status"), TelegramCommand::Status);
         assert_eq!(parse_command("/queue@youwee_bot"), TelegramCommand::Queue);
+        assert_eq!(parse_command("Queue"), TelegramCommand::Queue);
+        assert_eq!(parse_command("/run"), TelegramCommand::Run);
+        assert_eq!(parse_command("Run Queue"), TelegramCommand::Run);
         assert_eq!(parse_command("stop"), TelegramCommand::Stop);
     }
 

@@ -64,10 +64,11 @@
 ![Youwee - Setting - General](screenshots/youwee-setting-general.png)
 ![Youwee - Setting - Dependencies](screenshots/youwee-setting-dependencies.png)
 ![Youwee - Setting - Download](screenshots/youwee-setting-download.png)
-![Youwee - Setting - Plugin](screenshots/youwee-setting-plugins.png)
-![Youwee - Setting - Extension](screenshots/youwee-setting-extension.png)
 ![Youwee - Setting - AI Features](screenshots/youwee-setting-ai-features.png)
 ![Youwee - Setting - Network & Auth](screenshots/youwee-setting-network-auth.png)
+![Youwee - Setting - Plugin](screenshots/youwee-setting-plugins.png)
+![Youwee - Setting - Remote Download](screenshots/youwee-setting-remote-download.png)
+![Youwee - Setting - Extension](screenshots/youwee-setting-extension.png)
 ![Youwee - Setting - About](screenshots/youwee-setting-about.png)
 ![Youwee - Browser Extension](screenshots/youwee-extension-chrome-firefox.png)
 

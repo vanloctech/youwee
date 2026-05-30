@@ -9,7 +9,7 @@ import type { DownloadItem, ExternalEnqueueOptions, Quality } from '@/lib/types'
 import { isSafeUrl } from '@/lib/utils';
 
 interface TelegramDownloadCommandEvent {
-  command: 'add' | 'download' | 'status' | 'queue' | 'stop';
+  command: 'add' | 'download' | 'status' | 'queue' | 'run' | 'stop';
   url?: string | null;
   quality?: string | null;
   chatId: string;
@@ -52,12 +52,29 @@ function truncateText(text: string, maxLength = 80) {
   return `${normalized.slice(0, maxLength - 1)}…`;
 }
 
+function statusIcon(status: DownloadItem['status']) {
+  if (status === 'pending') return '⏳';
+  if (status === 'downloading' || status === 'fetching') return '⬇️';
+  if (status === 'completed') return '✅';
+  if (status === 'error') return '❌';
+  return '•';
+}
+
+function formatStatusLabel(status: DownloadItem['status']) {
+  if (status === 'fetching') return 'fetching';
+  return status;
+}
+
 function formatQueueEntry(entry: QueueEntry, displayIndex: number) {
   const { item, source, index } = entry;
-  const title = truncateText(item.title || item.url);
+  const title = truncateText(item.title || item.url, 90);
   const progress =
-    item.status === 'downloading' || item.status === 'fetching' ? ` ${item.progress}%` : '';
-  return `${displayIndex}. [${source} #${index + 1} ${item.status}${progress}] ${title}`;
+    item.status === 'downloading' || item.status === 'fetching' ? ` · ${item.progress}%` : '';
+  return [
+    `${displayIndex}. ${statusIcon(item.status)} ${formatStatusLabel(item.status)}${progress}`,
+    `${source} #${index + 1}`,
+    title,
+  ].join('\n');
 }
 
 function buildStatusReply(
@@ -73,15 +90,19 @@ function buildStatusReply(
     completed: youtube.completed + universal.completed,
     error: youtube.error + universal.error,
   };
-  const state =
-    isDownloading || total.downloading > 0 ? 'Youwee is downloading.' : 'Youwee is idle.';
+  const isActive = isDownloading || total.downloading > 0;
+  const totalItems = total.pending + total.downloading + total.completed + total.error;
 
   return [
-    state,
-    `Pending: ${total.pending}`,
-    `Downloading: ${total.downloading}`,
-    `Completed: ${total.completed}`,
-    `Error: ${total.error}`,
+    `${isActive ? '⬇️' : '🟢'} Youwee ${isActive ? 'is downloading' : 'is idle'}`,
+    '',
+    '📊 Queue status',
+    `⏳ Pending: ${total.pending}`,
+    `⬇️ Downloading: ${total.downloading}`,
+    `✅ Completed: ${total.completed}`,
+    `❌ Error: ${total.error}`,
+    '',
+    `📦 Total: ${totalItems}`,
   ].join('\n');
 }
 
@@ -92,16 +113,21 @@ function buildQueueReply(youtubeItems: DownloadItem[], universalItems: DownloadI
   ];
 
   if (entries.length === 0) {
-    return 'Queue is empty.';
+    return ['📭 Queue is empty.', '', 'Send a link or use /add <url> to add one.'].join('\n');
   }
 
   const activeEntries = entries.filter((entry) => entry.item.status !== 'completed');
   const recentEntries = (activeEntries.length > 0 ? activeEntries : entries).slice(-5).reverse();
 
   return [
-    'Recent queue items:',
-    ...recentEntries.map((entry, index) => formatQueueEntry(entry, index + 1)),
+    '📋 Recent queue items',
+    '',
+    recentEntries.map((entry, index) => formatQueueEntry(entry, index + 1)).join('\n\n'),
   ].join('\n');
+}
+
+function hasStartableItems(items: DownloadItem[]) {
+  return items.some((item) => item.status === 'pending' || item.status === 'error');
 }
 
 function parseTelegramQuality(token?: string | null): ExternalEnqueueOptions | null {
@@ -167,6 +193,48 @@ export function useTelegramRemoteCommands(
 
       if (payload.command === 'queue') {
         await sendTelegramReply(payload.chatId, buildQueueReply(download.items, universal.items));
+        return;
+      }
+
+      if (payload.command === 'run') {
+        const isBusy =
+          download.isDownloading ||
+          universal.isDownloading ||
+          startLockRef.current.youtube ||
+          startLockRef.current.universal;
+
+        if (isBusy) {
+          await sendTelegramReply(payload.chatId, 'Youwee is already downloading.');
+          return;
+        }
+
+        const shouldStartYoutube = hasStartableItems(download.items);
+        const shouldStartUniversal = hasStartableItems(universal.items);
+
+        if (!shouldStartYoutube && !shouldStartUniversal) {
+          await sendTelegramReply(payload.chatId, 'No pending downloads in the queue.');
+          return;
+        }
+
+        if (shouldStartYoutube) {
+          setCurrentPage('youtube');
+          startLockRef.current.youtube = true;
+          void download.startDownload().finally(() => {
+            startLockRef.current.youtube = false;
+          });
+        }
+
+        if (shouldStartUniversal) {
+          if (!shouldStartYoutube) {
+            setCurrentPage('universal');
+          }
+          startLockRef.current.universal = true;
+          void universal.startDownload().finally(() => {
+            startLockRef.current.universal = false;
+          });
+        }
+
+        await sendTelegramReply(payload.chatId, 'Started pending downloads.');
         return;
       }
 
