@@ -494,14 +494,18 @@ fn command_keyboard() -> ReplyKeyboardMarkup {
     ReplyKeyboardMarkup {
         keyboard: vec![
             vec![
-                KeyboardButton { text: "Status" },
-                KeyboardButton { text: "Queue" },
+                KeyboardButton {
+                    text: "📊 Status"
+                },
+                KeyboardButton { text: "📋 Queue" },
             ],
             vec![
-                KeyboardButton { text: "Run Queue" },
-                KeyboardButton { text: "Stop" },
+                KeyboardButton {
+                    text: "▶️ Run Queue",
+                },
+                KeyboardButton { text: "⏹ Stop" },
             ],
-            vec![KeyboardButton { text: "Help" }],
+            vec![KeyboardButton { text: "💡 Help" }],
         ],
         resize_keyboard: true,
         is_persistent: true,
@@ -595,7 +599,9 @@ fn parse_command_with_plain_url_action(
     }
 
     let mut parts = trimmed.split_whitespace();
-    let command = parts.next().unwrap_or_default();
+    let command = parts
+        .find(|part| part.chars().any(|c| c.is_ascii_alphanumeric()) || part.starts_with('/'))
+        .unwrap_or_default();
     let command = command.split('@').next().unwrap_or(command).to_lowercase();
 
     match command.as_str() {
@@ -676,10 +682,14 @@ mod tests {
     fn parses_control_commands() {
         assert_eq!(parse_command("/status"), TelegramCommand::Status);
         assert_eq!(parse_command("Status"), TelegramCommand::Status);
+        assert_eq!(parse_command("📊 Status"), TelegramCommand::Status);
         assert_eq!(parse_command("/queue@youwee_bot"), TelegramCommand::Queue);
         assert_eq!(parse_command("Queue"), TelegramCommand::Queue);
+        assert_eq!(parse_command("📋 Queue"), TelegramCommand::Queue);
         assert_eq!(parse_command("/run"), TelegramCommand::Run);
         assert_eq!(parse_command("Run Queue"), TelegramCommand::Run);
+        assert_eq!(parse_command("▶️ Run Queue"), TelegramCommand::Run);
+        assert_eq!(parse_command("⏹ Stop"), TelegramCommand::Stop);
         assert_eq!(parse_command("stop"), TelegramCommand::Stop);
     }
 
