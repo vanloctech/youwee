@@ -1,4 +1,4 @@
-import { Film, Gauge, Radio, Rocket, RotateCcw, ShieldCheck } from 'lucide-react';
+import { Database, Film, Gauge, Radio, Rocket, RotateCcw, ShieldCheck } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { Input } from '@/components/ui/input';
 import {
@@ -35,6 +35,7 @@ export function DownloadSection({ highlightId }: DownloadSectionProps) {
     updateUseAria2,
     updateAria2Args,
     updateAutoRetry,
+    updateSettings,
     updateSponsorBlock,
     updateSponsorBlockMode,
     updateSponsorBlockCategory,
@@ -42,6 +43,29 @@ export function DownloadSection({ highlightId }: DownloadSectionProps) {
 
   return (
     <div className="space-y-8">
+      <SettingsSection
+        title={t('download.queuePersistence')}
+        description={t('download.queuePersistenceDesc')}
+        icon={<Database className="w-5 h-5 text-white" />}
+        iconClassName="bg-gradient-to-br from-indigo-500 to-blue-600 shadow-indigo-500/20"
+      >
+        <SettingsCard>
+          <SettingsRow
+            id="persist-download-queue"
+            label={t('download.persistDownloadQueue')}
+            description={t('download.persistDownloadQueueDesc')}
+            highlight={highlightId === 'persist-download-queue'}
+          >
+            <Switch
+              checked={settings.persistDownloadQueue}
+              onCheckedChange={(persistDownloadQueue) => updateSettings({ persistDownloadQueue })}
+            />
+          </SettingsRow>
+        </SettingsCard>
+      </SettingsSection>
+
+      <SettingsDivider />
+
       {/* Post-processing */}
       <SettingsSection
         title={t('download.postProcessing')}

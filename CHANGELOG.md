@@ -8,10 +8,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Persistent download queue** - Added an optional Download setting to save YouTube, Universal, and Gallery queue items in the app database so queued items can be restored after closing and reopening Youwee
 - **Data Export** - Added a new Data Export workspace for exporting YouTube playlist and channel data, choosing exactly which fields to include, saving files in formats such as CSV, Excel, JSON, Markdown, HTML, SQLite, and Word, and keeping exported files in Library for later access
 - **Telegram Remote Download** - Added a Remote Download settings section with Telegram long-polling control, allowed chat ID tags, bot command guide, `/add`, `/download`, `/status`, `/queue`, `/stop`, and `/help` support, plus optional quality shortcuts such as `720`, `audio`, and `mp3`
 
 ### Changed
+- **Download queue additions while running** - Allowed adding new URLs to YouTube, Universal, and Gallery queues while downloads are already running, with queue workers waiting briefly for newly added items before ending the active session
 - **YouTube format selection** - Changed the default YouTube video codec to Auto so new downloads no longer force H.264-only format selection and better match Universal downloads for videos without matching AVC streams
 
 ### Fixed

@@ -12,6 +12,7 @@ import {
   useRef,
   useState,
 } from 'react';
+import { usePersistedDownloadQueue } from '@/hooks/usePersistedDownloadQueue';
 import {
   extractBackendError,
   localizeBackendError,
@@ -64,6 +65,7 @@ import type {
 import { DEFAULT_SPONSORBLOCK_CATEGORIES } from '@/lib/types';
 
 const STORAGE_KEY = 'youwee-settings';
+const DOWNLOAD_QUEUE_IDLE_GRACE_MS = 1000;
 
 // Check if path is absolute (cross-platform)
 const isAbsolutePath = (path: string): boolean => {
@@ -147,6 +149,7 @@ function saveSettings(settings: DownloadSettings) {
         autoRetryEnabled: settings.autoRetryEnabled,
         autoRetryMaxAttempts: settings.autoRetryMaxAttempts,
         autoRetryDelaySeconds: settings.autoRetryDelaySeconds,
+        persistDownloadQueue: settings.persistDownloadQueue,
         sponsorBlock: settings.sponsorBlock,
         sponsorBlockMode: settings.sponsorBlockMode,
         sponsorBlockCategories: settings.sponsorBlockCategories,
@@ -304,6 +307,8 @@ export function DownloadProvider({ children }: { children: ReactNode }) {
       autoRetryDelaySeconds: clampAutoRetryDelaySeconds(
         saved.autoRetryDelaySeconds || AUTO_RETRY_LIMITS.delaySeconds.default,
       ),
+      // Queue persistence
+      persistDownloadQueue: saved.persistDownloadQueue === true,
       // SponsorBlock settings
       sponsorBlock: saved.sponsorBlock === true, // Default to false
       sponsorBlockMode: saved.sponsorBlockMode || 'remove',
@@ -331,6 +336,21 @@ export function DownloadProvider({ children }: { children: ReactNode }) {
       ...buildCookieProxyInvokeOptions(cookies, proxy),
     }).catch((e) => console.error('Failed to sync polling network config:', e));
   }, []);
+
+  const [currentPlaylistInfo, setCurrentPlaylistInfo] = useState<PlaylistInfo | null>(null);
+
+  const isDownloadingRef = useRef(false);
+  const itemsRef = useRef<DownloadItem[]>([]);
+  const settingsRef = useRef<DownloadSettings>(settings);
+  const focusClearTimerRef = useRef<number | null>(null);
+
+  usePersistedDownloadQueue({
+    queueKind: 'youtube',
+    enabled: settings.persistDownloadQueue,
+    items,
+    setItems,
+    logLabel: 'download queue',
+  });
 
   // Initial sync on mount
   useEffect(() => {
@@ -367,13 +387,6 @@ export function DownloadProvider({ children }: { children: ReactNode }) {
     settings.telegramAllowedChatIds,
     settings.telegramPlainUrlAction,
   ]);
-
-  const [currentPlaylistInfo, setCurrentPlaylistInfo] = useState<PlaylistInfo | null>(null);
-
-  const isDownloadingRef = useRef(false);
-  const itemsRef = useRef<DownloadItem[]>([]);
-  const settingsRef = useRef<DownloadSettings>(settings);
-  const focusClearTimerRef = useRef<number | null>(null);
 
   // Keep itemsRef in sync with items state
   useEffect(() => {
@@ -1195,7 +1208,13 @@ export function DownloadProvider({ children }: { children: ReactNode }) {
           const item = claimNextItem();
           if (!item) {
             if (activeCount === 0 && !hasUnclaimedPendingItems()) {
-              return;
+              await new Promise<void>((resolve) => {
+                window.setTimeout(resolve, DOWNLOAD_QUEUE_IDLE_GRACE_MS);
+              });
+              if (!isDownloadingRef.current || !hasUnclaimedPendingItems()) {
+                return;
+              }
+              continue;
             }
             await new Promise<void>((resolve) => {
               window.setTimeout(resolve, 200);

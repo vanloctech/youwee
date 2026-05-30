@@ -338,6 +338,9 @@ pub fn run() {
             commands::set_telegram_config,
             commands::get_telegram_status,
             commands::send_telegram_reply,
+            commands::load_download_queue,
+            commands::save_download_queue,
+            commands::clear_download_queue,
             // External deep-link commands
             commands::consume_pending_external_links,
             // System commands

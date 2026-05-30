@@ -8,10 +8,12 @@ và dự án tuân theo [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ## [Unreleased]
 
 ### Thêm mới
+- **Lưu hàng đợi tải xuống** - Thêm tùy chọn trong cài đặt Tải xuống để lưu các item trong queue YouTube, Universal và Gallery vào database của ứng dụng, giúp khôi phục lại hàng đợi sau khi đóng và mở lại Youwee
 - **Xuất dữ liệu** - Thêm không gian Xuất dữ liệu mới để xuất danh sách từ playlist và kênh YouTube, chọn chính xác các cột cần lấy, lưu file ở nhiều định dạng như CSV, Excel, JSON, Markdown, HTML, SQLite và Word, đồng thời lưu file đã xuất vào Thư viện để mở lại sau
 - **Tải từ xa qua Telegram** - Thêm mục cài đặt Remote Download với điều khiển Telegram bằng long polling, nhập chat ID được phép dạng tag, popup hướng dẫn lệnh, hỗ trợ `/add`, `/download`, `/status`, `/queue`, `/stop`, `/help`, cùng cú pháp chất lượng ngắn như `720`, `audio`, và `mp3`
 
 ### Thay đổi
+- **Thêm vào queue khi đang tải** - Cho phép thêm URL mới vào queue YouTube, Universal và Gallery trong lúc đang tải, đồng thời worker chờ ngắn để nhận item vừa thêm trước khi kết thúc phiên tải hiện tại
 - **Chọn định dạng YouTube** - Đổi codec video mặc định của YouTube sang Auto để lượt tải mới không còn ép chọn riêng H.264 và đồng nhất hơn với Universal khi video không có stream AVC phù hợp
 
 ### Sửa lỗi

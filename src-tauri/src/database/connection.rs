@@ -283,6 +283,17 @@ pub fn init_database(app: &AppHandle) -> Result<(), String> {
     )
     .ok();
 
+    // Create persisted download queues table
+    conn.execute(
+        "CREATE TABLE IF NOT EXISTS download_queues (
+            queue_kind TEXT PRIMARY KEY,
+            items_json TEXT NOT NULL,
+            updated_at INTEGER NOT NULL
+        )",
+        [],
+    )
+    .map_err(|e| format!("Failed to create download_queues table: {}", e))?;
+
     // Migration: Add download_threads column if it doesn't exist
     conn.execute(
         "ALTER TABLE followed_channels ADD COLUMN download_threads INTEGER NOT NULL DEFAULT 1",
