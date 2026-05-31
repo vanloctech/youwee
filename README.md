@@ -2,9 +2,9 @@
 
 <div align="center">
 
-  ![English](https://img.shields.io/badge/lang-English-blue)
-  ![Tiếng Việt](https://img.shields.io/badge/lang-Tiếng_Việt-red)
-  ![简体中文](https://img.shields.io/badge/lang-简体中文-green)
+  [![English](https://img.shields.io/badge/lang-English-blue)](README.md)
+  [![Tiếng Việt](https://img.shields.io/badge/lang-Tiếng_Việt-red)](docs/README.vi.md)
+  [![简体中文](https://img.shields.io/badge/lang-简体中文-green)](docs/README.zh-CN.md)
   ![Français](https://img.shields.io/badge/lang-Français-0055A4)
   ![Русский](https://img.shields.io/badge/lang-Русский-1F5FBF)
   ![العربية](https://img.shields.io/badge/lang-%D8%A7%D9%84%D8%B9%D8%B1%D8%A8%D9%8A%D8%A9-0A8F6A)
@@ -68,10 +68,11 @@
 ![Youwee - Setting - General](docs/screenshots/youwee-setting-general.png)
 ![Youwee - Setting - Dependencies](docs/screenshots/youwee-setting-dependencies.png)
 ![Youwee - Setting - Download](docs/screenshots/youwee-setting-download.png)
-![Youwee - Setting - Plugin](docs/screenshots/youwee-setting-plugins.png)
-![Youwee - Setting - Extension](docs/screenshots/youwee-setting-extension.png)
 ![Youwee - Setting - AI Features](docs/screenshots/youwee-setting-ai-features.png)
 ![Youwee - Setting - Network & Auth](docs/screenshots/youwee-setting-network-auth.png)
+![Youwee - Setting - Plugin](docs/screenshots/youwee-setting-plugins.png)
+![Youwee - Setting - Remote Download](docs/screenshots/youwee-setting-remote-download.png)
+![Youwee - Setting - Extension](docs/screenshots/youwee-setting-extension.png)
 ![Youwee - Setting - About](docs/screenshots/youwee-setting-about.png)
 ![Youwee - Browser Extension](docs/screenshots/youwee-extension-chrome-firefox.png)
 
@@ -114,10 +115,10 @@
 
 ### Plugins
 
-- Install signed `.ywp` plugins to extend post-download workflows with custom actions such as notifications, uploads, and third-party integrations
-- Create a plugin workspace from Youwee, attach it for live debugging, then build and sign the final plugin package with `youwee-sdk`
-- Plugins can provide localized guides, typed configuration fields, requested permissions, and trigger-based workflow steps inside the app
-- SDK guide: [sdk-js/README.md](sdk-js/README.md)
+Extend Youwee with signed `.ywp` plugins for post-download workflows such as notifications, uploads, and third-party integrations.
+
+- Recommended plugins and install guide: [PLUGINS.md](PLUGINS.md)
+- SDK: [sdk-js/README.md](sdk-js/README.md) · [youwee-sdk](https://www.npmjs.com/package/youwee-sdk)
 
 ### Build from Source
 

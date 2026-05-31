@@ -2,9 +2,9 @@
 
 <div align="center">
 
-  ![English](https://img.shields.io/badge/lang-English-blue)
-  ![Tiếng Việt](https://img.shields.io/badge/lang-Tiếng_Việt-red)
-  ![简体中文](https://img.shields.io/badge/lang-简体中文-green)
+  [![English](https://img.shields.io/badge/lang-English-blue)](../README.md)
+  [![Tiếng Việt](https://img.shields.io/badge/lang-Tiếng_Việt-red)](README.vi.md)
+  [![简体中文](https://img.shields.io/badge/lang-简体中文-green)](README.zh-CN.md)
   ![Français](https://img.shields.io/badge/lang-Français-0055A4)
   ![Русский](https://img.shields.io/badge/lang-Русский-1F5FBF)
   ![العربية](https://img.shields.io/badge/lang-%D8%A7%D9%84%D8%B9%D8%B1%D8%A8%D9%8A%D8%A9-0A8F6A)
@@ -64,10 +64,11 @@
 ![Youwee - Setting - General](screenshots/youwee-setting-general.png)
 ![Youwee - Setting - Dependencies](screenshots/youwee-setting-dependencies.png)
 ![Youwee - Setting - Download](screenshots/youwee-setting-download.png)
-![Youwee - Setting - Plugin](screenshots/youwee-setting-plugins.png)
-![Youwee - Setting - Extension](screenshots/youwee-setting-extension.png)
 ![Youwee - Setting - AI Features](screenshots/youwee-setting-ai-features.png)
 ![Youwee - Setting - Network & Auth](screenshots/youwee-setting-network-auth.png)
+![Youwee - Setting - Plugin](screenshots/youwee-setting-plugins.png)
+![Youwee - Setting - Remote Download](screenshots/youwee-setting-remote-download.png)
+![Youwee - Setting - Extension](screenshots/youwee-setting-extension.png)
 ![Youwee - Setting - About](screenshots/youwee-setting-about.png)
 ![Youwee - Browser Extension](screenshots/youwee-extension-chrome-firefox.png)
 
@@ -110,10 +111,10 @@
 
 ### 插件
 
-- 安装已签名的 `.ywp` 插件，为下载后工作流增加通知、文件上传或第三方集成等自定义动作
-- 可直接在 Youwee 中创建插件 workspace，附加到应用进行实时调试，然后使用 `youwee-sdk` 构建并签名最终插件包
-- 插件支持多语言说明文档、强类型配置字段、可审批权限，以及基于触发器的工作流步骤
-- SDK 文档：[sdk-js/README.md](../sdk-js/README.md)
+使用已签名的 `.ywp` 插件扩展 Youwee 的下载后工作流，例如通知、上传和第三方集成。
+
+- 推荐插件和安装指南：[PLUGINS.zh-CN.md](PLUGINS.zh-CN.md)
+- SDK：[sdk-js/README.md](../sdk-js/README.md) · [youwee-sdk](https://www.npmjs.com/package/youwee-sdk)
 
 ### 从源码构建
 

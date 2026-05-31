@@ -15,6 +15,7 @@ pub mod services;
 pub mod types;
 pub mod utils;
 
+use serde::Deserialize;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Mutex;
 use tauri::menu::{MenuBuilder, MenuItemBuilder, SubmenuBuilder};
@@ -29,6 +30,25 @@ static TRAY_LANG: Mutex<String> = Mutex::new(String::new());
 
 /// Schedule status text for tray menu (empty = no schedule active)
 static TRAY_SCHEDULE_STATUS: Mutex<String> = Mutex::new(String::new());
+
+/// Download queue summary shown in the tray menu.
+static TRAY_DOWNLOAD_STATUS: Mutex<TrayDownloadStatus> = Mutex::new(TrayDownloadStatus {
+    pending: 0,
+    downloading: 0,
+    completed: 0,
+    error: 0,
+    active: false,
+});
+
+#[derive(Clone, Debug, PartialEq, Eq, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct TrayDownloadStatus {
+    pending: u32,
+    downloading: u32,
+    completed: u32,
+    error: u32,
+    active: bool,
+}
 
 #[cfg(target_os = "linux")]
 fn configure_linux_webkit_env() {
@@ -75,6 +95,21 @@ fn update_tray_schedule(app: tauri::AppHandle, status: String) {
         *stored = status;
     }
     rebuild_tray_menu(&app);
+}
+
+/// Tauri command: update the download queue summary shown in the tray menu
+#[tauri::command]
+fn update_tray_download_status(app: tauri::AppHandle, status: TrayDownloadStatus) {
+    let mut should_rebuild = false;
+    if let Ok(mut stored) = TRAY_DOWNLOAD_STATUS.lock() {
+        if *stored != status {
+            *stored = status;
+            should_rebuild = true;
+        }
+    }
+    if should_rebuild {
+        rebuild_tray_menu(&app);
+    }
 }
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
@@ -305,12 +340,16 @@ pub fn run() {
             commands::set_telegram_config,
             commands::get_telegram_status,
             commands::send_telegram_reply,
+            commands::load_download_queue,
+            commands::save_download_queue,
+            commands::clear_download_queue,
             // External deep-link commands
             commands::consume_pending_external_links,
             // System commands
             set_hide_dock_on_close,
             rebuild_tray_menu_cmd,
             update_tray_schedule,
+            update_tray_download_status,
         ])
         .build(tauri::generate_context!())
         .expect("error while building tauri application")
@@ -444,6 +483,15 @@ fn tray_text(key: &str) -> &'static str {
         ("vi", "followed_channels") => "Kênh đang theo dõi",
         ("vi", "no_channels") => "Chưa theo dõi kênh nào",
         ("vi", "new_suffix") => "mới",
+        ("vi", "download_queue") => "Hàng đợi tải xuống",
+        ("vi", "downloading") => "Đang tải",
+        ("vi", "pending") => "Chờ tải",
+        ("vi", "completed") => "Hoàn tất",
+        ("vi", "errors") => "Lỗi",
+        ("vi", "idle") => "Rảnh",
+        ("vi", "remote_download") => "Tải từ xa",
+        ("vi", "running") => "Đang chạy",
+        ("vi", "disabled") => "Đã tắt",
         ("vi", "check_all") => "Kiểm tra kênh theo dõi ngay",
         ("vi", "settings") => "Cài đặt",
         ("vi", "check_update") => "Kiểm tra cập nhật...",
@@ -454,6 +502,15 @@ fn tray_text(key: &str) -> &'static str {
         ("zh-CN", "followed_channels") => "已关注的频道",
         ("zh-CN", "no_channels") => "尚未关注任何频道",
         ("zh-CN", "new_suffix") => "个新视频",
+        ("zh-CN", "download_queue") => "下载队列",
+        ("zh-CN", "downloading") => "下载中",
+        ("zh-CN", "pending") => "等待中",
+        ("zh-CN", "completed") => "已完成",
+        ("zh-CN", "errors") => "错误",
+        ("zh-CN", "idle") => "空闲",
+        ("zh-CN", "remote_download") => "远程下载",
+        ("zh-CN", "running") => "运行中",
+        ("zh-CN", "disabled") => "已禁用",
         ("zh-CN", "check_all") => "立即检查已关注频道",
         ("zh-CN", "settings") => "设置",
         ("zh-CN", "check_update") => "检查更新...",
@@ -464,6 +521,15 @@ fn tray_text(key: &str) -> &'static str {
         ("fr", "followed_channels") => "Chaines suivies",
         ("fr", "no_channels") => "Aucune chaine suivie",
         ("fr", "new_suffix") => "nouvelles",
+        ("fr", "download_queue") => "File de telechargement",
+        ("fr", "downloading") => "Telechargement",
+        ("fr", "pending") => "En attente",
+        ("fr", "completed") => "Termines",
+        ("fr", "errors") => "Erreurs",
+        ("fr", "idle") => "Inactif",
+        ("fr", "remote_download") => "Telechargement distant",
+        ("fr", "running") => "En cours",
+        ("fr", "disabled") => "Desactive",
         ("fr", "check_all") => "Verifier les chaines suivies maintenant",
         ("fr", "settings") => "Parametres",
         ("fr", "check_update") => "Verifier les mises a jour...",
@@ -474,6 +540,15 @@ fn tray_text(key: &str) -> &'static str {
         (_, "followed_channels") => "Followed Channels",
         (_, "no_channels") => "No channels followed",
         (_, "new_suffix") => "new",
+        (_, "download_queue") => "Download Queue",
+        (_, "downloading") => "Downloading",
+        (_, "pending") => "Pending",
+        (_, "completed") => "Completed",
+        (_, "errors") => "Errors",
+        (_, "idle") => "Idle",
+        (_, "remote_download") => "Remote Download",
+        (_, "running") => "Running",
+        (_, "disabled") => "Disabled",
         (_, "check_all") => "Check Followed Channels Now",
         (_, "settings") => "Settings",
         (_, "check_update") => "Check for Updates...",
@@ -484,11 +559,50 @@ fn tray_text(key: &str) -> &'static str {
     }
 }
 
+fn tray_download_status() -> TrayDownloadStatus {
+    TRAY_DOWNLOAD_STATUS
+        .lock()
+        .map(|status| status.clone())
+        .unwrap_or(TrayDownloadStatus {
+            pending: 0,
+            downloading: 0,
+            completed: 0,
+            error: 0,
+            active: false,
+        })
+}
+
+fn tray_download_summary(status: &TrayDownloadStatus) -> String {
+    let total = status.pending + status.downloading + status.completed + status.error;
+    let activity = if status.active || status.downloading > 0 {
+        tray_text("downloading")
+    } else {
+        tray_text("idle")
+    };
+    format!("{} ({})", activity, total)
+}
+
+fn tray_remote_status_label() -> String {
+    let status = services::telegram::get_status();
+    let state = match status.state {
+        services::telegram::TelegramStatusState::Running => tray_text("running"),
+        services::telegram::TelegramStatusState::Disabled => tray_text("disabled"),
+        services::telegram::TelegramStatusState::Error => tray_text("errors"),
+    };
+
+    if let Some(message) = status.message.filter(|message| !message.trim().is_empty()) {
+        format!("{}: {}", state, message)
+    } else {
+        state.to_string()
+    }
+}
+
 fn rebuild_tray_menu_inner(
     app_handle: &tauri::AppHandle,
 ) -> Result<(), Box<dyn std::error::Error>> {
     let channels = database::get_followed_channels_db().unwrap_or_default();
     let channel_count = channels.len();
+    let download_status = tray_download_status();
 
     // Build channel submenu
     let submenu_label = format!("{} ({})", tray_text("followed_channels"), channel_count);
@@ -514,6 +628,61 @@ fn rebuild_tray_menu_inner(
     }
 
     let built_submenu = submenu.build()?;
+    let download_label = format!(
+        "{} - {}",
+        tray_text("download_queue"),
+        tray_download_summary(&download_status)
+    );
+    let download_status_item = MenuItemBuilder::with_id("download_status", &download_label)
+        .enabled(false)
+        .build(app_handle)?;
+    let download_pending_item = MenuItemBuilder::with_id(
+        "download_pending",
+        format!("{}: {}", tray_text("pending"), download_status.pending),
+    )
+    .enabled(false)
+    .build(app_handle)?;
+    let download_downloading_item = MenuItemBuilder::with_id(
+        "download_downloading",
+        format!(
+            "{}: {}",
+            tray_text("downloading"),
+            download_status.downloading
+        ),
+    )
+    .enabled(false)
+    .build(app_handle)?;
+    let download_completed_item = MenuItemBuilder::with_id(
+        "download_completed",
+        format!("{}: {}", tray_text("completed"), download_status.completed),
+    )
+    .enabled(false)
+    .build(app_handle)?;
+    let download_error_item = MenuItemBuilder::with_id(
+        "download_error",
+        format!("{}: {}", tray_text("errors"), download_status.error),
+    )
+    .enabled(false)
+    .build(app_handle)?;
+    let download_submenu = SubmenuBuilder::new(app_handle, tray_text("download_queue"))
+        .item(&download_status_item)
+        .separator()
+        .item(&download_downloading_item)
+        .item(&download_pending_item)
+        .item(&download_completed_item)
+        .item(&download_error_item)
+        .build()?;
+
+    let remote_status = MenuItemBuilder::with_id(
+        "remote_download_status",
+        format!(
+            "{} - {}",
+            tray_text("remote_download"),
+            tray_remote_status_label()
+        ),
+    )
+    .enabled(false)
+    .build(app_handle)?;
 
     // Build full menu
     let check_now =
@@ -528,11 +697,15 @@ fn rebuild_tray_menu_inner(
     let quit = MenuItemBuilder::with_id("quit", tray_text("quit")).build(app_handle)?;
 
     let menu = MenuBuilder::new(app_handle)
+        .item(&show)
+        .separator()
+        .item(&download_submenu)
+        .item(&remote_status)
+        .separator()
         .item(&built_submenu)
         .item(&check_now)
         .separator()
         .item(&settings)
-        .item(&show)
         .item(&browser_extension)
         .separator()
         .item(&check_update)

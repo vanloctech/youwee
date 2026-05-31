@@ -29,6 +29,7 @@ import { UpdaterProvider, useUpdater } from '@/contexts/UpdaterContext';
 import { useExternalDownloadLinks } from '@/hooks/useExternalDownloadLinks';
 import { usePluginExecutionToasts } from '@/hooks/usePluginExecutionToasts';
 import { useTelegramRemoteCommands } from '@/hooks/useTelegramRemoteCommands';
+import { useTrayDownloadStatus } from '@/hooks/useTrayDownloadStatus';
 import { useTrayEvents } from '@/hooks/useTrayEvents';
 import {
   ChannelsPage,
@@ -65,6 +66,7 @@ function AppContent() {
 
   useExternalDownloadLinks(setCurrentPage, externalStartLockRef);
   useTelegramRemoteCommands(setCurrentPage, externalStartLockRef);
+  useTrayDownloadStatus();
   useTrayEvents(setCurrentPage, openSettingsPage, updater.checkForUpdate);
   usePluginExecutionToasts();
 

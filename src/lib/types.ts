@@ -177,6 +177,8 @@ export interface DownloadSettings {
   autoRetryEnabled: boolean; // Retry transient failures automatically
   autoRetryMaxAttempts: number; // Number of retries after initial failure (1-10)
   autoRetryDelaySeconds: number; // Delay between retries in seconds (1-60)
+  // Queue persistence
+  persistDownloadQueue: boolean; // Keep download queue across app restarts
   // SponsorBlock settings
   sponsorBlock: boolean; // toggle on/off
   sponsorBlockMode: SponsorBlockMode; // 'remove' | 'mark' | 'custom'

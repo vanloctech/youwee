@@ -102,6 +102,13 @@ export const SEARCHABLE_SETTINGS: SearchableSetting[] = [
 
   // Download Section
   {
+    id: 'persist-download-queue',
+    labelKey: 'download.persistDownloadQueue',
+    descriptionKey: 'download.persistDownloadQueueDesc',
+    keywords: ['queue', 'persist', 'restore', 'resume', 'restart', 'storage', 'download'],
+    section: 'download',
+  },
+  {
     id: 'embed-metadata',
     labelKey: 'download.embedMetadata',
     descriptionKey: 'download.embedMetadataDesc',

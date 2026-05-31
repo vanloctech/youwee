@@ -2,9 +2,9 @@
 
 <div align="center">
 
-  ![English](https://img.shields.io/badge/lang-English-blue)
-  ![Tiếng Việt](https://img.shields.io/badge/lang-Tiếng_Việt-red)
-  ![简体中文](https://img.shields.io/badge/lang-简体中文-green)
+  [![English](https://img.shields.io/badge/lang-English-blue)](../README.md)
+  [![Tiếng Việt](https://img.shields.io/badge/lang-Tiếng_Việt-red)](README.vi.md)
+  [![简体中文](https://img.shields.io/badge/lang-简体中文-green)](README.zh-CN.md)
   ![Français](https://img.shields.io/badge/lang-Français-0055A4)
   ![Русский](https://img.shields.io/badge/lang-Русский-1F5FBF)
   ![العربية](https://img.shields.io/badge/lang-%D8%A7%D9%84%D8%B9%D8%B1%D8%A8%D9%8A%D8%A9-0A8F6A)
@@ -64,10 +64,11 @@
 ![Youwee - Setting - General](screenshots/youwee-setting-general.png)
 ![Youwee - Setting - Dependencies](screenshots/youwee-setting-dependencies.png)
 ![Youwee - Setting - Download](screenshots/youwee-setting-download.png)
-![Youwee - Setting - Plugin](screenshots/youwee-setting-plugins.png)
-![Youwee - Setting - Extension](screenshots/youwee-setting-extension.png)
 ![Youwee - Setting - AI Features](screenshots/youwee-setting-ai-features.png)
 ![Youwee - Setting - Network & Auth](screenshots/youwee-setting-network-auth.png)
+![Youwee - Setting - Plugin](screenshots/youwee-setting-plugins.png)
+![Youwee - Setting - Remote Download](screenshots/youwee-setting-remote-download.png)
+![Youwee - Setting - Extension](screenshots/youwee-setting-extension.png)
 ![Youwee - Setting - About](screenshots/youwee-setting-about.png)
 ![Youwee - Browser Extension](screenshots/youwee-extension-chrome-firefox.png)
 
@@ -110,10 +111,10 @@
 
 ### Plugin
 
-- Cài plugin `.ywp` đã ký để mở rộng workflow sau khi tải xong với các tác vụ như gửi thông báo, upload file hoặc tích hợp dịch vụ bên thứ ba
-- Tạo plugin workspace ngay trong Youwee, attach để debug trực tiếp, rồi build và ký gói plugin cuối cùng bằng `youwee-sdk`
-- Plugin có thể cung cấp hướng dẫn đa ngôn ngữ, field cấu hình có kiểu dữ liệu rõ ràng, quyền truy cập cần duyệt và các bước workflow theo trigger
-- Hướng dẫn SDK: [sdk-js/README.md](../sdk-js/README.md)
+Mở rộng Youwee bằng plugin `.ywp` đã ký cho workflow sau khi tải xong, như gửi thông báo, upload file hoặc tích hợp dịch vụ bên thứ ba.
+
+- Plugin khuyến nghị và hướng dẫn cài đặt: [PLUGINS.vi.md](PLUGINS.vi.md)
+- SDK: [sdk-js/README.md](../sdk-js/README.md) · [youwee-sdk](https://www.npmjs.com/package/youwee-sdk)
 
 ### Xây dựng từ mã nguồn
 

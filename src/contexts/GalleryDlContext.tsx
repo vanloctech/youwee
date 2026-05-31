@@ -11,6 +11,7 @@ import {
   useRef,
   useState,
 } from 'react';
+import { usePersistedDownloadQueue } from '@/hooks/usePersistedDownloadQueue';
 import { extractBackendError, localizeBackendError } from '@/lib/backend-error';
 import {
   AUTO_RETRY_LIMITS,
@@ -23,8 +24,10 @@ import {
 import { buildCookieProxyInvokeOptions, loadNetworkSettings } from '@/lib/network-config';
 import { parseUniversalUrls } from '@/lib/sources';
 import type { DownloadItem } from '@/lib/types';
+import { useDownload } from './DownloadContext';
 
 const STORAGE_KEY = 'youwee-gallerydl-settings';
+const DOWNLOAD_QUEUE_IDLE_GRACE_MS = 1000;
 
 interface GalleryDlSettings {
   outputPath: string;
@@ -129,6 +132,15 @@ export function GalleryDlProvider({ children }: { children: ReactNode }) {
   const itemsRef = useRef<DownloadItem[]>([]);
   const settingsRef = useRef<GalleryDlSettings>(settings);
   const focusClearTimerRef = useRef<number | null>(null);
+  const { settings: downloadSettings } = useDownload();
+
+  usePersistedDownloadQueue({
+    queueKind: 'gallery',
+    enabled: downloadSettings.persistDownloadQueue,
+    items,
+    setItems,
+    logLabel: 'gallery queue',
+  });
 
   useEffect(() => {
     itemsRef.current = items;
@@ -462,7 +474,13 @@ export function GalleryDlProvider({ children }: { children: ReactNode }) {
           const item = claimNextItem();
           if (!item) {
             if (activeCount === 0 && !hasUnclaimedPendingItems()) {
-              return;
+              await new Promise<void>((resolve) => {
+                window.setTimeout(resolve, DOWNLOAD_QUEUE_IDLE_GRACE_MS);
+              });
+              if (!isDownloadingRef.current || !hasUnclaimedPendingItems()) {
+                return;
+              }
+              continue;
             }
             await new Promise<void>((resolve) => {
               window.setTimeout(resolve, 200);
