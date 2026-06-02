@@ -1,42 +1,26 @@
 use crate::types::DenoStatus;
-use crate::utils::CommandExt;
+use crate::utils::{find_system_binary, unix_system_binary_dirs, CommandExt};
 use std::path::PathBuf;
 use std::process::Stdio;
 use tauri::{AppHandle, Manager};
 use tokio::process::Command;
 
-fn get_system_deno_candidates() -> Vec<PathBuf> {
+fn get_system_deno_path() -> Option<PathBuf> {
     #[cfg(windows)]
     let binary_name = "deno.exe";
     #[cfg(not(windows))]
     let binary_name = "deno";
 
-    let mut candidates = Vec::new();
+    let mut fallback_dirs = Vec::new();
 
-    if let Ok(path_var) = std::env::var("PATH") {
-        for dir in std::env::split_paths(&path_var) {
-            candidates.push(dir.join(binary_name));
-        }
-    }
-
-    #[cfg(unix)]
+    #[cfg(not(windows))]
     {
         let home = std::env::var("HOME").unwrap_or_default();
-        candidates.extend([
-            PathBuf::from(home).join(".deno/bin/deno"),
-            PathBuf::from("/opt/homebrew/bin").join(binary_name),
-            PathBuf::from("/usr/local/bin").join(binary_name),
-            PathBuf::from("/usr/bin").join(binary_name),
-        ]);
+        fallback_dirs.push(PathBuf::from(home).join(".deno/bin"));
+        fallback_dirs.extend(unix_system_binary_dirs());
     }
 
-    candidates
-}
-
-fn get_system_deno_path() -> Option<PathBuf> {
-    get_system_deno_candidates()
-        .into_iter()
-        .find(|path| path.exists())
+    find_system_binary(binary_name, &fallback_dirs)
 }
 
 /// Get the Deno binary path (app data or system)

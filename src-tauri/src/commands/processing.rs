@@ -12,7 +12,8 @@ use tokio::sync::Mutex;
 use crate::database::get_db;
 use crate::services::{generate_raw, get_ffmpeg_path, AIConfig};
 use crate::utils::{
-    args_to_display_command, parse_ffmpeg_command_args, validate_ffmpeg_args, CommandExt,
+    args_to_display_command, find_system_binary, parse_ffmpeg_command_args,
+    unix_system_binary_dirs, validate_ffmpeg_args, CommandExt,
 };
 
 #[path = "processing/attachments.rs"]
@@ -1180,49 +1181,20 @@ async fn get_ffprobe_path(app: &AppHandle) -> Option<std::path::PathBuf> {
         }
     }
 
-    #[cfg(unix)]
-    {
-        let mut cmd = Command::new("which");
-        cmd.arg("ffprobe");
-        cmd.hide_window();
-        let output = cmd.output().await.ok();
-        if let Some(output) = output.filter(|output| output.status.success()) {
-            let path_str = String::from_utf8_lossy(&output.stdout).trim().to_string();
-            if !path_str.is_empty() {
-                return Some(std::path::PathBuf::from(path_str));
-            }
-        }
+    #[cfg(windows)]
+    let binary_name = "ffprobe.exe";
+    #[cfg(not(windows))]
+    let binary_name = "ffprobe";
 
-        if let Some(ffmpeg_path) = get_ffmpeg_path(app).await {
-            if let Some(parent) = ffmpeg_path.parent() {
-                let ffprobe_path = parent.join("ffprobe");
-                if ffprobe_path.exists() {
-                    return Some(ffprobe_path);
-                }
-            }
-        }
-
-        for dir in ["/opt/homebrew/bin", "/usr/local/bin", "/usr/bin"] {
-            let ffprobe_path = std::path::PathBuf::from(dir).join("ffprobe");
-            if ffprobe_path.exists() {
-                return Some(ffprobe_path);
-            }
-        }
+    if let Some(path) = find_system_binary(binary_name, &unix_system_binary_dirs()) {
+        return Some(path);
     }
 
-    #[cfg(windows)]
-    {
-        let mut cmd = Command::new("where");
-        cmd.arg("ffprobe");
-        cmd.hide_window();
-        let output = cmd.output().await.ok()?;
-        if output.status.success() {
-            let path_str = String::from_utf8_lossy(&output.stdout)
-                .lines()
-                .next()?
-                .to_string();
-            if !path_str.is_empty() {
-                return Some(std::path::PathBuf::from(path_str));
+    if let Some(ffmpeg_path) = get_ffmpeg_path(app).await {
+        if let Some(parent) = ffmpeg_path.parent() {
+            let ffprobe_path = parent.join(binary_name);
+            if ffprobe_path.exists() {
+                return Some(ffprobe_path);
             }
         }
     }

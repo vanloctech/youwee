@@ -8,7 +8,7 @@ use tokio::process::Command;
 
 use crate::database::add_history_internal;
 use crate::database::add_log_internal;
-use crate::services::{get_system_gallerydl_path, system_gallerydl_not_found_message};
+use crate::services::{get_gallerydl_path, system_gallerydl_not_found_message};
 use crate::types::BackendError;
 use crate::utils::{normalize_url, sanitize_output_path, validate_url, CommandExt};
 
@@ -112,7 +112,7 @@ pub async fn download_gallery(
     validate_url(&url).map_err(|e| BackendError::from_message(e).to_wire_string())?;
     let url = normalize_url(&url);
 
-    let Some(binary_path) = get_system_gallerydl_path() else {
+    let Some(binary_path) = get_gallerydl_path(&app) else {
         return Err(BackendError::new(
             crate::types::code::GALLERYDL_NOT_FOUND,
             system_gallerydl_not_found_message(),

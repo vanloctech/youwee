@@ -1,6 +1,5 @@
 use crate::types::{DependencySource, FfmpegStatus};
-use crate::utils::CommandExt;
-use std::collections::HashSet;
+use crate::utils::{find_system_binary, unix_system_binary_dirs, CommandExt};
 use std::path::PathBuf;
 use std::process::Stdio;
 use tauri::{AppHandle, Manager};
@@ -74,41 +73,13 @@ fn get_app_ffmpeg_path(app: &AppHandle) -> Option<PathBuf> {
     }
 }
 
-fn get_system_binary_candidates(binary_name: &str) -> Vec<PathBuf> {
-    let mut candidates = Vec::new();
-
-    if let Ok(path_var) = std::env::var("PATH") {
-        for dir in std::env::split_paths(&path_var) {
-            candidates.push(dir.join(binary_name));
-        }
-    }
-
-    candidates.extend([
-        PathBuf::from("/opt/homebrew/bin").join(binary_name),
-        PathBuf::from("/usr/local/bin").join(binary_name),
-        PathBuf::from("/usr/bin").join(binary_name),
-    ]);
-
-    let mut unique = Vec::new();
-    let mut seen = HashSet::new();
-    for path in candidates {
-        let key = path.to_string_lossy().to_string();
-        if seen.insert(key) {
-            unique.push(path);
-        }
-    }
-    unique
-}
-
 fn get_system_ffmpeg_path() -> Option<PathBuf> {
     #[cfg(windows)]
     let binary_name = "ffmpeg.exe";
     #[cfg(not(windows))]
     let binary_name = "ffmpeg";
 
-    get_system_binary_candidates(binary_name)
-        .into_iter()
-        .find(|p| p.exists())
+    find_system_binary(binary_name, &unix_system_binary_dirs())
 }
 
 /// Get the FFmpeg binary path (app data or system)

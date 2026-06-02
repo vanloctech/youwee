@@ -1,12 +1,11 @@
-use std::collections::HashSet;
 use std::path::PathBuf;
 use std::process::Stdio;
 
-use tauri::AppHandle;
+use tauri::{AppHandle, Manager};
 use tokio::process::Command;
 
 use crate::types::{BackendError, GalleryDlStatus};
-use crate::utils::CommandExt;
+use crate::utils::{find_system_binary, unix_system_binary_dirs, CommandExt};
 
 pub fn system_gallerydl_not_found_message() -> String {
     #[cfg(target_os = "macos")]
@@ -28,45 +27,36 @@ pub fn system_gallerydl_not_found_message() -> String {
     }
 }
 
-fn get_system_binary_candidates(binary_name: &str) -> Vec<PathBuf> {
-    let mut candidates = Vec::new();
-
-    if let Ok(path_var) = std::env::var("PATH") {
-        for dir in std::env::split_paths(&path_var) {
-            candidates.push(dir.join(binary_name));
-        }
-    }
-
-    candidates.extend([
-        PathBuf::from("/opt/homebrew/bin").join(binary_name),
-        PathBuf::from("/usr/local/bin").join(binary_name),
-        PathBuf::from("/usr/bin").join(binary_name),
-    ]);
-
-    let mut unique = Vec::new();
-    let mut seen = HashSet::new();
-    for path in candidates {
-        let key = path.to_string_lossy().to_string();
-        if seen.insert(key) {
-            unique.push(path);
-        }
-    }
-    unique
-}
-
 pub fn get_system_gallerydl_path() -> Option<PathBuf> {
     #[cfg(windows)]
     let binary_name = "gallery-dl.exe";
     #[cfg(not(windows))]
     let binary_name = "gallery-dl";
 
-    get_system_binary_candidates(binary_name)
-        .into_iter()
-        .find(|p| p.exists())
+    find_system_binary(binary_name, &unix_system_binary_dirs())
 }
 
-pub async fn check_gallerydl_internal(_app: &AppHandle) -> Result<GalleryDlStatus, String> {
-    let Some(binary_path) = get_system_gallerydl_path() else {
+fn get_app_gallerydl_path(app: &AppHandle) -> Option<PathBuf> {
+    let app_data_dir = app.path().app_data_dir().ok()?;
+    #[cfg(windows)]
+    let binary_name = "gallery-dl.exe";
+    #[cfg(not(windows))]
+    let binary_name = "gallery-dl";
+
+    let binary_path = app_data_dir.join("bin").join(binary_name);
+    if binary_path.exists() {
+        Some(binary_path)
+    } else {
+        None
+    }
+}
+
+pub fn get_gallerydl_path(app: &AppHandle) -> Option<PathBuf> {
+    get_system_gallerydl_path().or_else(|| get_app_gallerydl_path(app))
+}
+
+pub async fn check_gallerydl_internal(app: &AppHandle) -> Result<GalleryDlStatus, String> {
+    let Some(binary_path) = get_gallerydl_path(app) else {
         return Ok(GalleryDlStatus {
             installed: false,
             version: None,
@@ -98,6 +88,9 @@ pub async fn check_gallerydl_internal(_app: &AppHandle) -> Result<GalleryDlStatu
         installed: true,
         version: Some(String::from_utf8_lossy(&output.stdout).trim().to_string()),
         binary_path: Some(binary_path.to_string_lossy().to_string()),
-        is_system: true,
+        is_system: get_app_gallerydl_path(app)
+            .as_ref()
+            .map(|app_path| app_path != &binary_path)
+            .unwrap_or(true),
     })
 }
