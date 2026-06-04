@@ -64,9 +64,19 @@ pub enum HistoryFilterMatchMode {
     All,
 }
 
+#[derive(Clone, Serialize, Deserialize, Debug, PartialEq, Eq, Default)]
+#[serde(rename_all = "lowercase")]
+pub enum HistorySearchScope {
+    #[default]
+    All,
+    Metadata,
+    Summary,
+}
+
 #[derive(Clone, Serialize, Deserialize, Debug, Default)]
 #[serde(rename_all = "camelCase")]
 pub struct HistoryAdvancedFilters {
+    pub search_scope: Option<HistorySearchScope>,
     pub media_type: Option<HistoryMediaType>,
     pub downloaded_at_from: Option<i64>,
     pub downloaded_at_to: Option<i64>,

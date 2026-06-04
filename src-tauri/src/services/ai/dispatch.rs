@@ -20,6 +20,7 @@ pub async fn generate_summary(
                 &config.summary_style,
                 &config.summary_language,
                 title,
+                config.timeout_seconds,
             )
             .await
         }
@@ -32,6 +33,7 @@ pub async fn generate_summary(
                 &config.summary_style,
                 &config.summary_language,
                 title,
+                config.timeout_seconds,
             )
             .await
         }
@@ -44,6 +46,7 @@ pub async fn generate_summary(
                 &config.summary_style,
                 &config.summary_language,
                 title,
+                config.timeout_seconds,
             )
             .await
         }
@@ -56,6 +59,7 @@ pub async fn generate_summary(
                 &config.summary_style,
                 &config.summary_language,
                 title,
+                config.timeout_seconds,
             )
             .await
         }
@@ -71,6 +75,7 @@ pub async fn generate_summary(
                 &config.summary_style,
                 &config.summary_language,
                 title,
+                config.timeout_seconds,
             )
             .await
         }
@@ -86,6 +91,7 @@ pub async fn generate_summary(
                 &config.summary_style,
                 &config.summary_language,
                 title,
+                config.timeout_seconds,
             )
             .await
         }
@@ -103,6 +109,7 @@ pub async fn generate_summary(
                 &config.summary_style,
                 &config.summary_language,
                 title,
+                config.timeout_seconds,
             )
             .await
         }
@@ -123,19 +130,55 @@ pub async fn generate_summary_custom(
     match config.provider {
         AIProvider::Gemini => {
             let api_key = config.api_key.as_ref().ok_or(AIError::NoApiKey)?;
-            generate_with_gemini(api_key, &config.model, transcript, style, language, title).await
+            generate_with_gemini(
+                api_key,
+                &config.model,
+                transcript,
+                style,
+                language,
+                title,
+                config.timeout_seconds,
+            )
+            .await
         }
         AIProvider::OpenAI => {
             let api_key = config.api_key.as_ref().ok_or(AIError::NoApiKey)?;
-            generate_with_openai(api_key, &config.model, transcript, style, language, title).await
+            generate_with_openai(
+                api_key,
+                &config.model,
+                transcript,
+                style,
+                language,
+                title,
+                config.timeout_seconds,
+            )
+            .await
         }
         AIProvider::DeepSeek => {
             let api_key = config.api_key.as_ref().ok_or(AIError::NoApiKey)?;
-            generate_with_deepseek(api_key, &config.model, transcript, style, language, title).await
+            generate_with_deepseek(
+                api_key,
+                &config.model,
+                transcript,
+                style,
+                language,
+                title,
+                config.timeout_seconds,
+            )
+            .await
         }
         AIProvider::Qwen => {
             let api_key = config.api_key.as_ref().ok_or(AIError::NoApiKey)?;
-            generate_with_qwen(api_key, &config.model, transcript, style, language, title).await
+            generate_with_qwen(
+                api_key,
+                &config.model,
+                transcript,
+                style,
+                language,
+                title,
+                config.timeout_seconds,
+            )
+            .await
         }
         AIProvider::Ollama => {
             let ollama_url = config
@@ -149,6 +192,7 @@ pub async fn generate_summary_custom(
                 style,
                 language,
                 title,
+                config.timeout_seconds,
             )
             .await
         }
@@ -164,6 +208,7 @@ pub async fn generate_summary_custom(
                 style,
                 language,
                 title,
+                config.timeout_seconds,
             )
             .await
         }
@@ -181,6 +226,7 @@ pub async fn generate_summary_custom(
                 style,
                 language,
                 title,
+                config.timeout_seconds,
             )
             .await
         }

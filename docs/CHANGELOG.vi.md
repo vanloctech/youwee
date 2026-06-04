@@ -8,8 +8,10 @@ và dự án tuân theo [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ## [Unreleased]
 
 ### Thêm mới
+- **Tìm kiếm tóm tắt AI** - Thêm tìm kiếm Thư viện dùng SQLite FTS5 trên tiêu đề, URL, đường dẫn file và các bản tóm tắt AI đã lưu, kèm lựa chọn phạm vi tìm trong tất cả nội dung, chỉ chi tiết hoặc chỉ tóm tắt AI
 
 ### Thay đổi
+- **Thời gian chờ AI** - Mở rộng lựa chọn Thời gian chờ khi tạo AI lên tối đa 60 phút và áp dụng timeout đã chọn vào HTTP request của các nhà cung cấp AI để hỗ trợ tóm tắt video dài
 
 ### Sửa lỗi
 

@@ -218,7 +218,10 @@
     "emptyTitle": "No downloads yet",
     "emptyDescription": "Your download history will appear here. Start downloading videos from YouTube or other platforms to see them in your library.",
     "toolbar": {
-      "searchPlaceholder": "Search downloads...",
+      "searchPlaceholder": "Search titles, files, URLs, or AI summaries...",
+      "searchScopeAll": "All",
+      "searchScopeMetadata": "Details",
+      "searchScopeSummary": "AI Summary",
       "sortRecent": "Recent",
       "sortOldest": "Oldest",
       "sortSize": "Size",

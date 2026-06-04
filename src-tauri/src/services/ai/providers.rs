@@ -1,5 +1,25 @@
 use super::*;
 use reqwest::Client;
+use std::time::Duration;
+
+const DEFAULT_AI_TIMEOUT_SECONDS: u64 = 120;
+const MIN_AI_TIMEOUT_SECONDS: u64 = 30;
+const MAX_AI_TIMEOUT_SECONDS: u64 = 60 * 60;
+
+fn normalized_timeout_seconds(timeout_seconds: Option<u64>) -> u64 {
+    timeout_seconds
+        .unwrap_or(DEFAULT_AI_TIMEOUT_SECONDS)
+        .clamp(MIN_AI_TIMEOUT_SECONDS, MAX_AI_TIMEOUT_SECONDS)
+}
+
+fn ai_client(timeout_seconds: Option<u64>) -> Result<Client, AIError> {
+    Client::builder()
+        .timeout(Duration::from_secs(normalized_timeout_seconds(
+            timeout_seconds,
+        )))
+        .build()
+        .map_err(|e| AIError::NetworkError(format!("Failed to create AI HTTP client: {}", e)))
+}
 
 fn chat_completions_url(base_url: &str) -> String {
     let trimmed = base_url.trim_end_matches('/');
@@ -110,8 +130,9 @@ pub async fn generate_with_gemini(
     style: &SummaryStyle,
     language: &str,
     title: Option<&str>,
+    timeout_seconds: Option<u64>,
 ) -> Result<SummaryResult, AIError> {
-    let client = Client::new();
+    let client = ai_client(timeout_seconds)?;
     let prompt = build_prompt(transcript, style, language, title);
     let url = format!(
         "https://generativelanguage.googleapis.com/v1beta/models/{}:generateContent",
@@ -236,8 +257,9 @@ pub async fn generate_with_openai(
     style: &SummaryStyle,
     language: &str,
     title: Option<&str>,
+    timeout_seconds: Option<u64>,
 ) -> Result<SummaryResult, AIError> {
-    let client = Client::new();
+    let client = ai_client(timeout_seconds)?;
     let prompt = build_prompt(transcript, style, language, title);
 
     let body = serde_json::json!({
@@ -274,8 +296,9 @@ pub async fn generate_with_ollama(
     style: &SummaryStyle,
     language: &str,
     title: Option<&str>,
+    timeout_seconds: Option<u64>,
 ) -> Result<SummaryResult, AIError> {
-    let client = Client::new();
+    let client = ai_client(timeout_seconds)?;
     let prompt = build_prompt(transcript, style, language, title);
     let url = format!("{}/api/generate", ollama_url.trim_end_matches('/'));
 
@@ -329,8 +352,9 @@ pub async fn generate_with_deepseek(
     style: &SummaryStyle,
     language: &str,
     title: Option<&str>,
+    timeout_seconds: Option<u64>,
 ) -> Result<SummaryResult, AIError> {
-    let client = Client::new();
+    let client = ai_client(timeout_seconds)?;
     let prompt = build_prompt(transcript, style, language, title);
 
     let body = serde_json::json!({
@@ -367,8 +391,9 @@ pub async fn generate_with_qwen(
     style: &SummaryStyle,
     language: &str,
     title: Option<&str>,
+    timeout_seconds: Option<u64>,
 ) -> Result<SummaryResult, AIError> {
-    let client = Client::new();
+    let client = ai_client(timeout_seconds)?;
     let prompt = build_prompt(transcript, style, language, title);
 
     let body = serde_json::json!({
@@ -406,8 +431,9 @@ pub async fn generate_with_proxy(
     style: &SummaryStyle,
     language: &str,
     title: Option<&str>,
+    timeout_seconds: Option<u64>,
 ) -> Result<SummaryResult, AIError> {
-    let client = Client::new();
+    let client = ai_client(timeout_seconds)?;
     let prompt = build_prompt(transcript, style, language, title);
 
     let url = chat_completions_url(proxy_url);
@@ -452,8 +478,9 @@ pub async fn generate_with_lmstudio(
     style: &SummaryStyle,
     language: &str,
     title: Option<&str>,
+    timeout_seconds: Option<u64>,
 ) -> Result<SummaryResult, AIError> {
-    let client = Client::new();
+    let client = ai_client(timeout_seconds)?;
     let prompt = build_prompt(transcript, style, language, title);
 
     let url = chat_completions_url(lmstudio_url);
@@ -494,8 +521,9 @@ async fn generate_raw_with_gemini(
     api_key: &str,
     model: &str,
     prompt: &str,
+    timeout_seconds: Option<u64>,
 ) -> Result<SummaryResult, AIError> {
-    let client = Client::new();
+    let client = ai_client(timeout_seconds)?;
     let url = format!(
         "https://generativelanguage.googleapis.com/v1beta/models/{}:generateContent",
         model
@@ -575,8 +603,9 @@ async fn generate_raw_with_openai(
     api_key: &str,
     model: &str,
     prompt: &str,
+    timeout_seconds: Option<u64>,
 ) -> Result<SummaryResult, AIError> {
-    let client = Client::new();
+    let client = ai_client(timeout_seconds)?;
     let body = serde_json::json!({
         "model": model,
         "messages": [{ "role": "user", "content": prompt }],
@@ -608,8 +637,9 @@ async fn generate_raw_with_ollama(
     base_url: &str,
     model: &str,
     prompt: &str,
+    timeout_seconds: Option<u64>,
 ) -> Result<SummaryResult, AIError> {
-    let client = Client::new();
+    let client = ai_client(timeout_seconds)?;
     let url = format!("{}/api/generate", base_url.trim_end_matches('/'));
 
     let body = serde_json::json!({
@@ -655,8 +685,9 @@ async fn generate_raw_with_lmstudio(
     lmstudio_url: &str,
     model: &str,
     prompt: &str,
+    timeout_seconds: Option<u64>,
 ) -> Result<SummaryResult, AIError> {
-    let client = Client::new();
+    let client = ai_client(timeout_seconds)?;
     let url = chat_completions_url(lmstudio_url);
 
     let body = serde_json::json!({
@@ -694,8 +725,9 @@ async fn generate_raw_with_deepseek(
     api_key: &str,
     model: &str,
     prompt: &str,
+    timeout_seconds: Option<u64>,
 ) -> Result<SummaryResult, AIError> {
-    let client = Client::new();
+    let client = ai_client(timeout_seconds)?;
     let body = serde_json::json!({
         "model": model,
         "messages": [{ "role": "user", "content": prompt }],
@@ -727,8 +759,9 @@ async fn generate_raw_with_qwen(
     api_key: &str,
     model: &str,
     prompt: &str,
+    timeout_seconds: Option<u64>,
 ) -> Result<SummaryResult, AIError> {
-    let client = Client::new();
+    let client = ai_client(timeout_seconds)?;
     let body = serde_json::json!({
         "model": model,
         "messages": [{ "role": "user", "content": prompt }],
@@ -761,8 +794,9 @@ async fn generate_raw_with_proxy(
     api_key: &str,
     model: &str,
     prompt: &str,
+    timeout_seconds: Option<u64>,
 ) -> Result<SummaryResult, AIError> {
-    let client = Client::new();
+    let client = ai_client(timeout_seconds)?;
     let url = chat_completions_url(proxy_url);
 
     let body = serde_json::json!({
@@ -799,33 +833,35 @@ pub(super) async fn generate_raw_for_provider(
     match config.provider {
         AIProvider::Gemini => {
             let api_key = config.api_key.as_ref().ok_or(AIError::NoApiKey)?;
-            generate_raw_with_gemini(api_key, &config.model, prompt).await
+            generate_raw_with_gemini(api_key, &config.model, prompt, config.timeout_seconds).await
         }
         AIProvider::OpenAI => {
             let api_key = config.api_key.as_ref().ok_or(AIError::NoApiKey)?;
-            generate_raw_with_openai(api_key, &config.model, prompt).await
+            generate_raw_with_openai(api_key, &config.model, prompt, config.timeout_seconds).await
         }
         AIProvider::DeepSeek => {
             let api_key = config.api_key.as_ref().ok_or(AIError::NoApiKey)?;
-            generate_raw_with_deepseek(api_key, &config.model, prompt).await
+            generate_raw_with_deepseek(api_key, &config.model, prompt, config.timeout_seconds).await
         }
         AIProvider::Qwen => {
             let api_key = config.api_key.as_ref().ok_or(AIError::NoApiKey)?;
-            generate_raw_with_qwen(api_key, &config.model, prompt).await
+            generate_raw_with_qwen(api_key, &config.model, prompt, config.timeout_seconds).await
         }
         AIProvider::Ollama => {
             let ollama_url = config
                 .ollama_url
                 .as_deref()
                 .unwrap_or("http://localhost:11434");
-            generate_raw_with_ollama(ollama_url, &config.model, prompt).await
+            generate_raw_with_ollama(ollama_url, &config.model, prompt, config.timeout_seconds)
+                .await
         }
         AIProvider::LmStudio => {
             let lmstudio_url = config
                 .lmstudio_url
                 .as_deref()
                 .unwrap_or("http://localhost:1234");
-            generate_raw_with_lmstudio(lmstudio_url, &config.model, prompt).await
+            generate_raw_with_lmstudio(lmstudio_url, &config.model, prompt, config.timeout_seconds)
+                .await
         }
         AIProvider::Proxy => {
             let api_key = config.api_key.as_ref().ok_or(AIError::NoApiKey)?;
@@ -833,7 +869,14 @@ pub(super) async fn generate_raw_for_provider(
                 .proxy_url
                 .as_deref()
                 .unwrap_or("https://api.openai.com");
-            generate_raw_with_proxy(proxy_url, api_key, &config.model, prompt).await
+            generate_raw_with_proxy(
+                proxy_url,
+                api_key,
+                &config.model,
+                prompt,
+                config.timeout_seconds,
+            )
+            .await
         }
     }
 }

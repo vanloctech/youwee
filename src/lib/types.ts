@@ -745,11 +745,13 @@ export type HistoryFilter =
   | 'data_export'
   | 'other';
 export type HistoryMediaType = 'all' | 'video' | 'audio';
+export type HistorySearchScope = 'all' | 'metadata' | 'summary';
 export type HistoryDatePreset = 'all' | 'today' | 'last7days' | 'last30days' | 'custom';
 export type HistorySort = 'recent' | 'oldest' | 'title' | 'size';
 export type HistoryFilterMatchMode = 'any' | 'all';
 
 export interface HistoryAdvancedFilters {
+  searchScope: HistorySearchScope;
   mediaType: HistoryMediaType;
   datePreset: HistoryDatePreset;
   downloadedAtFrom?: number | null;

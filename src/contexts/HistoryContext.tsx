@@ -81,6 +81,7 @@ const MAX_HISTORY_KEY = 'youwee_max_history';
 const HISTORY_SORT_KEY = 'youwee_history_sort';
 
 const DEFAULT_ADVANCED_FILTERS: HistoryAdvancedFilters = {
+  searchScope: 'all',
   mediaType: 'all',
   datePreset: 'all',
   downloadedAtFrom: null,
@@ -144,6 +145,7 @@ function buildResolvedHistoryFilters(filters: HistoryAdvancedFilters): HistoryAd
     downloadedAtFrom,
     downloadedAtTo,
     mediaType: filters.mediaType || 'all',
+    searchScope: filters.searchScope || 'all',
     formats: filters.formats || [],
     qualities: filters.qualities || [],
     tagIds: filters.tagIds || [],
