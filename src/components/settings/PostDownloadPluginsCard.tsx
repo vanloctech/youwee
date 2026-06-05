@@ -312,43 +312,47 @@ const WORKFLOW_TRIGGER_TONES: Record<
   }
 > = {
   'download.queued': {
-    cardClassName: 'bg-gradient-to-br from-slate-500/[0.10] via-background to-background',
+    cardClassName:
+      '!p-5 relative overflow-hidden rounded-[1.4rem] bg-background/78 backdrop-blur-2xl transition-all duration-500',
     titleBadgeClassName: 'bg-slate-500/15 text-slate-700 dark:bg-slate-400/15 dark:text-slate-200',
     titleClassName: 'text-slate-800 dark:text-slate-100',
-    panelClassName: 'border-slate-500/20 bg-background/70',
-    emptyClassName: 'border-slate-500/20 bg-background/65',
-    stepClassName: 'border-slate-500/20 bg-background/75',
+    panelClassName: 'border-slate-500/20 bg-background/70 relative z-10',
+    emptyClassName: 'border-slate-500/20 bg-background/65 relative z-10',
+    stepClassName: 'border-slate-500/20 bg-background/75 relative z-10',
     triggerButtonSelectedClassName:
       'border-slate-500/40 bg-slate-500/12 text-slate-700 dark:text-slate-200',
   },
   'download.beforeStart': {
-    cardClassName: 'bg-gradient-to-br from-amber-500/[0.12] via-background to-background',
+    cardClassName:
+      '!p-5 relative overflow-hidden rounded-[1.4rem] bg-background/78 backdrop-blur-2xl transition-all duration-500',
     titleBadgeClassName: 'bg-amber-500/15 text-amber-700 dark:bg-amber-400/15 dark:text-amber-300',
     titleClassName: 'text-amber-900 dark:text-amber-100',
-    panelClassName: 'border-amber-500/20 bg-background/70',
-    emptyClassName: 'border-amber-500/20 bg-background/65',
-    stepClassName: 'border-amber-500/20 bg-background/75',
+    panelClassName: 'border-amber-500/20 bg-background/70 relative z-10',
+    emptyClassName: 'border-amber-500/20 bg-background/65 relative z-10',
+    stepClassName: 'border-amber-500/20 bg-background/75 relative z-10',
     triggerButtonSelectedClassName:
       'border-amber-500/45 bg-amber-500/12 text-amber-700 dark:text-amber-300',
   },
   'download.completed': {
-    cardClassName: 'bg-gradient-to-br from-emerald-500/[0.12] via-background to-background',
+    cardClassName:
+      '!p-5 relative overflow-hidden rounded-[1.4rem] bg-background/78 backdrop-blur-2xl transition-all duration-500',
     titleBadgeClassName:
       'bg-emerald-500/15 text-emerald-700 dark:bg-emerald-400/15 dark:text-emerald-300',
     titleClassName: 'text-emerald-900 dark:text-emerald-100',
-    panelClassName: 'border-emerald-500/20 bg-background/70',
-    emptyClassName: 'border-emerald-500/20 bg-background/65',
-    stepClassName: 'border-emerald-500/20 bg-background/75',
+    panelClassName: 'border-emerald-500/20 bg-background/70 relative z-10',
+    emptyClassName: 'border-emerald-500/20 bg-background/65 relative z-10',
+    stepClassName: 'border-emerald-500/20 bg-background/75 relative z-10',
     triggerButtonSelectedClassName:
       'border-emerald-500/45 bg-emerald-500/12 text-emerald-700 dark:text-emerald-300',
   },
   'download.failed': {
-    cardClassName: 'bg-gradient-to-br from-rose-500/[0.12] via-background to-background',
+    cardClassName:
+      '!p-5 relative overflow-hidden rounded-[1.4rem] bg-background/78 backdrop-blur-2xl transition-all duration-500',
     titleBadgeClassName: 'bg-rose-500/15 text-rose-700 dark:bg-rose-400/15 dark:text-rose-300',
     titleClassName: 'text-rose-900 dark:text-rose-100',
-    panelClassName: 'border-rose-500/20 bg-background/70',
-    emptyClassName: 'border-rose-500/20 bg-background/65',
-    stepClassName: 'border-rose-500/20 bg-background/75',
+    panelClassName: 'border-rose-500/20 bg-background/70 relative z-10',
+    emptyClassName: 'border-rose-500/20 bg-background/65 relative z-10',
+    stepClassName: 'border-rose-500/20 bg-background/75 relative z-10',
     triggerButtonSelectedClassName:
       'border-rose-500/45 bg-rose-500/12 text-rose-700 dark:text-rose-300',
   },
@@ -2047,100 +2051,126 @@ export function PostDownloadPluginsCard() {
         {error && <p className="text-xs text-destructive">{error}</p>}
 
         {inspection && installSource && (
-          <div className="rounded-xl border border-dashed border-amber-500/40 bg-amber-500/5 p-4">
-            <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
-              <div className="space-y-2">
-                <div className="flex flex-wrap items-center gap-3">
-                  <div className="rounded-xl bg-purple-500/10 p-2 text-purple-500">
-                    {renderPluginManifestIcon(inspection.manifest.icon)}
+          <div className="relative overflow-hidden rounded-[1.4rem] bg-background/78 backdrop-blur-2xl transition-all duration-500">
+            <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_left,_hsl(var(--primary)/0.10),_transparent_32%),radial-gradient(circle_at_bottom_right,_hsl(var(--gradient-via)/0.08),_transparent_34%)]" />
+            <div className="relative space-y-3 p-4">
+              {/* Header: Icon + Name + Badges */}
+              <div className="flex items-start gap-3">
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-purple-500/10 text-purple-500">
+                  {renderPluginManifestIcon(inspection.manifest.icon, 'h-5 w-5')}
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <p className="text-sm font-semibold">{inspection.manifest.name}</p>
+                    <span className="rounded-md bg-muted/60 px-1.5 py-0.5 text-[10px] tracking-wide text-muted-foreground">
+                      v{inspection.manifest.version}
+                    </span>
+                    <span className="rounded-md bg-blue-500/10 px-1.5 py-0.5 text-[10px] uppercase tracking-wide text-blue-600 dark:text-blue-400">
+                      {LANGUAGE_LABELS[inspection.manifest.runtime.language]}
+                    </span>
                   </div>
-                  <p className="text-sm font-semibold">{inspection.manifest.name}</p>
-                  <span className="rounded bg-muted px-2 py-0.5 text-[10px] tracking-wide text-muted-foreground">
-                    v{inspection.manifest.version}
-                  </span>
-                  <span className="rounded bg-blue-500/10 px-2 py-0.5 text-[10px] uppercase tracking-wide text-blue-600 dark:text-blue-400">
-                    {LANGUAGE_LABELS[inspection.manifest.runtime.language]}
-                  </span>
-                </div>
-                <p className="text-xs text-muted-foreground">
-                  {inspection.manifest.description || t('download.pluginNoDescription')}
-                </p>
-                <div className="flex flex-wrap gap-2 text-[11px] text-muted-foreground">
-                  <span>{inspection.manifest.id}</span>
-                  <span>•</span>
-                  <span>{formatSourceKind(inspection.source.kind, t)}</span>
-                </div>
-                <div className="space-y-1 text-[11px] text-muted-foreground">
-                  <p className="font-medium text-foreground/80">
-                    {t('download.pluginCompatibilityTitle')}
+                  <p className="mt-0.5 text-xs text-muted-foreground">
+                    {inspection.manifest.description || t('download.pluginNoDescription')}
                   </p>
-                  <p>
-                    {t('download.pluginSignatureTitle')}:{' '}
-                    {formatSignatureStatus(inspection.signatureStatus, t)}
-                  </p>
-                  {inspection.signerFingerprint && (
-                    <p>
-                      {t('download.pluginSignerFingerprintLabel')}:{' '}
-                      {formatSignerFingerprint(inspection.signerFingerprint)}
-                    </p>
-                  )}
-                  {inspection.signedAt && (
-                    <p>
-                      {t('download.pluginSignedAtLabel')}: {inspection.signedAt}
-                    </p>
-                  )}
-                  {inspection.packageFormat && (
-                    <p>
-                      {t('download.pluginPackageFormatLabel')}:{' '}
-                      {formatPackageFormat(
-                        inspection.packageFormat,
-                        inspection.packageFormatVersion,
-                      )}
-                    </p>
-                  )}
-                  {inspection.builderSdkVersion && (
-                    <p>
-                      {t('download.pluginBuilderSdkVersionLabel')}: v{inspection.builderSdkVersion}
-                    </p>
-                  )}
-                  {inspection.packageChecksum && (
-                    <p className="break-all">
-                      {t('download.pluginPackageChecksumLabel')}: {inspection.packageChecksum}
-                    </p>
-                  )}
-                  {inspectionCompatibilityEntries.length > 0 ? (
-                    inspectionCompatibilityEntries.map((entry) => <p key={entry}>{entry}</p>)
-                  ) : (
-                    <p>{t('download.pluginCompatibilityNone')}</p>
-                  )}
-                </div>
-                {inspection.warnings.length > 0 && (
-                  <div className="flex flex-wrap gap-2">
-                    {inspection.warnings.map((warning) => (
-                      <span
-                        key={warning}
-                        className="rounded bg-amber-500/10 px-2 py-1 text-[11px] text-amber-600 dark:text-amber-400"
-                      >
-                        {warning}
-                      </span>
-                    ))}
-                  </div>
-                )}
-                <div className="rounded-lg border border-border/60 bg-background/60 px-3 py-3">
-                  <ToggleChoiceCard
-                    checked={installAcknowledged}
-                    onToggle={() => setInstallAcknowledged((current) => !current)}
-                    label={t('download.pluginInstallConfirmLabel')}
-                    description={t('download.pluginInstallConfirmHelp')}
-                    className="border-border/50 bg-background/80"
-                  />
                 </div>
               </div>
 
-              <div className="flex gap-2">
+              {/* Metadata grid */}
+              <div className="grid gap-x-4 gap-y-1 rounded-xl bg-muted/20 px-3 py-2.5 text-[11px] text-muted-foreground sm:grid-cols-2">
+                <p>
+                  <span className="text-foreground/70">{t('download.pluginIdentifierLabel')}:</span>{' '}
+                  {inspection.manifest.id}
+                </p>
+                <p>
+                  <span className="text-foreground/70">{t('download.pluginSourceLabel')}:</span>{' '}
+                  {formatSourceKind(inspection.source.kind, t)}
+                </p>
+                <p>
+                  <span className="text-foreground/70">{t('download.pluginSignatureTitle')}:</span>{' '}
+                  <span
+                    className={cn(
+                      inspectionSigned
+                        ? 'text-emerald-600 dark:text-emerald-400'
+                        : 'text-amber-600 dark:text-amber-400',
+                    )}
+                  >
+                    {formatSignatureStatus(inspection.signatureStatus, t)}
+                  </span>
+                </p>
+                {inspection.signerFingerprint && (
+                  <p>
+                    <span className="text-foreground/70">
+                      {t('download.pluginSignerFingerprintLabel')}:
+                    </span>{' '}
+                    {formatSignerFingerprint(inspection.signerFingerprint)}
+                  </p>
+                )}
+                {inspection.signedAt && (
+                  <p>
+                    <span className="text-foreground/70">{t('download.pluginSignedAtLabel')}:</span>{' '}
+                    {inspection.signedAt}
+                  </p>
+                )}
+                {inspection.packageFormat && (
+                  <p>
+                    <span className="text-foreground/70">
+                      {t('download.pluginPackageFormatLabel')}:
+                    </span>{' '}
+                    {formatPackageFormat(inspection.packageFormat, inspection.packageFormatVersion)}
+                  </p>
+                )}
+                {inspection.builderSdkVersion && (
+                  <p>
+                    <span className="text-foreground/70">
+                      {t('download.pluginBuilderSdkVersionLabel')}:
+                    </span>{' '}
+                    v{inspection.builderSdkVersion}
+                  </p>
+                )}
+                {inspection.packageChecksum && (
+                  <p className="break-all sm:col-span-2">
+                    <span className="text-foreground/70">
+                      {t('download.pluginPackageChecksumLabel')}:
+                    </span>{' '}
+                    {inspection.packageChecksum}
+                  </p>
+                )}
+                {inspectionCompatibilityEntries.length > 0 ? (
+                  inspectionCompatibilityEntries.map((entry) => <p key={entry}>{entry}</p>)
+                ) : (
+                  <p>{t('download.pluginCompatibilityNone')}</p>
+                )}
+              </div>
+
+              {/* Warnings */}
+              {inspection.warnings.length > 0 && (
+                <div className="flex flex-wrap gap-1.5">
+                  {inspection.warnings.map((warning) => (
+                    <span
+                      key={warning}
+                      className="rounded-md bg-amber-500/10 px-2 py-0.5 text-[10px] text-amber-600 dark:text-amber-400"
+                    >
+                      {warning}
+                    </span>
+                  ))}
+                </div>
+              )}
+
+              {/* Acknowledge checkbox */}
+              <ToggleChoiceCard
+                checked={installAcknowledged}
+                onToggle={() => setInstallAcknowledged((current) => !current)}
+                label={t('download.pluginInstallConfirmLabel')}
+                description={t('download.pluginInstallConfirmHelp')}
+                className="border-border/40 bg-background/50"
+              />
+
+              {/* Actions */}
+              <div className="flex items-center gap-2">
                 {inspection.readmeContent && (
                   <Button
                     variant="outline"
+                    size="sm"
                     onClick={() =>
                       setPluginGuideDialog({
                         title: inspection.manifest.name,
@@ -2149,12 +2179,13 @@ export function PostDownloadPluginsCard() {
                     }
                     disabled={installing}
                   >
-                    <Info className="h-4 w-4" />
+                    <Info className="h-3.5 w-3.5" />
                     {t('download.pluginGuideButton')}
                   </Button>
                 )}
                 <Button
                   variant="outline"
+                  size="sm"
                   onClick={() => {
                     setInspection(null);
                     setInstallAcknowledged(false);
@@ -2164,10 +2195,11 @@ export function PostDownloadPluginsCard() {
                   {t('download.pluginDismiss')}
                 </Button>
                 <Button
+                  size="sm"
                   onClick={handleInstallInspection}
                   disabled={installing || !installAcknowledged || !inspectionSigned}
                 >
-                  <Download className="h-4 w-4" />
+                  <Download className="h-3.5 w-3.5" />
                   {installing ? t('download.pluginInstalling') : t('download.pluginInstall')}
                 </Button>
               </div>
@@ -3078,185 +3110,232 @@ export function PostDownloadPluginsCard() {
           const tone = WORKFLOW_TRIGGER_TONES[trigger];
 
           return (
-            <SettingsCard key={trigger} className={cn('space-y-4', tone.cardClassName)}>
-              <div className="space-y-1">
-                <div className="flex flex-wrap items-center gap-2">
-                  <span
-                    className={cn(
-                      'rounded-full px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.18em]',
-                      tone.titleBadgeClassName,
-                    )}
+            <Collapsible key={trigger}>
+              <SettingsCard className={cn('space-y-0', tone.cardClassName)}>
+                {trigger === 'download.queued' && (
+                  <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_left,_rgba(148,163,184,0.10),_transparent_32%),radial-gradient(circle_at_bottom_right,_rgba(148,163,184,0.05),_transparent_34%)]" />
+                )}
+                {trigger === 'download.beforeStart' && (
+                  <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_left,_rgba(245,158,11,0.12),_transparent_32%),radial-gradient(circle_at_bottom_right,_rgba(245,158,11,0.06),_transparent_34%)]" />
+                )}
+                {trigger === 'download.completed' && (
+                  <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_left,_rgba(16,185,129,0.12),_transparent_32%),radial-gradient(circle_at_bottom_right,_rgba(16,185,129,0.06),_transparent_34%)]" />
+                )}
+                {trigger === 'download.failed' && (
+                  <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_left,_rgba(244,63,94,0.12),_transparent_32%),radial-gradient(circle_at_bottom_right,_rgba(244,63,94,0.06),_transparent_34%)]" />
+                )}
+
+                {/* Header — always visible, clickable to toggle */}
+                <CollapsibleTrigger asChild>
+                  <button
+                    type="button"
+                    className="relative z-10 flex w-full items-center justify-between gap-3 text-left"
                   >
-                    {t(`download.pluginWorkflowTrigger.${trigger}.title`)}
-                  </span>
-                </div>
-                <p className={cn('text-sm font-medium', tone.titleClassName)}>
-                  {t(`download.pluginWorkflowTrigger.${trigger}.title`)}
-                </p>
-                <p className="text-xs text-muted-foreground">
-                  {t(`download.pluginWorkflowTrigger.${trigger}.desc`)}
-                </p>
-              </div>
-
-              <div className={cn('rounded-xl border border-dashed p-4', tone.panelClassName)}>
-                <div className="flex flex-col gap-3 lg:flex-row lg:items-end">
-                  <div className="min-w-0 flex-1 space-y-2">
-                    <p className="text-xs font-medium">{t('download.pluginWorkflowAddLabel')}</p>
-                    <Select
-                      value={candidateValue}
-                      onValueChange={(value) =>
-                        setWorkflowCandidates((current) => ({ ...current, [trigger]: value }))
-                      }
-                    >
-                      <SelectTrigger className="h-9 text-xs">
-                        <SelectValue placeholder={t('download.pluginWorkflowAddPlaceholder')} />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {availableWorkflowPlugins.map((plugin) => (
-                          <SelectItem
-                            key={`${trigger}-${plugin.manifest.id}`}
-                            value={plugin.manifest.id}
-                            className="text-xs"
-                          >
-                            {plugin.manifest.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  <Button
-                    variant="outline"
-                    className="border-dashed"
-                    onClick={() => handleAddWorkflowPlugin(trigger)}
-                    disabled={!candidateValue}
-                  >
-                    <Plus className="h-4 w-4" />
-                    {t('download.pluginWorkflowAddButton')}
-                  </Button>
-                </div>
-              </div>
-
-              {workflowPlugins.length === 0 ? (
-                <div
-                  className={cn(
-                    'rounded-xl border border-dashed px-4 py-6 text-center',
-                    tone.emptyClassName,
-                  )}
-                >
-                  <p className="text-sm font-medium">{t('download.pluginWorkflowEmptyTitle')}</p>
-                  <p className="mt-1 text-xs text-muted-foreground">
-                    {t('download.pluginWorkflowEmptyDesc')}
-                  </p>
-                </div>
-              ) : (
-                <div className="space-y-3">
-                  {workflowPlugins.map(({ step, plugin }, index) => {
-                    if (!plugin) return null;
-                    return (
-                      <div
-                        key={`${trigger}-${plugin.manifest.id}`}
-                        className={cn('rounded-xl border p-4', tone.stepClassName)}
-                      >
-                        <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
-                          <div className="min-w-0 flex-1 space-y-2">
-                            <div className="flex flex-wrap items-center gap-2">
-                              <span
-                                className={cn(
-                                  'rounded px-2 py-0.5 text-[10px] uppercase tracking-wide',
-                                  tone.titleBadgeClassName,
-                                )}
-                              >
-                                {t('download.pluginWorkflowStepNumber', { index: index + 1 })}
-                              </span>
-                              <p className="truncate text-sm font-semibold">
-                                {plugin.manifest.name}
-                              </p>
-                              <span className="rounded bg-muted px-2 py-0.5 text-[10px] tracking-wide text-muted-foreground">
-                                v{plugin.manifest.version}
-                              </span>
-                            </div>
-                            <p className="text-xs text-muted-foreground">
-                              {plugin.manifest.description || t('download.pluginNoDescription')}
-                            </p>
-                          </div>
-
-                          <div className="flex flex-wrap gap-2">
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() =>
-                                handleMoveWorkflowStep(trigger, plugin.manifest.id, -1)
-                              }
-                              disabled={index === 0}
-                            >
-                              <MoveUp className="h-4 w-4" />
-                              {t('download.pluginWorkflowMoveUp')}
-                            </Button>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => handleMoveWorkflowStep(trigger, plugin.manifest.id, 1)}
-                              disabled={index === workflowPlugins.length - 1}
-                            >
-                              <MoveDown className="h-4 w-4" />
-                              {t('download.pluginWorkflowMoveDown')}
-                            </Button>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => handleRemoveWorkflowStep(trigger, plugin.manifest.id)}
-                            >
-                              <Trash2 className="h-4 w-4" />
-                              {t('download.pluginWorkflowRemove')}
-                            </Button>
-                          </div>
-                        </div>
-
-                        <div className="mt-4 grid gap-3 md:grid-cols-2">
-                          <div className="space-y-2">
-                            <p className="text-xs font-medium">
-                              {t('download.pluginWorkflowStepOrder')}
-                            </p>
-                            <p className="text-xs text-muted-foreground">
-                              {t('download.pluginWorkflowStepOrderHelp')}
-                            </p>
-                          </div>
-
-                          <div className="space-y-2">
-                            <p className="text-xs font-medium">
-                              {t('download.pluginWorkflowFailureTitle')}
-                            </p>
-                            <Select
-                              value={step.failurePolicy}
-                              onValueChange={(value) =>
-                                handleWorkflowFailurePolicy(
-                                  trigger,
-                                  plugin.manifest.id,
-                                  value as PluginWorkflowFailurePolicy,
-                                )
-                              }
-                            >
-                              <SelectTrigger className="h-9 text-xs">
-                                <SelectValue />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="continue" className="text-xs">
-                                  {t('download.pluginWorkflowFailureContinue')}
-                                </SelectItem>
-                                <SelectItem value="stop-chain" className="text-xs">
-                                  {t('download.pluginWorkflowFailureStopChain')}
-                                </SelectItem>
-                              </SelectContent>
-                            </Select>
-                          </div>
-                        </div>
+                    <div className="min-w-0 flex-1 space-y-0.5">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span
+                          className={cn(
+                            'rounded-full px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.18em]',
+                            tone.titleBadgeClassName,
+                          )}
+                        >
+                          {t(`download.pluginWorkflowTrigger.${trigger}.title`)}
+                        </span>
+                        {workflowPlugins.length > 0 && (
+                          <span className="rounded-md bg-muted/50 px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground">
+                            {workflowPlugins.length}
+                          </span>
+                        )}
                       </div>
-                    );
-                  })}
-                </div>
-              )}
-            </SettingsCard>
+                      <p className="text-xs text-muted-foreground">
+                        {t(`download.pluginWorkflowTrigger.${trigger}.desc`)}
+                      </p>
+                    </div>
+                    <ChevronDown className="h-4 w-4 shrink-0 text-muted-foreground transition-transform duration-200 [[data-state=open]_&]:rotate-180" />
+                  </button>
+                </CollapsibleTrigger>
+
+                {/* Body — collapsible */}
+                <CollapsibleContent>
+                  <div className="relative z-10 space-y-4 pt-4">
+                    <div className={cn('rounded-xl border border-dashed p-4', tone.panelClassName)}>
+                      <div className="flex flex-col gap-3 lg:flex-row lg:items-end">
+                        <div className="min-w-0 flex-1 space-y-2">
+                          <p className="text-xs font-medium">
+                            {t('download.pluginWorkflowAddLabel')}
+                          </p>
+                          <Select
+                            value={candidateValue}
+                            onValueChange={(value) =>
+                              setWorkflowCandidates((current) => ({
+                                ...current,
+                                [trigger]: value,
+                              }))
+                            }
+                          >
+                            <SelectTrigger className="h-9 text-xs">
+                              <SelectValue
+                                placeholder={t('download.pluginWorkflowAddPlaceholder')}
+                              />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {availableWorkflowPlugins.map((plugin) => (
+                                <SelectItem
+                                  key={`${trigger}-${plugin.manifest.id}`}
+                                  value={plugin.manifest.id}
+                                  className="text-xs"
+                                >
+                                  {plugin.manifest.name}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+
+                        <Button
+                          variant="outline"
+                          className="border-dashed"
+                          onClick={() => handleAddWorkflowPlugin(trigger)}
+                          disabled={!candidateValue}
+                        >
+                          <Plus className="h-4 w-4" />
+                          {t('download.pluginWorkflowAddButton')}
+                        </Button>
+                      </div>
+                    </div>
+
+                    {workflowPlugins.length === 0 ? (
+                      <div
+                        className={cn(
+                          'rounded-xl border border-dashed px-4 py-6 text-center',
+                          tone.emptyClassName,
+                        )}
+                      >
+                        <p className="text-sm font-medium">
+                          {t('download.pluginWorkflowEmptyTitle')}
+                        </p>
+                        <p className="mt-1 text-xs text-muted-foreground">
+                          {t('download.pluginWorkflowEmptyDesc')}
+                        </p>
+                      </div>
+                    ) : (
+                      <div className="space-y-3">
+                        {workflowPlugins.map(({ step, plugin }, index) => {
+                          if (!plugin) return null;
+                          return (
+                            <div
+                              key={`${trigger}-${plugin.manifest.id}`}
+                              className={cn('rounded-xl border p-4', tone.stepClassName)}
+                            >
+                              <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+                                <div className="min-w-0 flex-1 space-y-2">
+                                  <div className="flex flex-wrap items-center gap-2">
+                                    <span
+                                      className={cn(
+                                        'rounded px-2 py-0.5 text-[10px] uppercase tracking-wide',
+                                        tone.titleBadgeClassName,
+                                      )}
+                                    >
+                                      {t('download.pluginWorkflowStepNumber', {
+                                        index: index + 1,
+                                      })}
+                                    </span>
+                                    <p className="truncate text-sm font-semibold">
+                                      {plugin.manifest.name}
+                                    </p>
+                                    <span className="rounded bg-muted px-2 py-0.5 text-[10px] tracking-wide text-muted-foreground">
+                                      v{plugin.manifest.version}
+                                    </span>
+                                  </div>
+                                  <p className="text-xs text-muted-foreground">
+                                    {plugin.manifest.description ||
+                                      t('download.pluginNoDescription')}
+                                  </p>
+                                </div>
+
+                                <div className="flex flex-wrap gap-2">
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() =>
+                                      handleMoveWorkflowStep(trigger, plugin.manifest.id, -1)
+                                    }
+                                    disabled={index === 0}
+                                  >
+                                    <MoveUp className="h-4 w-4" />
+                                    {t('download.pluginWorkflowMoveUp')}
+                                  </Button>
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() =>
+                                      handleMoveWorkflowStep(trigger, plugin.manifest.id, 1)
+                                    }
+                                    disabled={index === workflowPlugins.length - 1}
+                                  >
+                                    <MoveDown className="h-4 w-4" />
+                                    {t('download.pluginWorkflowMoveDown')}
+                                  </Button>
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() =>
+                                      handleRemoveWorkflowStep(trigger, plugin.manifest.id)
+                                    }
+                                  >
+                                    <Trash2 className="h-4 w-4" />
+                                    {t('download.pluginWorkflowRemove')}
+                                  </Button>
+                                </div>
+                              </div>
+
+                              <div className="mt-4 grid gap-3 md:grid-cols-2">
+                                <div className="space-y-2">
+                                  <p className="text-xs font-medium">
+                                    {t('download.pluginWorkflowStepOrder')}
+                                  </p>
+                                  <p className="text-xs text-muted-foreground">
+                                    {t('download.pluginWorkflowStepOrderHelp')}
+                                  </p>
+                                </div>
+
+                                <div className="space-y-2">
+                                  <p className="text-xs font-medium">
+                                    {t('download.pluginWorkflowFailureTitle')}
+                                  </p>
+                                  <Select
+                                    value={step.failurePolicy}
+                                    onValueChange={(value) =>
+                                      handleWorkflowFailurePolicy(
+                                        trigger,
+                                        plugin.manifest.id,
+                                        value as PluginWorkflowFailurePolicy,
+                                      )
+                                    }
+                                  >
+                                    <SelectTrigger className="h-9 text-xs">
+                                      <SelectValue />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      <SelectItem value="continue" className="text-xs">
+                                        {t('download.pluginWorkflowFailureContinue')}
+                                      </SelectItem>
+                                      <SelectItem value="stop-chain" className="text-xs">
+                                        {t('download.pluginWorkflowFailureStopChain')}
+                                      </SelectItem>
+                                    </SelectContent>
+                                  </Select>
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                </CollapsibleContent>
+              </SettingsCard>
+            </Collapsible>
           );
         })}
       </div>
@@ -4215,34 +4294,42 @@ export function PostDownloadPluginsCard() {
       </Dialog>
 
       <Dialog open={importDisclaimerOpen} onOpenChange={setImportDisclaimerOpen}>
-        <DialogContent className="sm:max-w-[640px]">
+        <DialogContent className="sm:max-w-[480px]">
           <DialogHeader>
-            <DialogTitle>{t('download.pluginImportDisclaimerTitle')}</DialogTitle>
+            <DialogTitle className="flex items-center gap-2.5">
+              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-amber-500/10">
+                <ShieldCheck className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+              </div>
+              {t('download.pluginImportDisclaimerTitle')}
+            </DialogTitle>
           </DialogHeader>
 
-          <div className="space-y-4">
-            <p className="text-sm text-muted-foreground">
+          <div className="space-y-3">
+            <p className="text-sm leading-relaxed text-muted-foreground">
               {t('download.pluginImportDisclaimerIntro')}
             </p>
 
-            <div className="rounded-xl bg-amber-500/5 p-4 text-sm text-muted-foreground">
-              <p>{t('download.pluginImportDisclaimerBody')}</p>
+            <div className="space-y-2 rounded-xl bg-muted/30 p-3">
+              <div className="flex gap-2.5 text-xs leading-relaxed text-muted-foreground">
+                <span className="mt-0.5 shrink-0 text-amber-500">•</span>
+                <span>{t('download.pluginImportDisclaimerBody')}</span>
+              </div>
+              <div className="flex gap-2.5 text-xs leading-relaxed text-muted-foreground">
+                <span className="mt-0.5 shrink-0 text-amber-500">•</span>
+                <span>{t('download.pluginImportDisclaimerSignature')}</span>
+              </div>
+              <div className="flex gap-2.5 text-xs leading-relaxed text-muted-foreground">
+                <span className="mt-0.5 shrink-0 text-amber-500">•</span>
+                <span>{t('download.pluginImportDisclaimerRecommendation')}</span>
+              </div>
             </div>
 
-            <div className="rounded-xl bg-muted/30 p-4 text-sm text-muted-foreground">
-              <p>{t('download.pluginImportDisclaimerSignature')}</p>
-            </div>
-
-            <div className="rounded-xl bg-muted/30 p-4 text-sm text-muted-foreground">
-              <p>{t('download.pluginImportDisclaimerRecommendation')}</p>
-            </div>
-
-            <div className="flex justify-end gap-2">
-              <Button variant="outline" onClick={() => setImportDisclaimerOpen(false)}>
+            <div className="flex justify-end gap-2 pt-1">
+              <Button variant="outline" size="sm" onClick={() => setImportDisclaimerOpen(false)}>
                 {t('download.pluginDismiss')}
               </Button>
-              <Button onClick={handleConfirmImportPackage}>
-                <Download className="h-4 w-4" />
+              <Button size="sm" onClick={handleConfirmImportPackage}>
+                <Download className="h-3.5 w-3.5" />
                 {t('download.pluginImportPlugin')}
               </Button>
             </div>

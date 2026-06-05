@@ -1,7 +1,6 @@
 use crate::database::{
     add_log_internal, clear_logs_from_db, clear_plugin_logs_from_db, export_logs_from_db,
-    get_logs_from_db,
-    get_plugin_logs_from_db,
+    get_logs_from_db, get_plugin_logs_from_db,
 };
 use crate::types::{LogEntry, PluginLogsPage};
 

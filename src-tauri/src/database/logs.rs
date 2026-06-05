@@ -171,16 +171,19 @@ pub fn get_plugin_logs_from_db(
         .map_err(|e| format!("Failed to count plugin logs: {}", e))?;
 
     let logs = stmt
-        .query_map(params![legacy_pattern, runtime_pattern, limit, offset], |row| {
-            Ok(LogEntry {
-                id: row.get(0)?,
-                timestamp: row.get(1)?,
-                log_type: row.get(2)?,
-                message: row.get(3)?,
-                details: row.get(4)?,
-                url: row.get(5)?,
-            })
-        })
+        .query_map(
+            params![legacy_pattern, runtime_pattern, limit, offset],
+            |row| {
+                Ok(LogEntry {
+                    id: row.get(0)?,
+                    timestamp: row.get(1)?,
+                    log_type: row.get(2)?,
+                    message: row.get(3)?,
+                    details: row.get(4)?,
+                    url: row.get(5)?,
+                })
+            },
+        )
         .map_err(|e| format!("Plugin log query failed: {}", e))?
         .filter_map(|row| row.ok())
         .collect();

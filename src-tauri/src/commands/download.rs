@@ -22,9 +22,8 @@ use crate::database::add_history_internal;
 use crate::database::add_log_internal;
 use crate::database::update_history_download;
 use crate::services::{
-    enqueue_post_download_workflow, get_deno_path, get_ffmpeg_path,
-    get_ytdlp_path, get_ytdlp_source, resolve_download_workflow_snapshot,
-    system_ytdlp_not_found_message,
+    enqueue_post_download_workflow, get_deno_path, get_ffmpeg_path, get_ytdlp_path,
+    get_ytdlp_source, resolve_download_workflow_snapshot, system_ytdlp_not_found_message,
 };
 use crate::types::{
     BackendError, DependencySource, DownloadProgress, PluginWorkflowStepSnapshot,
@@ -816,10 +815,11 @@ pub async fn download_video(
                         &download_kind,
                     );
                 }
-                return Err(
-                    BackendError::from_message(format!("Failed to start yt-dlp: {}", error))
-                        .to_wire_string(),
-                );
+                return Err(BackendError::from_message(format!(
+                    "Failed to start yt-dlp: {}",
+                    error
+                ))
+                .to_wire_string());
             }
         };
 
@@ -913,13 +913,11 @@ pub async fn download_video(
                             &download_kind,
                         );
                     }
-                    return Err(
-                        BackendError::from_message(format!(
-                            "Failed to start bundled yt-dlp: {}",
-                            error
-                        ))
-                        .to_wire_string(),
-                    );
+                    return Err(BackendError::from_message(format!(
+                        "Failed to start bundled yt-dlp: {}",
+                        error
+                    ))
+                    .to_wire_string());
                 }
             };
 
@@ -1347,8 +1345,11 @@ pub async fn download_video(
                                     extract_time_range(&download_sections),
                                     &download_kind,
                                 );
-                                let _ =
-                                    enqueue_post_download_workflow(&app, failed_workflow_steps.clone(), payload);
+                                let _ = enqueue_post_download_workflow(
+                                    &app,
+                                    failed_workflow_steps.clone(),
+                                    payload,
+                                );
                             }
 
                             return Err(error.to_wire_string());
@@ -1413,10 +1414,11 @@ pub async fn download_video(
                             &download_kind,
                         );
                     }
-                    return Err(
-                        BackendError::from_message(format!("Failed to start yt-dlp: {}", error))
-                            .to_wire_string(),
-                    );
+                    return Err(BackendError::from_message(format!(
+                        "Failed to start yt-dlp: {}",
+                        error
+                    ))
+                    .to_wire_string());
                 }
             };
 

@@ -1,41 +1,31 @@
 import { getVersion } from '@tauri-apps/api/app';
 import {
-  AlertCircle,
   Bug,
   Check,
   CheckCircle2,
-  ChevronDown,
-  ChevronUp,
   Coffee,
   Copy,
   Download,
   ExternalLink,
-  Eye,
-  EyeOff,
   FileText,
   Github,
-  GripVertical,
   Heart,
   Info,
   Loader2,
-  Plus,
   RefreshCw,
   Settings,
   Share2,
-  Sparkles,
-  X,
 } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
+  AISection,
   DependenciesSection,
   DownloadSection,
   ExtensionSection,
   GeneralSection,
   NetworkSection,
   PluginsSection,
-  SettingsCard,
-  SettingsDivider,
   SettingsRow,
   SettingsSearch,
   SettingsSection,
@@ -44,21 +34,11 @@ import {
 } from '@/components/settings';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
-import { useAI } from '@/contexts/AIContext';
 import { useDownload } from '@/contexts/DownloadContext';
+import { useTheme } from '@/contexts/ThemeContext';
 import { useUpdater } from '@/contexts/UpdaterContext';
-import type { AIProvider, SummaryStyle } from '@/lib/types';
-import { DEFAULT_TRANSCRIPT_LANGUAGES, LANGUAGE_OPTIONS } from '@/lib/types';
 import { cn } from '@/lib/utils';
 
 export function SettingsPage({
@@ -70,7 +50,6 @@ export function SettingsPage({
   const [activeSection, setActiveSection] = useState<SettingsSectionId>(initialSection);
   const [highlightId, setHighlightId] = useState<string | null>(null);
   const [appVersion, setAppVersion] = useState('');
-  const [showApiKey, setShowApiKey] = useState(false);
   const contentRef = useRef<HTMLDivElement>(null);
 
   const updater = useUpdater();
@@ -153,13 +132,7 @@ export function SettingsPage({
 
                 {activeSection === 'extension' && <ExtensionSection highlightId={highlightId} />}
 
-                {activeSection === 'ai' && (
-                  <AISettingsContent
-                    highlightId={highlightId}
-                    showApiKey={showApiKey}
-                    setShowApiKey={setShowApiKey}
-                  />
-                )}
+                {activeSection === 'ai' && <AISection highlightId={highlightId} />}
 
                 {activeSection === 'network' && <NetworkSection highlightId={highlightId} />}
 
@@ -179,589 +152,6 @@ export function SettingsPage({
           </div>
         </ScrollArea>
       </div>
-    </div>
-  );
-}
-
-// AI Settings Content (inline component for now)
-function AISettingsContent({
-  highlightId,
-  showApiKey,
-  setShowApiKey,
-}: {
-  highlightId: string | null;
-  showApiKey: boolean;
-  setShowApiKey: (show: boolean) => void;
-}) {
-  const { t } = useTranslation('settings');
-  const ai = useAI();
-
-  return (
-    <div className="space-y-8">
-      <SettingsSection
-        title={t('ai.title')}
-        description={t('ai.description')}
-        icon={<Sparkles className="w-5 h-5 text-white" />}
-        iconClassName="bg-gradient-to-br from-purple-500 to-indigo-600 shadow-purple-500/20"
-      >
-        <SettingsCard>
-          {/* Enable AI */}
-          <SettingsRow
-            id="ai-enabled"
-            label={t('ai.enabled')}
-            description={t('ai.enabledDesc')}
-            highlight={highlightId === 'ai-enabled'}
-          >
-            <Switch
-              checked={ai.config.enabled}
-              onCheckedChange={(enabled) => ai.updateConfig({ enabled })}
-            />
-          </SettingsRow>
-
-          {ai.config.enabled && (
-            <>
-              {/* Provider */}
-              <SettingsRow
-                id="ai-provider"
-                label={t('ai.provider')}
-                description={t('ai.providerDesc')}
-                highlight={highlightId === 'ai-provider'}
-              >
-                <Select
-                  value={ai.config.provider}
-                  onValueChange={(v) => {
-                    const defaultModels: Record<string, string> = {
-                      gemini: 'gemini-2.0-flash',
-                      openai: 'gpt-4o-mini',
-                      deepseek: 'deepseek-chat',
-                      qwen: 'qwen-turbo',
-                      ollama: 'llama3.2',
-                      lmstudio: 'local-model',
-                      proxy: 'gpt-4o-mini',
-                    };
-                    ai.updateConfig({
-                      provider: v as AIProvider,
-                      model: defaultModels[v] || 'gpt-4o-mini',
-                    });
-                  }}
-                >
-                  <SelectTrigger className="h-9 w-full bg-background sm:w-[160px]">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="gemini">Gemini</SelectItem>
-                    <SelectItem value="openai">OpenAI</SelectItem>
-                    <SelectItem value="deepseek">DeepSeek</SelectItem>
-                    <SelectItem value="qwen">Qwen</SelectItem>
-                    <SelectItem value="proxy">{t('ai.proxyCustom')}</SelectItem>
-                    <SelectItem value="ollama">{t('ai.ollamaLocal')}</SelectItem>
-                    <SelectItem value="lmstudio">{t('ai.lmstudioLocal')}</SelectItem>
-                  </SelectContent>
-                </Select>
-              </SettingsRow>
-
-              {/* API Key */}
-              {ai.config.provider !== 'ollama' && ai.config.provider !== 'lmstudio' && (
-                <div
-                  id="ai-api-key"
-                  className={cn(
-                    'space-y-2 py-2 rounded-lg px-2 -mx-2 transition-all duration-500',
-                    highlightId === 'ai-api-key' && 'bg-primary/10 ring-1 ring-primary/30',
-                  )}
-                >
-                  <p className="text-sm font-medium">{t('ai.apiKey')}</p>
-                  <div className="flex flex-col items-stretch gap-2 sm:flex-row sm:items-center">
-                    <div className="relative flex-1">
-                      <Input
-                        type={showApiKey ? 'text' : 'password'}
-                        value={ai.config.api_key || ''}
-                        onChange={(e) => ai.updateConfig({ api_key: e.target.value })}
-                        placeholder={
-                          ai.config.provider === 'gemini'
-                            ? t('ai.enterGeminiApiKey')
-                            : ai.config.provider === 'openai'
-                              ? t('ai.enterOpenAIApiKey')
-                              : ai.config.provider === 'deepseek'
-                                ? t('ai.enterDeepSeekApiKey')
-                                : ai.config.provider === 'qwen'
-                                  ? t('ai.enterQwenApiKey')
-                                  : t('ai.enterProxyApiKey')
-                        }
-                        className="h-9 bg-background pr-10"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => setShowApiKey(!showApiKey)}
-                        className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-muted-foreground hover:text-foreground"
-                      >
-                        {showApiKey ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                      </button>
-                    </div>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={ai.testConnection}
-                      disabled={ai.isTesting || !ai.config.api_key}
-                      className="w-full sm:w-auto"
-                    >
-                      {ai.isTesting ? <Loader2 className="w-4 h-4 animate-spin" /> : t('ai.test')}
-                    </Button>
-                  </div>
-                  {ai.config.provider !== 'proxy' && (
-                    <p className="text-xs text-muted-foreground">
-                      {t('ai.getApiKeyFrom')}{' '}
-                      <a
-                        href={
-                          ai.config.provider === 'gemini'
-                            ? 'https://aistudio.google.com/apikey'
-                            : ai.config.provider === 'openai'
-                              ? 'https://platform.openai.com/api-keys'
-                              : ai.config.provider === 'deepseek'
-                                ? 'https://platform.deepseek.com/api_keys'
-                                : ai.config.provider === 'qwen'
-                                  ? 'https://dashscope.console.aliyun.com/apiKey'
-                                  : '#'
-                        }
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-primary hover:underline"
-                      >
-                        {ai.config.provider === 'gemini'
-                          ? 'Google AI Studio'
-                          : ai.config.provider === 'openai'
-                            ? 'OpenAI Platform'
-                            : ai.config.provider === 'deepseek'
-                              ? 'DeepSeek Platform'
-                              : ai.config.provider === 'qwen'
-                                ? 'Alibaba DashScope'
-                                : 'Provider'}
-                      </a>
-                    </p>
-                  )}
-                  {ai.testResult && (
-                    <div
-                      className={cn(
-                        'flex items-center gap-2 text-xs p-2 rounded-lg',
-                        ai.testResult.success
-                          ? 'bg-emerald-500/10 text-emerald-500'
-                          : 'bg-destructive/10 text-destructive',
-                      )}
-                    >
-                      {ai.testResult.success ? (
-                        <CheckCircle2 className="w-3.5 h-3.5" />
-                      ) : (
-                        <AlertCircle className="w-3.5 h-3.5" />
-                      )}
-                      {ai.testResult.message}
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {/* Ollama URL */}
-              {ai.config.provider === 'ollama' && (
-                <div className="space-y-2 py-2">
-                  <p className="text-sm font-medium">{t('ai.ollamaUrl')}</p>
-                  <div className="flex flex-col items-stretch gap-2 sm:flex-row sm:items-center">
-                    <Input
-                      type="text"
-                      value={ai.config.ollama_url || 'http://localhost:11434'}
-                      onChange={(e) => ai.updateConfig({ ollama_url: e.target.value })}
-                      placeholder="http://localhost:11434"
-                      className="h-9 bg-background flex-1"
-                    />
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={ai.testConnection}
-                      disabled={ai.isTesting}
-                      className="w-full sm:w-auto"
-                    >
-                      {ai.isTesting ? <Loader2 className="w-4 h-4 animate-spin" /> : t('ai.test')}
-                    </Button>
-                  </div>
-                </div>
-              )}
-
-              {/* LM Studio URL */}
-              {ai.config.provider === 'lmstudio' && (
-                <div className="space-y-2 py-2">
-                  <p className="text-sm font-medium">{t('ai.lmstudioUrl')}</p>
-                  <div className="flex flex-col items-stretch gap-2 sm:flex-row sm:items-center">
-                    <Input
-                      type="text"
-                      value={ai.config.lmstudio_url || 'http://localhost:1234'}
-                      onChange={(e) => ai.updateConfig({ lmstudio_url: e.target.value })}
-                      placeholder="http://localhost:1234"
-                      className="h-9 bg-background flex-1"
-                    />
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={ai.testConnection}
-                      disabled={ai.isTesting}
-                      className="w-full sm:w-auto"
-                    >
-                      {ai.isTesting ? <Loader2 className="w-4 h-4 animate-spin" /> : t('ai.test')}
-                    </Button>
-                  </div>
-                </div>
-              )}
-
-              {/* Proxy URL */}
-              {ai.config.provider === 'proxy' && (
-                <div className="space-y-2 py-2">
-                  <p className="text-sm font-medium">{t('ai.proxyUrl')}</p>
-                  <div className="flex items-center gap-2">
-                    <Input
-                      type="text"
-                      value={ai.config.proxy_url || 'https://api.openai.com'}
-                      onChange={(e) => ai.updateConfig({ proxy_url: e.target.value })}
-                      placeholder="https://api.openai.com"
-                      className="h-9 bg-background flex-1"
-                    />
-                  </div>
-                </div>
-              )}
-
-              {/* Model */}
-              <SettingsRow
-                id="ai-model"
-                label={t('ai.model')}
-                description={t('ai.modelDesc')}
-                highlight={highlightId === 'ai-model'}
-              >
-                <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row">
-                  <Input
-                    type="text"
-                    value={ai.config.model}
-                    onChange={(e) => ai.updateConfig({ model: e.target.value })}
-                    placeholder={t('ai.modelPlaceholder')}
-                    className="h-9 w-full bg-background sm:w-52"
-                  />
-                  <Select
-                    value={
-                      ai.models.some((m) => m.value === ai.config.model) ? ai.config.model : ''
-                    }
-                    onValueChange={(v) => ai.updateConfig({ model: v })}
-                  >
-                    <SelectTrigger className="h-9 w-full bg-background sm:w-[160px]">
-                      <SelectValue placeholder={t('ai.quickSelect')} />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {ai.models.map((m) => (
-                        <SelectItem key={m.value} value={m.value}>
-                          {m.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </SettingsRow>
-
-              {/* Summary Style */}
-              <SettingsRow
-                id="summary-style"
-                label={t('ai.summaryStyle')}
-                description={t('ai.summaryStyleDesc')}
-                highlight={highlightId === 'summary-style'}
-              >
-                <Select
-                  value={ai.config.summary_style}
-                  onValueChange={(v) => ai.updateConfig({ summary_style: v as SummaryStyle })}
-                >
-                  <SelectTrigger className="h-9 w-full bg-background sm:w-[220px]">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="short">{t('ai.short')}</SelectItem>
-                    <SelectItem value="concise">{t('ai.concise')}</SelectItem>
-                    <SelectItem value="detailed">{t('ai.detailed')}</SelectItem>
-                  </SelectContent>
-                </Select>
-              </SettingsRow>
-
-              {/* Summary Language */}
-              <SettingsRow
-                id="summary-language"
-                label={t('ai.summaryLanguage')}
-                description={t('ai.summaryLanguageDesc')}
-                highlight={highlightId === 'summary-language'}
-              >
-                <Select
-                  value={ai.config.summary_language}
-                  onValueChange={(v) => ai.updateConfig({ summary_language: v })}
-                >
-                  <SelectTrigger className="h-9 w-full bg-background sm:w-[200px]">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="auto">{t('ai.autoSameAsVideo')}</SelectItem>
-                    {LANGUAGE_OPTIONS.map((l) => (
-                      <SelectItem key={l.code} value={l.code}>
-                        {l.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </SettingsRow>
-
-              {/* Timeout */}
-              <SettingsRow
-                id="ai-timeout"
-                label={t('ai.timeout')}
-                description={t('ai.timeoutDesc')}
-                highlight={highlightId === 'ai-timeout'}
-              >
-                <Select
-                  value={String(ai.config.timeout_seconds || 120)}
-                  onValueChange={(v) =>
-                    ai.updateConfig({ timeout_seconds: Number.parseInt(v, 10) })
-                  }
-                >
-                  <SelectTrigger className="h-9 w-full bg-background sm:w-[120px]">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="60">{t('ai.60seconds')}</SelectItem>
-                    <SelectItem value="120">{t('ai.2minutes')}</SelectItem>
-                    <SelectItem value="180">{t('ai.3minutes')}</SelectItem>
-                    <SelectItem value="300">{t('ai.5minutes')}</SelectItem>
-                  </SelectContent>
-                </Select>
-              </SettingsRow>
-
-              <SettingsDivider />
-
-              {/* Transcript Languages */}
-              <div
-                id="transcript-languages"
-                className={cn(
-                  'space-y-3 py-2 rounded-lg px-2 -mx-2 transition-all duration-500',
-                  highlightId === 'transcript-languages' && 'bg-primary/10 ring-1 ring-primary/30',
-                )}
-              >
-                <div>
-                  <p className="text-sm font-medium">{t('ai.transcriptLanguages')}</p>
-                  <p className="text-xs text-muted-foreground">{t('ai.transcriptLanguagesDesc')}</p>
-                </div>
-                <div className="space-y-1.5">
-                  {(ai.config.transcript_languages || DEFAULT_TRANSCRIPT_LANGUAGES).map(
-                    (code, index) => {
-                      const lang = LANGUAGE_OPTIONS.find((l) => l.code === code);
-                      const currentLangs =
-                        ai.config.transcript_languages || DEFAULT_TRANSCRIPT_LANGUAGES;
-                      return (
-                        <div
-                          key={code}
-                          className="flex items-center gap-2 p-2 rounded-lg bg-muted/50 group"
-                        >
-                          <div className="flex items-center gap-1.5 text-muted-foreground">
-                            <GripVertical className="w-4 h-4" />
-                            <span className="text-xs font-mono w-4">{index + 1}</span>
-                          </div>
-                          <span className="flex-1 text-sm">{lang?.name || code}</span>
-                          <code className="text-xs text-muted-foreground font-mono">{code}</code>
-                          {/* Move up/down buttons */}
-                          <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
-                            <button
-                              type="button"
-                              className="p-1 hover:bg-muted rounded disabled:opacity-30"
-                              disabled={index === 0}
-                              onClick={() => {
-                                const langs = [...currentLangs];
-                                [langs[index - 1], langs[index]] = [langs[index], langs[index - 1]];
-                                ai.updateConfig({ transcript_languages: langs });
-                              }}
-                              title="Move up"
-                            >
-                              <ChevronUp className="w-3 h-3" />
-                            </button>
-                            <button
-                              type="button"
-                              className="p-1 hover:bg-muted rounded disabled:opacity-30"
-                              disabled={index === currentLangs.length - 1}
-                              onClick={() => {
-                                const langs = [...currentLangs];
-                                [langs[index], langs[index + 1]] = [langs[index + 1], langs[index]];
-                                ai.updateConfig({ transcript_languages: langs });
-                              }}
-                              title="Move down"
-                            >
-                              <ChevronDown className="w-3 h-3" />
-                            </button>
-                          </div>
-                          <button
-                            type="button"
-                            className="p-1 hover:bg-destructive/20 hover:text-destructive rounded opacity-0 group-hover:opacity-100 transition-opacity"
-                            onClick={() => {
-                              const langs = currentLangs.filter((l) => l !== code);
-                              ai.updateConfig({
-                                transcript_languages:
-                                  langs.length > 0 ? langs : DEFAULT_TRANSCRIPT_LANGUAGES,
-                              });
-                            }}
-                          >
-                            <X className="w-3.5 h-3.5" />
-                          </button>
-                        </div>
-                      );
-                    },
-                  )}
-                </div>
-                {/* Add language dropdown */}
-                {(() => {
-                  const currentLangs =
-                    ai.config.transcript_languages || DEFAULT_TRANSCRIPT_LANGUAGES;
-                  const availableLangs = LANGUAGE_OPTIONS.filter(
-                    (l) => !currentLangs.includes(l.code),
-                  );
-                  if (availableLangs.length === 0) return null;
-                  return (
-                    <Select
-                      value=""
-                      onValueChange={(code) => {
-                        if (code) {
-                          ai.updateConfig({ transcript_languages: [...currentLangs, code] });
-                        }
-                      }}
-                    >
-                      <SelectTrigger className="w-full h-9 bg-background text-muted-foreground">
-                        <div className="flex items-center gap-2">
-                          <Plus className="w-4 h-4" />
-                          <span>{t('ai.addLanguage')}</span>
-                        </div>
-                      </SelectTrigger>
-                      <SelectContent>
-                        {availableLangs.map((lang) => (
-                          <SelectItem key={lang.code} value={lang.code}>
-                            {lang.name} ({lang.code})
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  );
-                })()}
-              </div>
-
-              <SettingsDivider />
-
-              {/* Whisper */}
-              <div
-                id="whisper"
-                className={cn(
-                  'space-y-3 py-2 rounded-lg px-2 -mx-2 transition-all duration-500',
-                  highlightId === 'whisper' && 'bg-primary/10 ring-1 ring-primary/30',
-                )}
-              >
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-medium">{t('ai.whisper')}</p>
-                    <p className="text-xs text-muted-foreground">{t('ai.whisperDesc')}</p>
-                  </div>
-                  <Switch
-                    checked={ai.config.whisper_enabled || false}
-                    onCheckedChange={(enabled) => ai.updateConfig({ whisper_enabled: enabled })}
-                  />
-                </div>
-                {ai.config.whisper_enabled && (
-                  <div className="space-y-2 pl-4 border-l-2 border-primary/20">
-                    {/* Provider toggle: OpenAI / Custom */}
-                    <div className="flex items-center gap-1 p-0.5 bg-muted/50 rounded-lg w-fit">
-                      <button
-                        type="button"
-                        onClick={() =>
-                          ai.updateConfig({
-                            whisper_endpoint_url: undefined,
-                            whisper_model: undefined,
-                          })
-                        }
-                        className={cn(
-                          'px-3 py-1 text-xs font-medium rounded-md transition-all',
-                          ai.config.whisper_endpoint_url === undefined
-                            ? 'bg-background shadow-sm text-foreground'
-                            : 'text-muted-foreground hover:text-foreground',
-                        )}
-                      >
-                        OpenAI
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() =>
-                          ai.updateConfig({
-                            whisper_endpoint_url: ai.config.whisper_endpoint_url ?? '',
-                          })
-                        }
-                        className={cn(
-                          'px-3 py-1 text-xs font-medium rounded-md transition-all',
-                          ai.config.whisper_endpoint_url !== undefined
-                            ? 'bg-background shadow-sm text-foreground'
-                            : 'text-muted-foreground hover:text-foreground',
-                        )}
-                      >
-                        {t('ai.whisperCustom')}
-                      </button>
-                    </div>
-
-                    {ai.config.whisper_endpoint_url !== undefined ? (
-                      // Custom backend
-                      <div className="space-y-2">
-                        <Input
-                          type="password"
-                          value={ai.config.whisper_api_key || ''}
-                          onChange={(e) => ai.updateConfig({ whisper_api_key: e.target.value })}
-                          placeholder={t('ai.whisperApiKey')}
-                          className="h-9 bg-background"
-                        />
-                        <Input
-                          type="text"
-                          value={ai.config.whisper_endpoint_url || ''}
-                          onChange={(e) =>
-                            ai.updateConfig({ whisper_endpoint_url: e.target.value })
-                          }
-                          placeholder={t('ai.whisperEndpointPlaceholder')}
-                          className="h-9 bg-background"
-                        />
-                        <Input
-                          type="text"
-                          value={ai.config.whisper_model || ''}
-                          onChange={(e) =>
-                            ai.updateConfig({ whisper_model: e.target.value || undefined })
-                          }
-                          placeholder={t('ai.whisperModelPlaceholder')}
-                          className="h-9 bg-background"
-                        />
-                        <p className="text-xs text-muted-foreground/60">
-                          {t('ai.whisperCompatible')}
-                        </p>
-                      </div>
-                    ) : (
-                      // OpenAI (default)
-                      <div className="space-y-2">
-                        {ai.config.provider === 'openai' ? (
-                          <div className="flex items-center gap-2 text-xs p-2 rounded-lg bg-emerald-500/10 text-emerald-500">
-                            <Check className="w-3.5 h-3.5" />
-                            <span>{t('ai.usingOpenAI')}</span>
-                          </div>
-                        ) : (
-                          <Input
-                            type="password"
-                            value={ai.config.whisper_api_key || ''}
-                            onChange={(e) => ai.updateConfig({ whisper_api_key: e.target.value })}
-                            placeholder={t('ai.whisperApiKey')}
-                            className="h-9 bg-background"
-                          />
-                        )}
-                        <p className="text-xs text-muted-foreground">{t('ai.whisperCost')}</p>
-                      </div>
-                    )}
-                  </div>
-                )}
-              </div>
-            </>
-          )}
-        </SettingsCard>
-      </SettingsSection>
     </div>
   );
 }
@@ -786,6 +176,7 @@ function AboutSettingsContent({
 }) {
   const { t } = useTranslation('settings');
   const { settings, updateAutoCheckUpdate } = useDownload();
+  const { mode } = useTheme();
   const [copied, setCopied] = useState(false);
 
   const appUrl = 'https://github.com/vanloctech/youwee';
@@ -793,8 +184,7 @@ function AboutSettingsContent({
   const redditUrl = 'https://www.reddit.com/r/youwee/';
   const productHuntUrl =
     'https://www.producthunt.com/products/youwee/reviews/new?utm_source=badge-product_review&utm_medium=badge&utm_source=badge-youwee';
-  const productHuntBadgeUrl =
-    'https://api.producthunt.com/widgets/embed-image/v1/product_review.svg?product_id=1154224&theme=light';
+  const productHuntBadgeUrl = `https://api.producthunt.com/widgets/embed-image/v1/product_review.svg?product_id=1154224&theme=${mode}`;
   const shareText = t('about.shareText');
   const encodedUrl = encodeURIComponent(appUrl);
   const encodedText = encodeURIComponent(shareText);
@@ -805,13 +195,15 @@ function AboutSettingsContent({
       label: 'X',
       faIcon: 'fa-twitter',
       color: 'text-sky-400',
+      hoverBg: 'hover:bg-sky-500/10',
       href: `https://x.com/intent/tweet?text=${encodedText}&url=${encodedUrl}`,
     },
     {
       key: 'facebook',
       label: 'Facebook',
       faIcon: 'fa-facebook',
-      color: 'text-blue-600',
+      color: 'text-blue-600 dark:text-blue-400',
+      hoverBg: 'hover:bg-blue-500/10',
       href: `https://www.facebook.com/sharer/sharer.php?u=${encodedUrl}`,
     },
     {
@@ -819,6 +211,7 @@ function AboutSettingsContent({
       label: 'Reddit',
       faIcon: 'fa-reddit',
       color: 'text-orange-500',
+      hoverBg: 'hover:bg-orange-500/10',
       href: `https://www.reddit.com/submit?url=${encodedUrl}&title=${encodedText}`,
     },
     {
@@ -826,6 +219,7 @@ function AboutSettingsContent({
       label: 'Telegram',
       faIcon: 'fa-telegram',
       color: 'text-sky-500',
+      hoverBg: 'hover:bg-sky-500/10',
       href: `https://t.me/share/url?url=${encodedUrl}&text=${encodedText}`,
     },
     {
@@ -833,6 +227,7 @@ function AboutSettingsContent({
       label: 'WhatsApp',
       faIcon: 'fa-whatsapp',
       color: 'text-green-500',
+      hoverBg: 'hover:bg-green-500/10',
       href: `https://wa.me/?text=${encodeURIComponent(`${shareText} ${appUrl}`)}`,
     },
     {
@@ -840,6 +235,7 @@ function AboutSettingsContent({
       label: 'Weibo',
       faIcon: 'fa-weibo',
       color: 'text-rose-500',
+      hoverBg: 'hover:bg-rose-500/10',
       href: `https://service.weibo.com/share/share.php?url=${encodedUrl}&title=${encodedText}`,
     },
   ];
@@ -862,115 +258,138 @@ function AboutSettingsContent({
         icon={<Info className="w-5 h-5 text-white" />}
         iconClassName="bg-gradient-to-br from-pink-500 to-rose-600 shadow-pink-500/20"
       >
-        {/* App Info Card */}
-        <SettingsCard id="app-version" highlight={highlightId === 'app-version'}>
-          <div className="flex items-start justify-between gap-4">
-            <div className="flex items-center gap-4">
-              <div className="w-16 h-16 rounded-2xl overflow-hidden flex-shrink-0">
-                <img src="/logo-128.png" alt="Youwee" className="w-full h-full object-cover" />
-              </div>
-              <div>
-                <div className="flex items-center gap-2">
-                  <span className="text-lg font-bold">Youwee</span>
-                  <Badge variant="secondary" className="font-mono text-xs">
-                    v{appVersion}
-                  </Badge>
+        {/* ── Hero App Info Card ── */}
+        <div
+          id="app-version"
+          className={cn(
+            'relative overflow-hidden rounded-[1.4rem] transition-all duration-500',
+            'bg-background/78 shadow-[0_16px_40px_rgba(0,0,0,0.08)] backdrop-blur-2xl',
+            'dark:shadow-[0_22px_50px_rgba(0,0,0,0.25)]',
+            highlightId === 'app-version' &&
+              'ring-2 ring-primary ring-offset-2 ring-offset-background',
+          )}
+        >
+          <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_left,_hsl(var(--primary)/0.14),_transparent_32%),radial-gradient(circle_at_bottom_right,_hsl(var(--gradient-via)/0.16),_transparent_34%)]" />
+          <div className="relative p-5">
+            <div className="flex items-start justify-between gap-4">
+              <div className="flex items-center gap-4">
+                <div className="w-16 h-16 flex-shrink-0 rounded-2xl overflow-hidden">
+                  <img src="/logo-128.png" alt="Youwee" className="w-full h-full object-cover" />
                 </div>
-                <p className="text-sm text-muted-foreground mt-1">{t('about.appDesc')}</p>
-                <p className="text-xs text-muted-foreground mt-0.5">
-                  {isAppChecking ? (
-                    <span className="flex items-center gap-1">
-                      <Loader2 className="w-3 h-3 animate-spin" />
-                      {t('about.checkingUpdates')}
-                    </span>
-                  ) : isAppUpdateAvailable && updater.updateInfo ? (
-                    <span className="text-primary font-medium">
-                      {t('about.versionAvailable', { version: updater.updateInfo.version })}
-                    </span>
-                  ) : isAppUpToDate ? (
-                    <span className="flex items-center gap-1 text-emerald-500">
-                      <CheckCircle2 className="w-3 h-3" />
-                      {t('about.upToDate')}
-                    </span>
-                  ) : isAppError ? (
-                    <span className="text-destructive">
-                      {updater.error || t('about.checkFailed')}
-                    </span>
-                  ) : null}
-                </p>
+                <div>
+                  <div className="flex items-center gap-2.5">
+                    <span className="text-xl font-bold tracking-tight gradient-text">Youwee</span>
+                    <Badge
+                      variant="secondary"
+                      className="font-mono text-xs bg-primary/10 text-primary border-0"
+                    >
+                      v{appVersion}
+                    </Badge>
+                  </div>
+                  <p className="text-sm text-muted-foreground mt-1">{t('about.appDesc')}</p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    {isAppChecking ? (
+                      <span className="flex items-center gap-1.5">
+                        <Loader2 className="w-3 h-3 animate-spin text-primary" />
+                        {t('about.checkingUpdates')}
+                      </span>
+                    ) : isAppUpdateAvailable && updater.updateInfo ? (
+                      <span className="inline-flex items-center gap-1.5 text-primary font-medium">
+                        <Download className="w-3 h-3" />
+                        {t('about.versionAvailable', { version: updater.updateInfo.version })}
+                      </span>
+                    ) : isAppUpToDate ? (
+                      <span className="flex items-center gap-1.5 text-emerald-500">
+                        <CheckCircle2 className="w-3 h-3" />
+                        {t('about.upToDate')}
+                      </span>
+                    ) : isAppError ? (
+                      <span className="text-destructive">
+                        {updater.error || t('about.checkFailed')}
+                      </span>
+                    ) : null}
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-1.5 flex-shrink-0">
+                {isAppUpdateAvailable && (
+                  <Button
+                    size="sm"
+                    onClick={updater.downloadAndInstall}
+                    disabled={updater.status === 'downloading' || updater.status === 'ready'}
+                    className="gap-1.5"
+                  >
+                    {updater.status === 'downloading' || updater.status === 'ready' ? (
+                      <>
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        {updater.status === 'downloading'
+                          ? `${updater.progress ? Math.round((updater.progress.downloaded / updater.progress.total) * 100) : 0}%`
+                          : t('about.restarting')}
+                      </>
+                    ) : (
+                      <>
+                        <Download className="w-4 h-4" />
+                        {t('about.update')}
+                      </>
+                    )}
+                  </Button>
+                )}
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={updater.checkForUpdate}
+                  disabled={isAppChecking}
+                  title={t('about.checkForUpdates')}
+                  className="h-9 w-9"
+                >
+                  <RefreshCw className={cn('w-4 h-4', isAppChecking && 'animate-spin')} />
+                </Button>
               </div>
             </div>
-            <div className="flex items-center gap-1.5">
-              {isAppUpdateAvailable && (
-                <Button
-                  size="sm"
-                  onClick={updater.downloadAndInstall}
-                  disabled={updater.status === 'downloading' || updater.status === 'ready'}
-                  className="gap-1.5"
-                >
-                  {updater.status === 'downloading' || updater.status === 'ready' ? (
-                    <>
-                      <Loader2 className="w-4 h-4 animate-spin" />
-                      {updater.status === 'downloading'
-                        ? `${updater.progress ? Math.round((updater.progress.downloaded / updater.progress.total) * 100) : 0}%`
-                        : t('about.restarting')}
-                    </>
-                  ) : (
-                    <>
-                      <Download className="w-4 h-4" />
-                      {t('about.update')}
-                    </>
-                  )}
-                </Button>
-              )}
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={updater.checkForUpdate}
-                disabled={isAppChecking}
-                title={t('about.checkForUpdates')}
-                className="h-9 w-9"
+
+            {/* Quick Links */}
+            <div className="flex flex-wrap items-center gap-2 mt-4 pt-4 border-t border-border/30">
+              <a
+                href="https://github.com/vanloctech/youwee/blob/main/LICENSE"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-background/60 hover:bg-background text-xs font-medium transition-all hover:shadow-sm"
               >
-                <RefreshCw className={cn('w-4 h-4', isAppChecking && 'animate-spin')} />
-              </Button>
+                <FileText className="w-3.5 h-3.5 text-muted-foreground" />
+                {t('about.license')}
+              </a>
+              <a
+                href="https://github.com/vanloctech/youwee/issues"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-background/60 hover:bg-background text-xs font-medium transition-all hover:shadow-sm"
+              >
+                <Bug className="w-3.5 h-3.5 text-muted-foreground" />
+                {t('about.reportIssue')}
+              </a>
             </div>
           </div>
+        </div>
 
-          {/* Quick Links */}
-          <div className="flex flex-wrap items-center gap-2 mt-4 pt-4 border-t border-border/50">
-            <a
-              href="https://github.com/vanloctech/youwee/blob/main/LICENSE"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-background/50 hover:bg-background text-xs font-medium transition-colors"
-            >
-              <FileText className="w-3.5 h-3.5" />
-              {t('about.license')}
-            </a>
-            <a
-              href="https://github.com/vanloctech/youwee/issues"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-background/50 hover:bg-background text-xs font-medium transition-colors"
-            >
-              <Bug className="w-3.5 h-3.5" />
-              {t('about.reportIssue')}
-            </a>
-          </div>
-
-          {/* Community */}
-          <div className="mt-4 pt-4 border-t border-border/50">
-            <div className="flex items-center gap-2 mb-2">
-              <Github className="w-4 h-4 text-muted-foreground" />
-              <p className="text-sm font-medium">{t('about.communityTitle')}</p>
+        {/* ── Community & Support Row ── */}
+        <div className="grid gap-4 md:grid-cols-2">
+          {/* Community Card */}
+          <div className="rounded-xl bg-muted/30 p-4 transition-all hover:bg-muted/40">
+            <div className="flex items-center gap-2.5 mb-2">
+              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-violet-500/10">
+                <Github className="w-4 h-4 text-violet-600 dark:text-violet-400" />
+              </div>
+              <p className="text-sm font-semibold">{t('about.communityTitle')}</p>
             </div>
-            <p className="text-xs text-muted-foreground mb-3">{t('about.communityDesc')}</p>
+            <p className="text-xs text-muted-foreground mb-3 leading-relaxed">
+              {t('about.communityDesc')}
+            </p>
             <div className="flex flex-wrap items-center gap-2">
               <a
                 href="https://github.com/vanloctech/youwee"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-background/50 hover:bg-background text-xs font-medium transition-colors"
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-background/60 hover:bg-background text-xs font-medium transition-all hover:shadow-sm"
               >
                 <Github className="w-3.5 h-3.5" />
                 GitHub
@@ -979,7 +398,7 @@ function AboutSettingsContent({
                 href={redditUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-background/50 hover:bg-background text-xs font-medium transition-colors text-orange-500"
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-background/60 hover:bg-orange-500/10 text-xs font-medium transition-all text-orange-500 hover:shadow-sm"
               >
                 <i className="fa fa-reddit text-[12px]" aria-hidden="true" />
                 Reddit
@@ -990,98 +409,112 @@ function AboutSettingsContent({
                 href={productHuntUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex max-w-full"
+                className="inline-flex max-w-full transition-opacity hover:opacity-90"
               >
                 <img
                   src={productHuntBadgeUrl}
                   alt={t('about.productHuntBadgeAlt')}
                   width={250}
                   height={54}
-                  className="h-[54px] w-[250px] max-w-full"
+                  className="h-[54px] w-[250px] max-w-full rounded-lg"
                 />
               </a>
             </div>
           </div>
 
-          {/* Support */}
-          <div className="mt-4 pt-4 border-t border-border/50">
-            <div className="flex items-center gap-2 mb-2">
-              <Heart className="w-4 h-4 text-red-500" />
-              <p className="text-sm font-medium">{t('about.supportTitle')}</p>
+          {/* Support Card */}
+          <div className="rounded-xl bg-muted/30 p-4 transition-all hover:bg-muted/40">
+            <div className="flex items-center gap-2.5 mb-2">
+              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-rose-500/10">
+                <Heart className="w-4 h-4 text-rose-500" />
+              </div>
+              <p className="text-sm font-semibold">{t('about.supportTitle')}</p>
             </div>
-            <p className="text-xs text-muted-foreground mb-3">{t('about.supportDesc')}</p>
-            <div className="flex flex-wrap items-center gap-2">
-              <a
-                href={buyMeACoffeeUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="group inline-flex min-h-14 items-center gap-3 rounded-md border border-dashed border-amber-500/40 bg-amber-500/10 px-3 py-2 text-left transition-colors hover:bg-amber-500/15"
-              >
-                <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-md bg-amber-500/15 text-amber-600 dark:text-amber-400">
-                  <Coffee className="h-4 w-4" />
-                </div>
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-center gap-1.5 text-xs font-semibold text-foreground">
-                    <span>{t('about.buyMeACoffee')}</span>
-                    <ExternalLink className="h-3.5 w-3.5 text-muted-foreground transition-colors group-hover:text-foreground" />
-                  </div>
-                  <p className="mt-0.5 text-[11px] leading-4 text-muted-foreground">
-                    {t('about.buyMeACoffeeDesc')}
-                  </p>
-                </div>
-              </a>
-            </div>
-          </div>
-
-          {/* Share */}
-          <div className="mt-4 pt-4 border-t border-border/50">
-            <div className="flex items-center gap-2 mb-2">
-              <Share2 className="w-4 h-4 text-muted-foreground" />
-              <p className="text-sm font-medium">{t('about.shareTitle')}</p>
-            </div>
-            <p className="text-xs text-muted-foreground mb-3">{t('about.shareDesc')}</p>
-            <div className="flex flex-wrap items-center gap-2">
-              {shareLinks.map((item) => (
-                <a
-                  key={item.key}
-                  href={item.href}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className={cn(
-                    'inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-background/50 hover:bg-background text-xs font-medium transition-colors',
-                    item.color,
-                  )}
-                >
-                  <i className={cn('fa', item.faIcon, 'text-[12px]')} aria-hidden="true" />
-                  {item.label}
-                </a>
-              ))}
-              <button
-                type="button"
-                onClick={handleCopyLink}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-background/50 hover:bg-background text-xs font-medium transition-colors"
-              >
-                {copied ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
-                {copied ? t('about.copied') : t('about.copyLink')}
-              </button>
-            </div>
-          </div>
-
-          {/* Made with love */}
-          <div className="flex items-center justify-center gap-1.5 mt-4 pt-4 border-t border-border/50">
-            <span className="text-xs text-muted-foreground">{t('about.madeWith')}</span>
-            <Heart className="w-3.5 h-3.5 text-red-500 fill-red-500" />
-            <span className="text-xs text-muted-foreground">{t('about.by')}</span>
+            <p className="text-xs text-muted-foreground mb-3 leading-relaxed">
+              {t('about.supportDesc')}
+            </p>
             <a
-              href="https://github.com/vanloctech"
+              href={buyMeACoffeeUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="text-sm font-semibold bg-gradient-to-r from-red-500 via-yellow-500 to-red-500 bg-clip-text text-transparent hover:opacity-80 transition-opacity"
+              className="group flex items-center gap-3 rounded-xl border border-dashed border-amber-500/30 bg-gradient-to-br from-amber-500/5 to-amber-500/10 px-4 py-3 transition-all hover:border-amber-500/50 hover:shadow-sm hover:shadow-amber-500/5"
             >
-              vanloctech
+              <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl bg-amber-500/15 text-amber-600 dark:text-amber-400 transition-transform group-hover:scale-110">
+                <Coffee className="h-5 w-5" />
+              </div>
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center gap-1.5 text-sm font-semibold text-foreground">
+                  <span>{t('about.buyMeACoffee')}</span>
+                  <ExternalLink className="h-3 w-3 text-muted-foreground transition-all group-hover:text-foreground group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
+                </div>
+                <p className="mt-0.5 text-[11px] leading-4 text-muted-foreground">
+                  {t('about.buyMeACoffeeDesc')}
+                </p>
+              </div>
             </a>
           </div>
-        </SettingsCard>
+        </div>
+
+        {/* ── Share Card ── */}
+        <div className="rounded-xl bg-muted/30 p-4 transition-all hover:bg-muted/40">
+          <div className="flex items-center gap-2.5 mb-2">
+            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-500/10">
+              <Share2 className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+            </div>
+            <div>
+              <p className="text-sm font-semibold">{t('about.shareTitle')}</p>
+              <p className="text-xs text-muted-foreground">{t('about.shareDesc')}</p>
+            </div>
+          </div>
+          <div className="flex flex-wrap items-center gap-2 mt-3">
+            {shareLinks.map((item) => (
+              <a
+                key={item.key}
+                href={item.href}
+                target="_blank"
+                rel="noopener noreferrer"
+                className={cn(
+                  'inline-flex items-center gap-1.5 px-3 py-2 rounded-lg bg-background/60 text-xs font-medium transition-all hover:shadow-sm hover:scale-105',
+                  item.color,
+                  item.hoverBg,
+                )}
+              >
+                <i className={cn('fa', item.faIcon, 'text-[13px]')} aria-hidden="true" />
+                {item.label}
+              </a>
+            ))}
+            <button
+              type="button"
+              onClick={handleCopyLink}
+              className={cn(
+                'inline-flex items-center gap-1.5 px-3 py-2 rounded-lg bg-background/60 hover:bg-background text-xs font-medium transition-all hover:shadow-sm hover:scale-105',
+                copied && 'text-emerald-500',
+              )}
+            >
+              {copied ? (
+                <Check className="w-3.5 h-3.5" />
+              ) : (
+                <Copy className="w-3.5 h-3.5 text-muted-foreground" />
+              )}
+              {copied ? t('about.copied') : t('about.copyLink')}
+            </button>
+          </div>
+        </div>
+
+        {/* ── Made with love ── */}
+        <div className="flex items-center justify-center gap-2 py-2">
+          <span className="text-xs text-muted-foreground">{t('about.madeWith')}</span>
+          <Heart className="w-3.5 h-3.5 text-red-500 fill-red-500 animate-pulse" />
+          <span className="text-xs text-muted-foreground">{t('about.by')}</span>
+          <a
+            href="https://github.com/vanloctech"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-sm font-bold gradient-text hover:opacity-80 transition-opacity"
+          >
+            vanloctech
+          </a>
+        </div>
 
         {/* Auto Update Toggle */}
         <SettingsRow
