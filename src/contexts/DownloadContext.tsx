@@ -535,15 +535,43 @@ export function DownloadProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const parseUrls = useCallback((text: string): string[] => {
-    return text
-      .split('\n')
-      .map((line) => line.trim())
-      .filter((line) => {
-        // Skip empty lines and comments
-        if (!line || line.startsWith('#')) return false;
-        // Check for valid YouTube URLs
-        return line.includes('youtube.com') || line.includes('youtu.be');
-      });
+    // Extract URLs from arbitrary text (supports URLs embedded in messages)
+    const urlRegex = /https?:\/\/[^\s<>\"'\)\]\}，。、！？]+/gi;
+    const seen = new Set<string>();
+    const results: string[] = [];
+
+    for (const line of text.split('\n')) {
+      const trimmed = line.trim();
+      if (!trimmed || trimmed.startsWith('#')) continue;
+
+      // If the line itself is a YouTube URL, use it directly
+      if (trimmed.includes('youtube.com') || trimmed.includes('youtu.be')) {
+        try {
+          new URL(trimmed);
+          if (!seen.has(trimmed)) {
+            seen.add(trimmed);
+            results.push(trimmed);
+          }
+          continue;
+        } catch {
+          // Not a standalone URL, extract below
+        }
+      }
+
+      // Extract URLs from within the line
+      const matches = trimmed.match(urlRegex);
+      if (matches) {
+        for (let url of matches) {
+          url = url.replace(/[.,;:!?)>\]]+$/, '');
+          if ((url.includes('youtube.com') || url.includes('youtu.be')) && !seen.has(url)) {
+            seen.add(url);
+            results.push(url);
+          }
+        }
+      }
+    }
+
+    return results;
   }, []);
 
   // Helper to check if URL is a playlist

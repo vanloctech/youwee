@@ -169,18 +169,48 @@ export function MetadataProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const parseUrls = useCallback((text: string): string[] => {
-    return text
-      .split('\n')
-      .map((line) => line.trim())
-      .filter((line) => {
-        if (!line || line.startsWith('#')) return false;
-        return (
-          line.includes('youtube.com') ||
-          line.includes('youtu.be') ||
-          line.includes('http://') ||
-          line.includes('https://')
-        );
-      });
+    // Extract URLs from arbitrary text (supports URLs embedded in messages)
+    const urlRegex = /https?:\/\/[^\s<>\"'\)\]\}，。、！？]+/gi;
+    const seen = new Set<string>();
+    const results: string[] = [];
+
+    for (const line of text.split('\n')) {
+      const trimmed = line.trim();
+      if (!trimmed || trimmed.startsWith('#')) continue;
+
+      // If the whole line is a valid URL, use directly
+      try {
+        const u = new URL(trimmed);
+        if (u.protocol === 'http:' || u.protocol === 'https:') {
+          if (!seen.has(trimmed)) {
+            seen.add(trimmed);
+            results.push(trimmed);
+          }
+          continue;
+        }
+      } catch {
+        // Not a standalone URL
+      }
+
+      // Extract URLs from within the text
+      const matches = trimmed.match(urlRegex);
+      if (matches) {
+        for (let url of matches) {
+          url = url.replace(/[.,;:!?)>\]]+$/, '');
+          try {
+            const u = new URL(url);
+            if ((u.protocol === 'http:' || u.protocol === 'https:') && !seen.has(url)) {
+              seen.add(url);
+              results.push(url);
+            }
+          } catch {
+            // skip invalid
+          }
+        }
+      }
+    }
+
+    return results;
   }, []);
 
   const addUrls = useCallback(

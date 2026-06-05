@@ -169,16 +169,51 @@ export function isValidUrl(text: string): boolean {
 }
 
 /**
- * Parse URLs from text input, filtering for valid HTTP/HTTPS URLs
+ * Extract all HTTP/HTTPS URLs from arbitrary text.
+ * Handles URLs embedded in sentences, messages, markdown, etc.
+ * Deduplicates results while preserving order.
+ */
+export function extractUrls(text: string): string[] {
+  // Match http/https URLs - handles parentheses, brackets, and common trailing punctuation
+  const urlRegex = /https?:\/\/[^\s<>\"'\)\]\}，。、！？]+/gi;
+  const seen = new Set<string>();
+  const results: string[] = [];
+
+  for (const line of text.split('\n')) {
+    const trimmed = line.trim();
+    // Skip comments
+    if (trimmed.startsWith('#')) continue;
+
+    // If the entire line is a valid URL, use it directly (preserves exact input)
+    if (isValidUrl(trimmed)) {
+      if (!seen.has(trimmed)) {
+        seen.add(trimmed);
+        results.push(trimmed);
+      }
+      continue;
+    }
+
+    // Otherwise extract URLs from within the text
+    const matches = trimmed.match(urlRegex);
+    if (matches) {
+      for (let url of matches) {
+        // Clean trailing punctuation that's likely not part of the URL
+        url = url.replace(/[.,;:!?)>\]]+$/, '');
+        if (isValidUrl(url) && !seen.has(url)) {
+          seen.add(url);
+          results.push(url);
+        }
+      }
+    }
+  }
+
+  return results;
+}
+
+/**
+ * Parse URLs from text input, filtering for valid HTTP/HTTPS URLs.
+ * Supports both clean URL-per-line input and URLs embedded in text/messages.
  */
 export function parseUniversalUrls(text: string): string[] {
-  return text
-    .split('\n')
-    .map((line) => line.trim())
-    .filter((line) => {
-      // Skip empty lines and comments
-      if (!line || line.startsWith('#')) return false;
-      // Validate URL format
-      return isValidUrl(line);
-    });
+  return extractUrls(text);
 }

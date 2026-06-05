@@ -2,7 +2,6 @@ import { invoke } from '@tauri-apps/api/core';
 import { listen, type UnlistenFn } from '@tauri-apps/api/event';
 import { open } from '@tauri-apps/plugin-dialog';
 import { readFile } from '@tauri-apps/plugin-fs';
-import { revealItemInDir } from '@tauri-apps/plugin-opener';
 import {
   createContext,
   type ReactNode,
@@ -864,7 +863,7 @@ export function ProcessingProvider({ children }: { children: ReactNode }) {
   const openOutputFolder = useCallback(async () => {
     if (completedOutputPath) {
       try {
-        await revealItemInDir(completedOutputPath);
+        await invoke('open_file_location', { filepath: completedOutputPath });
       } catch (error) {
         console.error('Failed to open folder:', error);
       }
