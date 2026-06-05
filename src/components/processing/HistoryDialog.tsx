@@ -1,4 +1,4 @@
-import { revealItemInDir } from '@tauri-apps/plugin-opener';
+import { invoke } from '@tauri-apps/api/core';
 import {
   AlertCircle,
   Calendar,
@@ -621,7 +621,7 @@ export function HistoryDialog({
                         <Button
                           size="sm"
                           onClick={() =>
-                            selectedJob.output_path && revealItemInDir(selectedJob.output_path)
+                            selectedJob.output_path && invoke('open_file_location', { filepath: selectedJob.output_path })
                           }
                           className="gap-1.5"
                         >

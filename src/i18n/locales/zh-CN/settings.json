@@ -430,7 +430,12 @@
     "autoRetryConfigDesc": "设置重试次数和每次重试间隔",
     "retryAttempts": "次数",
     "retryDelay": "间隔",
-    "secondsShort": "秒"
+    "secondsShort": "秒",
+    "customYtdlpArgs": "自定义 yt-dlp 参数",
+    "customYtdlpArgsDesc": "为每条 yt-dlp 命令追加额外标志",
+    "customYtdlpArgsLabel": "额外参数",
+    "customYtdlpArgsLabelDesc": "直接传递给 yt-dlp 的原始标志（例如 --no-check-certificates --ignore-errors）",
+    "customYtdlpArgsPlaceholder": "--no-check-certificates"
   },
   "plugins": {
     "title": "插件",

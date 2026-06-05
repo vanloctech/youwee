@@ -20,6 +20,21 @@ import { cn } from '@/lib/utils';
 // Cookie settings storage key (same as in DownloadContext)
 const COOKIE_STORAGE_KEY = 'youwee-cookie-settings';
 const PROXY_STORAGE_KEY = 'youwee-proxy-settings';
+const DOWNLOAD_STORAGE_KEY = 'youwee-settings';
+
+// Load custom yt-dlp args from download settings
+function loadCustomYtdlpArgs(): string {
+  try {
+    const saved = localStorage.getItem(DOWNLOAD_STORAGE_KEY);
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      return typeof parsed.customYtdlpArgs === 'string' ? parsed.customYtdlpArgs : '';
+    }
+  } catch (e) {
+    console.error('Failed to load custom ytdlp args:', e);
+  }
+  return '';
+}
 
 // Load cookie settings from localStorage
 function loadCookieSettings(): CookieSettings {
@@ -183,6 +198,7 @@ export function VideoPreview({ url, onClose, onFormatSelect, className }: VideoP
           cookieBrowserProfile: cookieSettings.browserProfile || null,
           cookieFilePath: cookieSettings.filePath || null,
           proxyUrl: buildProxyUrl(proxySettings) || null,
+          customYtdlpArgs: loadCustomYtdlpArgs() || null,
         });
         if (!cancelled) {
           setData(result);

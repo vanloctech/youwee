@@ -430,7 +430,12 @@
     "autoRetryConfigDesc": "Đặt số lần thử lại và thời gian chờ giữa mỗi lần",
     "retryAttempts": "Số lần",
     "retryDelay": "Độ trễ",
-    "secondsShort": "giây"
+    "secondsShort": "giây",
+    "customYtdlpArgs": "Tham số yt-dlp tùy chỉnh",
+    "customYtdlpArgsDesc": "Thêm cờ bổ sung vào mọi lệnh yt-dlp",
+    "customYtdlpArgsLabel": "Tham số bổ sung",
+    "customYtdlpArgsLabelDesc": "Cờ thô truyền trực tiếp cho yt-dlp (ví dụ: --no-check-certificates --ignore-errors)",
+    "customYtdlpArgsPlaceholder": "--no-check-certificates"
   },
   "plugins": {
     "title": "Plugin",

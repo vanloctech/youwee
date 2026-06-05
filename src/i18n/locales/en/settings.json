@@ -430,7 +430,12 @@
     "autoRetryConfigDesc": "Set retry attempts and delay between retries",
     "retryAttempts": "Attempts",
     "retryDelay": "Delay",
-    "secondsShort": "s"
+    "secondsShort": "s",
+    "customYtdlpArgs": "Custom yt-dlp Arguments",
+    "customYtdlpArgsDesc": "Append extra flags to every yt-dlp command",
+    "customYtdlpArgsLabel": "Extra Arguments",
+    "customYtdlpArgsLabelDesc": "Raw flags passed directly to yt-dlp (e.g. --no-check-certificates --ignore-errors)",
+    "customYtdlpArgsPlaceholder": "--no-check-certificates"
   },
   "plugins": {
     "title": "Plugins",

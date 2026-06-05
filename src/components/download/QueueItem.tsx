@@ -1,4 +1,4 @@
-import { revealItemInDir } from '@tauri-apps/plugin-opener';
+import { invoke } from '@tauri-apps/api/core';
 import {
   CheckCircle2,
   ChevronDown,
@@ -219,7 +219,7 @@ export function QueueItem({
     if (!item.completedFilepath) return;
 
     try {
-      await revealItemInDir(item.completedFilepath);
+      await invoke('open_file_location', { filepath: item.completedFilepath });
     } catch (error) {
       console.error('Failed to open completed file location:', error);
     }

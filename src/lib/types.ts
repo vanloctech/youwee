@@ -61,6 +61,7 @@ export interface ItemDownloadSettings {
   audioBitrate: AudioBitrate;
   useAria2: boolean;
   aria2Args: string;
+  customYtdlpArgs: string;
   subtitleMode: SubtitleMode;
   subtitleLangs: string[];
   subtitleEmbed: boolean;
@@ -82,6 +83,7 @@ export interface ItemUniversalSettings {
   audioBitrate: AudioBitrate;
   useAria2: boolean;
   aria2Args: string;
+  customYtdlpArgs: string;
   timeRangeStart?: string;
   timeRangeEnd?: string;
   pluginWorkflowSnapshots?: PluginWorkflowSnapshotMap;
@@ -172,6 +174,8 @@ export interface DownloadSettings {
   // External downloader settings
   useAria2: boolean; // Use aria2c as yt-dlp external downloader
   aria2Args: string; // Custom aria2 arguments (raw or aria2c: prefixed)
+  // Custom yt-dlp arguments
+  customYtdlpArgs: string; // Extra raw args appended to every yt-dlp invocation (e.g. --no-check-certificates)
   // Auto retry settings
   autoRetryEnabled: boolean; // Retry transient failures automatically
   autoRetryMaxAttempts: number; // Number of retries after initial failure (1-10)
