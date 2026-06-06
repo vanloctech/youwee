@@ -72,9 +72,7 @@
         },
         "sortOptions": {
           "relevance": "相关性",
-          "uploadDate": "上传日期",
-          "viewCount": "观看次数",
-          "rating": "评分"
+          "viewCount": "热门程度"
         },
         "featureOptions": {
           "live": "直播",

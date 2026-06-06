@@ -103,9 +103,7 @@ const DURATION_OPTIONS: SelectOption<YoutubeSearchDurationFilter>[] = [
 
 const SORT_OPTIONS: SelectOption<YoutubeSearchSortFilter>[] = [
   { value: 'relevance', labelKey: 'relevance' },
-  { value: 'uploadDate', labelKey: 'uploadDate' },
   { value: 'viewCount', labelKey: 'viewCount' },
-  { value: 'rating', labelKey: 'rating' },
 ];
 
 const FEATURE_OPTIONS: SelectOption<YoutubeSearchFeatureFilter>[] = [
@@ -124,7 +122,7 @@ function normalizeFilters(filters?: Partial<YoutubeSearchFilters>): YoutubeSearc
   return {
     uploadDate: filters?.uploadDate || null,
     duration: filters?.duration || null,
-    sort: filters?.sort || DEFAULT_FILTERS.sort,
+    sort: filters?.sort === 'viewCount' ? 'viewCount' : DEFAULT_FILTERS.sort,
     features: Array.isArray(filters?.features) ? filters.features : [],
   };
 }

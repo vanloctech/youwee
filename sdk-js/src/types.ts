@@ -241,7 +241,7 @@ export type YoutubeSearchUploadDateFilter = 'today' | 'thisWeek' | 'thisMonth' |
 
 export type YoutubeSearchDurationFilter = 'short' | 'medium' | 'long';
 
-export type YoutubeSearchSortFilter = 'relevance' | 'uploadDate' | 'viewCount' | 'rating';
+export type YoutubeSearchSortFilter = 'relevance' | 'viewCount';
 
 export type YoutubeSearchFeatureFilter =
   | 'live'

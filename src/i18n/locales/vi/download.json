@@ -72,9 +72,7 @@
         },
         "sortOptions": {
           "relevance": "Mức độ liên quan",
-          "uploadDate": "Ngày tải lên",
-          "viewCount": "Lượt xem",
-          "rating": "Xếp hạng"
+          "viewCount": "Mức độ phổ biến"
         },
         "featureOptions": {
           "live": "Trực tiếp",

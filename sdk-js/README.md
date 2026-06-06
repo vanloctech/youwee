@@ -606,7 +606,7 @@ Supported filters:
 
 - `uploadDate`: `"today"`, `"thisWeek"`, `"thisMonth"`, `"thisYear"`
 - `duration`: `"short"`, `"medium"`, `"long"`
-- `sort`: `"relevance"`, `"uploadDate"`, `"viewCount"`, `"rating"`
+- `sort`: `"relevance"`, `"viewCount"` (YouTube labels this as popularity)
 - `features`: `"live"`, `"fourK"`, `"hd"`, `"subtitles"`, `"creativeCommons"`, `"threeSixty"`, `"vr180"`, `"threeD"`, `"hdr"`
 
 Use `continuation` to load more results with the same query/filter context:

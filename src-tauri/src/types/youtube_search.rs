@@ -53,9 +53,7 @@ pub enum YoutubeSearchDurationFilter {
 #[serde(rename_all = "camelCase")]
 pub enum YoutubeSearchSortFilter {
     Relevance,
-    UploadDate,
     ViewCount,
-    Rating,
 }
 
 #[derive(Clone, Serialize, Deserialize, Debug, PartialEq, Eq, Hash)]

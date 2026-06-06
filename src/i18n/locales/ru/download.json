@@ -72,9 +72,7 @@
         },
         "sortOptions": {
           "relevance": "Relevance",
-          "uploadDate": "Upload date",
-          "viewCount": "View count",
-          "rating": "Rating"
+          "viewCount": "Популярность"
         },
         "featureOptions": {
           "live": "Live",

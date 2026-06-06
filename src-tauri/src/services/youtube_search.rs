@@ -60,8 +60,6 @@ fn duration_filter_value(filter: &YoutubeSearchDurationFilter) -> u32 {
 fn sort_filter_value(filter: &YoutubeSearchSortFilter) -> Option<u32> {
     match filter {
         YoutubeSearchSortFilter::Relevance => None,
-        YoutubeSearchSortFilter::Rating => Some(1),
-        YoutubeSearchSortFilter::UploadDate => Some(2),
         YoutubeSearchSortFilter::ViewCount => Some(3),
     }
 }
