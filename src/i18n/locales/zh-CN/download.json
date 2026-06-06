@@ -43,6 +43,7 @@
       "selectedCount": "已选择 {{selected}}/{{total}}",
       "selectAll": "全选",
       "clearSelection": "清除",
+      "clearResults": "清除结果",
       "loadMore": "加载更多",
       "addSelected": "添加所选",
       "openButton": "按关键词搜索",
@@ -72,9 +73,7 @@
         },
         "sortOptions": {
           "relevance": "相关性",
-          "uploadDate": "上传日期",
-          "viewCount": "观看次数",
-          "rating": "评分"
+          "viewCount": "热门程度"
         },
         "featureOptions": {
           "live": "直播",

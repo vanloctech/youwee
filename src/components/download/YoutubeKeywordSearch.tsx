@@ -9,6 +9,7 @@ import {
   Loader2,
   Plus,
   Search,
+  Trash2,
   Video,
   X,
 } from 'lucide-react';
@@ -103,9 +104,7 @@ const DURATION_OPTIONS: SelectOption<YoutubeSearchDurationFilter>[] = [
 
 const SORT_OPTIONS: SelectOption<YoutubeSearchSortFilter>[] = [
   { value: 'relevance', labelKey: 'relevance' },
-  { value: 'uploadDate', labelKey: 'uploadDate' },
   { value: 'viewCount', labelKey: 'viewCount' },
-  { value: 'rating', labelKey: 'rating' },
 ];
 
 const FEATURE_OPTIONS: SelectOption<YoutubeSearchFeatureFilter>[] = [
@@ -124,7 +123,7 @@ function normalizeFilters(filters?: Partial<YoutubeSearchFilters>): YoutubeSearc
   return {
     uploadDate: filters?.uploadDate || null,
     duration: filters?.duration || null,
-    sort: filters?.sort || DEFAULT_FILTERS.sort,
+    sort: filters?.sort === 'viewCount' ? 'viewCount' : DEFAULT_FILTERS.sort,
     features: Array.isArray(filters?.features) ? filters.features : [],
   };
 }
@@ -392,6 +391,13 @@ export function YoutubeKeywordSearch({
     setSelectedIds(new Set());
   }, []);
 
+  const clearSearchResults = useCallback(() => {
+    setVideos([]);
+    setSelectedIds(new Set());
+    setContinuation(null);
+    setError(null);
+  }, []);
+
   const addSelected = useCallback(async () => {
     if (selectedVideos.length === 0) return;
     setIsAdding(true);
@@ -465,10 +471,21 @@ export function YoutubeKeywordSearch({
     void runSearch();
   };
 
+  const handleQueryChange = useCallback(
+    (value: string) => {
+      setQuery(value);
+      if (!value.trim()) {
+        clearSearchResults();
+      }
+    },
+    [clearSearchResults],
+  );
+
   const clearQuery = useCallback(() => {
     setQuery('');
+    clearSearchResults();
     searchInputRef.current?.focus();
-  }, []);
+  }, [clearSearchResults]);
 
   const hasResults = videos.length > 0;
   const busy = disabled || isSearching || isLoadingMore || isAdding;
@@ -488,7 +505,7 @@ export function YoutubeKeywordSearch({
               <Input
                 ref={searchInputRef}
                 value={query}
-                onChange={(e) => setQuery(e.target.value)}
+                onChange={(e) => handleQueryChange(e.target.value)}
                 disabled={disabled || isSearching}
                 placeholder={t('urlInput.keyword.placeholder')}
                 className="pl-10 pr-10 h-12 rounded-xl bg-background border-border/60 focus:bg-background text-base sm:text-sm shadow-sm"
@@ -775,6 +792,18 @@ export function YoutubeKeywordSearch({
                 title={t('urlInput.keyword.clearSelection')}
               >
                 <X className="w-4 h-4" />
+              </Button>
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                onClick={clearSearchResults}
+                disabled={busy}
+                className="h-9 w-9 rounded-full text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors"
+                title={t('urlInput.keyword.clearResults')}
+                aria-label={t('urlInput.keyword.clearResults')}
+              >
+                <Trash2 className="w-4 h-4" />
               </Button>
             </div>
 

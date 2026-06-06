@@ -43,6 +43,7 @@
       "selectedCount": "Đã chọn {{selected}}/{{total}}",
       "selectAll": "Chọn tất cả",
       "clearSelection": "Bỏ chọn",
+      "clearResults": "Xóa kết quả",
       "loadMore": "Tải thêm",
       "addSelected": "Thêm đã chọn",
       "openButton": "Tìm theo từ khóa",
@@ -72,9 +73,7 @@
         },
         "sortOptions": {
           "relevance": "Mức độ liên quan",
-          "uploadDate": "Ngày tải lên",
-          "viewCount": "Lượt xem",
-          "rating": "Xếp hạng"
+          "viewCount": "Mức độ phổ biến"
         },
         "featureOptions": {
           "live": "Trực tiếp",

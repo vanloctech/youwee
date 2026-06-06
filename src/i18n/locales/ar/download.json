@@ -43,6 +43,7 @@
       "selectedCount": "{{selected}}/{{total}} selected",
       "selectAll": "Select all",
       "clearSelection": "Clear",
+      "clearResults": "Clear results",
       "loadMore": "Load more",
       "addSelected": "Add selected",
       "openButton": "Search by keyword",
@@ -72,9 +73,7 @@
         },
         "sortOptions": {
           "relevance": "Relevance",
-          "uploadDate": "Upload date",
-          "viewCount": "View count",
-          "rating": "Rating"
+          "viewCount": "الشعبية"
         },
         "featureOptions": {
           "live": "Live",
