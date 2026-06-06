@@ -237,6 +237,57 @@ export interface PluginHttpBridge {
   ): Promise<PluginHttpResponse<T>>;
 }
 
+export type YoutubeSearchUploadDateFilter = 'today' | 'thisWeek' | 'thisMonth' | 'thisYear';
+
+export type YoutubeSearchDurationFilter = 'short' | 'medium' | 'long';
+
+export type YoutubeSearchSortFilter = 'relevance' | 'viewCount';
+
+export type YoutubeSearchFeatureFilter =
+  | 'live'
+  | 'fourK'
+  | 'hd'
+  | 'subtitles'
+  | 'creativeCommons'
+  | 'threeSixty'
+  | 'vr180'
+  | 'threeD'
+  | 'hdr';
+
+export interface YoutubeSearchFilters {
+  uploadDate?: YoutubeSearchUploadDateFilter | null;
+  duration?: YoutubeSearchDurationFilter | null;
+  sort?: YoutubeSearchSortFilter | null;
+  features?: YoutubeSearchFeatureFilter[];
+}
+
+export interface YoutubeSearchVideo {
+  id: string;
+  url: string;
+  title: string;
+  thumbnail?: string | null;
+  duration?: string | null;
+  channel?: string | null;
+  viewCountText?: string | null;
+  publishedTimeText?: string | null;
+}
+
+export interface YoutubeSearchResponse {
+  videos: YoutubeSearchVideo[];
+  continuation?: string | null;
+}
+
+export interface YoutubeSearchOptions {
+  query: string;
+  limit?: number;
+  continuation?: string | null;
+  filters?: YoutubeSearchFilters;
+}
+
+export interface YouweeYouTubeBridge {
+  searchVideos(options: YoutubeSearchOptions): Promise<YoutubeSearchResponse>;
+}
+
 export interface CompatibilityCheckResult {
   compatible: boolean;
   currentVersion: string | null;
@@ -343,6 +394,7 @@ export interface YouweeBridge {
   };
   fs: PluginFileSystemBridge;
   http: PluginHttpBridge;
+  youtube: YouweeYouTubeBridge;
   ai: AIBridge;
 }
 

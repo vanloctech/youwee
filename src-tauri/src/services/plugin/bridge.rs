@@ -11,6 +11,10 @@ use tokio::process::Command;
 use tokio::sync::{oneshot, Mutex};
 
 use crate::utils::CommandExt;
+use crate::{
+    services::search_youtube_videos_internal,
+    types::{YoutubeSearchFilters, YoutubeSearchResponse},
+};
 
 use super::security_policy::{
     validate_command_path, validate_plugin_output_path, validate_plugin_write_scope,
@@ -31,6 +35,7 @@ pub(super) struct PluginBridgePolicy {
     pub(super) plugin_dir: PathBuf,
     pub(super) ffmpeg_path: Option<PathBuf>,
     pub(super) ytdlp_path: Option<PathBuf>,
+    pub(super) network_allowed: bool,
 }
 
 #[derive(Default)]
@@ -101,6 +106,15 @@ struct ToolRunRequest {
     args: Vec<String>,
     cwd: Option<String>,
     env: Option<BTreeMap<String, String>>,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct YoutubeSearchVideosRequest {
+    query: String,
+    limit: Option<u32>,
+    filters: Option<YoutubeSearchFilters>,
+    continuation: Option<String>,
 }
 
 #[derive(Debug, Serialize)]
@@ -360,6 +374,28 @@ async fn handle_bridge_request(
         "/tool/run" => {
             let request: ToolRunRequest = parse_body(&body)?;
             let response = run_tool(policy, state, request).await?;
+            Ok((
+                200,
+                Some(serde_json::to_value(response).unwrap_or_default()),
+                None,
+            ))
+        }
+        "/youtube/searchVideos" => {
+            if !policy.network_allowed {
+                return Ok((
+                    403,
+                    None,
+                    Some("YouTube search requires approved plugin network permission.".to_string()),
+                ));
+            }
+            let request: YoutubeSearchVideosRequest = parse_body(&body)?;
+            let response: YoutubeSearchResponse = search_youtube_videos_internal(
+                request.query,
+                request.limit,
+                request.filters,
+                request.continuation,
+            )
+            .await?;
             Ok((
                 200,
                 Some(serde_json::to_value(response).unwrap_or_default()),
@@ -737,7 +773,37 @@ mod tests {
             plugin_dir: root.to_path_buf(),
             ffmpeg_path: None,
             ytdlp_path: None,
+            network_allowed: false,
         }
+    }
+
+    #[tokio::test]
+    async fn youtube_search_requires_network_permission() {
+        let root = test_dir("youtube-search-network");
+        let policy = Arc::new(test_policy(&root));
+        let state = Arc::new(Mutex::new(PluginBridgeRunState::default()));
+        let body = serde_json::to_vec(&serde_json::json!({
+            "query": "test",
+            "limit": 1,
+        }))
+        .expect("serialize body");
+
+        let result = handle_bridge_request(
+            "token",
+            policy,
+            state,
+            b"POST /youtube/searchVideos HTTP/1.1\r\nauthorization: Bearer token",
+            body,
+        )
+        .await
+        .expect("youtube search rejection");
+
+        std::fs::remove_dir_all(&root).ok();
+        assert_eq!(result.0, 403);
+        assert_eq!(
+            result.2.as_deref(),
+            Some("YouTube search requires approved plugin network permission.")
+        );
     }
 
     #[tokio::test]

@@ -13,3 +13,4 @@ export { UniversalSettingsPanel } from './UniversalSettingsPanel';
 export { UniversalUrlInput } from './UniversalUrlInput';
 export { UrlInput } from './UrlInput';
 export { VideoPreview } from './VideoPreview';
+export { YoutubeKeywordSearch } from './YoutubeKeywordSearch';

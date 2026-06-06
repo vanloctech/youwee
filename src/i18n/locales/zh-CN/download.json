@@ -29,7 +29,65 @@
     "detectedMultiple": "已识别 {{count}} 个链接",
     "detectedSingle": "已准备好单个链接",
     "readyToAdd": "确认后加入队列",
-    "clearInput": "清空"
+    "clearInput": "清空",
+    "keyword": {
+      "tab": "关键词",
+      "hint": "按关键词搜索 YouTube 视频",
+      "placeholder": "搜索 YouTube 视频...",
+      "limitLabel": "结果数量",
+      "search": "搜索",
+      "searching": "正在搜索 YouTube...",
+      "emptyTitle": "按关键词搜索",
+      "emptyDescription": "查找 YouTube 视频，选择需要的结果，然后加入队列。",
+      "errorTitle": "搜索失败",
+      "selectedCount": "已选择 {{selected}}/{{total}}",
+      "selectAll": "全选",
+      "clearSelection": "清除",
+      "clearResults": "清除结果",
+      "loadMore": "加载更多",
+      "addSelected": "添加所选",
+      "openButton": "按关键词搜索",
+      "back": "返回下载",
+      "pageTitle": "按关键词搜索",
+      "pageDescription": "查找 YouTube 视频，并将所选结果加入队列。",
+      "added": "已添加",
+      "filters": {
+        "title": "筛选",
+        "description": "搜索前缩小结果范围。",
+        "clear": "重置",
+        "any": "不限",
+        "uploadDate": "上传日期",
+        "duration": "时长",
+        "sort": "排序",
+        "features": "功能",
+        "uploadDateOptions": {
+          "today": "今天",
+          "thisWeek": "本周",
+          "thisMonth": "本月",
+          "thisYear": "今年"
+        },
+        "durationOptions": {
+          "short": "3 分钟以内",
+          "medium": "3 到 20 分钟",
+          "long": "20 分钟以上"
+        },
+        "sortOptions": {
+          "relevance": "相关性",
+          "viewCount": "热门程度"
+        },
+        "featureOptions": {
+          "live": "直播",
+          "fourK": "4K",
+          "hd": "HD",
+          "subtitles": "字幕",
+          "creativeCommons": "Creative Commons",
+          "threeSixty": "360°",
+          "vr180": "VR180",
+          "threeD": "3D",
+          "hdr": "HDR"
+        }
+      }
+    }
   },
   "page": {
     "quickSettings": "快捷设置",

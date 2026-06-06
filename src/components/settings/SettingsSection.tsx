@@ -25,7 +25,7 @@ export function SettingsSection({
       <div className="flex items-center gap-3">
         <div
           className={cn(
-            'p-2 rounded-xl shadow-lg',
+            'flex h-9 w-9 items-center justify-center rounded-xl shadow-lg',
             iconClassName || 'bg-gradient-to-br from-gray-500 to-gray-600 shadow-gray-500/20',
           )}
         >

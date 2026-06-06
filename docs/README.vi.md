@@ -2,9 +2,9 @@
 
 <div align="center">
 
-  ![English](https://img.shields.io/badge/lang-English-blue)
-  ![Tiếng Việt](https://img.shields.io/badge/lang-Tiếng_Việt-red)
-  ![简体中文](https://img.shields.io/badge/lang-简体中文-green)
+  [![English](https://img.shields.io/badge/lang-English-blue)](../README.md)
+  [![Tiếng Việt](https://img.shields.io/badge/lang-Tiếng_Việt-red)](README.vi.md)
+  [![简体中文](https://img.shields.io/badge/lang-简体中文-green)](README.zh-CN.md)
   ![Français](https://img.shields.io/badge/lang-Français-0055A4)
   ![Русский](https://img.shields.io/badge/lang-Русский-1F5FBF)
   ![العربية](https://img.shields.io/badge/lang-%D8%A7%D9%84%D8%B9%D8%B1%D8%A8%D9%8A%D8%A9-0A8F6A)
@@ -18,6 +18,8 @@
   [![Downloads](https://img.shields.io/github/downloads/vanloctech/youwee/total?label=Downloads)](https://github.com/vanloctech/youwee/releases)
   [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
   [![Reddit](https://img.shields.io/badge/Reddit-r%2Fyouwee-FF4500?logo=reddit&logoColor=white)](https://www.reddit.com/r/youwee)
+  [![Website](https://img.shields.io/badge/Website-youwee.app-0EA5E9)](https://youwee.app)
+  [![Discord](https://img.shields.io/badge/Discord-Community-5865F2?logo=discord&logoColor=white)](https://discord.gg/yCrs9hcw)
   [![Tauri](https://img.shields.io/badge/Tauri-2.0-FFC131?logo=tauri&logoColor=white)](https://tauri.app/)
   [![React](https://img.shields.io/badge/React-19-61DAFB?logo=react&logoColor=white)](https://react.dev/)
 </div>
@@ -64,10 +66,11 @@
 ![Youwee - Setting - General](screenshots/youwee-setting-general.png)
 ![Youwee - Setting - Dependencies](screenshots/youwee-setting-dependencies.png)
 ![Youwee - Setting - Download](screenshots/youwee-setting-download.png)
-![Youwee - Setting - Plugin](screenshots/youwee-setting-plugins.png)
-![Youwee - Setting - Extension](screenshots/youwee-setting-extension.png)
 ![Youwee - Setting - AI Features](screenshots/youwee-setting-ai-features.png)
 ![Youwee - Setting - Network & Auth](screenshots/youwee-setting-network-auth.png)
+![Youwee - Setting - Plugin](screenshots/youwee-setting-plugins.png)
+![Youwee - Setting - Remote Download](screenshots/youwee-setting-remote-download.png)
+![Youwee - Setting - Extension](screenshots/youwee-setting-extension.png)
 ![Youwee - Setting - About](screenshots/youwee-setting-about.png)
 ![Youwee - Browser Extension](screenshots/youwee-extension-chrome-firefox.png)
 
@@ -110,10 +113,11 @@
 
 ### Plugin
 
-- Cài plugin `.ywp` đã ký để mở rộng workflow sau khi tải xong với các tác vụ như gửi thông báo, upload file hoặc tích hợp dịch vụ bên thứ ba
-- Tạo plugin workspace ngay trong Youwee, attach để debug trực tiếp, rồi build và ký gói plugin cuối cùng bằng `youwee-sdk`
-- Plugin có thể cung cấp hướng dẫn đa ngôn ngữ, field cấu hình có kiểu dữ liệu rõ ràng, quyền truy cập cần duyệt và các bước workflow theo trigger
-- Hướng dẫn SDK: [sdk-js/README.md](../sdk-js/README.md)
+Mở rộng Youwee bằng plugin `.ywp` đã ký cho workflow sau khi tải xong, như gửi thông báo, upload file hoặc tích hợp dịch vụ bên thứ ba.
+
+- Trang plugin: [Youwee Plugins](http://localhost:5175/plugins)
+- Plugin khuyến nghị và hướng dẫn cài đặt: [PLUGINS.vi.md](PLUGINS.vi.md)
+- SDK: [sdk-js/README.md](../sdk-js/README.md) · [youwee-sdk](https://www.npmjs.com/package/youwee-sdk)
 
 ### Xây dựng từ mã nguồn
 
@@ -140,6 +144,14 @@ bun run tauri dev
 bun run tauri build
 ```
 
+## Nhà tài trợ
+
+<div align="center">
+  <a href="https://www.atlascloud.ai/">
+    <img src="sponsors/atlascloud.svg" alt="Atlas Cloud" width="220">
+  </a>
+</div>
+
 ## Đóng góp
 
 Chúng tôi hoan nghênh mọi đóng góp. Xem [Hướng dẫn Đóng góp](CONTRIBUTING.vi.md).
@@ -150,6 +162,9 @@ Dự án này được cấp phép theo MIT License - xem file [LICENSE](../LICE
 
 ## Liên hệ
 
+- **Website**: [youwee.app](https://youwee.app)
+- **Tài liệu**: [Docs](http://localhost:5175/docs)
+- **Discord**: [Youwee Community](https://discord.gg/yCrs9hcw)
 - **GitHub**: [@vanloctech](https://github.com/vanloctech)
 - **Issues**: [GitHub Issues](https://github.com/vanloctech/youwee/issues)
 

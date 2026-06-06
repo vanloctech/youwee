@@ -25,7 +25,10 @@ import type {
   PluginPayload,
   PluginResult,
   ToolRunner,
+  YoutubeSearchOptions,
+  YoutubeSearchResponse,
   YouweeBridge,
+  YouweeYouTubeBridge,
 } from './types';
 
 const STRIP_SUBPROCESS_ENV_KEYS = new Set([
@@ -379,6 +382,27 @@ function createHttpBridge(): PluginHttpBridge {
   };
 }
 
+function createYouTubeBridge(): YouweeYouTubeBridge {
+  return {
+    async searchVideos(options: YoutubeSearchOptions) {
+      if (!options || typeof options !== 'object') {
+        throw new Error('ctx.youwee.youtube.searchVideos(...) expects an options object.');
+      }
+      const query = String(options.query ?? '').trim();
+      if (!query && !options.continuation) {
+        throw new Error('ctx.youwee.youtube.searchVideos(...) requires a query.');
+      }
+
+      return await bridgeRequest<YoutubeSearchResponse>('/youtube/searchVideos', {
+        query,
+        limit: options.limit,
+        continuation: options.continuation ?? null,
+        filters: options.filters,
+      });
+    },
+  };
+}
+
 function createSdkBridge(currentAppVersion: string | null): {
   version: string;
   checkAppVersion(range: string): CompatibilityCheckResult;
@@ -489,6 +513,7 @@ function createYouweeBridge(logger: PluginLogger): YouweeBridge {
     },
     fs: createFileSystemBridge(),
     http: createHttpBridge(),
+    youtube: createYouTubeBridge(),
     ai: createAIBridge(logger),
   };
 }

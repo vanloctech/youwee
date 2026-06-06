@@ -4,7 +4,9 @@ mod ffmpeg;
 mod gallerydl;
 mod plugin;
 pub mod polling;
+pub mod telegram;
 mod whisper;
+mod youtube_search;
 mod ytdlp;
 
 pub use ai::*;
@@ -13,4 +15,5 @@ pub use ffmpeg::*;
 pub use gallerydl::*;
 pub use plugin::*;
 pub use whisper::*;
+pub use youtube_search::*;
 pub use ytdlp::*;

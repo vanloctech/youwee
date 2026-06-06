@@ -29,7 +29,65 @@
     "detectedMultiple": "Đã nhận diện {{count}} URL",
     "detectedSingle": "Sẵn sàng thêm 1 URL",
     "readyToAdd": "Kiểm tra và thêm vào hàng đợi",
-    "clearInput": "Xóa"
+    "clearInput": "Xóa",
+    "keyword": {
+      "tab": "Từ khóa",
+      "hint": "Tìm video YouTube theo từ khóa",
+      "placeholder": "Tìm video YouTube...",
+      "limitLabel": "Số kết quả",
+      "search": "Tìm",
+      "searching": "Đang tìm trên YouTube...",
+      "emptyTitle": "Tìm theo từ khóa",
+      "emptyDescription": "Tìm video YouTube, chọn kết quả bạn muốn, rồi thêm vào hàng đợi.",
+      "errorTitle": "Tìm kiếm thất bại",
+      "selectedCount": "Đã chọn {{selected}}/{{total}}",
+      "selectAll": "Chọn tất cả",
+      "clearSelection": "Bỏ chọn",
+      "clearResults": "Xóa kết quả",
+      "loadMore": "Tải thêm",
+      "addSelected": "Thêm đã chọn",
+      "openButton": "Tìm theo từ khóa",
+      "back": "Quay lại tải video",
+      "pageTitle": "Tìm theo từ khóa",
+      "pageDescription": "Tìm video YouTube và thêm các kết quả đã chọn vào hàng đợi.",
+      "added": "Đã thêm",
+      "filters": {
+        "title": "Bộ lọc",
+        "description": "Thu hẹp kết quả trước khi tìm.",
+        "clear": "Đặt lại",
+        "any": "Bất kỳ",
+        "uploadDate": "Ngày tải lên",
+        "duration": "Thời lượng",
+        "sort": "Ưu tiên",
+        "features": "Video nổi bật",
+        "uploadDateOptions": {
+          "today": "Hôm nay",
+          "thisWeek": "Tuần này",
+          "thisMonth": "Tháng này",
+          "thisYear": "Năm nay"
+        },
+        "durationOptions": {
+          "short": "Dưới 3 phút",
+          "medium": "Từ 3 đến 20 phút",
+          "long": "Trên 20 phút"
+        },
+        "sortOptions": {
+          "relevance": "Mức độ liên quan",
+          "viewCount": "Mức độ phổ biến"
+        },
+        "featureOptions": {
+          "live": "Trực tiếp",
+          "fourK": "4K",
+          "hd": "HD",
+          "subtitles": "Phụ đề",
+          "creativeCommons": "Creative Commons",
+          "threeSixty": "360°",
+          "vr180": "VR180",
+          "threeD": "3D",
+          "hdr": "HDR"
+        }
+      }
+    }
   },
   "page": {
     "quickSettings": "Cài đặt nhanh",

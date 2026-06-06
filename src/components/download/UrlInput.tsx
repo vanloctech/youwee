@@ -7,6 +7,7 @@ import {
   List,
   Loader2,
   Plus,
+  Search,
 } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -24,10 +25,13 @@ import { Textarea } from '@/components/ui/textarea';
 import { cn } from '@/lib/utils';
 import { VideoPreview } from './VideoPreview';
 
+type UrlInputMode = 'single' | 'multiple';
+
 interface UrlInputProps {
   disabled?: boolean;
   isExpandingPlaylist?: boolean;
   onAddUrls: (text: string) => Promise<number>;
+  onOpenKeywordSearch: () => void;
   onImportFile: () => Promise<number>;
   onImportClipboard: () => Promise<number>;
   onGoToSettings?: () => void;
@@ -71,6 +75,7 @@ export function UrlInput({
   disabled,
   isExpandingPlaylist,
   onAddUrls,
+  onOpenKeywordSearch,
   onImportFile,
   onImportClipboard,
   onGoToSettings,
@@ -82,7 +87,7 @@ export function UrlInput({
   const [showPreview, setShowPreview] = useState(false);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [isDragOver, setIsDragOver] = useState(false);
-  const [isExpanded, setIsExpanded] = useState(false);
+  const [mode, setModeState] = useState<UrlInputMode>('single');
   const [showGuideDialog, setShowGuideDialog] = useState(false);
   const debounceRef = useRef<number | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -90,13 +95,14 @@ export function UrlInput({
 
   const urlCount = countUrls(value);
   const hasMultipleLines = value.includes('\n');
+  const isExpanded = mode === 'multiple';
 
   // Auto-expand when multiple lines detected
   useEffect(() => {
-    if (hasMultipleLines && !isExpanded) {
-      setIsExpanded(true);
+    if (hasMultipleLines && mode === 'single') {
+      setModeState('multiple');
     }
-  }, [hasMultipleLines, isExpanded]);
+  }, [hasMultipleLines, mode]);
 
   // Auto-show preview when single URL is entered
   useEffect(() => {
@@ -140,7 +146,7 @@ export function UrlInput({
         setValue('');
         setShowPreview(false);
         setPreviewUrl(null);
-        setIsExpanded(false);
+        setModeState('single');
       }
     } finally {
       setIsAdding(false);
@@ -220,11 +226,11 @@ export function UrlInput({
     setValue(newValue);
   };
 
-  const setMode = (expanded: boolean) => {
-    setIsExpanded(expanded);
+  const setMode = (nextMode: UrlInputMode) => {
+    setModeState(nextMode);
     // Focus appropriate input after toggle
     setTimeout(() => {
-      if (expanded) {
+      if (nextMode === 'multiple') {
         textareaRef.current?.focus();
       } else {
         inputRef.current?.focus();
@@ -244,37 +250,56 @@ export function UrlInput({
       aria-label="URL drop zone"
     >
       {/* Mode Toggle - Segmented Control */}
-      <div className="flex items-center justify-between gap-2">
-        <div className="inline-flex items-center rounded-lg bg-muted/50 p-1">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div className="flex max-w-full flex-wrap items-center gap-1.5">
+          <div className="inline-flex max-w-full items-center overflow-x-auto rounded-lg bg-muted/50 p-1">
+            <button
+              type="button"
+              onClick={() => setMode('single')}
+              disabled={disabled}
+              className={cn(
+                'flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all',
+                mode === 'single'
+                  ? 'bg-background shadow-sm text-foreground'
+                  : 'text-muted-foreground hover:text-foreground',
+              )}
+              title={t('urlInput.singleHint')}
+            >
+              <Link2 className="w-3.5 h-3.5" />
+              <span>{t('urlInput.single')}</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setMode('multiple')}
+              disabled={disabled}
+              className={cn(
+                'flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all',
+                mode === 'multiple'
+                  ? 'bg-background shadow-sm text-foreground'
+                  : 'text-muted-foreground hover:text-foreground',
+              )}
+              title={t('urlInput.multipleHint')}
+            >
+              <List className="w-3.5 h-3.5" />
+              <span>{t('urlInput.multiple')}</span>
+            </button>
+          </div>
           <button
             type="button"
-            onClick={() => setMode(false)}
+            onClick={onOpenKeywordSearch}
             disabled={disabled}
             className={cn(
-              'flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all',
-              !isExpanded
-                ? 'bg-background shadow-sm text-foreground'
-                : 'text-muted-foreground hover:text-foreground',
+              'group inline-flex h-9 items-center gap-2 rounded-xl border border-primary/25 bg-primary/10 px-3 text-xs font-semibold text-primary shadow-sm shadow-primary/10 transition-all',
+              'hover:border-primary/45 hover:bg-primary hover:text-primary-foreground hover:shadow-md hover:shadow-primary/20',
+              'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2 focus-visible:ring-offset-background',
+              'disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-primary/10 disabled:hover:text-primary',
             )}
-            title={t('urlInput.singleHint')}
+            title={t('urlInput.keyword.hint')}
           >
-            <Link2 className="w-3.5 h-3.5" />
-            <span>{t('urlInput.single')}</span>
-          </button>
-          <button
-            type="button"
-            onClick={() => setMode(true)}
-            disabled={disabled}
-            className={cn(
-              'flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all',
-              isExpanded
-                ? 'bg-background shadow-sm text-foreground'
-                : 'text-muted-foreground hover:text-foreground',
-            )}
-            title={t('urlInput.multipleHint')}
-          >
-            <List className="w-3.5 h-3.5" />
-            <span>{t('urlInput.multiple')}</span>
+            <span className="flex h-5 w-5 items-center justify-center rounded-full bg-primary text-primary-foreground transition-colors group-hover:bg-primary-foreground group-hover:text-primary">
+              <Search className="h-3.5 w-3.5" />
+            </span>
+            <span>{t('urlInput.keyword.openButton')}</span>
           </button>
         </div>
 
@@ -410,7 +435,7 @@ export function UrlInput({
             setValue('');
             setShowPreview(false);
             setPreviewUrl(null);
-            setIsExpanded(false);
+            setModeState('single');
           }}
         />
       )}

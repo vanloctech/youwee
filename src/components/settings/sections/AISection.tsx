@@ -49,6 +49,18 @@ interface AISectionProps {
   highlightId?: string | null;
 }
 
+const AI_TIMEOUT_OPTIONS = [
+  { value: 60, labelKey: 'ai.60seconds' },
+  { value: 120, labelKey: 'ai.2minutes' },
+  { value: 180, labelKey: 'ai.3minutes' },
+  { value: 300, labelKey: 'ai.5minutes' },
+  { value: 600, labelKey: 'ai.10minutes' },
+  { value: 900, labelKey: 'ai.15minutes' },
+  { value: 1800, labelKey: 'ai.30minutes' },
+  { value: 2700, labelKey: 'ai.45minutes' },
+  { value: 3600, labelKey: 'ai.60minutes' },
+];
+
 export function AISection({ highlightId }: AISectionProps) {
   const { t } = useTranslation('settings');
   const ai = useAI();
@@ -658,18 +670,15 @@ export function AISection({ highlightId }: AISectionProps) {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="60" className="text-xs">
-                      {t('ai.60seconds')}
-                    </SelectItem>
-                    <SelectItem value="120" className="text-xs">
-                      {t('ai.2minutes')}
-                    </SelectItem>
-                    <SelectItem value="180" className="text-xs">
-                      {t('ai.3minutes')}
-                    </SelectItem>
-                    <SelectItem value="300" className="text-xs">
-                      {t('ai.5minutes')}
-                    </SelectItem>
+                    {AI_TIMEOUT_OPTIONS.map((option) => (
+                      <SelectItem
+                        key={option.value}
+                        value={String(option.value)}
+                        className="text-xs"
+                      >
+                        {t(option.labelKey)}
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
                 <p className="text-[10px] text-muted-foreground leading-normal">

@@ -2,11 +2,13 @@ import {
   ArrowUpDown,
   ChevronDown,
   ChevronUp,
+  FileText,
   Filter,
   Folder,
   Hash,
   RefreshCw,
   Search,
+  Sparkles,
   Trash2,
 } from 'lucide-react';
 import { useCallback, useState } from 'react';
@@ -21,7 +23,12 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { useHistory } from '@/contexts/HistoryContext';
-import type { HistoryDatePreset, HistoryFilter, HistorySort } from '@/lib/types';
+import type {
+  HistoryDatePreset,
+  HistoryFilter,
+  HistorySearchScope,
+  HistorySort,
+} from '@/lib/types';
 import { cn } from '@/lib/utils';
 
 export function HistoryToolbar() {
@@ -56,6 +63,7 @@ export function HistoryToolbar() {
     { value: 'instagram', label: t('library.toolbar.filterInstagram') },
     { value: 'twitter', label: t('library.toolbar.filterTwitter') },
     { value: 'bilibili', label: t('library.toolbar.filterBilibili') },
+    { value: 'data_export', label: t('library.toolbar.filterDataExport') },
     { value: 'other', label: t('library.toolbar.filterOther') },
   ];
 
@@ -80,11 +88,35 @@ export function HistoryToolbar() {
     { value: 'custom', label: t('library.toolbar.dateCustom') },
   ];
 
-  const formatOptions = ['mp4', 'mkv', 'webm', 'mp3', 'm4a', 'opus'];
+  const searchScopeOptions: { value: HistorySearchScope; label: string; icon: typeof Search }[] = [
+    { value: 'all', label: t('library.toolbar.searchScopeAll'), icon: Search },
+    { value: 'metadata', label: t('library.toolbar.searchScopeMetadata'), icon: FileText },
+    { value: 'summary', label: t('library.toolbar.searchScopeSummary'), icon: Sparkles },
+  ];
+
+  const formatOptions = [
+    'mp4',
+    'mkv',
+    'webm',
+    'mp3',
+    'm4a',
+    'opus',
+    'csv',
+    'xls',
+    'txt',
+    'html',
+    'json',
+    'md',
+    'xml',
+    'yaml',
+    'sqlite',
+    'doc',
+  ];
   const qualityOptions = ['best', 'audio', '8k', '4k', '2k', '1080', '720', '480', '360'];
 
   const activeAdvancedCount =
     (advancedFilters.mediaType !== 'all' ? 1 : 0) +
+    (advancedFilters.searchScope !== 'all' ? 1 : 0) +
     (advancedFilters.datePreset !== 'all' ? 1 : 0) +
     (advancedFilters.formats.length > 0 ? 1 : 0) +
     (advancedFilters.qualities.length > 0 ? 1 : 0) +
@@ -148,20 +180,44 @@ export function HistoryToolbar() {
   return (
     <div className="space-y-3">
       {/* Search - styled like URL input */}
-      <div className="relative flex-1">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-        <Input
-          type="text"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          placeholder={t('library.toolbar.searchPlaceholder')}
-          className={cn(
-            'pl-10 pr-4 h-11 text-sm',
-            'bg-background/50 border-border/50',
-            'focus:bg-background transition-colors',
-            'placeholder:text-muted-foreground/50',
-          )}
-        />
+      <div className="grid gap-2 lg:grid-cols-[1fr_auto]">
+        <div className="relative flex-1">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+          <Input
+            type="text"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder={t('library.toolbar.searchPlaceholder')}
+            className={cn(
+              'pl-10 pr-4 h-11 text-sm',
+              'bg-background/50 border-border/50',
+              'focus:bg-background transition-colors',
+              'placeholder:text-muted-foreground/50',
+            )}
+          />
+        </div>
+
+        <div className="inline-flex h-11 w-full items-center overflow-x-auto rounded-lg bg-muted/50 p-1 lg:w-auto">
+          {searchScopeOptions.map((option) => {
+            const Icon = option.icon;
+            return (
+              <button
+                type="button"
+                key={option.value}
+                onClick={() => setAdvancedFilters({ searchScope: option.value })}
+                className={cn(
+                  'flex h-9 shrink-0 items-center gap-1.5 rounded-md px-2.5 text-xs font-medium transition-all',
+                  advancedFilters.searchScope === option.value
+                    ? 'bg-background shadow-sm text-foreground'
+                    : 'text-muted-foreground hover:text-foreground',
+                )}
+              >
+                <Icon className="h-3.5 w-3.5" />
+                <span>{option.label}</span>
+              </button>
+            );
+          })}
+        </div>
       </div>
 
       {/* Filter tabs and actions */}

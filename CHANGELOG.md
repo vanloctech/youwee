@@ -7,7 +7,33 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [0.15.0] - 2026-05-27
+### Added
+- **AI summary search** - Added SQLite FTS5-powered Library search across titles, URLs, file paths, and saved AI summaries, with search scope controls for all content, details only, or AI summaries only
+- **YouTube keyword search** - Added a dedicated YouTube keyword search view with filter controls for upload date, duration, sort order, and video features, letting selected results be added directly to the download queue
+- **Plugin SDK YouTube search bridge** - Exposed app-managed YouTube keyword search to JavaScript plugins through `ctx.youwee.youtube.searchVideos(...)` with typed filters and continuation support
+
+### Changed
+- **AI generation timeout** - Expanded the AI Generation Timeout options up to 60 minutes and now applies the selected timeout to AI provider HTTP requests for long-video summaries
+
+### Fixed
+
+## [0.16.0] - 2026-06-02
+
+### Added
+- **Persistent download queue** - Added an optional Download setting to save YouTube, Universal, and Gallery queue items in the app database so queued items can be restored after closing and reopening Youwee
+- **Data Export** - Added a new Data Export workspace for exporting YouTube playlist and channel data, choosing exactly which fields to include, saving files in formats such as CSV, Excel, JSON, Markdown, HTML, SQLite, and Word, and keeping exported files in Library for later access
+- **Telegram Remote Download** - Added a Remote Download settings section with Telegram long-polling control, allowed chat ID tags, bot command guide, `/add`, `/download`, `/status`, `/queue`, `/stop`, and `/help` support, plus optional quality shortcuts such as `720`, `audio`, and `mp3`
+
+### Changed
+- **Download queue additions while running** - Allowed adding new URLs to YouTube, Universal, and Gallery queues while downloads are already running, with queue workers waiting briefly for newly added items before ending the active session
+- **YouTube format selection** - Changed the default YouTube video codec to Auto so new downloads no longer force H.264-only format selection and better match Universal downloads for videos without matching AVC streams
+
+### Fixed
+- **Linux deb install conflict** - Renamed the bundled yt-dlp sidecar to a Youwee-specific binary name so `.deb` installs no longer conflict with distro-managed `yt-dlp` packages
+- **System dependency paths** - Improved Windows PATH resolution for yt-dlp, FFmpeg, Deno, gallery-dl, and helper tools
+- **Firefox cookie profile selection** - Prioritized the active Firefox profile from `profiles.ini` so browser-cookie downloads target the profile where cookies are most likely stored
+
+## [0.15.1] - 2026-05-27
 
 ### Changed
 - **UI and UX refinements** - Improved the app's overall UI and UX across AI Features, metadata, plugin settings, guide dialogs, and shared notification flows for a more consistent Youwee experience

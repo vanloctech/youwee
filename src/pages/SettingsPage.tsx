@@ -25,6 +25,7 @@ import {
   GeneralSection,
   NetworkSection,
   PluginsSection,
+  RemoteDownloadSection,
   SettingsRow,
   SettingsSearch,
   SettingsSection,
@@ -126,6 +127,10 @@ export function SettingsPage({
                 )}
 
                 {activeSection === 'download' && <DownloadSection highlightId={highlightId} />}
+
+                {activeSection === 'remote-download' && (
+                  <RemoteDownloadSection highlightId={highlightId} />
+                )}
 
                 {activeSection === 'plugins' && <PluginsSection highlightId={highlightId} />}
 

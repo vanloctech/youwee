@@ -7,7 +7,33 @@ và dự án tuân theo [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
-## [0.15.0] - 2026-05-27
+### Thêm mới
+- **Tìm kiếm tóm tắt AI** - Thêm tìm kiếm Thư viện dùng SQLite FTS5 trên tiêu đề, URL, đường dẫn file và các bản tóm tắt AI đã lưu, kèm lựa chọn phạm vi tìm trong tất cả nội dung, chỉ chi tiết hoặc chỉ tóm tắt AI
+- **Tìm YouTube theo từ khóa** - Thêm màn hình tìm video YouTube theo từ khóa riêng với bộ lọc ngày tải lên, thời lượng, thứ tự ưu tiên và tính năng video, cho phép chọn kết quả rồi thêm trực tiếp vào hàng đợi tải
+- **Cầu nối tìm kiếm YouTube cho Plugin SDK** - Mở app-managed YouTube keyword search cho plugin JavaScript qua `ctx.youwee.youtube.searchVideos(...)`, kèm bộ lọc có kiểu dữ liệu rõ ràng và hỗ trợ continuation
+
+### Thay đổi
+- **Thời gian chờ AI** - Mở rộng lựa chọn Thời gian chờ khi tạo AI lên tối đa 60 phút và áp dụng timeout đã chọn vào HTTP request của các nhà cung cấp AI để hỗ trợ tóm tắt video dài
+
+### Sửa lỗi
+
+## [0.16.0] - 2026-06-02
+
+### Thêm mới
+- **Lưu hàng đợi tải xuống** - Thêm tùy chọn trong cài đặt Tải xuống để lưu các item trong queue YouTube, Universal và Gallery vào database của ứng dụng, giúp khôi phục lại hàng đợi sau khi đóng và mở lại Youwee
+- **Xuất dữ liệu** - Thêm không gian Xuất dữ liệu mới để xuất danh sách từ playlist và kênh YouTube, chọn chính xác các cột cần lấy, lưu file ở nhiều định dạng như CSV, Excel, JSON, Markdown, HTML, SQLite và Word, đồng thời lưu file đã xuất vào Thư viện để mở lại sau
+- **Tải từ xa qua Telegram** - Thêm mục cài đặt Remote Download với điều khiển Telegram bằng long polling, nhập chat ID được phép dạng tag, popup hướng dẫn lệnh, hỗ trợ `/add`, `/download`, `/status`, `/queue`, `/stop`, `/help`, cùng cú pháp chất lượng ngắn như `720`, `audio`, và `mp3`
+
+### Thay đổi
+- **Thêm vào queue khi đang tải** - Cho phép thêm URL mới vào queue YouTube, Universal và Gallery trong lúc đang tải, đồng thời worker chờ ngắn để nhận item vừa thêm trước khi kết thúc phiên tải hiện tại
+- **Chọn định dạng YouTube** - Đổi codec video mặc định của YouTube sang Auto để lượt tải mới không còn ép chọn riêng H.264 và đồng nhất hơn với Universal khi video không có stream AVC phù hợp
+
+### Sửa lỗi
+- **Xung đột cài đặt deb trên Linux** - Đổi tên yt-dlp bundled sang tên binary riêng của Youwee để gói `.deb` không còn đụng với package `yt-dlp` do distro quản lý
+- **Đường dẫn dependency hệ thống** - Cải thiện resolve PATH trên Windows cho yt-dlp, FFmpeg, Deno, gallery-dl và các công cụ phụ trợ
+- **Chọn profile cookie Firefox** - Ưu tiên profile Firefox đang active từ `profiles.ini` để tải bằng cookie trình duyệt dùng đúng profile có khả năng đang lưu cookie
+
+## [0.15.1] - 2026-05-27
 
 ### Thay đổi
 - **Cải tiến UI và UX** - Hoàn thiện giao diện và trải nghiệm trên AI Features, metadata, phần cài đặt plugin, dialog guide, và hệ thống thông báo dùng chung để trải nghiệm Youwee đồng nhất hơn

@@ -554,10 +554,96 @@ If a plugin returns `mutations.activeFilepath` or `mutations.extraFiles`, those 
 
 ### Network permission model
 
-`network: true` allows the plugin runtime to make outbound network requests, for example through `ctx.youwee.http` or `fetch`.
+`network: true` allows the plugin runtime to make outbound network requests, for example through `ctx.youwee.http`, `fetch`, or app-mediated network features such as `ctx.youwee.youtube.searchVideos(...)`.
 
 If `network` is omitted or `false`, Youwee only grants the minimal local bridge access needed by SDK context APIs.
 Only request `network: true` when the plugin actually needs external HTTP access, such as calling Telegram, Discord, a webhook, or a public API.
+
+### YouTube keyword search
+
+Plugins can ask Youwee to perform the same app-managed YouTube keyword search used by the YouTube download page:
+
+```ts
+const results = await ctx.youwee.youtube.searchVideos({
+  query: "free hd video no copyright",
+  limit: 20,
+  filters: {
+    uploadDate: "thisMonth",
+    duration: "medium",
+    sort: "viewCount",
+    features: ["hd", "creativeCommons"],
+  },
+});
+
+for (const video of results.videos) {
+  ctx.log.info("Found YouTube video", {
+    title: video.title,
+    url: video.url,
+    channel: video.channel,
+  });
+}
+```
+
+Requirements:
+
+- use a `youwee-sdk` release that includes `ctx.youwee.youtube.searchVideos(...)` and set the plugin compatibility range accordingly
+- `plugin.json` must request `"network": true`
+- the user must approve the plugin's network permission in Youwee
+- the plugin does **not** provide cookies, authorization headers, visitor IDs, or YouTube session identifiers
+- `limit` is clamped by Youwee to the supported range
+
+Manifest example:
+
+```json
+{
+  "permissions": {
+    "network": true
+  }
+}
+```
+
+Supported filters:
+
+- `uploadDate`: `"today"`, `"thisWeek"`, `"thisMonth"`, `"thisYear"`
+- `duration`: `"short"`, `"medium"`, `"long"`
+- `sort`: `"relevance"`, `"viewCount"` (YouTube labels this as popularity)
+- `features`: `"live"`, `"fourK"`, `"hd"`, `"subtitles"`, `"creativeCommons"`, `"threeSixty"`, `"vr180"`, `"threeD"`, `"hdr"`
+
+Use `continuation` to load more results with the same query/filter context:
+
+```ts
+const firstPage = await ctx.youwee.youtube.searchVideos({
+  query: "lofi study music",
+  limit: 20,
+});
+
+if (firstPage.continuation) {
+  const nextPage = await ctx.youwee.youtube.searchVideos({
+    query: "lofi study music",
+    continuation: firstPage.continuation,
+    limit: 20,
+  });
+
+  ctx.log.info("Loaded more videos", { count: nextPage.videos.length });
+}
+```
+
+The returned videos use this shape:
+
+```ts
+interface YoutubeSearchVideo {
+  id: string;
+  url: string;
+  title: string;
+  thumbnail?: string | null;
+  duration?: string | null;
+  channel?: string | null;
+  viewCountText?: string | null;
+  publishedTimeText?: string | null;
+}
+```
+
+This API returns search results only. It does not enqueue downloads by itself. If a plugin wants to persist the selected URLs somewhere, write them to an approved output path or include them in the plugin result metadata.
 
 ### Plugin configuration fields
 
@@ -698,6 +784,14 @@ ctx.file.name
 ctx.media.url
 ctx.media.title
 ctx.download.kind
+```
+
+Youwee app bridge examples:
+
+```ts
+await ctx.youwee.fs.readText(ctx.file.path);
+await ctx.youwee.tools.ytdlp.run(["--version"]);
+await ctx.youwee.youtube.searchVideos({ query: "ambient video", limit: 10 });
 ```
 
 Plugin configuration:

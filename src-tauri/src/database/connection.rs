@@ -10,6 +10,63 @@ static DB_TEST_LOCK: std::sync::OnceLock<Mutex<()>> = std::sync::OnceLock::new()
 
 pub const MAX_LOG_ENTRIES: i64 = 500;
 
+fn rebuild_history_search_index(conn: &Connection) -> Result<(), String> {
+    conn.execute("DELETE FROM history_search_fts", [])
+        .map_err(|e| format!("Failed to clear history search index: {}", e))?;
+    conn.execute(
+        "INSERT INTO history_search_fts (rowid, history_id, title, filepath, url, summary)
+         SELECT rowid, id, title, filepath, url, COALESCE(summary, '') FROM history",
+        [],
+    )
+    .map_err(|e| format!("Failed to rebuild history search index: {}", e))?;
+    Ok(())
+}
+
+fn init_history_search_index(conn: &Connection) -> Result<(), String> {
+    conn.execute(
+        "CREATE VIRTUAL TABLE IF NOT EXISTS history_search_fts USING fts5(
+            history_id UNINDEXED,
+            title,
+            filepath,
+            url,
+            summary,
+            tokenize = 'unicode61 remove_diacritics 2'
+        )",
+        [],
+    )
+    .map_err(|e| format!("Failed to create history search index: {}", e))?;
+
+    conn.execute_batch(
+        "CREATE TRIGGER IF NOT EXISTS history_search_insert AFTER INSERT ON history BEGIN
+            INSERT INTO history_search_fts (rowid, history_id, title, filepath, url, summary)
+            VALUES (new.rowid, new.id, new.title, new.filepath, new.url, COALESCE(new.summary, ''));
+        END;
+        CREATE TRIGGER IF NOT EXISTS history_search_delete AFTER DELETE ON history BEGIN
+            DELETE FROM history_search_fts WHERE rowid = old.rowid;
+        END;
+        CREATE TRIGGER IF NOT EXISTS history_search_update AFTER UPDATE ON history BEGIN
+            DELETE FROM history_search_fts WHERE rowid = old.rowid;
+            INSERT INTO history_search_fts (rowid, history_id, title, filepath, url, summary)
+            VALUES (new.rowid, new.id, new.title, new.filepath, new.url, COALESCE(new.summary, ''));
+        END;",
+    )
+    .map_err(|e| format!("Failed to create history search triggers: {}", e))?;
+
+    let history_count: i64 = conn
+        .query_row("SELECT COUNT(*) FROM history", [], |row| row.get(0))
+        .map_err(|e| format!("Failed to count history rows: {}", e))?;
+    let search_count: i64 = conn
+        .query_row("SELECT COUNT(*) FROM history_search_fts", [], |row| {
+            row.get(0)
+        })
+        .map_err(|e| format!("Failed to count history search rows: {}", e))?;
+    if history_count != search_count {
+        rebuild_history_search_index(conn)?;
+    }
+
+    Ok(())
+}
+
 /// Initialize the SQLite database
 pub fn init_database(app: &AppHandle) -> Result<(), String> {
     if DB_CONNECTION.get().is_some() {
@@ -176,6 +233,12 @@ pub fn init_database(app: &AppHandle) -> Result<(), String> {
     )
     .ok();
 
+    // Keep history text search local and fast. If FTS5 is unavailable, history search
+    // falls back to LIKE in the query layer.
+    if let Err(e) = init_history_search_index(&conn) {
+        log::warn!("{}", e);
+    }
+
     // Create processing_jobs table
     conn.execute(
         "CREATE TABLE IF NOT EXISTS processing_jobs (
@@ -282,6 +345,17 @@ pub fn init_database(app: &AppHandle) -> Result<(), String> {
         [],
     )
     .ok();
+
+    // Create persisted download queues table
+    conn.execute(
+        "CREATE TABLE IF NOT EXISTS download_queues (
+            queue_kind TEXT PRIMARY KEY,
+            items_json TEXT NOT NULL,
+            updated_at INTEGER NOT NULL
+        )",
+        [],
+    )
+    .map_err(|e| format!("Failed to create download_queues table: {}", e))?;
 
     // Migration: Add download_threads column if it doesn't exist
     conn.execute(

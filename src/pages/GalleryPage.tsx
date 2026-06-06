@@ -105,7 +105,7 @@ export function GalleryPage({ onNavigateToSettings }: GalleryPageProps) {
           )}
 
           <GalleryUrlInput
-            disabled={!isReady || isDownloading}
+            disabled={!isReady}
             onAddUrls={addFromText}
             onImportFile={importFromFile}
             onImportClipboard={importFromClipboard}

@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use super::get_db;
 use crate::types::{
     HistoryAdvancedFilters, HistoryCollection, HistoryEntry, HistoryFilterMatchMode,
-    HistoryMediaType, HistorySort, HistoryTag,
+    HistoryMediaType, HistorySearchScope, HistorySort, HistoryTag,
 };
 use chrono::Utc;
 use rusqlite::{params, params_from_iter, types::Value, Connection};
@@ -113,6 +113,42 @@ fn normalize_quality(value: &str) -> String {
     }
 }
 
+fn history_search_fts_available(conn: &Connection) -> bool {
+    conn.prepare("SELECT rowid FROM history_search_fts WHERE history_search_fts MATCH ? LIMIT 1")
+        .is_ok()
+}
+
+fn build_fts_query(search: &str, scope: HistorySearchScope) -> Option<String> {
+    let terms: Vec<String> = search
+        .split_whitespace()
+        .map(|term| {
+            term.chars()
+                .filter(|ch| ch.is_alphanumeric())
+                .collect::<String>()
+                .to_lowercase()
+        })
+        .filter(|term| !term.is_empty())
+        .take(12)
+        .collect();
+
+    if terms.is_empty() {
+        return None;
+    }
+
+    let column_prefix = match scope {
+        HistorySearchScope::All => "",
+        HistorySearchScope::Metadata => "{title filepath url}:",
+        HistorySearchScope::Summary => "summary:",
+    };
+    Some(
+        terms
+            .into_iter()
+            .map(|term| format!("{column_prefix}{term}*"))
+            .collect::<Vec<_>>()
+            .join(" AND "),
+    )
+}
+
 fn apply_relation_filter(
     query: &mut String,
     params: &mut Vec<Value>,
@@ -163,12 +199,35 @@ fn apply_history_filters(
     }
 
     if let Some(search_text) = search.map(|s| s.trim()).filter(|s| !s.is_empty()) {
+        let search_scope = filters
+            .and_then(|filter| filter.search_scope.clone())
+            .unwrap_or_default();
         let search_pattern = format!("%{}%", search_text);
-        query.push_str(&format!(
-            " AND ({history_alias}.title LIKE ? OR {history_alias}.filepath LIKE ?)"
-        ));
-        params.push(Value::from(search_pattern.clone()));
-        params.push(Value::from(search_pattern));
+        match search_scope {
+            HistorySearchScope::All => {
+                query.push_str(&format!(
+                    " AND ({history_alias}.title LIKE ? OR {history_alias}.filepath LIKE ? OR {history_alias}.url LIKE ? OR COALESCE({history_alias}.summary, '') LIKE ?)"
+                ));
+                params.push(Value::from(search_pattern.clone()));
+                params.push(Value::from(search_pattern.clone()));
+                params.push(Value::from(search_pattern.clone()));
+                params.push(Value::from(search_pattern));
+            }
+            HistorySearchScope::Metadata => {
+                query.push_str(&format!(
+                    " AND ({history_alias}.title LIKE ? OR {history_alias}.filepath LIKE ? OR {history_alias}.url LIKE ?)"
+                ));
+                params.push(Value::from(search_pattern.clone()));
+                params.push(Value::from(search_pattern.clone()));
+                params.push(Value::from(search_pattern));
+            }
+            HistorySearchScope::Summary => {
+                query.push_str(&format!(
+                    " AND COALESCE({history_alias}.summary, '') LIKE ?"
+                ));
+                params.push(Value::from(search_pattern));
+            }
+        }
     }
 
     if let Some(filter) = filters {
@@ -180,6 +239,9 @@ fn apply_history_filters(
             Some(HistoryMediaType::Video) => {
                 query.push_str(" AND NOT ");
                 query.push_str(&audio_media_sql_condition(history_alias));
+                query.push_str(&format!(
+                    " AND COALESCE({history_alias}.source, '') != 'data_export'"
+                ));
             }
             _ => {}
         }
@@ -545,22 +607,49 @@ pub fn get_history_from_db(
 
     let limit = limit.unwrap_or(50).min(500);
     let offset = offset.unwrap_or(0);
+    let trimmed_search = search.as_deref().map(str::trim).filter(|s| !s.is_empty());
+    let search_scope = filters
+        .as_ref()
+        .and_then(|filter| filter.search_scope.clone())
+        .unwrap_or_default();
+    let fts_query = trimmed_search
+        .and_then(|value| build_fts_query(value, search_scope))
+        .filter(|_| history_search_fts_available(&conn));
 
-    let mut query = String::from(
-        "SELECT h.id, h.url, h.title, h.thumbnail, h.filepath, h.filesize, h.duration, h.quality, h.format, h.source, h.downloaded_at, h.summary, h.time_range
-         FROM history h WHERE 1=1",
-    );
+    let mut query = if fts_query.is_some() {
+        String::from(
+            "SELECT h.id, h.url, h.title, h.thumbnail, h.filepath, h.filesize, h.duration, h.quality, h.format, h.source, h.downloaded_at, h.summary, h.time_range
+             FROM history h
+             JOIN history_search_fts ON history_search_fts.rowid = h.rowid
+             WHERE history_search_fts MATCH ?",
+        )
+    } else {
+        String::from(
+            "SELECT h.id, h.url, h.title, h.thumbnail, h.filepath, h.filesize, h.duration, h.quality, h.format, h.source, h.downloaded_at, h.summary, h.time_range
+             FROM history h WHERE 1=1",
+        )
+    };
     let mut query_params: Vec<Value> = Vec::new();
+    if let Some(value) = fts_query.clone() {
+        query_params.push(Value::from(value));
+    }
     apply_history_filters(
         &mut query,
         &mut query_params,
         "h",
         source.as_deref(),
-        search.as_deref(),
+        if fts_query.is_some() {
+            None
+        } else {
+            trimmed_search
+        },
         filters.as_ref(),
     );
 
     match sort.unwrap_or_default() {
+        HistorySort::Recent if fts_query.is_some() => {
+            query.push_str(" ORDER BY bm25(history_search_fts) ASC, h.downloaded_at DESC")
+        }
         HistorySort::Recent => query.push_str(" ORDER BY h.downloaded_at DESC"),
         HistorySort::Oldest => query.push_str(" ORDER BY h.downloaded_at ASC"),
         HistorySort::Title => query.push_str(" ORDER BY LOWER(h.title) ASC"),
@@ -650,14 +739,38 @@ pub fn get_history_count_from_db(
 ) -> Result<i64, String> {
     let conn = get_db()?;
 
-    let mut query = String::from("SELECT COUNT(*) FROM history h WHERE 1=1");
+    let trimmed_search = search.as_deref().map(str::trim).filter(|s| !s.is_empty());
+    let search_scope = filters
+        .as_ref()
+        .and_then(|filter| filter.search_scope.clone())
+        .unwrap_or_default();
+    let fts_query = trimmed_search
+        .and_then(|value| build_fts_query(value, search_scope))
+        .filter(|_| history_search_fts_available(&conn));
+
+    let mut query = if fts_query.is_some() {
+        String::from(
+            "SELECT COUNT(*) FROM history h
+             JOIN history_search_fts ON history_search_fts.rowid = h.rowid
+             WHERE history_search_fts MATCH ?",
+        )
+    } else {
+        String::from("SELECT COUNT(*) FROM history h WHERE 1=1")
+    };
     let mut query_params: Vec<Value> = Vec::new();
+    if let Some(value) = fts_query.clone() {
+        query_params.push(Value::from(value));
+    }
     apply_history_filters(
         &mut query,
         &mut query_params,
         "h",
         source.as_deref(),
-        search.as_deref(),
+        if fts_query.is_some() {
+            None
+        } else {
+            trimmed_search
+        },
         filters.as_ref(),
     );
 
@@ -960,9 +1073,31 @@ mod tests {
                 history_id TEXT NOT NULL,
                 collection_id TEXT NOT NULL,
                 UNIQUE(history_id, collection_id)
-            );",
+            );
+            CREATE VIRTUAL TABLE IF NOT EXISTS history_search_fts USING fts5(
+                history_id UNINDEXED,
+                title,
+                filepath,
+                url,
+                summary,
+                tokenize = 'unicode61 remove_diacritics 2'
+            );
+            CREATE TRIGGER IF NOT EXISTS history_search_insert AFTER INSERT ON history BEGIN
+                INSERT INTO history_search_fts (rowid, history_id, title, filepath, url, summary)
+                VALUES (new.rowid, new.id, new.title, new.filepath, new.url, COALESCE(new.summary, ''));
+            END;
+            CREATE TRIGGER IF NOT EXISTS history_search_delete AFTER DELETE ON history BEGIN
+                DELETE FROM history_search_fts WHERE rowid = old.rowid;
+            END;
+            CREATE TRIGGER IF NOT EXISTS history_search_update AFTER UPDATE ON history BEGIN
+                DELETE FROM history_search_fts WHERE rowid = old.rowid;
+                INSERT INTO history_search_fts (rowid, history_id, title, filepath, url, summary)
+                VALUES (new.rowid, new.id, new.title, new.filepath, new.url, COALESCE(new.summary, ''));
+            END;",
         )
         .expect("create tables");
+        conn.execute("DELETE FROM history_search_fts", [])
+            .expect("clear history search");
         conn.execute("DELETE FROM history_tags", [])
             .expect("clear history tags");
         conn.execute("DELETE FROM history_collections", [])
@@ -981,6 +1116,15 @@ mod tests {
             params![id, "https://example.com/v", "video", filepath, 0_i64],
         )
         .expect("insert history row");
+    }
+
+    fn insert_history_search_row(id: &str, title: &str, summary: &str) {
+        let conn = get_db().expect("get db");
+        conn.execute(
+            "INSERT INTO history (id, url, title, filepath, downloaded_at, summary) VALUES (?1, ?2, ?3, ?4, ?5, ?6)",
+            params![id, "https://example.com/v", title, "", 0_i64, summary],
+        )
+        .expect("insert searchable history row");
     }
 
     #[test]
@@ -1059,6 +1203,52 @@ mod tests {
             .find(|item| item.id == collection.id)
             .expect("favorites collection");
         assert_eq!(favorites.item_count, Some(1));
+    }
+
+    #[test]
+    fn history_fts_search_can_scope_to_ai_summary() {
+        let _guard = db_test_guard();
+        ensure_test_history_tables();
+        let summary_id = uuid::Uuid::new_v4().to_string();
+        let title_id = uuid::Uuid::new_v4().to_string();
+        insert_history_search_row(
+            &summary_id,
+            "Cooking notes",
+            "SQLite FTS5 keeps local AI summary search fast.",
+        );
+        insert_history_search_row(&title_id, "SQLite tutorial", "");
+
+        let summary_filters = HistoryAdvancedFilters {
+            search_scope: Some(HistorySearchScope::Summary),
+            ..Default::default()
+        };
+        let summary_result = get_history_from_db(
+            Some(50),
+            Some(0),
+            None,
+            Some("sqlite".to_string()),
+            Some(summary_filters),
+            None,
+        )
+        .expect("search summary");
+        assert_eq!(summary_result.len(), 1);
+        assert_eq!(summary_result[0].id, summary_id);
+
+        let metadata_filters = HistoryAdvancedFilters {
+            search_scope: Some(HistorySearchScope::Metadata),
+            ..Default::default()
+        };
+        let metadata_result = get_history_from_db(
+            Some(50),
+            Some(0),
+            None,
+            Some("sqlite".to_string()),
+            Some(metadata_filters),
+            None,
+        )
+        .expect("search metadata");
+        assert_eq!(metadata_result.len(), 1);
+        assert_eq!(metadata_result[0].id, title_id);
     }
 
     #[test]

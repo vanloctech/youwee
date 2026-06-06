@@ -76,6 +76,12 @@ const SOURCE_MAP: Record<string, SourceInfo> = {
     color: 'text-blue-400',
     label: 'Dailymotion',
   },
+  dataexport: {
+    platform: 'data_export',
+    faIcon: 'fa-table',
+    color: 'text-emerald-400',
+    label: 'Data Export',
+  },
   reddit: {
     platform: 'other',
     faIcon: 'fa-reddit',

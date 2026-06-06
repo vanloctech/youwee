@@ -230,6 +230,7 @@
       "filterInstagram": "Rede conectada via imagens - META (Visualizações)",
       "filterTwitter": "Ambiente microbblogado via linkagem.",
       "filterBilibili": "Canais BILI - CHN",
+      "filterDataExport": "Exportação de dados",
       "filterOther": "Externos não indexados no filtro",
       "advancedFilters": "Filtros avançados",
       "mediaType": "Tipo de mídia",

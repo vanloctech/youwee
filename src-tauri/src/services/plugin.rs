@@ -1018,6 +1018,8 @@ async fn execute_plugin(
             .approved_permissions
             .tools
             .contains(&PluginToolPermission::YtdlpRun);
+    let network_allowed =
+        plugin.manifest.permissions.network && plugin.installation.approved_permissions.network;
 
     let bridge = start_plugin_bridge(
         Uuid::new_v4().to_string(),
@@ -1031,6 +1033,7 @@ async fn execute_plugin(
             ytdlp_path: ytdlp_run_allowed
                 .then(|| ytdlp_path.as_ref().map(PathBuf::from))
                 .flatten(),
+            network_allowed,
         },
     )
     .await?;

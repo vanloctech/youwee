@@ -1,7 +1,7 @@
 {
   "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
   "productName": "Youwee",
-  "version": "0.15.0",
+  "version": "0.16.0",
   "identifier": "com.vanloctech.youwee",
   "build": {
     "frontendDist": "../dist",
@@ -37,7 +37,7 @@
   "bundle": {
     "active": true,
     "targets": ["app", "dmg", "deb", "appimage", "msi", "nsis"],
-    "externalBin": ["bin/yt-dlp"],
+    "externalBin": ["bin/youwee-yt-dlp"],
     "icon": [
       "icons/32x32.png",
       "icons/128x128.png",

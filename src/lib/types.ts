@@ -50,6 +50,7 @@ export type SourcePlatform =
   | 'bilibili'
   | 'soundcloud'
   | 'dailymotion'
+  | 'data_export'
   | 'other';
 
 // Settings snapshot saved with each queue item (YouTube page)
@@ -131,6 +132,51 @@ export interface DownloadItem {
   retryState?: DownloadRetryState;
 }
 
+export interface YoutubeSearchVideo {
+  id: string;
+  url: string;
+  title: string;
+  thumbnail?: string | null;
+  duration?: string | null;
+  channel?: string | null;
+  viewCountText?: string | null;
+  publishedTimeText?: string | null;
+}
+
+export interface YoutubeSearchResponse {
+  videos: YoutubeSearchVideo[];
+  continuation?: string | null;
+}
+
+export type YoutubeSearchUploadDateFilter = 'today' | 'thisWeek' | 'thisMonth' | 'thisYear';
+
+export type YoutubeSearchDurationFilter = 'short' | 'medium' | 'long';
+
+export type YoutubeSearchSortFilter = 'relevance' | 'viewCount';
+
+export type YoutubeSearchFeatureFilter =
+  | 'live'
+  | 'fourK'
+  | 'hd'
+  | 'subtitles'
+  | 'creativeCommons'
+  | 'threeSixty'
+  | 'vr180'
+  | 'threeD'
+  | 'hdr';
+
+export interface YoutubeSearchFilters {
+  uploadDate?: YoutubeSearchUploadDateFilter | null;
+  duration?: YoutubeSearchDurationFilter | null;
+  sort?: YoutubeSearchSortFilter | null;
+  features: YoutubeSearchFeatureFilter[];
+}
+
+export interface YoutubeSearchQueueResult {
+  added: number;
+  queuedIds: string[];
+}
+
 export interface ExternalEnqueueResult {
   added: boolean;
   itemId: string | null;
@@ -176,10 +222,22 @@ export interface DownloadSettings {
   autoRetryEnabled: boolean; // Retry transient failures automatically
   autoRetryMaxAttempts: number; // Number of retries after initial failure (1-10)
   autoRetryDelaySeconds: number; // Delay between retries in seconds (1-60)
+  // Queue persistence
+  persistDownloadQueue: boolean; // Keep download queue across app restarts
   // SponsorBlock settings
   sponsorBlock: boolean; // toggle on/off
   sponsorBlockMode: SponsorBlockMode; // 'remove' | 'mark' | 'custom'
   sponsorBlockCategories: Record<SponsorBlockCategory, SponsorBlockAction>; // per-category action (custom mode)
+  // Telegram remote control settings
+  telegramEnabled: boolean;
+  telegramBotToken: string;
+  telegramAllowedChatIds: string;
+  telegramPlainUrlAction: 'add' | 'download';
+}
+
+export interface TelegramStatus {
+  state: 'disabled' | 'running' | 'error';
+  message?: string | null;
 }
 
 export interface DownloadProgress {
@@ -626,6 +684,48 @@ export interface PlaylistVideoEntry {
   upload_date?: string;
 }
 
+export type ExportSource = 'auto' | 'youtube_playlist' | 'youtube_channel' | 'url_list';
+
+export type ExportFormat =
+  | 'csv'
+  | 'excel'
+  | 'text'
+  | 'bookmark_html'
+  | 'json'
+  | 'markdown'
+  | 'xml'
+  | 'html'
+  | 'yaml'
+  | 'sqlite'
+  | 'word';
+
+export interface ExportRow {
+  id: string;
+  title?: string | null;
+  url?: string | null;
+  platform?: string | null;
+  uploader?: string | null;
+  thumbnail?: string | null;
+  durationSeconds?: number | null;
+  uploadDate?: string | null;
+  timestamp?: number | null;
+  viewCount?: number | null;
+  likeCount?: number | null;
+  commentCount?: number | null;
+  shareCount?: number | null;
+  description?: string | null;
+  tags?: string[] | null;
+  playlistIndex?: number | null;
+  extractor?: string | null;
+}
+
+export interface ExtractDataRowsOutput {
+  source: ExportSource;
+  title?: string | null;
+  rows: ExportRow[];
+  warnings: string[];
+}
+
 // Log types
 export type LogType = 'command' | 'success' | 'error' | 'stderr' | 'info';
 
@@ -687,13 +787,16 @@ export type HistoryFilter =
   | 'instagram'
   | 'twitter'
   | 'bilibili'
+  | 'data_export'
   | 'other';
 export type HistoryMediaType = 'all' | 'video' | 'audio';
+export type HistorySearchScope = 'all' | 'metadata' | 'summary';
 export type HistoryDatePreset = 'all' | 'today' | 'last7days' | 'last30days' | 'custom';
 export type HistorySort = 'recent' | 'oldest' | 'title' | 'size';
 export type HistoryFilterMatchMode = 'any' | 'all';
 
 export interface HistoryAdvancedFilters {
+  searchScope: HistorySearchScope;
   mediaType: HistoryMediaType;
   datePreset: HistoryDatePreset;
   downloadedAtFrom?: number | null;

@@ -734,11 +734,17 @@ pub async fn download_video(
     if let Some((binary_path, _)) = get_ytdlp_path(&app).await {
         // Build extended PATH with deno/bun locations for JavaScript runtime support
         let home_dir = std::env::var("HOME").unwrap_or_else(|_| "/Users".to_string());
-        let current_path = std::env::var("PATH").unwrap_or_default();
-        let extended_path = format!(
-            "{}/.deno/bin:{}/.bun/bin:/opt/homebrew/bin:/usr/local/bin:{}",
-            home_dir, home_dir, current_path
-        );
+        let mut path_entries: Vec<std::path::PathBuf> = std::env::var_os("PATH")
+            .map(|paths| std::env::split_paths(&paths).collect())
+            .unwrap_or_default();
+        path_entries.extend([
+            std::path::PathBuf::from(&home_dir).join(".deno/bin"),
+            std::path::PathBuf::from(&home_dir).join(".bun/bin"),
+            std::path::PathBuf::from("/opt/homebrew/bin"),
+            std::path::PathBuf::from("/usr/local/bin"),
+        ]);
+        let extended_path = std::env::join_paths(path_entries)
+            .unwrap_or_else(|_| std::env::var_os("PATH").unwrap_or_default());
 
         let mut cmd = Command::new(&binary_path);
         cmd.args(&args)

@@ -2,6 +2,7 @@ export type SettingsSectionId =
   | 'general'
   | 'dependencies'
   | 'download'
+  | 'remote-download'
   | 'plugins'
   | 'extension'
   | 'ai'
@@ -90,7 +91,23 @@ export const SEARCHABLE_SETTINGS: SearchableSetting[] = [
     section: 'general',
   },
 
+  // Remote Download Section
+  {
+    id: 'telegram-remote',
+    labelKey: 'remoteDownload.telegramRemote',
+    descriptionKey: 'remoteDownload.telegramRemoteDesc',
+    keywords: ['telegram', 'bot', 'remote', 'chat', 'command', 'download'],
+    section: 'remote-download',
+  },
+
   // Download Section
+  {
+    id: 'persist-download-queue',
+    labelKey: 'download.persistDownloadQueue',
+    descriptionKey: 'download.persistDownloadQueueDesc',
+    keywords: ['queue', 'persist', 'restore', 'resume', 'restart', 'storage', 'download'],
+    section: 'download',
+  },
   {
     id: 'embed-metadata',
     labelKey: 'download.embedMetadata',
@@ -390,6 +407,7 @@ export const SECTION_INFO: Record<SettingsSectionId, { label: string; icon: stri
   general: { label: 'General', icon: 'Palette' },
   dependencies: { label: 'Dependencies', icon: 'Package' },
   download: { label: 'Download', icon: 'ArrowDownToLine' },
+  'remote-download': { label: 'Remote Download', icon: 'MessageCircleCode' },
   plugins: { label: 'Plugins', icon: 'Atom' },
   extension: { label: 'Extension', icon: 'Puzzle' },
   ai: { label: 'AI Features', icon: 'Sparkles' },

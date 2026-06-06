@@ -12,6 +12,7 @@ import {
   useRef,
   useState,
 } from 'react';
+import { usePersistedDownloadQueue } from '@/hooks/usePersistedDownloadQueue';
 import {
   extractBackendError,
   localizeBackendError,
@@ -49,9 +50,11 @@ import type {
   Quality,
   VideoInfoResponse,
 } from '@/lib/types';
+import { useDownload } from './DownloadContext';
 
 const STORAGE_KEY = 'youwee-universal-settings';
 const DOWNLOAD_STORAGE_KEY = 'youwee-settings';
+const DOWNLOAD_QUEUE_IDLE_GRACE_MS = 1000;
 
 // Format duration in seconds to HH:MM:SS or MM:SS
 function formatDuration(seconds: number): string {
@@ -274,6 +277,15 @@ export function UniversalProvider({ children }: { children: ReactNode }) {
   const itemsRef = useRef<DownloadItem[]>([]);
   const settingsRef = useRef<UniversalSettings>(settings);
   const focusClearTimerRef = useRef<number | null>(null);
+  const { settings: downloadSettings } = useDownload();
+
+  usePersistedDownloadQueue({
+    queueKind: 'universal',
+    enabled: downloadSettings.persistDownloadQueue,
+    items,
+    setItems,
+    logLabel: 'universal queue',
+  });
 
   // Keep itemsRef in sync with items state
   useEffect(() => {
@@ -689,7 +701,11 @@ export function UniversalProvider({ children }: { children: ReactNode }) {
   }, [settings.outputPath]);
 
   const removeItem = useCallback((id: string) => {
-    setItems((items) => items.filter((item) => item.id !== id));
+    setItems((items) => {
+      const nextItems = items.filter((item) => item.id !== id);
+      itemsRef.current = nextItems;
+      return nextItems;
+    });
   }, []);
 
   const updateItemTimeRange = useCallback((id: string, start?: string, end?: string) => {
@@ -747,11 +763,16 @@ export function UniversalProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const clearAll = useCallback(() => {
+    itemsRef.current = [];
     setItems([]);
   }, []);
 
   const clearCompleted = useCallback(() => {
-    setItems((items) => items.filter((item) => item.status !== 'completed'));
+    setItems((items) => {
+      const nextItems = items.filter((item) => item.status !== 'completed');
+      itemsRef.current = nextItems;
+      return nextItems;
+    });
   }, []);
 
   const startDownload = useCallback(async () => {
@@ -975,7 +996,13 @@ export function UniversalProvider({ children }: { children: ReactNode }) {
           const item = claimNextItem();
           if (!item) {
             if (activeCount === 0 && !hasUnclaimedPendingItems()) {
-              return;
+              await new Promise<void>((resolve) => {
+                window.setTimeout(resolve, DOWNLOAD_QUEUE_IDLE_GRACE_MS);
+              });
+              if (!isDownloadingRef.current || !hasUnclaimedPendingItems()) {
+                return;
+              }
+              continue;
             }
             await new Promise<void>((resolve) => {
               window.setTimeout(resolve, 200);

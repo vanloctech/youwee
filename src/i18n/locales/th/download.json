@@ -29,7 +29,65 @@
     "detectedMultiple": "ตรวจพบ URL {{count}} รายการ",
     "detectedSingle": "URL เดี่ยวพร้อมแล้ว",
     "readyToAdd": "ตรวจสอบแล้วเพิ่มเข้าคิว",
-    "clearInput": "ล้าง"
+    "clearInput": "ล้าง",
+    "keyword": {
+      "tab": "Keyword",
+      "hint": "Search YouTube videos by keyword",
+      "placeholder": "Search YouTube videos...",
+      "limitLabel": "Result limit",
+      "search": "Search",
+      "searching": "Searching YouTube...",
+      "emptyTitle": "Search by keyword",
+      "emptyDescription": "Find YouTube videos, select the results you want, then add them to the queue.",
+      "errorTitle": "Search failed",
+      "selectedCount": "{{selected}}/{{total}} selected",
+      "selectAll": "Select all",
+      "clearSelection": "Clear",
+      "clearResults": "Clear results",
+      "loadMore": "Load more",
+      "addSelected": "Add selected",
+      "openButton": "Search by keyword",
+      "back": "Back to downloads",
+      "pageTitle": "Search by keyword",
+      "pageDescription": "Find YouTube videos and add selected results to the queue.",
+      "added": "Added",
+      "filters": {
+        "title": "Filters",
+        "description": "Narrow results before searching.",
+        "clear": "Reset",
+        "any": "Any",
+        "uploadDate": "Upload date",
+        "duration": "Duration",
+        "sort": "Sort by",
+        "features": "Features",
+        "uploadDateOptions": {
+          "today": "Today",
+          "thisWeek": "This week",
+          "thisMonth": "This month",
+          "thisYear": "This year"
+        },
+        "durationOptions": {
+          "short": "Under 3 minutes",
+          "medium": "3 to 20 minutes",
+          "long": "Over 20 minutes"
+        },
+        "sortOptions": {
+          "relevance": "Relevance",
+          "viewCount": "ความนิยม"
+        },
+        "featureOptions": {
+          "live": "Live",
+          "fourK": "4K",
+          "hd": "HD",
+          "subtitles": "Subtitles",
+          "creativeCommons": "Creative Commons",
+          "threeSixty": "360°",
+          "vr180": "VR180",
+          "threeD": "3D",
+          "hdr": "HDR"
+        }
+      }
+    }
   },
   "page": {
     "quickSettings": "การตั้งค่าด่วน",

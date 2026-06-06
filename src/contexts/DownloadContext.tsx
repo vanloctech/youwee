@@ -12,6 +12,7 @@ import {
   useRef,
   useState,
 } from 'react';
+import { usePersistedDownloadQueue } from '@/hooks/usePersistedDownloadQueue';
 import {
   extractBackendError,
   localizeBackendError,
@@ -58,11 +59,16 @@ import type {
   SponsorBlockMode,
   SubtitleFormat,
   SubtitleMode,
+  TelegramStatus,
   VideoCodec,
+  YoutubeSearchQueueResult,
+  YoutubeSearchVideo,
 } from '@/lib/types';
 import { DEFAULT_SPONSORBLOCK_CATEGORIES } from '@/lib/types';
+import { extractYouTubeVideoId } from '@/lib/youtube-url';
 
 const STORAGE_KEY = 'youwee-settings';
+const DOWNLOAD_QUEUE_IDLE_GRACE_MS = 1000;
 
 // Check if path is absolute (cross-platform)
 const isAbsolutePath = (path: string): boolean => {
@@ -146,9 +152,14 @@ function saveSettings(settings: DownloadSettings) {
         autoRetryEnabled: settings.autoRetryEnabled,
         autoRetryMaxAttempts: settings.autoRetryMaxAttempts,
         autoRetryDelaySeconds: settings.autoRetryDelaySeconds,
+        persistDownloadQueue: settings.persistDownloadQueue,
         sponsorBlock: settings.sponsorBlock,
         sponsorBlockMode: settings.sponsorBlockMode,
         sponsorBlockCategories: settings.sponsorBlockCategories,
+        telegramEnabled: settings.telegramEnabled,
+        telegramBotToken: settings.telegramBotToken,
+        telegramAllowedChatIds: settings.telegramAllowedChatIds,
+        telegramPlainUrlAction: settings.telegramPlainUrlAction,
       }),
     );
   } catch (e) {
@@ -177,6 +188,7 @@ interface DownloadContextType {
   proxySettings: ProxySettings;
   currentPlaylistInfo: PlaylistInfo | null;
   addFromText: (text: string) => Promise<number>;
+  addSearchResultsToQueue: (results: YoutubeSearchVideo[]) => Promise<YoutubeSearchQueueResult>;
   enqueueExternalUrl: (
     url: string,
     options?: ExternalEnqueueOptions,
@@ -228,6 +240,13 @@ interface DownloadContextType {
   updateSponsorBlock: (enabled: boolean) => void;
   updateSponsorBlockMode: (mode: SponsorBlockMode) => void;
   updateSponsorBlockCategory: (category: SponsorBlockCategory, action: SponsorBlockAction) => void;
+  updateTelegramSettings: (
+    updates: Pick<
+      Partial<DownloadSettings>,
+      'telegramEnabled' | 'telegramBotToken' | 'telegramAllowedChatIds' | 'telegramPlainUrlAction'
+    >,
+  ) => void;
+  refreshTelegramStatus: () => Promise<TelegramStatus>;
   // Cookie error detection
   cookieError: { show: boolean; itemId?: string; kind: 'db_locked' | 'fresh_cookies' } | null;
   clearCookieError: () => void;
@@ -259,7 +278,7 @@ export function DownloadProvider({ children }: { children: ReactNode }) {
       format: saved.format || 'mp4',
       outputPath: saved.outputPath || '',
       downloadPlaylist: saved.downloadPlaylist || false,
-      videoCodec: saved.videoCodec || 'h264',
+      videoCodec: saved.videoCodec || 'auto',
       audioBitrate: saved.audioBitrate || 'auto',
       concurrentDownloads: saved.concurrentDownloads || 1,
       playlistLimit: saved.playlistLimit || 0, // 0 = unlimited
@@ -292,12 +311,19 @@ export function DownloadProvider({ children }: { children: ReactNode }) {
       autoRetryDelaySeconds: clampAutoRetryDelaySeconds(
         saved.autoRetryDelaySeconds || AUTO_RETRY_LIMITS.delaySeconds.default,
       ),
+      // Queue persistence
+      persistDownloadQueue: saved.persistDownloadQueue === true,
       // SponsorBlock settings
       sponsorBlock: saved.sponsorBlock === true, // Default to false
       sponsorBlockMode: saved.sponsorBlockMode || 'remove',
       sponsorBlockCategories: saved.sponsorBlockCategories || {
         ...DEFAULT_SPONSORBLOCK_CATEGORIES,
       },
+      // Telegram remote control settings
+      telegramEnabled: saved.telegramEnabled === true,
+      telegramBotToken: saved.telegramBotToken || '',
+      telegramAllowedChatIds: saved.telegramAllowedChatIds || '',
+      telegramPlainUrlAction: saved.telegramPlainUrlAction === 'add' ? 'add' : 'download',
     };
   });
 
@@ -315,6 +341,21 @@ export function DownloadProvider({ children }: { children: ReactNode }) {
     }).catch((e) => console.error('Failed to sync polling network config:', e));
   }, []);
 
+  const [currentPlaylistInfo, setCurrentPlaylistInfo] = useState<PlaylistInfo | null>(null);
+
+  const isDownloadingRef = useRef(false);
+  const itemsRef = useRef<DownloadItem[]>([]);
+  const settingsRef = useRef<DownloadSettings>(settings);
+  const focusClearTimerRef = useRef<number | null>(null);
+
+  usePersistedDownloadQueue({
+    queueKind: 'youtube',
+    enabled: settings.persistDownloadQueue,
+    items,
+    setItems,
+    logLabel: 'download queue',
+  });
+
   // Initial sync on mount
   useEffect(() => {
     syncPollingNetworkConfig(loadCookieSettings(), loadProxySettings());
@@ -324,12 +365,32 @@ export function DownloadProvider({ children }: { children: ReactNode }) {
     refreshPostDownloadWorkflowSteps();
   }, []);
 
-  const [currentPlaylistInfo, setCurrentPlaylistInfo] = useState<PlaylistInfo | null>(null);
+  useEffect(() => {
+    const allowedChatIds = settings.telegramAllowedChatIds
+      .split(/[\s,]+/)
+      .map((id) => id.trim())
+      .filter((id) => /^-?\d+$/.test(id));
 
-  const isDownloadingRef = useRef(false);
-  const itemsRef = useRef<DownloadItem[]>([]);
-  const settingsRef = useRef<DownloadSettings>(settings);
-  const focusClearTimerRef = useRef<number | null>(null);
+    const timer = window.setTimeout(() => {
+      invoke('set_telegram_config', {
+        config: {
+          enabled: settings.telegramEnabled,
+          botToken: settings.telegramBotToken,
+          allowedChatIds,
+          plainUrlAction: settings.telegramPlainUrlAction,
+        },
+      }).catch((e) => console.error('Failed to sync Telegram config:', e));
+    }, 300);
+
+    return () => {
+      window.clearTimeout(timer);
+    };
+  }, [
+    settings.telegramEnabled,
+    settings.telegramBotToken,
+    settings.telegramAllowedChatIds,
+    settings.telegramPlainUrlAction,
+  ]);
 
   // Keep itemsRef in sync with items state
   useEffect(() => {
@@ -702,6 +763,84 @@ export function DownloadProvider({ children }: { children: ReactNode }) {
     [enqueueQueuedWorkflowForItems, focusItem],
   );
 
+  const addSearchResultsToQueue = useCallback(
+    async (results: YoutubeSearchVideo[]): Promise<YoutubeSearchQueueResult> => {
+      if (results.length === 0) return { added: 0, queuedIds: [] };
+
+      const workflowSnapshots = loadPluginWorkflowSnapshots();
+      const currentSettings = settingsRef.current;
+      const settingsSnapshot: ItemDownloadSettings = {
+        quality: currentSettings.quality,
+        format: currentSettings.format,
+        outputPath: currentSettings.outputPath,
+        videoCodec: currentSettings.videoCodec,
+        audioBitrate: currentSettings.audioBitrate,
+        useAria2: currentSettings.useAria2,
+        aria2Args: currentSettings.aria2Args,
+        subtitleMode: currentSettings.subtitleMode,
+        subtitleLangs: [...currentSettings.subtitleLangs],
+        subtitleEmbed: currentSettings.subtitleEmbed,
+        subtitleFormat: currentSettings.subtitleFormat,
+        pluginWorkflowSnapshots: workflowSnapshots,
+        postDownloadWorkflowSteps: loadPostDownloadWorkflowSteps(),
+        autoRetryEnabled: currentSettings.autoRetryEnabled,
+        autoRetryMaxAttempts: currentSettings.autoRetryMaxAttempts,
+        autoRetryDelaySeconds: currentSettings.autoRetryDelaySeconds,
+      };
+
+      const currentItems = itemsRef.current;
+      const seenUrls = new Set(currentItems.map((item) => item.url));
+      const seenYoutubeIds = new Set(
+        currentItems
+          .map((item) => extractYouTubeVideoId(item.url))
+          .filter((id): id is string => id !== null),
+      );
+      const newItems: DownloadItem[] = [];
+      const queuedIds: string[] = [];
+
+      for (const result of results) {
+        const url = result.url.trim();
+        if (!url) continue;
+        const videoId = result.id || extractYouTubeVideoId(url);
+        if (seenUrls.has(url) || (videoId && seenYoutubeIds.has(videoId))) {
+          queuedIds.push(result.id);
+          continue;
+        }
+        seenUrls.add(url);
+        if (videoId) {
+          seenYoutubeIds.add(videoId);
+        }
+        queuedIds.push(result.id);
+
+        newItems.push({
+          id: crypto.randomUUID(),
+          url,
+          title: result.title || url,
+          status: 'pending',
+          progress: 0,
+          speed: '',
+          eta: '',
+          isPlaylist: false,
+          thumbnail: result.thumbnail || undefined,
+          duration: result.duration || undefined,
+          channel: result.channel || undefined,
+          extractor: 'youtube',
+          settings: settingsSnapshot,
+        });
+      }
+
+      if (newItems.length === 0) return { added: 0, queuedIds };
+
+      const nextItems = [...itemsRef.current, ...newItems];
+      itemsRef.current = nextItems;
+      setItems(nextItems);
+      focusItem(newItems[0].id);
+      enqueueQueuedWorkflowForItems(newItems);
+      return { added: newItems.length, queuedIds };
+    },
+    [enqueueQueuedWorkflowForItems, focusItem],
+  );
+
   // Expand playlist URL to individual videos
   const expandPlaylistUrl = useCallback(
     async (url: string): Promise<string[]> => {
@@ -860,7 +999,11 @@ export function DownloadProvider({ children }: { children: ReactNode }) {
   }, [settings.outputPath]);
 
   const removeItem = useCallback((id: string) => {
-    setItems((items) => items.filter((item) => item.id !== id));
+    setItems((items) => {
+      const nextItems = items.filter((item) => item.id !== id);
+      itemsRef.current = nextItems;
+      return nextItems;
+    });
   }, []);
 
   const updateItemTimeRange = useCallback((id: string, start?: string, end?: string) => {
@@ -918,12 +1061,17 @@ export function DownloadProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const clearAll = useCallback(() => {
+    itemsRef.current = [];
     setItems([]);
     setCurrentPlaylistInfo(null);
   }, []);
 
   const clearCompleted = useCallback(() => {
-    setItems((items) => items.filter((item) => item.status !== 'completed'));
+    setItems((items) => {
+      const nextItems = items.filter((item) => item.status !== 'completed');
+      itemsRef.current = nextItems;
+      return nextItems;
+    });
   }, []);
 
   const startDownload = useCallback(async () => {
@@ -1151,7 +1299,13 @@ export function DownloadProvider({ children }: { children: ReactNode }) {
           const item = claimNextItem();
           if (!item) {
             if (activeCount === 0 && !hasUnclaimedPendingItems()) {
-              return;
+              await new Promise<void>((resolve) => {
+                window.setTimeout(resolve, DOWNLOAD_QUEUE_IDLE_GRACE_MS);
+              });
+              if (!isDownloadingRef.current || !hasUnclaimedPendingItems()) {
+                return;
+              }
+              continue;
             }
             await new Promise<void>((resolve) => {
               window.setTimeout(resolve, 200);
@@ -1438,6 +1592,26 @@ export function DownloadProvider({ children }: { children: ReactNode }) {
     [],
   );
 
+  const updateTelegramSettings = useCallback(
+    (
+      updates: Pick<
+        Partial<DownloadSettings>,
+        'telegramEnabled' | 'telegramBotToken' | 'telegramAllowedChatIds' | 'telegramPlainUrlAction'
+      >,
+    ) => {
+      setSettings((s) => {
+        const newSettings = { ...s, ...updates };
+        saveSettings(newSettings);
+        return newSettings;
+      });
+    },
+    [],
+  );
+
+  const refreshTelegramStatus = useCallback(async () => {
+    return invoke<TelegramStatus>('get_telegram_status');
+  }, []);
+
   // Clear cookie error dialog
   const clearCookieError = useCallback(() => {
     setCookieError(null);
@@ -1474,6 +1648,7 @@ export function DownloadProvider({ children }: { children: ReactNode }) {
     proxySettings,
     currentPlaylistInfo,
     addFromText,
+    addSearchResultsToQueue,
     enqueueExternalUrl,
     focusItem,
     importFromFile,
@@ -1513,6 +1688,8 @@ export function DownloadProvider({ children }: { children: ReactNode }) {
     updateSponsorBlock,
     updateSponsorBlockMode,
     updateSponsorBlockCategory,
+    updateTelegramSettings,
+    refreshTelegramStatus,
     // Cookie error detection
     cookieError,
     clearCookieError,

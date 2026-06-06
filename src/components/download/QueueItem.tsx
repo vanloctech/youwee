@@ -23,6 +23,7 @@ import { SimpleMarkdown } from '@/components/ui/simple-markdown';
 import { useAI } from '@/contexts/AIContext';
 import type { DownloadItem, ItemDownloadSettings } from '@/lib/types';
 import { cn } from '@/lib/utils';
+import { extractYouTubeVideoId, youtubeThumbnailUrl } from '@/lib/youtube-url';
 import { ThumbnailCompletedBadge, ThumbnailFailedBadge } from './ThumbnailStatusBadge';
 
 // Parse a duration string like "5:30" or "1:05:30" to total seconds
@@ -137,12 +138,6 @@ export function QueueItem({
   const generatingStatus =
     task?.status === 'fetching' ? 'fetching' : task?.status === 'generating' ? 'generating' : null;
 
-  // Extract video ID for thumbnail
-  const getVideoId = (url: string) => {
-    const match = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([^&?]+)/);
-    return match ? match[1] : null;
-  };
-
   const handleGenerateSummary = () => {
     if (isGenerating) return;
 
@@ -161,9 +156,8 @@ export function QueueItem({
     });
   };
 
-  const videoId = getVideoId(item.url);
-  const thumbnailUrl =
-    item.thumbnail || (videoId ? `https://img.youtube.com/vi/${videoId}/mqdefault.jpg` : null);
+  const videoId = extractYouTubeVideoId(item.url);
+  const thumbnailUrl = item.thumbnail || (videoId ? youtubeThumbnailUrl(videoId) : null);
 
   const isActive = item.status === 'downloading' || item.status === 'fetching';
   const isCompleted = item.status === 'completed';

@@ -1144,6 +1144,89 @@ pub async fn get_browser_profiles(browser: String) -> Result<Vec<BrowserProfile>
         None
     }
 
+    fn get_firefox_profiles(content: &str) -> Vec<BrowserProfile> {
+        #[derive(Default)]
+        struct FirefoxProfileEntry {
+            name: Option<String>,
+            path: Option<String>,
+            is_default: bool,
+            index: usize,
+        }
+
+        let mut entries = Vec::new();
+        let mut install_default_paths = Vec::new();
+        let mut current_profile: Option<FirefoxProfileEntry> = None;
+        let mut in_install_section = false;
+        let mut next_index = 0;
+
+        for raw_line in content.lines() {
+            let line = raw_line.trim();
+
+            if line.starts_with('[') && line.ends_with(']') {
+                if let Some(entry) = current_profile.take() {
+                    if entry.name.as_deref().is_some_and(|name| !name.is_empty()) {
+                        entries.push(entry);
+                    }
+                }
+
+                in_install_section = line.starts_with("[Install");
+                current_profile = if line.starts_with("[Profile") {
+                    let entry = FirefoxProfileEntry {
+                        index: next_index,
+                        ..Default::default()
+                    };
+                    next_index += 1;
+                    Some(entry)
+                } else {
+                    None
+                };
+                continue;
+            }
+
+            if let Some(entry) = current_profile.as_mut() {
+                if let Some(name) = line.strip_prefix("Name=") {
+                    entry.name = Some(name.to_string());
+                } else if let Some(path) = line.strip_prefix("Path=") {
+                    entry.path = Some(path.to_string());
+                } else if line == "Default=1" {
+                    entry.is_default = true;
+                }
+            } else if in_install_section {
+                if let Some(path) = line.strip_prefix("Default=") {
+                    if !path.is_empty() {
+                        install_default_paths.push(path.to_string());
+                    }
+                }
+            }
+        }
+
+        if let Some(entry) = current_profile {
+            if entry.name.as_deref().is_some_and(|name| !name.is_empty()) {
+                entries.push(entry);
+            }
+        }
+
+        entries.sort_by_key(|entry| {
+            let is_install_default = entry.path.as_ref().is_some_and(|path| {
+                install_default_paths
+                    .iter()
+                    .any(|default_path| default_path == path)
+            });
+
+            (!is_install_default, !entry.is_default, entry.index)
+        });
+
+        entries
+            .into_iter()
+            .filter_map(|entry| {
+                entry.name.map(|name| BrowserProfile {
+                    folder_name: name.clone(),
+                    display_name: name,
+                })
+            })
+            .collect()
+    }
+
     #[cfg(target_os = "macos")]
     {
         let home = std::env::var("HOME").unwrap_or_default();
@@ -1165,17 +1248,7 @@ pub async fn get_browser_profiles(browser: String) -> Result<Vec<BrowserProfile>
                 let profiles_ini =
                     format!("{}/Library/Application Support/Firefox/profiles.ini", home);
                 if let Ok(content) = std::fs::read_to_string(&profiles_ini) {
-                    for line in content.lines() {
-                        if line.starts_with("Name=") {
-                            let name = line.trim_start_matches("Name=");
-                            if !name.is_empty() {
-                                profiles.push(BrowserProfile {
-                                    folder_name: name.to_string(),
-                                    display_name: name.to_string(),
-                                });
-                            }
-                        }
-                    }
+                    profiles = get_firefox_profiles(&content);
                 }
                 return Ok(profiles);
             }
@@ -1254,17 +1327,7 @@ pub async fn get_browser_profiles(browser: String) -> Result<Vec<BrowserProfile>
             "firefox" => {
                 let profiles_ini = format!("{}\\Mozilla\\Firefox\\profiles.ini", app_data);
                 if let Ok(content) = std::fs::read_to_string(&profiles_ini) {
-                    for line in content.lines() {
-                        if line.starts_with("Name=") {
-                            let name = line.trim_start_matches("Name=");
-                            if !name.is_empty() {
-                                profiles.push(BrowserProfile {
-                                    folder_name: name.to_string(),
-                                    display_name: name.to_string(),
-                                });
-                            }
-                        }
-                    }
+                    profiles = get_firefox_profiles(&content);
                 }
                 return Ok(profiles);
             }
@@ -1312,17 +1375,7 @@ pub async fn get_browser_profiles(browser: String) -> Result<Vec<BrowserProfile>
             "firefox" => {
                 let profiles_ini = format!("{}/.mozilla/firefox/profiles.ini", home);
                 if let Ok(content) = std::fs::read_to_string(&profiles_ini) {
-                    for line in content.lines() {
-                        if line.starts_with("Name=") {
-                            let name = line.trim_start_matches("Name=");
-                            if !name.is_empty() {
-                                profiles.push(BrowserProfile {
-                                    folder_name: name.to_string(),
-                                    display_name: name.to_string(),
-                                });
-                            }
-                        }
-                    }
+                    profiles = get_firefox_profiles(&content);
                 }
                 return Ok(profiles);
             }

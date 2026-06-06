@@ -40,7 +40,7 @@ const plugin = definePlugin({{
       // 1. Read the downloaded file info from ctx.file
       // 2. Read extra metadata from ctx.media or ctx.download
       // 3. Read plugin config from ctx.config.require("yourConfigKey")
-      // 4. Use approved app capabilities from ctx.youwee.tools
+      // 4. Use approved app capabilities from ctx.youwee.fs, ctx.youwee.tools, or ctx.youwee.youtube
       // 5. Return ctx.ok(...) or ctx.fail(...)
 
       return ctx.ok(ctx.i18n.t("result.success"), {{
@@ -294,6 +294,7 @@ The installed plugin runtime is intentionally constrained:
 - Deno does not receive direct `--allow-write` or `--allow-run`
 - filesystem access must use `ctx.youwee.fs`
 - FFmpeg and yt-dlp must use `ctx.youwee.tools`
+- YouTube keyword search should use `ctx.youwee.youtube.searchVideos(...)` with approved network permission
 - tool execution is mediated by Youwee and does not use a shell
 - output files must stay inside approved write scopes and cannot use dangerous executable extensions
 

@@ -2,6 +2,7 @@
 //!
 //! Supports: info.json, description, comments, thumbnail
 
+use rusqlite::{params_from_iter, Connection};
 use std::path::Path;
 use std::process::Stdio;
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -12,12 +13,13 @@ use tokio::process::Command;
 use crate::database::{add_history_internal, add_log_internal};
 use crate::services::{
     get_deno_path, get_ffmpeg_path, get_ytdlp_path, get_ytdlp_source,
-    system_ytdlp_not_found_message,
+    run_ytdlp_with_stderr_and_cookies, system_ytdlp_not_found_message,
 };
 use crate::types::{BackendError, DependencySource};
 use crate::utils::{normalize_url, sanitize_output_path, validate_url, CommandExt};
 
 pub static METADATA_CANCEL_FLAG: AtomicBool = AtomicBool::new(false);
+pub static DATA_EXPORT_CANCEL_FLAG: AtomicBool = AtomicBool::new(false);
 
 #[derive(Clone, serde::Serialize)]
 pub struct MetadataProgress {
@@ -33,6 +35,490 @@ pub struct MetadataProgress {
 #[tauri::command]
 pub fn cancel_metadata_fetch() {
     METADATA_CANCEL_FLAG.store(true, Ordering::SeqCst);
+}
+
+#[tauri::command]
+pub fn cancel_data_export() {
+    DATA_EXPORT_CANCEL_FLAG.store(true, Ordering::SeqCst);
+}
+
+#[derive(Clone, serde::Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum ExportSource {
+    Auto,
+    YoutubePlaylist,
+    YoutubeChannel,
+    UrlList,
+}
+
+#[derive(Clone, serde::Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ExtractDataRowsInput {
+    pub source: ExportSource,
+    pub text: String,
+    pub limit: Option<u32>,
+    pub detail_mode: bool,
+    pub cookie_mode: Option<String>,
+    pub cookie_browser: Option<String>,
+    pub cookie_browser_profile: Option<String>,
+    pub cookie_file_path: Option<String>,
+    pub proxy_url: Option<String>,
+}
+
+#[derive(Clone, serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ExportRow {
+    pub id: String,
+    pub title: Option<String>,
+    pub url: Option<String>,
+    pub platform: Option<String>,
+    pub uploader: Option<String>,
+    pub thumbnail: Option<String>,
+    pub duration_seconds: Option<f64>,
+    pub upload_date: Option<String>,
+    pub timestamp: Option<i64>,
+    pub view_count: Option<i64>,
+    pub like_count: Option<i64>,
+    pub comment_count: Option<i64>,
+    pub share_count: Option<i64>,
+    pub description: Option<String>,
+    pub tags: Option<Vec<String>>,
+    pub playlist_index: Option<i64>,
+    pub extractor: Option<String>,
+}
+
+#[derive(Clone, serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ExtractDataRowsOutput {
+    pub source: String,
+    pub title: Option<String>,
+    pub rows: Vec<ExportRow>,
+    pub warnings: Vec<String>,
+}
+
+fn export_source_key(source: &ExportSource) -> &'static str {
+    match source {
+        ExportSource::Auto => "auto",
+        ExportSource::YoutubePlaylist => "youtube_playlist",
+        ExportSource::YoutubeChannel => "youtube_channel",
+        ExportSource::UrlList => "url_list",
+    }
+}
+
+fn parse_input_lines(text: &str) -> Vec<String> {
+    text.lines()
+        .map(|line| line.trim())
+        .filter(|line| !line.is_empty() && !line.starts_with('#'))
+        .map(|line| line.to_string())
+        .collect()
+}
+
+fn detect_platform(source: &ExportSource, extractor: Option<&str>, url: Option<&str>) -> String {
+    let haystack = format!(
+        "{} {}",
+        extractor.unwrap_or_default().to_lowercase(),
+        url.unwrap_or_default().to_lowercase()
+    );
+
+    if haystack.contains("youtube") || haystack.contains("youtu.be") {
+        "youtube".to_string()
+    } else {
+        match source {
+            ExportSource::Auto => "other".to_string(),
+            ExportSource::YoutubePlaylist | ExportSource::YoutubeChannel => "youtube".to_string(),
+            ExportSource::UrlList => "other".to_string(),
+        }
+    }
+}
+
+fn string_field(json: &serde_json::Value, keys: &[&str]) -> Option<String> {
+    keys.iter()
+        .find_map(|key| json.get(*key).and_then(|value| value.as_str()))
+        .filter(|value| !value.is_empty())
+        .map(|value| value.to_string())
+}
+
+fn i64_field(json: &serde_json::Value, keys: &[&str]) -> Option<i64> {
+    keys.iter()
+        .find_map(|key| json.get(*key).and_then(|value| value.as_i64()))
+}
+
+fn f64_field(json: &serde_json::Value, keys: &[&str]) -> Option<f64> {
+    keys.iter()
+        .find_map(|key| json.get(*key).and_then(|value| value.as_f64()))
+}
+
+fn tags_field(json: &serde_json::Value) -> Option<Vec<String>> {
+    json.get("tags")
+        .and_then(|value| value.as_array())
+        .map(|tags| {
+            tags.iter()
+                .filter_map(|tag| tag.as_str())
+                .filter(|tag| !tag.is_empty())
+                .map(|tag| tag.to_string())
+                .collect::<Vec<_>>()
+        })
+        .filter(|tags| !tags.is_empty())
+}
+
+fn thumbnail_field(json: &serde_json::Value) -> Option<String> {
+    string_field(json, &["thumbnail"])
+        .or_else(|| {
+            json.get("thumbnails")
+                .and_then(|value| value.as_array())
+                .and_then(|thumbnails| thumbnails.iter().rev().find_map(|item| item.get("url")))
+                .and_then(|value| value.as_str())
+                .map(|value| value.to_string())
+        })
+        .map(|url| url.replace("http://", "https://"))
+}
+
+fn fallback_url(id: &str) -> Option<String> {
+    if id.is_empty() {
+        return None;
+    }
+    Some(format!("https://www.youtube.com/watch?v={}", id))
+}
+
+fn detect_export_source(url: &str, selected_source: &ExportSource) -> ExportSource {
+    if !matches!(selected_source, ExportSource::Auto) {
+        return selected_source.clone();
+    }
+
+    let lower = url.to_lowercase();
+    if lower.contains("youtube.com") || lower.contains("youtu.be") {
+        if lower.contains("list=") || lower.contains("/playlist") {
+            return ExportSource::YoutubePlaylist;
+        }
+
+        if lower.contains("/@")
+            || lower.contains("/channel/")
+            || lower.contains("/c/")
+            || lower.contains("/user/")
+        {
+            return ExportSource::YoutubeChannel;
+        }
+    }
+
+    ExportSource::UrlList
+}
+
+fn row_from_json(
+    source: &ExportSource,
+    json: &serde_json::Value,
+    _source_url: &str,
+) -> Option<ExportRow> {
+    let id = string_field(json, &["id", "display_id"])?;
+    let extractor = string_field(json, &["extractor_key", "extractor"]);
+    let webpage_url = string_field(json, &["webpage_url", "original_url"])
+        .or_else(|| {
+            string_field(json, &["url"]).and_then(|url| {
+                if url.starts_with("http://") || url.starts_with("https://") {
+                    Some(url)
+                } else {
+                    fallback_url(&id)
+                }
+            })
+        })
+        .or_else(|| fallback_url(&id));
+    let uploader = string_field(json, &["channel", "uploader", "creator", "artist"]);
+
+    Some(ExportRow {
+        id,
+        title: string_field(json, &["title", "fulltitle"]),
+        url: webpage_url.clone(),
+        platform: Some(detect_platform(
+            source,
+            extractor.as_deref(),
+            webpage_url.as_deref(),
+        )),
+        uploader,
+        thumbnail: thumbnail_field(json),
+        duration_seconds: f64_field(json, &["duration"]),
+        upload_date: string_field(json, &["upload_date", "release_date"]),
+        timestamp: i64_field(
+            json,
+            &["timestamp", "release_timestamp", "modified_timestamp"],
+        ),
+        view_count: i64_field(json, &["view_count", "play_count"]),
+        like_count: i64_field(json, &["like_count", "repost_count"]),
+        comment_count: i64_field(json, &["comment_count"]),
+        share_count: i64_field(json, &["share_count"]),
+        description: string_field(json, &["description"]),
+        tags: tags_field(json),
+        playlist_index: i64_field(json, &["playlist_index"]),
+        extractor,
+    })
+}
+
+fn parse_ytdlp_rows(
+    source: &ExportSource,
+    output: &str,
+    source_url: &str,
+) -> (Vec<ExportRow>, Option<String>) {
+    let mut rows = Vec::new();
+    let mut title = None;
+
+    for line in output.lines() {
+        let line = line.trim();
+        if line.is_empty() {
+            continue;
+        }
+
+        if let Ok(json) = serde_json::from_str::<serde_json::Value>(line) {
+            if title.is_none() {
+                title = string_field(
+                    &json,
+                    &["playlist_title", "playlist", "channel", "uploader"],
+                );
+            }
+            if let Some(row) = row_from_json(source, &json, source_url) {
+                rows.push(row);
+            }
+        }
+    }
+
+    (rows, title)
+}
+
+async fn run_export_ytdlp(
+    app: &AppHandle,
+    source: &ExportSource,
+    url: &str,
+    limit: Option<u32>,
+    detail_mode: bool,
+    input: &ExtractDataRowsInput,
+) -> Result<(Vec<ExportRow>, Option<String>), String> {
+    validate_url(url).map_err(|e| BackendError::from_message(e).to_wire_string())?;
+    let normalized_url = normalize_url(url);
+    let is_youtube = normalized_url.contains("youtube.com") || normalized_url.contains("youtu.be");
+
+    let mut args = vec![
+        "--dump-json".to_string(),
+        "--no-warnings".to_string(),
+        "--socket-timeout".to_string(),
+        "30".to_string(),
+    ];
+
+    if matches!(source, ExportSource::UrlList) {
+        args.push("--no-playlist".to_string());
+    } else if is_youtube && !detail_mode {
+        args.push("--flat-playlist".to_string());
+    }
+
+    if let Some(limit) = limit.filter(|value| *value > 0) {
+        args.push("--playlist-end".to_string());
+        args.push(limit.to_string());
+    }
+
+    if is_youtube {
+        if let Some(deno_path) = get_deno_path(app).await {
+            args.push("--js-runtimes".to_string());
+            args.push(format!("deno:{}", deno_path.to_string_lossy()));
+        }
+    }
+
+    args.push("--".to_string());
+    args.push(normalized_url.clone());
+
+    let arg_refs: Vec<&str> = args.iter().map(|arg| arg.as_str()).collect();
+    let output = run_ytdlp_with_stderr_and_cookies(
+        app,
+        &arg_refs,
+        input.cookie_mode.as_deref(),
+        input.cookie_browser.as_deref(),
+        input.cookie_browser_profile.as_deref(),
+        input.cookie_file_path.as_deref(),
+        input.proxy_url.as_deref(),
+    )
+    .await?;
+
+    if !output.success && output.stdout.trim().is_empty() {
+        let detail = output
+            .stderr
+            .lines()
+            .rev()
+            .find(|line| !line.trim().is_empty())
+            .unwrap_or("yt-dlp exited with error");
+        return Err(BackendError::from_message(detail).to_wire_string());
+    }
+
+    Ok(parse_ytdlp_rows(source, &output.stdout, &normalized_url))
+}
+
+#[tauri::command]
+pub async fn extract_data_rows(
+    app: AppHandle,
+    input: ExtractDataRowsInput,
+) -> Result<ExtractDataRowsOutput, String> {
+    DATA_EXPORT_CANCEL_FLAG.store(false, Ordering::SeqCst);
+
+    let lines = parse_input_lines(&input.text);
+    if lines.is_empty() {
+        return Err(BackendError::from_message("No input URLs found").to_wire_string());
+    }
+
+    let mut all_rows = Vec::new();
+    let mut title = None;
+    let mut warnings = Vec::new();
+
+    for line in lines {
+        if DATA_EXPORT_CANCEL_FLAG.load(Ordering::SeqCst) {
+            warnings.push("Export stopped by user".to_string());
+            break;
+        }
+
+        let effective_source = detect_export_source(&line, &input.source);
+
+        match run_export_ytdlp(
+            &app,
+            &effective_source,
+            &line,
+            input.limit,
+            input.detail_mode,
+            &input,
+        )
+        .await
+        {
+            Ok((mut rows, source_title)) => {
+                if title.is_none() {
+                    title = source_title;
+                }
+                all_rows.append(&mut rows);
+            }
+            Err(error) => {
+                if matches!(input.source, ExportSource::Auto | ExportSource::UrlList) {
+                    warnings.push(format!("{}: {}", line, error));
+                } else {
+                    return Err(error);
+                }
+            }
+        }
+    }
+
+    if all_rows.is_empty() {
+        return Err(BackendError::from_message("No data rows found").to_wire_string());
+    }
+
+    Ok(ExtractDataRowsOutput {
+        source: export_source_key(&input.source).to_string(),
+        title,
+        rows: all_rows,
+        warnings,
+    })
+}
+
+fn sqlite_identifier(value: &str) -> String {
+    let mut result = value
+        .chars()
+        .map(|ch| {
+            if ch.is_ascii_alphanumeric() {
+                ch.to_ascii_lowercase()
+            } else {
+                '_'
+            }
+        })
+        .collect::<String>();
+
+    while result.contains("__") {
+        result = result.replace("__", "_");
+    }
+
+    let result = result.trim_matches('_').to_string();
+    if result.is_empty() {
+        "field".to_string()
+    } else {
+        result
+    }
+}
+
+fn sqlite_quote_identifier(value: &str) -> String {
+    format!("\"{}\"", value.replace('"', "\"\""))
+}
+
+fn json_export_value_to_string(value: Option<&serde_json::Value>) -> String {
+    match value {
+        Some(serde_json::Value::Null) | None => String::new(),
+        Some(serde_json::Value::String(value)) => value.clone(),
+        Some(serde_json::Value::Array(values)) => values
+            .iter()
+            .map(|value| json_export_value_to_string(Some(value)))
+            .filter(|value| !value.is_empty())
+            .collect::<Vec<_>>()
+            .join(", "),
+        Some(value) => value.to_string(),
+    }
+}
+
+#[tauri::command]
+pub fn export_data_rows_sqlite(
+    file_path: String,
+    columns: Vec<String>,
+    rows: Vec<serde_json::Map<String, serde_json::Value>>,
+) -> Result<(), String> {
+    if columns.is_empty() {
+        return Err(BackendError::from_message("No export fields selected").to_wire_string());
+    }
+
+    if Path::new(&file_path).exists() {
+        std::fs::remove_file(&file_path)
+            .map_err(|error| BackendError::from_message(error.to_string()).to_wire_string())?;
+    }
+
+    let conn = Connection::open(&file_path)
+        .map_err(|error| BackendError::from_message(error.to_string()).to_wire_string())?;
+
+    let sql_columns = columns
+        .iter()
+        .map(|column| sqlite_identifier(column))
+        .collect::<Vec<_>>();
+    let create_columns = sql_columns
+        .iter()
+        .map(|column| format!("{} TEXT", sqlite_quote_identifier(column)))
+        .collect::<Vec<_>>()
+        .join(", ");
+    conn.execute(
+        &format!("CREATE TABLE export_rows ({})", create_columns),
+        [],
+    )
+    .map_err(|error| BackendError::from_message(error.to_string()).to_wire_string())?;
+
+    let column_list = sql_columns
+        .iter()
+        .map(|column| sqlite_quote_identifier(column))
+        .collect::<Vec<_>>()
+        .join(", ");
+    let placeholders = (0..columns.len())
+        .map(|_| "?")
+        .collect::<Vec<_>>()
+        .join(", ");
+    let insert_sql = format!(
+        "INSERT INTO export_rows ({}) VALUES ({})",
+        column_list, placeholders
+    );
+
+    let tx = conn
+        .unchecked_transaction()
+        .map_err(|error| BackendError::from_message(error.to_string()).to_wire_string())?;
+    {
+        let mut statement = tx
+            .prepare(&insert_sql)
+            .map_err(|error| BackendError::from_message(error.to_string()).to_wire_string())?;
+
+        for row in rows {
+            let values = columns
+                .iter()
+                .map(|column| json_export_value_to_string(row.get(column)))
+                .collect::<Vec<_>>();
+            statement
+                .execute(params_from_iter(values))
+                .map_err(|error| BackendError::from_message(error.to_string()).to_wire_string())?;
+        }
+    }
+    tx.commit()
+        .map_err(|error| BackendError::from_message(error.to_string()).to_wire_string())?;
+
+    Ok(())
 }
 
 /// Split comments from info.json into separate files
@@ -264,11 +750,17 @@ pub async fn fetch_metadata(
     // Get yt-dlp path
     if let Some((binary_path, is_bundled)) = get_ytdlp_path(&app).await {
         let home_dir = std::env::var("HOME").unwrap_or_else(|_| "/Users".to_string());
-        let current_path = std::env::var("PATH").unwrap_or_default();
-        let extended_path = format!(
-            "{}/.deno/bin:{}/.bun/bin:/opt/homebrew/bin:/usr/local/bin:{}",
-            home_dir, home_dir, current_path
-        );
+        let mut path_entries: Vec<std::path::PathBuf> = std::env::var_os("PATH")
+            .map(|paths| std::env::split_paths(&paths).collect())
+            .unwrap_or_default();
+        path_entries.extend([
+            std::path::PathBuf::from(&home_dir).join(".deno/bin"),
+            std::path::PathBuf::from(&home_dir).join(".bun/bin"),
+            std::path::PathBuf::from("/opt/homebrew/bin"),
+            std::path::PathBuf::from("/usr/local/bin"),
+        ]);
+        let extended_path = std::env::join_paths(path_entries)
+            .unwrap_or_else(|_| std::env::var_os("PATH").unwrap_or_default());
 
         // Log command with binary path info (same format as download.rs)
         let binary_info = format!("{} (bundled: {})", binary_path.display(), is_bundled);

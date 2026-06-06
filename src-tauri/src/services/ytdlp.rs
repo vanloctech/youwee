@@ -2,8 +2,7 @@ use crate::types::{
     BackendError, DependencySource, YtdlpAllVersions, YtdlpChannel, YtdlpChannelInfo,
     YtdlpVersionInfo,
 };
-use crate::utils::CommandExt;
-use std::collections::HashSet;
+use crate::utils::{find_system_binary, unix_system_binary_dirs, CommandExt};
 use std::path::PathBuf;
 use std::process::Stdio;
 use tauri::{AppHandle, Manager};
@@ -13,6 +12,14 @@ use tokio::process::Command;
 
 const CHANNEL_CONFIG_FILE: &str = "ytdlp-channel.txt";
 const SOURCE_CONFIG_FILE: &str = "ytdlp-source.txt";
+#[cfg(windows)]
+const BUNDLED_YTDLP_BINARY_NAME: &str = "youwee-yt-dlp.exe";
+#[cfg(not(windows))]
+const BUNDLED_YTDLP_BINARY_NAME: &str = "youwee-yt-dlp";
+#[cfg(windows)]
+const LEGACY_BUNDLED_YTDLP_BINARY_NAME: &str = "yt-dlp.exe";
+#[cfg(not(windows))]
+const LEGACY_BUNDLED_YTDLP_BINARY_NAME: &str = "yt-dlp";
 
 pub fn system_ytdlp_not_found_message() -> String {
     #[cfg(target_os = "macos")]
@@ -87,39 +94,13 @@ pub async fn set_ytdlp_source(app: &AppHandle, source: &DependencySource) -> Res
     Ok(())
 }
 
-fn get_system_binary_candidates(binary_name: &str) -> Vec<PathBuf> {
-    let mut candidates = vec![
-        PathBuf::from("/opt/homebrew/bin").join(binary_name),
-        PathBuf::from("/usr/local/bin").join(binary_name),
-        PathBuf::from("/usr/bin").join(binary_name),
-    ];
-
-    if let Ok(path_var) = std::env::var("PATH") {
-        for dir in std::env::split_paths(&path_var) {
-            candidates.push(dir.join(binary_name));
-        }
-    }
-
-    let mut unique = Vec::new();
-    let mut seen = HashSet::new();
-    for path in candidates {
-        let key = path.to_string_lossy().to_string();
-        if seen.insert(key) {
-            unique.push(path);
-        }
-    }
-    unique
-}
-
 fn get_system_ytdlp_path() -> Option<PathBuf> {
     #[cfg(windows)]
     let binary_name = "yt-dlp.exe";
     #[cfg(not(windows))]
     let binary_name = "yt-dlp";
 
-    get_system_binary_candidates(binary_name)
-        .into_iter()
-        .find(|p| p.exists())
+    find_system_binary(binary_name, &unix_system_binary_dirs())
 }
 
 /// Get the config file path for storing channel selection
@@ -206,17 +187,14 @@ fn get_legacy_ytdlp_path(app: &AppHandle) -> Option<PathBuf> {
 
 /// Get the bundled yt-dlp path
 fn get_bundled_ytdlp_path() -> Option<PathBuf> {
-    #[cfg(windows)]
-    let binary_name = "yt-dlp.exe";
-    #[cfg(not(windows))]
-    let binary_name = "yt-dlp";
-
     // Check next to executable first
     if let Ok(exe_path) = std::env::current_exe() {
         if let Some(exe_dir) = exe_path.parent() {
-            let bundled = exe_dir.join(binary_name);
-            if bundled.exists() {
-                return Some(bundled);
+            for binary_name in [BUNDLED_YTDLP_BINARY_NAME, LEGACY_BUNDLED_YTDLP_BINARY_NAME] {
+                let bundled = exe_dir.join(binary_name);
+                if bundled.exists() {
+                    return Some(bundled);
+                }
             }
         }
     }
