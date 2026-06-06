@@ -1,4 +1,4 @@
-import { Clock, Play, Square, Trash2, X } from 'lucide-react';
+import { ArrowLeft, Clock, Play, Square, Trash2, X } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { BrowserCookieErrorDialog } from '@/components/BrowserCookieErrorDialog';
@@ -120,7 +120,24 @@ export function DownloadPage({ onNavigateToSettings }: DownloadPageProps) {
     <div className="flex-1 flex flex-col overflow-hidden">
       {/* Header */}
       <header className="flex-shrink-0 flex items-center justify-between h-12 sm:h-14 px-4 sm:px-6">
-        <h1 className="text-base sm:text-lg font-semibold">{t('title')}</h1>
+        {activeView === 'keywordSearch' ? (
+          <div className="flex min-w-0 items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setActiveView('download')}
+              className="-ml-2 inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+              title={t('urlInput.keyword.back')}
+              aria-label={t('urlInput.keyword.back')}
+            >
+              <ArrowLeft className="h-5 w-5" />
+            </button>
+            <h1 className="truncate text-base font-semibold sm:text-lg">
+              {t('urlInput.keyword.pageTitle')}
+            </h1>
+          </div>
+        ) : (
+          <h1 className="text-base sm:text-lg font-semibold">{t('title')}</h1>
+        )}
         <ThemePicker />
       </header>
 
@@ -306,7 +323,6 @@ export function DownloadPage({ onNavigateToSettings }: DownloadPageProps) {
       >
         <YoutubeKeywordSearch
           disabled={isDownloading}
-          onBack={() => setActiveView('download')}
           onAddResults={addSearchResultsToQueue}
           queuedVideoIds={queuedVideoIds}
         />

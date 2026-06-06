@@ -1,7 +1,6 @@
 import { invoke } from '@tauri-apps/api/core';
 import {
   AlertCircle,
-  ArrowLeft,
   Check,
   CheckCircle2,
   CheckSquare,
@@ -52,7 +51,6 @@ const DEFAULT_FILTERS: YoutubeSearchFilters = {
 
 interface YoutubeKeywordSearchProps {
   disabled?: boolean;
-  onBack: () => void;
   onAddResults: (results: YoutubeSearchVideo[]) => Promise<YoutubeSearchQueueResult>;
   queuedVideoIds: Set<string>;
 }
@@ -277,7 +275,6 @@ function SearchResultGridItem({
 
 export function YoutubeKeywordSearch({
   disabled,
-  onBack,
   onAddResults,
   queuedVideoIds,
 }: YoutubeKeywordSearchProps) {
@@ -478,29 +475,9 @@ export function YoutubeKeywordSearch({
 
   return (
     <div className="flex flex-col h-full bg-background rounded-xl border border-border/50 overflow-hidden shadow-sm relative">
-      {/* Header & Search Form */}
+      {/* Search Form */}
       <div className="flex-shrink-0 border-b border-border/50 bg-card/20">
-        <div className="p-4 sm:p-6 sm:pb-5 space-y-5">
-          {/* Header */}
-          <div className="flex items-center gap-4">
-            <button
-              type="button"
-              onClick={onBack}
-              className="p-2 -ml-2 rounded-xl hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
-              title={t('urlInput.keyword.back')}
-            >
-              <ArrowLeft className="w-5 h-5" />
-            </button>
-            <div>
-              <h2 className="text-lg font-semibold leading-none text-foreground tracking-tight">
-                {t('urlInput.keyword.pageTitle')}
-              </h2>
-              <p className="text-sm text-muted-foreground mt-1.5">
-                {t('urlInput.keyword.pageDescription')}
-              </p>
-            </div>
-          </div>
-
+        <div className="p-4 sm:p-6 sm:pb-5">
           {/* Search Form */}
           <form
             onSubmit={handleSubmit}
