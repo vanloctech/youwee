@@ -89,12 +89,19 @@
       "moreCount": "ещё 1 790",
       "viewFullList": "Посмотреть полный список поддерживаемых сайтов"
     },
+    "filters": {
+      "all": "Все",
+      "active": "Активные",
+      "emptyTitle": "Нет видео с этим статусом",
+      "showAll": "Показать все видео"
+    },
     "status": {
       "pending": "Ожидание",
       "fetching": "Получение",
       "downloading": "Загрузка",
       "completed": "Завершено",
       "failed": "Ошибка",
+      "skipped": "Пропущено",
       "failedHint": "Смотрите страницу Журналов для подробностей",
       "retrying": "Попытка {{current}}/{{total}} через {{seconds}}с"
     },

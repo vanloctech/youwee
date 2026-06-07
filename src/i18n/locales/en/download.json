@@ -183,6 +183,12 @@
       "title": "No videos yet",
       "description": "Paste a YouTube URL above to start downloading videos"
     },
+    "filters": {
+      "all": "All",
+      "active": "Active",
+      "emptyTitle": "No videos in this status",
+      "showAll": "Show all videos"
+    },
     "status": {
       "pending": "Pending",
       "fetching": "Fetching",

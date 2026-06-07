@@ -181,12 +181,19 @@
       "title": "Nenhum vídeo ainda",
       "description": "Cole um URL do YouTube acima para iniciar downloads"
     },
+    "filters": {
+      "all": "Todos",
+      "active": "Ativo",
+      "emptyTitle": "Nenhum vídeo neste status",
+      "showAll": "Mostrar todos os vídeos"
+    },
     "status": {
       "pending": "Pendente",
       "fetching": "Buscando",
       "downloading": "Baixando",
       "completed": "Concluído",
       "failed": "Falhou",
+      "skipped": "Ignorado",
       "failedHint": "Visualize os Registros para detalhes",
       "retrying": "Tentando {{current}}/{{total}} em {{seconds}}s"
     },

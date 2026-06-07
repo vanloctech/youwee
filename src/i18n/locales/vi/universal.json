@@ -91,12 +91,19 @@
       "moreCount": "1,790 trang khác",
       "viewFullList": "Xem danh sách đầy đủ các trang hỗ trợ"
     },
+    "filters": {
+      "all": "Tất cả",
+      "active": "Đang xử lý",
+      "emptyTitle": "Không có video ở trạng thái này",
+      "showAll": "Hiện tất cả video"
+    },
     "status": {
       "pending": "Đang chờ",
       "fetching": "Đang lấy",
       "downloading": "Đang tải",
       "completed": "Hoàn thành",
       "failed": "Thất bại",
+      "skipped": "Đã bỏ qua",
       "failedHint": "Xem trang Logs để biết chi tiết",
       "retrying": "Thử lại {{current}}/{{total}} sau {{seconds}}s"
     },

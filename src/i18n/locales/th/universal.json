@@ -89,12 +89,19 @@
       "moreCount": "อีก 1,790 แห่ง",
       "viewFullList": "ดูรายชื่อเว็บไซต์ที่รองรับทั้งหมด"
     },
+    "filters": {
+      "all": "ทั้งหมด",
+      "active": "กำลังทำงาน",
+      "emptyTitle": "ไม่มีวิดีโอในสถานะนี้",
+      "showAll": "แสดงวิดีโอทั้งหมด"
+    },
     "status": {
       "pending": "รอดำเนินการ",
       "fetching": "กำลังดึงข้อมูล",
       "downloading": "กำลังดาวน์โหลด",
       "completed": "เสร็จสิ้น",
       "failed": "ล้มเหลว",
+      "skipped": "ข้ามแล้ว",
       "failedHint": "ดูรายละเอียดได้ที่หน้า Logs",
       "retrying": "ลองใหม่ {{current}}/{{total}} ในอีก {{seconds}} วินาที"
     },

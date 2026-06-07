@@ -183,6 +183,12 @@
       "title": "暂无视频",
       "description": "在上方粘贴 YouTube 链接开始下载视频"
     },
+    "filters": {
+      "all": "全部",
+      "active": "进行中",
+      "emptyTitle": "此状态下没有视频",
+      "showAll": "显示全部视频"
+    },
     "status": {
       "pending": "等待中",
       "fetching": "获取中",

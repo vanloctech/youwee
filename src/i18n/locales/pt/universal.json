@@ -89,12 +89,19 @@
       "moreCount": "mais de 1.790",
       "viewFullList": "Ver lista completa de sites suportados"
     },
+    "filters": {
+      "all": "Todos",
+      "active": "Ativo",
+      "emptyTitle": "Nenhum vídeo neste status",
+      "showAll": "Mostrar todos os vídeos"
+    },
     "status": {
       "pending": "Pendente",
       "fetching": "Buscando",
       "downloading": "Baixando",
       "completed": "Concluído",
       "failed": "Falhou",
+      "skipped": "Ignorado",
       "failedHint": "Visualize a página de Registros para detalhes",
       "retrying": "Tentando {{current}}/{{total}} em {{seconds}}s"
     },

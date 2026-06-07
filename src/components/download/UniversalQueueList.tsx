@@ -1,5 +1,5 @@
 import { CheckCircle2, ExternalLink, Globe } from 'lucide-react';
-import { useEffect, useRef } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { EmptyStateIllustration } from '@/components/shared/EmptyStateIllustration';
 import { Badge } from '@/components/ui/badge';
@@ -7,6 +7,13 @@ import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import type { DownloadItem } from '@/lib/types';
 import { cn } from '@/lib/utils';
+import {
+  filterQueueItems,
+  getQueueStatusCounts,
+  QueueStatusEmptyState,
+  QueueStatusFilter,
+  type QueueStatusFilterValue,
+} from './QueueStatusFilter';
 import { UniversalQueueItem } from './UniversalQueueItem';
 
 // Popular supported sites with Font Awesome v4 icons
@@ -44,14 +51,10 @@ export function UniversalQueueList({
 }: UniversalQueueListProps) {
   const { t } = useTranslation('universal');
   const containerRef = useRef<HTMLDivElement | null>(null);
-  const completedCount = items.filter((i) => i.status === 'completed').length;
-  const clearableCount = items.filter(
-    (i) => i.status === 'completed' || i.status === 'skipped',
-  ).length;
-  const pendingCount = items.filter((i) => i.status === 'pending').length;
+  const [statusFilter, setStatusFilter] = useState<QueueStatusFilterValue>('all');
+  const statusCounts = useMemo(() => getQueueStatusCounts(items), [items]);
   const totalCount = items.length;
-  const hasCompleted = clearableCount > 0;
-  const completionRate = totalCount > 0 ? Math.round((completedCount / totalCount) * 100) : 0;
+  const filteredItems = useMemo(() => filterQueueItems(items, statusFilter), [items, statusFilter]);
 
   useEffect(() => {
     if (!focusedItemId || !containerRef.current) return;
@@ -60,6 +63,12 @@ export function UniversalQueueList({
     );
     target?.scrollIntoView({ behavior: 'smooth', block: 'center' });
   }, [focusedItemId]);
+
+  useEffect(() => {
+    if (items.length === 0 && statusFilter !== 'all') {
+      setStatusFilter('all');
+    }
+  }, [items.length, statusFilter]);
 
   if (items.length === 0) {
     return (
@@ -107,52 +116,66 @@ export function UniversalQueueList({
   return (
     <div ref={containerRef} className="flex-1 flex flex-col overflow-hidden">
       {/* Queue Header */}
-      <div className="sticky top-0 z-10 mb-2 flex items-center justify-between gap-2 rounded-lg bg-background/80 px-1 py-2 backdrop-blur-sm">
-        <div className="flex items-center gap-1.5">
-          <span className="text-xs text-muted-foreground">{t('queue.title')}</span>
-          <Badge variant="outline" className="px-1.5 py-0 text-[10px]">
-            {completedCount}/{totalCount}
-          </Badge>
-          {pendingCount > 0 && (
-            <Badge variant="secondary" className="px-1.5 py-0 text-[10px]">
-              {t('queue.pending', { count: pendingCount })}
+      <div className="sticky top-0 z-10 mb-2 space-y-1.5 rounded-lg bg-background/85 py-1.5 backdrop-blur-sm">
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex items-center gap-1.5">
+            <span className="text-xs text-muted-foreground">{t('queue.title')}</span>
+            <Badge variant="outline" className="px-1.5 py-0 text-[10px]">
+              {statusCounts.completed}/{totalCount}
             </Badge>
-          )}
-          {hasCompleted && (
-            <Badge variant="outline" className="px-1.5 py-0 text-[10px] text-muted-foreground">
-              {completionRate}%
-            </Badge>
+          </div>
+          {statusCounts.clearable > 0 && (
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-7 gap-1 text-xs text-muted-foreground hover:text-foreground"
+              onClick={onClearCompleted}
+              disabled={isDownloading}
+            >
+              <CheckCircle2 className="w-3 h-3" />
+              {t('queue.clearCompleted', { count: statusCounts.clearable })}
+            </Button>
           )}
         </div>
-        {hasCompleted && (
-          <Button
-            variant="ghost"
-            size="sm"
-            className="h-7 gap-1 text-xs text-muted-foreground hover:text-foreground"
-            onClick={onClearCompleted}
-            disabled={isDownloading}
-          >
-            <CheckCircle2 className="w-3 h-3" />
-            {t('queue.clearCompleted', { count: clearableCount })}
-          </Button>
-        )}
+
+        <QueueStatusFilter
+          value={statusFilter}
+          counts={statusCounts}
+          onChange={setStatusFilter}
+          labels={{
+            all: t('queue.filters.all'),
+            pending: t('queue.status.pending'),
+            active: t('queue.filters.active'),
+            completed: t('queue.status.completed'),
+            error: t('queue.status.failed'),
+            skipped: t('queue.status.skipped'),
+          }}
+        />
       </div>
 
       {/* Queue Items */}
-      <ScrollArea className="flex-1 -mx-1 px-1">
-        <div className="space-y-2 pb-2">
-          {items.map((item) => (
-            <UniversalQueueItem
-              key={item.id}
-              item={item}
-              isFocused={focusedItemId === item.id}
-              disabled={isDownloading}
-              onRemove={onRemove}
-              onUpdateTimeRange={onUpdateTimeRange}
-              onRename={onRename}
-            />
-          ))}
-        </div>
+      <ScrollArea className="flex-1">
+        {filteredItems.length === 0 ? (
+          <QueueStatusEmptyState
+            title={t('queue.filters.emptyTitle')}
+            actionLabel={t('queue.filters.showAll')}
+            onShowAll={() => setStatusFilter('all')}
+          />
+        ) : (
+          <div className="space-y-2 pb-2">
+            {filteredItems.map((item) => (
+              <UniversalQueueItem
+                key={item.id}
+                item={item}
+                isFocused={focusedItemId === item.id}
+                disabled={isDownloading}
+                onRemove={onRemove}
+                onUpdateTimeRange={onUpdateTimeRange}
+                onRename={onRename}
+              />
+            ))}
+          </div>
+        )}
       </ScrollArea>
     </div>
   );

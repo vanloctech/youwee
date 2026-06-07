@@ -89,12 +89,19 @@
       "moreCount": "1,790 أخرى",
       "viewFullList": "عرض القائمة الكاملة للمواقع المدعومة"
     },
+    "filters": {
+      "all": "الكل",
+      "active": "نشط",
+      "emptyTitle": "لا توجد فيديوهات بهذه الحالة",
+      "showAll": "عرض كل الفيديوهات"
+    },
     "status": {
       "pending": "قيد الانتظار",
       "fetching": "جارٍ الجلب",
       "downloading": "جارٍ التنزيل",
       "completed": "مكتمل",
       "failed": "فشل",
+      "skipped": "تم التخطي",
       "failedHint": "راجع صفحة Logs للتفاصيل",
       "retrying": "إعادة المحاولة {{current}}/{{total}} بعد {{seconds}} ثانية"
     },
