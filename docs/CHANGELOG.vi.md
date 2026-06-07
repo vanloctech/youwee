@@ -7,6 +7,8 @@ và dự án tuân theo [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+## [0.17.0] - 2026-06-07
+
 ### Thêm mới
 - **Giao diện dòng lệnh** - Thêm CLI local `youwee` với nút cài đặt, request tải có cấu trúc và các tùy chọn chất lượng, chế độ âm thanh, chỉ thêm vào queue, playlist, phụ đề, cắt đoạn tải, tải live từ đầu và bỏ qua live
 - **Bỏ qua live** - Thêm cài đặt tải xuống để bỏ qua video đang phát trực tiếp trong giao diện YouTube và Universal
