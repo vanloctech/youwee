@@ -10,7 +10,7 @@ import {
   VolumeX,
   X,
 } from 'lucide-react';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { type PlayMode, usePlayer } from '@/contexts/PlayerContext';
 import { cn } from '@/lib/utils';
@@ -23,6 +23,10 @@ function formatTime(secs: number): string {
 }
 
 const PLAYBACK_RATES = [0.75, 1, 1.25, 1.5, 2];
+
+function clamp(value: number, min: number, max: number): number {
+  return Math.min(max, Math.max(min, value));
+}
 
 export function MusicPlayer() {
   const { t } = useTranslation('pages');
@@ -46,19 +50,15 @@ export function MusicPlayer() {
   } = usePlayer();
 
   const [thumbError, setThumbError] = useState(false);
+  const [isSeeking, setIsSeeking] = useState(false);
+  const [seekPreviewTime, setSeekPreviewTime] = useState(0);
+  const progressRef = useRef<HTMLDivElement | null>(null);
 
   // Reset thumbnail error whenever the current track changes
   // biome-ignore lint/correctness/useExhaustiveDependencies: we intentionally depend on the current entry id
   useEffect(() => {
     setThumbError(false);
   }, [currentEntry?.id]);
-
-  const handleSeek = useCallback(
-    (e: React.ChangeEvent<HTMLInputElement>) => {
-      seek(parseFloat(e.target.value));
-    },
-    [seek],
-  );
 
   const handleVolume = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -79,9 +79,83 @@ export function MusicPlayer() {
     setPlaybackRate(nextRate);
   }, [playbackRate, setPlaybackRate]);
 
+  const seekFromClientX = useCallback(
+    (clientX: number) => {
+      const rect = progressRef.current?.getBoundingClientRect();
+      if (!rect || rect.width <= 0 || duration <= 0) return currentTime;
+
+      const percent = clamp((clientX - rect.left) / rect.width, 0, 1);
+      const nextTime = percent * duration;
+      setSeekPreviewTime(nextTime);
+      seek(nextTime);
+      return nextTime;
+    },
+    [currentTime, duration, seek],
+  );
+
+  const handleProgressPointerDown = useCallback(
+    (event: React.PointerEvent<HTMLDivElement>) => {
+      if (duration <= 0) return;
+
+      event.preventDefault();
+      event.currentTarget.setPointerCapture(event.pointerId);
+      setIsSeeking(true);
+      seekFromClientX(event.clientX);
+    },
+    [duration, seekFromClientX],
+  );
+
+  const handleProgressPointerMove = useCallback(
+    (event: React.PointerEvent<HTMLDivElement>) => {
+      if (!isSeeking) return;
+
+      event.preventDefault();
+      seekFromClientX(event.clientX);
+    },
+    [isSeeking, seekFromClientX],
+  );
+
+  const handleProgressPointerEnd = useCallback(
+    (event: React.PointerEvent<HTMLDivElement>) => {
+      if (!isSeeking) return;
+
+      event.preventDefault();
+      if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+        event.currentTarget.releasePointerCapture(event.pointerId);
+      }
+      seekFromClientX(event.clientX);
+      setIsSeeking(false);
+    },
+    [isSeeking, seekFromClientX],
+  );
+
+  const handleProgressKeyDown = useCallback(
+    (event: React.KeyboardEvent<HTMLDivElement>) => {
+      if (duration <= 0) return;
+
+      const smallStep = 5;
+      const largeStep = 30;
+      let nextTime: number | null = null;
+
+      if (event.key === 'ArrowLeft') nextTime = currentTime - smallStep;
+      if (event.key === 'ArrowRight') nextTime = currentTime + smallStep;
+      if (event.key === 'PageDown') nextTime = currentTime - largeStep;
+      if (event.key === 'PageUp') nextTime = currentTime + largeStep;
+      if (event.key === 'Home') nextTime = 0;
+      if (event.key === 'End') nextTime = duration;
+
+      if (nextTime === null) return;
+
+      event.preventDefault();
+      seek(clamp(nextTime, 0, duration));
+    },
+    [currentTime, duration, seek],
+  );
+
   if (!currentEntry) return null;
 
-  const progress = duration > 0 ? (currentTime / duration) * 100 : 0;
+  const displayTime = isSeeking ? seekPreviewTime : currentTime;
+  const progress = duration > 0 ? (displayTime / duration) * 100 : 0;
   const queueLabel =
     queue.length > 1 ? t('player.trackCount', { count: queue.length }) : t('player.oneTrack');
 
@@ -178,26 +252,37 @@ export function MusicPlayer() {
 
             <div className="flex w-full items-center gap-2.5 sm:max-w-xl sm:self-center lg:max-w-2xl">
               <span className="w-9 flex-shrink-0 text-right text-[10px] tabular-nums text-muted-foreground">
-                {formatTime(currentTime)}
+                {formatTime(displayTime)}
               </span>
-              <div className="group relative h-2 flex-1">
-                <div className="absolute inset-y-0 w-full rounded-full bg-muted/80 ring-1 ring-white/[0.05]" />
+              <div
+                ref={progressRef}
+                className="group relative h-5 flex-1 cursor-pointer touch-none select-none"
+                onPointerDown={handleProgressPointerDown}
+                onPointerMove={handleProgressPointerMove}
+                onPointerUp={handleProgressPointerEnd}
+                onPointerCancel={handleProgressPointerEnd}
+                onKeyDown={handleProgressKeyDown}
+                role="slider"
+                tabIndex={0}
+                aria-valuemin={0}
+                aria-valuemax={Math.round(duration || 0)}
+                aria-valuenow={Math.round(displayTime)}
+                aria-valuetext={`${formatTime(displayTime)} / ${formatTime(duration)}`}
+              >
+                <div className="absolute top-1/2 h-2 w-full -translate-y-1/2 rounded-full bg-muted/80 ring-1 ring-white/[0.05]" />
                 <div
-                  className="absolute inset-y-0 left-0 rounded-full bg-primary transition-all"
+                  className={cn(
+                    'absolute left-0 top-1/2 h-2 -translate-y-1/2 rounded-full bg-primary',
+                    !isSeeking && 'transition-[width]',
+                  )}
                   style={{ width: `${progress}%` }}
                 />
                 <div
-                  className="absolute top-1/2 h-3.5 w-3.5 -translate-y-1/2 rounded-full border border-primary/40 bg-background shadow-[0_2px_10px_rgba(0,0,0,0.18)] transition-all group-hover:scale-110"
-                  style={{ left: `calc(${progress}% - 0.4375rem)` }}
-                />
-                <input
-                  type="range"
-                  min={0}
-                  max={duration || 1}
-                  step={0.1}
-                  value={currentTime}
-                  onChange={handleSeek}
-                  className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
+                  className={cn(
+                    'absolute top-1/2 h-3.5 w-3.5 -translate-x-1/2 -translate-y-1/2 rounded-full border border-primary/40 bg-background shadow-[0_2px_10px_rgba(0,0,0,0.18)] transition-transform group-hover:scale-110',
+                    isSeeking && 'scale-110 border-primary/70',
+                  )}
+                  style={{ left: `${progress}%` }}
                 />
               </div>
               <span className="w-9 flex-shrink-0 text-[10px] tabular-nums text-muted-foreground">
