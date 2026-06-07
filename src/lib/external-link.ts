@@ -60,7 +60,7 @@ function isPrivateOrLocalHost(hostname: string): boolean {
   return false;
 }
 
-function isPublicHttpUrl(url: string): boolean {
+export function isPublicHttpUrl(url: string): boolean {
   try {
     const parsed = new URL(url);
     if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {

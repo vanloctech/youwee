@@ -3,6 +3,7 @@ import {
   CheckCircle2,
   ChevronDown,
   ChevronUp,
+  CircleSlash,
   Clock,
   FolderOpen,
   Globe,
@@ -144,6 +145,7 @@ export function UniversalQueueItem({
   const isCompleted = item.status === 'completed';
   const isError = item.status === 'error';
   const isPending = item.status === 'pending';
+  const isSkipped = item.status === 'skipped';
   const retryState = item.retryState;
   const isFetchingMeta = isPending && !item.thumbnail && item.title === item.url && !item.extractor;
 
@@ -401,12 +403,14 @@ export function UniversalQueueItem({
               isActive && 'bg-primary/10 text-primary',
               isCompleted && 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400',
               isError && 'bg-red-500/10 text-red-600 dark:text-red-400',
+              isSkipped && 'bg-amber-500/10 text-amber-600 dark:text-amber-400',
             )}
           >
             {isPending && <Clock className="w-3 h-3" />}
             {isActive && <Loader2 className="w-3 h-3 animate-spin" />}
             {isCompleted && <CheckCircle2 className="w-3 h-3" />}
             {isError && <XCircle className="w-3 h-3" />}
+            {isSkipped && <CircleSlash className="w-3 h-3" />}
             <span>
               {isPending && t('queue.status.pending')}
               {isActive &&
@@ -415,6 +419,7 @@ export function UniversalQueueItem({
                   : t('queue.status.downloading'))}
               {isCompleted && t('queue.status.completed')}
               {isError && t('queue.status.failed')}
+              {isSkipped && t('queue.status.skipped')}
             </span>
           </span>
 

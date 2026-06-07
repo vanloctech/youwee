@@ -85,6 +85,7 @@ export interface UniversalSettings {
   concurrentDownloads: number;
   // Live stream settings
   liveFromStart: boolean;
+  skipLive: boolean;
   // Speed limit settings
   speedLimitEnabled: boolean;
   speedLimitValue: number;
@@ -183,6 +184,7 @@ function saveSettings(settings: UniversalSettings) {
         audioBitrate: settings.audioBitrate,
         concurrentDownloads: settings.concurrentDownloads,
         liveFromStart: settings.liveFromStart,
+        skipLive: settings.skipLive,
         speedLimitEnabled: settings.speedLimitEnabled,
         speedLimitValue: settings.speedLimitValue,
         speedLimitUnit: settings.speedLimitUnit,
@@ -220,6 +222,7 @@ interface UniversalContextType {
   updateAudioBitrate: (bitrate: AudioBitrate) => void;
   updateConcurrentDownloads: (concurrent: number) => void;
   updateLiveFromStart: (enabled: boolean) => void;
+  updateSkipLive: (enabled: boolean) => void;
   updateAutoRetry: (enabled: boolean, maxAttempts: number, delaySeconds: number) => void;
   // Cookie error detection
   cookieError: { show: boolean; itemId?: string; kind: 'db_locked' | 'fresh_cookies' } | null;
@@ -259,6 +262,7 @@ export function UniversalProvider({ children }: { children: ReactNode }) {
       concurrentDownloads: saved.concurrentDownloads || 1,
       // Live stream settings
       liveFromStart: saved.liveFromStart === true, // Default to false
+      skipLive: saved.skipLive === true, // Default to false
       // Speed limit settings
       speedLimitEnabled: saved.speedLimitEnabled === true, // Default to false (unlimited)
       speedLimitValue: saved.speedLimitValue || 10,
@@ -551,6 +555,8 @@ export function UniversalProvider({ children }: { children: ReactNode }) {
         audioBitrate: currentSettings.audioBitrate,
         useAria2: aria2Settings.useAria2,
         aria2Args: aria2Settings.aria2Args,
+        liveFromStart: currentSettings.liveFromStart,
+        skipLive: currentSettings.skipLive,
         pluginWorkflowSnapshots: workflowSnapshots,
         postDownloadWorkflowSteps: loadPostDownloadWorkflowSteps(),
         autoRetryEnabled: currentSettings.autoRetryEnabled,
@@ -623,6 +629,10 @@ export function UniversalProvider({ children }: { children: ReactNode }) {
         audioBitrate: mediaType === 'audio' ? audioBitrate : currentSettings.audioBitrate,
         useAria2: aria2Settings.useAria2,
         aria2Args: aria2Settings.aria2Args,
+        timeRangeStart: options?.timeRangeStart,
+        timeRangeEnd: options?.timeRangeEnd,
+        liveFromStart: options?.liveFromStart ?? currentSettings.liveFromStart,
+        skipLive: options?.skipLive ?? currentSettings.skipLive,
         pluginWorkflowSnapshots: workflowSnapshots,
         postDownloadWorkflowSteps: loadPostDownloadWorkflowSteps(),
         autoRetryEnabled: currentSettings.autoRetryEnabled,
@@ -770,7 +780,9 @@ export function UniversalProvider({ children }: { children: ReactNode }) {
 
   const clearCompleted = useCallback(() => {
     setItems((items) => {
-      const nextItems = items.filter((item) => item.status !== 'completed');
+      const nextItems = items.filter(
+        (item) => item.status !== 'completed' && item.status !== 'skipped',
+      );
       itemsRef.current = nextItems;
       return nextItems;
     });
@@ -863,7 +875,8 @@ export function UniversalProvider({ children }: { children: ReactNode }) {
             embedMetadata: embedSettings.embedMetadata,
             embedThumbnail: embedSettings.embedThumbnail,
             // Live stream settings
-            liveFromStart: settings.liveFromStart,
+            liveFromStart: itemSettings?.liveFromStart ?? settings.liveFromStart,
+            skipLive: itemSettings?.skipLive ?? false,
             // Speed limit settings
             speedLimit: settings.speedLimitEnabled
               ? `${settings.speedLimitValue}${settings.speedLimitUnit}`
@@ -904,6 +917,22 @@ export function UniversalProvider({ children }: { children: ReactNode }) {
         } catch (error) {
           const parsedError = extractBackendError(error);
           const errorMessage = localizeBackendError(parsedError);
+          if (parsedError.code === 'YT_SKIPPED_LIVE') {
+            setItems((items) =>
+              items.map((i) =>
+                i.id === item.id
+                  ? {
+                      ...i,
+                      status: 'skipped',
+                      progress: 0,
+                      error: errorMessage,
+                      retryState: undefined,
+                    }
+                  : i,
+              ),
+            );
+            return;
+          }
           const canRetry =
             isDownloadingRef.current &&
             autoRetryEnabled &&
@@ -1084,6 +1113,14 @@ export function UniversalProvider({ children }: { children: ReactNode }) {
     });
   }, []);
 
+  const updateSkipLive = useCallback((skipLive: boolean) => {
+    setSettings((s) => {
+      const newSettings = { ...s, skipLive };
+      saveSettings(newSettings);
+      return newSettings;
+    });
+  }, []);
+
   const updateAutoRetry = useCallback(
     (autoRetryEnabled: boolean, autoRetryMaxAttempts: number, autoRetryDelaySeconds: number) => {
       setSettings((s) => {
@@ -1147,6 +1184,7 @@ export function UniversalProvider({ children }: { children: ReactNode }) {
     updateAudioBitrate,
     updateConcurrentDownloads,
     updateLiveFromStart,
+    updateSkipLive,
     updateAutoRetry,
     // Cookie error detection
     cookieError,

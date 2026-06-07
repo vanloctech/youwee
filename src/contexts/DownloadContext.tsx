@@ -145,6 +145,7 @@ function saveSettings(settings: DownloadSettings) {
         embedMetadata: settings.embedMetadata,
         embedThumbnail: settings.embedThumbnail,
         liveFromStart: settings.liveFromStart,
+        skipLive: settings.skipLive,
         speedLimitEnabled: settings.speedLimitEnabled,
         speedLimitValue: settings.speedLimitValue,
         speedLimitUnit: settings.speedLimitUnit,
@@ -230,6 +231,7 @@ interface DownloadContextType {
   updateEmbedThumbnail: (enabled: boolean) => void;
   // Live stream settings
   updateLiveFromStart: (enabled: boolean) => void;
+  updateSkipLive: (enabled: boolean) => void;
   // Speed limit settings
   updateSpeedLimit: (enabled: boolean, value: number, unit: 'K' | 'M' | 'G') => void;
   // External downloader settings
@@ -297,6 +299,7 @@ export function DownloadProvider({ children }: { children: ReactNode }) {
       embedThumbnail: saved.embedThumbnail === true, // Default to false (requires FFmpeg)
       // Live stream settings
       liveFromStart: saved.liveFromStart === true, // Default to false
+      skipLive: saved.skipLive === true, // Default to false
       // Speed limit settings
       speedLimitEnabled: saved.speedLimitEnabled === true, // Default to false (unlimited)
       speedLimitValue: saved.speedLimitValue || 10,
@@ -657,6 +660,8 @@ export function DownloadProvider({ children }: { children: ReactNode }) {
         subtitleLangs: [...currentSettings.subtitleLangs],
         subtitleEmbed: currentSettings.subtitleEmbed,
         subtitleFormat: currentSettings.subtitleFormat,
+        liveFromStart: currentSettings.liveFromStart,
+        skipLive: currentSettings.skipLive,
         pluginWorkflowSnapshots: workflowSnapshots,
         postDownloadWorkflowSteps: loadPostDownloadWorkflowSteps(),
         autoRetryEnabled: currentSettings.autoRetryEnabled,
@@ -727,14 +732,20 @@ export function DownloadProvider({ children }: { children: ReactNode }) {
         quality: mediaType === 'audio' ? 'audio' : videoQuality,
         format: mediaType === 'audio' ? 'mp3' : 'mp4',
         outputPath: currentSettings.outputPath,
+        downloadPlaylist: options?.downloadPlaylist ?? false,
+        playlistLimit: options?.playlistLimit ?? null,
         videoCodec: currentSettings.videoCodec,
         audioBitrate: mediaType === 'audio' ? audioBitrate : currentSettings.audioBitrate,
         useAria2: currentSettings.useAria2,
         aria2Args: currentSettings.aria2Args,
-        subtitleMode: currentSettings.subtitleMode,
-        subtitleLangs: [...currentSettings.subtitleLangs],
-        subtitleEmbed: currentSettings.subtitleEmbed,
-        subtitleFormat: currentSettings.subtitleFormat,
+        subtitleMode: options?.subtitleMode ?? currentSettings.subtitleMode,
+        subtitleLangs: options?.subtitleLangs ?? [...currentSettings.subtitleLangs],
+        subtitleEmbed: options?.subtitleEmbed ?? currentSettings.subtitleEmbed,
+        subtitleFormat: options?.subtitleFormat ?? currentSettings.subtitleFormat,
+        timeRangeStart: options?.timeRangeStart,
+        timeRangeEnd: options?.timeRangeEnd,
+        liveFromStart: options?.liveFromStart ?? currentSettings.liveFromStart,
+        skipLive: options?.skipLive ?? currentSettings.skipLive,
         pluginWorkflowSnapshots: workflowSnapshots,
         postDownloadWorkflowSteps: loadPostDownloadWorkflowSteps(),
         autoRetryEnabled: currentSettings.autoRetryEnabled,
@@ -782,6 +793,8 @@ export function DownloadProvider({ children }: { children: ReactNode }) {
         subtitleLangs: [...currentSettings.subtitleLangs],
         subtitleEmbed: currentSettings.subtitleEmbed,
         subtitleFormat: currentSettings.subtitleFormat,
+        liveFromStart: currentSettings.liveFromStart,
+        skipLive: currentSettings.skipLive,
         pluginWorkflowSnapshots: workflowSnapshots,
         postDownloadWorkflowSteps: loadPostDownloadWorkflowSteps(),
         autoRetryEnabled: currentSettings.autoRetryEnabled,
@@ -867,6 +880,8 @@ export function DownloadProvider({ children }: { children: ReactNode }) {
           subtitleLangs: [...settingsRef.current.subtitleLangs],
           subtitleEmbed: settingsRef.current.subtitleEmbed,
           subtitleFormat: settingsRef.current.subtitleFormat,
+          liveFromStart: settingsRef.current.liveFromStart,
+          skipLive: settingsRef.current.skipLive,
           pluginWorkflowSnapshots: workflowSnapshots,
           postDownloadWorkflowSteps: loadPostDownloadWorkflowSteps(),
           autoRetryEnabled: settingsRef.current.autoRetryEnabled,
@@ -1069,7 +1084,9 @@ export function DownloadProvider({ children }: { children: ReactNode }) {
 
   const clearCompleted = useCallback(() => {
     setItems((items) => {
-      const nextItems = items.filter((item) => item.status !== 'completed');
+      const nextItems = items.filter(
+        (item) => item.status !== 'completed' && item.status !== 'skipped',
+      );
       itemsRef.current = nextItems;
       return nextItems;
     });
@@ -1144,10 +1161,13 @@ export function DownloadProvider({ children }: { children: ReactNode }) {
             outputPath: itemSettings?.outputPath ?? settings.outputPath,
             quality: itemSettings?.quality ?? settings.quality,
             format: itemSettings?.format ?? settings.format,
-            downloadPlaylist: false, // Always false - playlist already expanded
+            downloadPlaylist: itemSettings?.downloadPlaylist ?? false,
             videoCodec: itemSettings?.videoCodec ?? settings.videoCodec,
             audioBitrate: itemSettings?.audioBitrate ?? settings.audioBitrate,
-            playlistLimit: null, // Not needed
+            playlistLimit:
+              itemSettings?.playlistLimit && itemSettings.playlistLimit > 0
+                ? itemSettings.playlistLimit
+                : null,
             // Subtitle settings
             subtitleMode: itemSettings?.subtitleMode ?? settings.subtitleMode,
             subtitleLangs: (itemSettings?.subtitleLangs ?? settings.subtitleLangs).join(','),
@@ -1164,7 +1184,8 @@ export function DownloadProvider({ children }: { children: ReactNode }) {
             embedMetadata: settings.embedMetadata,
             embedThumbnail: settings.embedThumbnail,
             // Live stream settings
-            liveFromStart: settings.liveFromStart,
+            liveFromStart: itemSettings?.liveFromStart ?? settings.liveFromStart,
+            skipLive: itemSettings?.skipLive ?? false,
             // Speed limit settings
             speedLimit: settings.speedLimitEnabled
               ? `${settings.speedLimitValue}${settings.speedLimitUnit}`
@@ -1207,6 +1228,22 @@ export function DownloadProvider({ children }: { children: ReactNode }) {
         } catch (error) {
           const parsedError = extractBackendError(error);
           const errorMessage = localizeBackendError(parsedError);
+          if (parsedError.code === 'YT_SKIPPED_LIVE') {
+            setItems((items) =>
+              items.map((i) =>
+                i.id === item.id
+                  ? {
+                      ...i,
+                      status: 'skipped',
+                      progress: 0,
+                      error: errorMessage,
+                      retryState: undefined,
+                    }
+                  : i,
+              ),
+            );
+            return;
+          }
           const canRetry =
             isDownloadingRef.current &&
             autoRetryEnabled &&
@@ -1522,6 +1559,14 @@ export function DownloadProvider({ children }: { children: ReactNode }) {
     });
   }, []);
 
+  const updateSkipLive = useCallback((skipLive: boolean) => {
+    setSettings((s) => {
+      const newSettings = { ...s, skipLive };
+      saveSettings(newSettings);
+      return newSettings;
+    });
+  }, []);
+
   const updateSpeedLimit = useCallback(
     (speedLimitEnabled: boolean, speedLimitValue: number, speedLimitUnit: 'K' | 'M' | 'G') => {
       setSettings((s) => {
@@ -1683,6 +1728,7 @@ export function DownloadProvider({ children }: { children: ReactNode }) {
     updateEmbedMetadata,
     updateEmbedThumbnail,
     updateLiveFromStart,
+    updateSkipLive,
     updateSpeedLimit,
     updateUseAria2,
     updateAria2Args,

@@ -17,6 +17,7 @@ pub mod code {
     pub const YT_GEO_RESTRICTED: &str = "YT_GEO_RESTRICTED";
     pub const YT_VIDEO_UNAVAILABLE: &str = "YT_VIDEO_UNAVAILABLE";
     pub const YT_NO_SUBTITLES: &str = "YT_NO_SUBTITLES";
+    pub const YT_SKIPPED_LIVE: &str = "YT_SKIPPED_LIVE";
     pub const YT_COOKIE_DB_LOCKED: &str = "YT_COOKIE_DB_LOCKED";
     pub const YT_FRESH_COOKIES_REQUIRED: &str = "YT_FRESH_COOKIES_REQUIRED";
     pub const NETWORK_TIMEOUT: &str = "NETWORK_TIMEOUT";

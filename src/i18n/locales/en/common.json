@@ -64,6 +64,7 @@
     "YT_GEO_RESTRICTED": "This video is not available in your region.",
     "YT_VIDEO_UNAVAILABLE": "This video is unavailable.",
     "YT_NO_SUBTITLES": "No subtitles are available for this video.",
+    "YT_SKIPPED_LIVE": "Skipped live video (status: {{liveStatus}}).",
     "YT_COOKIE_DB_LOCKED": "Browser cookie database is locked. Close the browser and retry, or use cookie file mode.",
     "YT_FRESH_COOKIES_REQUIRED": "Fresh login cookies are required. Refresh browser login and retry.",
     "NETWORK_TIMEOUT": "Network timeout. Please try again.",

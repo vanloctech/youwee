@@ -28,6 +28,7 @@
     "fs:allow-app-read-recursive",
     "fs:allow-app-write-recursive",
     "deep-link:default",
+    "cli:default",
     "updater:default",
     "process:allow-restart",
     "opener:allow-reveal-item-in-dir",

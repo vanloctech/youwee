@@ -83,3 +83,23 @@ pub fn take_pending_external_links() -> Vec<String> {
 pub fn consume_pending_external_links() -> Vec<String> {
     take_pending_external_links()
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn deep_link_extraction_stays_string_based() {
+        let argv = vec![
+            "youwee".to_string(),
+            "youwee://download?v=1&url=https%3A%2F%2Fexample.com%2Fvideo".to_string(),
+        ];
+
+        let links = extract_external_links_from_argv(&argv);
+
+        assert_eq!(
+            links,
+            vec!["youwee://download?v=1&url=https%3A%2F%2Fexample.com%2Fvideo"]
+        );
+    }
+}

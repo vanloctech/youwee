@@ -6,16 +6,143 @@ import type { Page } from '@/components/layout';
 import { useDownload } from '@/contexts/DownloadContext';
 import { useUniversal } from '@/contexts/UniversalContext';
 import {
+  type ExternalLinkAction,
+  type ExternalLinkTarget,
+  isPublicHttpUrl,
   isTrustedExternalSource,
+  isYouTubeUrl,
+  normalizeExternalVideoUrl,
   parseExternalDeepLink,
-  resolveExternalRouteTarget,
 } from '@/lib/external-link';
 import { hasAcceptedLegalDisclaimer } from '@/lib/legal-disclaimer';
+import type { ExternalEnqueueOptions, Quality, SubtitleFormat, SubtitleMode } from '@/lib/types';
 
 type StartLockRef = MutableRefObject<{
   youtube: boolean;
   universal: boolean;
 }>;
+
+interface ExternalOpenUrlEventPayload {
+  urls: string[];
+}
+
+interface CliDownloadRequestPayload {
+  url: string;
+  target: string;
+  action: string;
+  media: string;
+  quality: string;
+  skip_live?: boolean;
+  download_playlist?: boolean | null;
+  subtitle_mode?: string;
+  subtitle_langs?: string[];
+  subtitle_embed?: boolean;
+  subtitle_format?: string;
+  download_sections?: string | null;
+  live_from_start?: boolean;
+  trusted_local?: boolean;
+}
+
+interface ExternalCliDownloadEventPayload {
+  requests: CliDownloadRequestPayload[];
+}
+
+interface ExternalDownloadRequest {
+  url: string;
+  target: ExternalLinkTarget;
+  action: ExternalLinkAction;
+  enqueueOptions: ExternalEnqueueOptions;
+  source: string | null;
+  trustedLocal: boolean;
+}
+
+const ALLOWED_VIDEO_QUALITIES = new Set<Quality>([
+  'best',
+  '8k',
+  '4k',
+  '2k',
+  '1080',
+  '720',
+  '480',
+  '360',
+]);
+const ALLOWED_SUBTITLE_MODES = new Set<SubtitleMode>(['off', 'auto', 'manual']);
+const ALLOWED_SUBTITLE_FORMATS = new Set<SubtitleFormat>(['srt', 'vtt', 'ass']);
+
+function parseDownloadSections(section: string | null | undefined):
+  | {
+      timeRangeStart: string;
+      timeRangeEnd: string;
+    }
+  | undefined {
+  const normalized = section?.trim().replace(/^\*/, '') ?? '';
+  const [start, end] = normalized.split('-', 2);
+  if (!start || !end) return undefined;
+  return { timeRangeStart: start, timeRangeEnd: end };
+}
+
+function normalizeCliDownloadRequest(
+  payload: CliDownloadRequestPayload,
+): ExternalDownloadRequest | null {
+  const normalizedUrl = normalizeExternalVideoUrl(payload.url?.trim() ?? '');
+  if (!isPublicHttpUrl(normalizedUrl)) return null;
+
+  const target: ExternalLinkTarget =
+    payload.target === 'youtube' || payload.target === 'universal' ? payload.target : 'auto';
+  const action: ExternalLinkAction =
+    payload.action === 'queue_only' ? 'queue_only' : 'download_now';
+  const media = payload.media === 'audio' ? 'audio' : 'video';
+  const qualityParam = payload.quality || '';
+
+  const enqueueOptions: ExternalEnqueueOptions =
+    media === 'audio'
+      ? {
+          mediaType: 'audio',
+          quality: 'audio',
+          audioBitrate: qualityParam === '128' ? '128' : 'auto',
+        }
+      : {
+          mediaType: 'video',
+          quality: ALLOWED_VIDEO_QUALITIES.has(qualityParam as Quality)
+            ? (qualityParam as Quality)
+            : 'best',
+        };
+  const downloadSections = parseDownloadSections(payload.download_sections);
+  if (payload.skip_live === true) {
+    enqueueOptions.skipLive = true;
+  }
+  if (payload.live_from_start === true) {
+    enqueueOptions.liveFromStart = true;
+  }
+  if (typeof payload.download_playlist === 'boolean') {
+    enqueueOptions.downloadPlaylist = payload.download_playlist;
+  }
+  if (downloadSections) {
+    enqueueOptions.timeRangeStart = downloadSections.timeRangeStart;
+    enqueueOptions.timeRangeEnd = downloadSections.timeRangeEnd;
+  }
+  if (ALLOWED_SUBTITLE_MODES.has(payload.subtitle_mode as SubtitleMode)) {
+    enqueueOptions.subtitleMode = payload.subtitle_mode as SubtitleMode;
+  }
+  if (ALLOWED_SUBTITLE_FORMATS.has(payload.subtitle_format as SubtitleFormat)) {
+    enqueueOptions.subtitleFormat = payload.subtitle_format as SubtitleFormat;
+  }
+  if (Array.isArray(payload.subtitle_langs) && payload.subtitle_langs.length > 0) {
+    enqueueOptions.subtitleLangs = payload.subtitle_langs;
+  }
+  if (payload.subtitle_embed === true) {
+    enqueueOptions.subtitleEmbed = true;
+  }
+
+  return {
+    url: normalizedUrl,
+    target,
+    action,
+    enqueueOptions,
+    source: 'cli',
+    trustedLocal: payload.trusted_local === true,
+  };
+}
 
 export function useExternalDownloadLinks(
   setCurrentPage: (page: Page) => void,
@@ -32,11 +159,8 @@ export function useExternalDownloadLinks(
   downloadRef.current = download;
   universalRef.current = universal;
 
-  const handleExternalLink = useCallback(
-    async (rawLink: string) => {
-      const parsed = parseExternalDeepLink(rawLink);
-      if (!parsed) return;
-
+  const handleExternalDownloadRequest = useCallback(
+    async (request: ExternalDownloadRequest) => {
       const now = Date.now();
       externalRequestRateRef.current = externalRequestRateRef.current.filter(
         (timestamp) => now - timestamp < 60_000,
@@ -46,7 +170,12 @@ export function useExternalDownloadLinks(
       }
       externalRequestRateRef.current.push(now);
 
-      const dedupeKey = `${parsed.action}:${parsed.target}:${parsed.url}:${parsed.enqueueOptions.mediaType ?? 'video'}:${parsed.enqueueOptions.quality ?? 'best'}:${parsed.enqueueOptions.audioBitrate ?? 'auto'}`;
+      const dedupeKey = JSON.stringify({
+        action: request.action,
+        target: request.target,
+        url: request.url,
+        ...request.enqueueOptions,
+      });
       const lastSeen = externalDedupRef.current.get(dedupeKey);
       if (lastSeen && now - lastSeen < 1500) {
         return;
@@ -59,20 +188,20 @@ export function useExternalDownloadLinks(
         }
       }
 
-      let allowAutoStart = parsed.action === 'download_now' && hasAcceptedLegalDisclaimer();
-      if (allowAutoStart) {
+      let allowAutoStart = request.action === 'download_now' && hasAcceptedLegalDisclaimer();
+      if (allowAutoStart && !request.trustedLocal) {
         const host = (() => {
           try {
-            return new URL(parsed.url).hostname;
+            return new URL(request.url).hostname;
           } catch {
             return 'this page';
           }
         })();
-        const approvalKey = `${host}:${parsed.source ?? 'unknown'}`;
+        const approvalKey = `${host}:${request.source ?? 'unknown'}`;
         const approvedUntil = externalApprovalCacheRef.current.get(approvalKey) ?? 0;
         if (approvedUntil <= now) {
-          const sourceLabel = isTrustedExternalSource(parsed.source)
-            ? parsed.source
+          const sourceLabel = isTrustedExternalSource(request.source)
+            ? request.source
             : 'unknown source';
           const confirmed = window.confirm(
             `External request from ${sourceLabel} wants to start downloading immediately for ${host}.\n\nPress OK to start now, or Cancel to only add this item to queue.`,
@@ -85,11 +214,16 @@ export function useExternalDownloadLinks(
         }
       }
 
-      const routeTarget = resolveExternalRouteTarget(parsed.target, parsed.url);
+      const routeTarget =
+        request.target === 'auto'
+          ? isYouTubeUrl(request.url)
+            ? 'youtube'
+            : 'universal'
+          : request.target;
       if (routeTarget === 'youtube') {
         const downloadApi = downloadRef.current;
         setCurrentPage('youtube');
-        await downloadApi.enqueueExternalUrl(parsed.url, parsed.enqueueOptions);
+        await downloadApi.enqueueExternalUrl(request.url, request.enqueueOptions);
 
         if (allowAutoStart && !downloadApi.isDownloading && !startLockRef.current.youtube) {
           startLockRef.current.youtube = true;
@@ -104,7 +238,7 @@ export function useExternalDownloadLinks(
 
       const universalApi = universalRef.current;
       setCurrentPage('universal');
-      await universalApi.enqueueExternalUrl(parsed.url, parsed.enqueueOptions);
+      await universalApi.enqueueExternalUrl(request.url, request.enqueueOptions);
 
       if (allowAutoStart && !universalApi.isDownloading && !startLockRef.current.universal) {
         startLockRef.current.universal = true;
@@ -118,10 +252,35 @@ export function useExternalDownloadLinks(
     [setCurrentPage, startLockRef],
   );
 
+  const handleExternalLink = useCallback(
+    async (rawLink: string) => {
+      const parsed = parseExternalDeepLink(rawLink);
+      if (!parsed) return;
+
+      await handleExternalDownloadRequest({
+        url: parsed.url,
+        target: parsed.target,
+        action: parsed.action,
+        enqueueOptions: parsed.enqueueOptions,
+        source: parsed.source,
+        trustedLocal: false,
+      });
+    },
+    [handleExternalDownloadRequest],
+  );
+
+  const handleCliDownloadRequest = useCallback(
+    async (payload: CliDownloadRequestPayload) => {
+      const request = normalizeCliDownloadRequest(payload);
+      if (!request) return;
+      await handleExternalDownloadRequest(request);
+    },
+    [handleExternalDownloadRequest],
+  );
+
   useEffect(() => {
-    const unlisten = listen<{ urls: string[] }>('external-open-url', (event) => {
-      const urls = event.payload?.urls ?? [];
-      for (const url of urls) {
+    const unlisten = listen<ExternalOpenUrlEventPayload>('external-open-url', (event) => {
+      for (const url of event.payload?.urls ?? []) {
         void handleExternalLink(url);
       }
     });
@@ -152,6 +311,18 @@ export function useExternalDownloadLinks(
   }, [handleExternalLink]);
 
   useEffect(() => {
+    const unlisten = listen<ExternalCliDownloadEventPayload>('external-cli-download', (event) => {
+      for (const request of event.payload?.requests ?? []) {
+        void handleCliDownloadRequest(request);
+      }
+    });
+
+    return () => {
+      unlisten.then((fn) => fn());
+    };
+  }, [handleCliDownloadRequest]);
+
+  useEffect(() => {
     let cancelled = false;
 
     const consumePendingExternalLinks = async () => {
@@ -172,4 +343,28 @@ export function useExternalDownloadLinks(
       cancelled = true;
     };
   }, [handleExternalLink]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const consumePendingCliDownloadRequests = async () => {
+      try {
+        const requests = await invoke<CliDownloadRequestPayload[]>(
+          'consume_pending_cli_download_requests',
+        );
+        for (const request of requests) {
+          if (cancelled) break;
+          await handleCliDownloadRequest(request);
+        }
+      } catch {
+        // Ignore; app still works without CLI integration.
+      }
+    };
+
+    void consumePendingCliDownloadRequests();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [handleCliDownloadRequest]);
 }

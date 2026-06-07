@@ -22,6 +22,7 @@ const RETRYABLE_CODES = new Set([
 const NON_RETRYABLE_CODES = new Set([
   'YT_PRIVATE_VIDEO',
   'YT_VIDEO_UNAVAILABLE',
+  'YT_SKIPPED_LIVE',
   'YT_AGE_RESTRICTED',
   'YT_MEMBERS_ONLY',
   'YT_SIGNIN_REQUIRED',
@@ -73,6 +74,7 @@ export function inferBackendErrorCode(message: string): string {
     return 'YT_GEO_RESTRICTED';
   }
   if (m.includes('video unavailable')) return 'YT_VIDEO_UNAVAILABLE';
+  if (m.includes('skipped live video')) return 'YT_SKIPPED_LIVE';
   if (m.includes('no subtitles')) return 'YT_NO_SUBTITLES';
   if (m.includes('no transcript available')) return 'TRANSCRIPT_NOT_AVAILABLE';
   if (m.includes('system yt-dlp not found')) return 'YTDLP_SYSTEM_NOT_FOUND';

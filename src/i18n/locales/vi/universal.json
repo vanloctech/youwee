@@ -44,6 +44,8 @@
     "advanced": "Cài đặt nâng cao",
     "more": "Thêm",
     "liveFromStart": "Phát trực tiếp từ đầu",
+    "skipLive": "Bỏ qua live",
+    "skipLiveDesc": "Bỏ qua video đang phát trực tiếp thay vì tải xuống",
     "autoRetry": "Tự động thử lại",
     "retryAttempts": "Số lần",
     "retryDelaySeconds": "Độ trễ (giây)"

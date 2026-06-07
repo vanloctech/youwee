@@ -58,6 +58,8 @@ export interface ItemDownloadSettings {
   quality: Quality;
   format: Format;
   outputPath: string;
+  downloadPlaylist?: boolean;
+  playlistLimit?: number | null;
   videoCodec: VideoCodec;
   audioBitrate: AudioBitrate;
   useAria2: boolean;
@@ -68,6 +70,8 @@ export interface ItemDownloadSettings {
   subtitleFormat: SubtitleFormat;
   timeRangeStart?: string;
   timeRangeEnd?: string;
+  liveFromStart?: boolean;
+  skipLive?: boolean;
   pluginWorkflowSnapshots?: PluginWorkflowSnapshotMap;
   postDownloadWorkflowSteps?: PluginWorkflowStepSnapshot[];
   autoRetryEnabled: boolean;
@@ -85,6 +89,8 @@ export interface ItemUniversalSettings {
   aria2Args: string;
   timeRangeStart?: string;
   timeRangeEnd?: string;
+  liveFromStart?: boolean;
+  skipLive?: boolean;
   pluginWorkflowSnapshots?: PluginWorkflowSnapshotMap;
   postDownloadWorkflowSteps?: PluginWorkflowStepSnapshot[];
   autoRetryEnabled: boolean;
@@ -103,7 +109,7 @@ export interface DownloadItem {
   id: string;
   url: string;
   title: string;
-  status: 'pending' | 'fetching' | 'downloading' | 'completed' | 'error';
+  status: 'pending' | 'fetching' | 'downloading' | 'completed' | 'error' | 'skipped';
   progress: number;
   speed: string;
   eta: string;
@@ -186,6 +192,16 @@ export interface ExternalEnqueueOptions {
   mediaType?: 'video' | 'audio';
   quality?: Quality;
   audioBitrate?: AudioBitrate;
+  downloadPlaylist?: boolean;
+  playlistLimit?: number | null;
+  subtitleMode?: SubtitleMode;
+  subtitleLangs?: string[];
+  subtitleEmbed?: boolean;
+  subtitleFormat?: SubtitleFormat;
+  timeRangeStart?: string;
+  timeRangeEnd?: string;
+  liveFromStart?: boolean;
+  skipLive?: boolean;
 }
 
 export interface DownloadSettings {
@@ -211,6 +227,7 @@ export interface DownloadSettings {
   embedThumbnail: boolean; // Embed thumbnail as cover art (requires FFmpeg)
   // Live stream settings
   liveFromStart: boolean; // Download live streams from the beginning
+  skipLive: boolean; // Skip live streams instead of downloading them
   // Speed limit settings
   speedLimitEnabled: boolean; // true = limited, false = unlimited
   speedLimitValue: number; // e.g. 10

@@ -44,6 +44,8 @@
     "advanced": "高级设置",
     "more": "更多",
     "liveFromStart": "从头开始录制直播",
+    "skipLive": "跳过直播",
+    "skipLiveDesc": "跳过当前正在直播的视频，而不是下载它们",
     "autoRetry": "自动重试",
     "retryAttempts": "次数",
     "retryDelaySeconds": "间隔（秒）"

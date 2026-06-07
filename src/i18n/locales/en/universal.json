@@ -44,6 +44,8 @@
     "advanced": "Advanced Settings",
     "more": "More",
     "liveFromStart": "Live from start",
+    "skipLive": "Skip live streams",
+    "skipLiveDesc": "Skip currently live videos instead of downloading them",
     "autoRetry": "Auto Retry",
     "retryAttempts": "Attempts",
     "retryDelaySeconds": "Delay (s)"

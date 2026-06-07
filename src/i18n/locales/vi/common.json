@@ -64,6 +64,7 @@
     "YT_GEO_RESTRICTED": "Video không khả dụng tại khu vực của bạn.",
     "YT_VIDEO_UNAVAILABLE": "Video hiện không khả dụng.",
     "YT_NO_SUBTITLES": "Video này không có phụ đề.",
+    "YT_SKIPPED_LIVE": "Đã bỏ qua video live (trạng thái: {{liveStatus}}).",
     "YT_COOKIE_DB_LOCKED": "Cơ sở dữ liệu cookie của trình duyệt đang bị khóa. Hãy đóng trình duyệt rồi thử lại, hoặc dùng chế độ file cookie.",
     "YT_FRESH_COOKIES_REQUIRED": "Cần cookie đăng nhập mới. Hãy đăng nhập lại trên trình duyệt rồi thử lại.",
     "NETWORK_TIMEOUT": "Hết thời gian chờ mạng. Vui lòng thử lại.",

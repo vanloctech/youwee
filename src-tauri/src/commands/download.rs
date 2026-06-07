@@ -24,7 +24,7 @@ use crate::database::update_history_download;
 use crate::services::{
     build_site_header_args, enqueue_post_download_workflow, get_deno_path, get_ffmpeg_path,
     get_ytdlp_path, get_ytdlp_source, resolve_download_workflow_snapshot,
-    system_ytdlp_not_found_message,
+    run_ytdlp_with_stderr_and_cookies, system_ytdlp_not_found_message,
 };
 use crate::types::{
     BackendError, DependencySource, DownloadProgress, PluginWorkflowStepSnapshot,
@@ -47,6 +47,66 @@ fn extract_time_range(download_sections: &Option<String>) -> Option<String> {
             Some(stripped.to_string())
         }
     })
+}
+
+async fn skipped_live_status(
+    app: &AppHandle,
+    url: &str,
+    cookie_mode: Option<&str>,
+    cookie_browser: Option<&str>,
+    cookie_browser_profile: Option<&str>,
+    cookie_file_path: Option<&str>,
+    proxy_url: Option<&str>,
+) -> Result<Option<String>, String> {
+    let mut args = vec![
+        "--print".to_string(),
+        "live_status".to_string(),
+        "--output-na-placeholder".to_string(),
+        "not_live".to_string(),
+        "--no-warnings".to_string(),
+        "--no-playlist".to_string(),
+        "--socket-timeout".to_string(),
+        "15".to_string(),
+    ];
+
+    if url.contains("youtube.com") || url.contains("youtu.be") {
+        if let Some(deno_path) = get_deno_path(app).await {
+            args.push("--js-runtimes".to_string());
+            args.push(format!("deno:{}", deno_path.to_string_lossy()));
+        }
+    }
+
+    args.push("--".to_string());
+    args.push(url.to_string());
+
+    let args_ref: Vec<&str> = args.iter().map(|arg| arg.as_str()).collect();
+    let output = run_ytdlp_with_stderr_and_cookies(
+        app,
+        &args_ref,
+        cookie_mode,
+        cookie_browser,
+        cookie_browser_profile,
+        cookie_file_path,
+        proxy_url,
+    )
+    .await?;
+
+    if !output.success {
+        let message = output.stderr.trim();
+        return Err(BackendError::from_message(if message.is_empty() {
+            "Failed to check live status before download.".to_string()
+        } else {
+            format!("Failed to check live status before download: {}", message)
+        })
+        .to_wire_string());
+    }
+
+    let status = output.stdout.lines().last().unwrap_or("").trim();
+    if status.is_empty() || status == "not_live" {
+        Ok(None)
+    } else {
+        Ok(Some(status.to_string()))
+    }
 }
 
 fn workflow_steps_for_trigger(
@@ -454,6 +514,7 @@ pub async fn download_video(
     proxy_url: Option<String>,
     // Live stream settings
     live_from_start: Option<bool>,
+    skip_live: Option<bool>,
     // Speed limit settings
     speed_limit: Option<String>,
     // External downloader settings
@@ -497,6 +558,38 @@ pub async fn download_video(
     }
     let emit_failed_workflow = emit_failed_workflow.unwrap_or(true);
     let download_kind = download_kind.unwrap_or_else(|| "download".to_string());
+
+    if skip_live.unwrap_or(false) {
+        if let Some(live_status) = skipped_live_status(
+            &app,
+            &url,
+            cookie_mode.as_deref(),
+            cookie_browser.as_deref(),
+            cookie_browser_profile.as_deref(),
+            cookie_file_path.as_deref(),
+            proxy_url.as_deref(),
+        )
+        .await?
+        {
+            add_log_internal(
+                "info",
+                &format!(
+                    "Skipped live video due to --skip-live (status: {})",
+                    live_status
+                ),
+                None,
+                Some(&url),
+            )
+            .ok();
+            return Err(BackendError::new(
+                crate::types::code::YT_SKIPPED_LIVE,
+                format!("Skipped live video (status: {})", live_status),
+            )
+            .with_retryable(false)
+            .with_param("liveStatus", live_status)
+            .to_wire_string());
+        }
+    }
 
     let should_log_stderr = log_stderr.unwrap_or(true);
     let sanitized_path = sanitize_output_path(&output_path)

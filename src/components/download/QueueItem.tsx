@@ -3,6 +3,7 @@ import {
   CheckCircle2,
   ChevronDown,
   ChevronUp,
+  CircleSlash,
   Clock,
   FolderOpen,
   HardDrive,
@@ -163,6 +164,7 @@ export function QueueItem({
   const isCompleted = item.status === 'completed';
   const isError = item.status === 'error';
   const isPending = item.status === 'pending';
+  const isSkipped = item.status === 'skipped';
   const retryState = item.retryState;
 
   // Get saved settings for pending items
@@ -403,12 +405,14 @@ export function QueueItem({
               isActive && 'bg-primary/10 text-primary',
               isCompleted && 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400',
               isError && 'bg-red-500/10 text-red-600 dark:text-red-400',
+              isSkipped && 'bg-amber-500/10 text-amber-600 dark:text-amber-400',
             )}
           >
             {isPending && <Clock className="w-3 h-3" />}
             {isActive && <Loader2 className="w-3 h-3 animate-spin" />}
             {isCompleted && <CheckCircle2 className="w-3 h-3" />}
             {isError && <XCircle className="w-3 h-3" />}
+            {isSkipped && <CircleSlash className="w-3 h-3" />}
             <span>
               {isPending && t('queue.status.pending')}
               {isActive &&
@@ -417,6 +421,7 @@ export function QueueItem({
                   : t('queue.status.downloading'))}
               {isCompleted && t('queue.status.completed')}
               {isError && t('queue.status.failed')}
+              {isSkipped && t('queue.status.skipped')}
             </span>
           </span>
 

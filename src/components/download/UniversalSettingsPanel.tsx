@@ -1,4 +1,12 @@
-import { FileVideo, FolderOpen, HardDrive, Music, Radio, Settings2 } from 'lucide-react';
+import {
+  CircleSlash,
+  FileVideo,
+  FolderOpen,
+  HardDrive,
+  Music,
+  Radio,
+  Settings2,
+} from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -60,6 +68,7 @@ interface UniversalSettingsPanelProps {
   onConcurrentChange: (concurrent: number) => void;
   onSelectFolder: () => void;
   onLiveFromStartChange: (enabled: boolean) => void;
+  onSkipLiveChange: (enabled: boolean) => void;
 }
 
 export function UniversalSettingsPanel({
@@ -72,6 +81,7 @@ export function UniversalSettingsPanel({
   onConcurrentChange,
   onSelectFolder,
   onLiveFromStartChange,
+  onSkipLiveChange,
 }: UniversalSettingsPanelProps) {
   const { t } = useTranslation('universal');
   const isAudioOnly =
@@ -274,6 +284,23 @@ export function UniversalSettingsPanel({
                 <Switch
                   checked={settings.liveFromStart}
                   onCheckedChange={onLiveFromStartChange}
+                  disabled={disabled}
+                  className="scale-90"
+                />
+              </div>
+
+              {/* Skip Live Toggle */}
+              <div
+                className="flex items-center justify-between py-1.5 px-2.5 rounded-md bg-muted/50"
+                title={t('settings.skipLiveDesc')}
+              >
+                <div className="flex items-center gap-2">
+                  <CircleSlash className="w-3.5 h-3.5 text-amber-500" />
+                  <span className="text-[11px] font-medium">{t('settings.skipLive')}</span>
+                </div>
+                <Switch
+                  checked={settings.skipLive}
+                  onCheckedChange={onSkipLiveChange}
                   disabled={disabled}
                   className="scale-90"
                 />

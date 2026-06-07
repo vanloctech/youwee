@@ -132,6 +132,8 @@
     "downloadFullPlaylist": "Download full playlist",
     "liveFromStart": "Download live from start",
     "liveFromStartDesc": "For live streams",
+    "skipLive": "Skip live streams",
+    "skipLiveDesc": "Skip currently live videos instead of downloading them",
     "saveTo": "Save to",
     "selectFolder": "Select folder...",
     "outputFolder": "Output folder: {{path}}",
@@ -187,6 +189,7 @@
       "downloading": "Downloading",
       "completed": "Completed",
       "failed": "Failed",
+      "skipped": "Skipped",
       "failedHint": "View Logs page for details",
       "retrying": "Retry {{current}}/{{total}} in {{seconds}}s"
     },

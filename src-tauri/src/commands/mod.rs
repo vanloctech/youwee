@@ -1,6 +1,8 @@
 mod ai;
 mod assets;
 mod channels;
+mod cli;
+mod cli_shortcut;
 mod dependencies;
 mod download;
 mod download_queue;
@@ -19,6 +21,8 @@ mod youtube_search;
 pub use ai::*;
 pub use assets::*;
 pub use channels::*;
+pub use cli::*;
+pub use cli_shortcut::*;
 pub use dependencies::*;
 pub use download::*;
 pub use download_queue::*;

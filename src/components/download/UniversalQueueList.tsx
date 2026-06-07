@@ -44,9 +44,12 @@ export function UniversalQueueList({
   const { t } = useTranslation('universal');
   const containerRef = useRef<HTMLDivElement | null>(null);
   const completedCount = items.filter((i) => i.status === 'completed').length;
+  const clearableCount = items.filter(
+    (i) => i.status === 'completed' || i.status === 'skipped',
+  ).length;
   const pendingCount = items.filter((i) => i.status === 'pending').length;
   const totalCount = items.length;
-  const hasCompleted = completedCount > 0;
+  const hasCompleted = clearableCount > 0;
   const completionRate = totalCount > 0 ? Math.round((completedCount / totalCount) * 100) : 0;
 
   useEffect(() => {
@@ -131,7 +134,7 @@ export function UniversalQueueList({
             disabled={isDownloading}
           >
             <CheckCircle2 className="w-3 h-3" />
-            {t('queue.clearCompleted', { count: completedCount })}
+            {t('queue.clearCompleted', { count: clearableCount })}
           </Button>
         )}
       </div>

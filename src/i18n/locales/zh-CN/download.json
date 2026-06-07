@@ -132,6 +132,8 @@
     "downloadFullPlaylist": "下载完整播放列表",
     "liveFromStart": "从头下载直播",
     "liveFromStartDesc": "适用于直播视频",
+    "skipLive": "跳过直播",
+    "skipLiveDesc": "跳过当前正在直播的视频，而不是下载它们",
     "saveTo": "保存到",
     "selectFolder": "选择文件夹...",
     "outputFolder": "输出文件夹：{{path}}",
@@ -187,6 +189,7 @@
       "downloading": "下载中",
       "completed": "已完成",
       "failed": "失败",
+      "skipped": "已跳过",
       "failedHint": "查看日志页面了解详情",
       "retrying": "{{seconds}}秒后重试 {{current}}/{{total}}"
     },

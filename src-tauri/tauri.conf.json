@@ -21,6 +21,7 @@
         "resizable": true,
         "fullscreen": false,
         "center": true,
+        "visible": false,
         "decorations": true,
         "titleBarStyle": "Overlay",
         "hiddenTitle": true
@@ -51,6 +52,92 @@
     "createUpdaterArtifacts": true
   },
   "plugins": {
+    "cli": {
+      "description": "Youwee - GUI for yt-dlp. Pass a video URL to queue or download it.",
+      "longDescription": "Youwee opens the desktop app and adds the given URL to the download queue. By default the download starts immediately; use --queue-only to only add it to the queue.",
+      "args": [
+        {
+          "name": "source",
+          "index": 1,
+          "takesValue": true,
+          "description": "Video URL to download (e.g. https://www.youtube.com/watch?v=...)"
+        },
+        {
+          "name": "url",
+          "short": "u",
+          "takesValue": true,
+          "description": "Video URL to download (alternative to the positional argument)"
+        },
+        {
+          "name": "quality",
+          "short": "q",
+          "takesValue": true,
+          "description": "Video quality: best, 8k, 4k, 2k, 1080, 720, 480, 360. For audio use 128 or auto."
+        },
+        {
+          "name": "audio",
+          "short": "a",
+          "takesValue": false,
+          "description": "Download audio only"
+        },
+        {
+          "name": "queue-only",
+          "takesValue": false,
+          "description": "Only add the URL to the queue without starting the download"
+        },
+        {
+          "name": "target",
+          "short": "t",
+          "takesValue": true,
+          "description": "Routing target: auto (default), youtube, or universal"
+        },
+        {
+          "name": "skip-live",
+          "takesValue": false,
+          "description": "Skip live, scheduled, or was-live videos before downloading"
+        },
+        {
+          "name": "playlist",
+          "takesValue": false,
+          "description": "Allow yt-dlp to download playlist URLs"
+        },
+        {
+          "name": "no-playlist",
+          "takesValue": false,
+          "description": "Force single-video download for playlist URLs"
+        },
+        {
+          "name": "subtitle-mode",
+          "takesValue": true,
+          "description": "Subtitle mode: off, auto, or manual"
+        },
+        {
+          "name": "subtitle-langs",
+          "takesValue": true,
+          "description": "Comma-separated subtitle languages, e.g. en,vi,ja"
+        },
+        {
+          "name": "subtitle-format",
+          "takesValue": true,
+          "description": "Subtitle format: srt, vtt, or ass"
+        },
+        {
+          "name": "embed-subs",
+          "takesValue": false,
+          "description": "Embed subtitles into the output file"
+        },
+        {
+          "name": "download-sections",
+          "takesValue": true,
+          "description": "Time range as START-END, e.g. 00:30-02:10"
+        },
+        {
+          "name": "live-from-start",
+          "takesValue": false,
+          "description": "Download livestreams from the beginning"
+        }
+      ]
+    },
     "shell": {
       "open": true
     },

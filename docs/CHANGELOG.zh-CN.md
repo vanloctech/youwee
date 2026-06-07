@@ -8,6 +8,8 @@ Youwee 的所有重要更改都将记录在此文件中。
 ## [Unreleased]
 
 ### 新增
+- **命令行界面** - 新增本地 `youwee` CLI，包含安装入口、结构化下载请求，并支持质量、音频模式、仅加入队列、播放列表、字幕、下载片段、从头下载直播和跳过直播等选项
+- **跳过直播** - 在 YouTube 和 Universal 界面新增下载设置，可跳过当前正在直播的视频
 - **AI 摘要搜索** - 新增基于 SQLite FTS5 的媒体库搜索，可检索标题、URL、文件路径和已保存的 AI 摘要，并提供全部内容、仅详情或仅 AI 摘要的搜索范围控制
 - **YouTube 关键词搜索** - 新增独立的 YouTube 关键词搜索视图，支持按上传日期、时长、排序方式和视频特性进行筛选，并可将选中的结果直接加入下载队列
 - **Plugin SDK YouTube 搜索桥接** - 通过 `ctx.youwee.youtube.searchVideos(...)` 向 JavaScript 插件开放由应用托管的 YouTube 关键词搜索，并提供强类型筛选和 continuation 支持

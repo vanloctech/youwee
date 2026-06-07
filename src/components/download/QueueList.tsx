@@ -37,6 +37,9 @@ export function QueueList({
   const { t } = useTranslation('download');
   const containerRef = useRef<HTMLDivElement | null>(null);
   const completedCount = items.filter((i) => i.status === 'completed').length;
+  const clearableCount = items.filter(
+    (i) => i.status === 'completed' || i.status === 'skipped',
+  ).length;
   const pendingCount = items.filter((i) => i.status === 'pending').length;
   const totalCount = items.length;
   const completionRate = totalCount > 0 ? Math.round((completedCount / totalCount) * 100) : 0;
@@ -90,7 +93,7 @@ export function QueueList({
             </div>
           </div>
 
-          {completedCount > 0 && (
+          {clearableCount > 0 && (
             <Button
               variant="ghost"
               size="sm"

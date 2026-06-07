@@ -59,6 +59,7 @@ export function DownloadPage({ onNavigateToSettings }: DownloadPageProps) {
     updateSubtitleEmbed,
     updateSubtitleFormat,
     updateLiveFromStart,
+    updateSkipLive,
     cookieError,
     clearCookieError,
     retryFailedDownload,
@@ -183,6 +184,7 @@ export function DownloadPage({ onNavigateToSettings }: DownloadPageProps) {
               onSubtitleEmbedChange={updateSubtitleEmbed}
               onSubtitleFormatChange={updateSubtitleFormat}
               onLiveFromStartChange={updateLiveFromStart}
+              onSkipLiveChange={updateSkipLive}
               onGoToSettings={onNavigateToSettings}
             />
           </div>

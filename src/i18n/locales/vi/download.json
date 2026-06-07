@@ -132,6 +132,8 @@
     "downloadFullPlaylist": "Tải toàn bộ playlist",
     "liveFromStart": "Tải live từ đầu",
     "liveFromStartDesc": "Cho video trực tiếp",
+    "skipLive": "Bỏ qua live",
+    "skipLiveDesc": "Bỏ qua video đang phát trực tiếp thay vì tải xuống",
     "saveTo": "Lưu vào",
     "selectFolder": "Chọn thư mục...",
     "outputFolder": "Thư mục xuất: {{path}}",
@@ -187,6 +189,7 @@
       "downloading": "Đang tải",
       "completed": "Hoàn thành",
       "failed": "Thất bại",
+      "skipped": "Đã bỏ qua",
       "failedHint": "Xem trang Logs để biết chi tiết",
       "retrying": "Thử lại {{current}}/{{total}} sau {{seconds}}s"
     },
