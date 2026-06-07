@@ -1,6 +1,7 @@
-import { CheckCircle2, ExternalLink, Inbox } from 'lucide-react';
+import { CheckCircle2, ExternalLink, Images } from 'lucide-react';
 import { useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
+import { EmptyStateIllustration } from '@/components/shared/EmptyStateIllustration';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -53,9 +54,7 @@ export function GalleryQueueList({
   if (items.length === 0) {
     return (
       <div className="flex-1 flex flex-col items-center justify-center py-8 text-center">
-        <div className="w-16 h-16 rounded-full bg-muted/50 flex items-center justify-center mb-4">
-          <Inbox className="w-8 h-8 text-muted-foreground/50" />
-        </div>
+        <EmptyStateIllustration className="mb-5" icon={Images} size="sm" />
         <h3 className="text-sm font-medium text-foreground mb-1">{t('queue.empty.title')}</h3>
         <p className="text-xs text-muted-foreground mb-4 max-w-[320px]">
           {t('queue.empty.description')}

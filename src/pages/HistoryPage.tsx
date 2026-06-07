@@ -1,19 +1,35 @@
 import { FolderDown } from 'lucide-react';
-import { useEffect } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { HistoryItem, HistoryToolbar } from '@/components/history';
 import { ThemePicker } from '@/components/settings/ThemePicker';
+import { EmptyStateIllustration } from '@/components/shared/EmptyStateIllustration';
 import { useHistory } from '@/contexts/HistoryContext';
-import { cn } from '@/lib/utils';
+
+const INITIAL_VISIBLE_HISTORY_ITEMS = 10;
+const HISTORY_RENDER_BATCH_SIZE = 40;
 
 export function HistoryPage() {
   const { t } = useTranslation('pages');
-  const { entries, loading, totalCount, refreshHistory } = useHistory();
+  const { entries, loading, totalCount } = useHistory();
+  const [visibleCount, setVisibleCount] = useState(INITIAL_VISIBLE_HISTORY_ITEMS);
+  const visibleEntries = useMemo(() => entries.slice(0, visibleCount), [entries, visibleCount]);
 
-  // Refresh history when navigating to this page
   useEffect(() => {
-    refreshHistory();
-  }, [refreshHistory]);
+    setVisibleCount(
+      entries.length === 0 ? 0 : Math.min(INITIAL_VISIBLE_HISTORY_ITEMS, entries.length),
+    );
+  }, [entries]);
+
+  useEffect(() => {
+    if (visibleCount >= entries.length) return;
+
+    const timeout = window.setTimeout(() => {
+      setVisibleCount((current) => Math.min(entries.length, current + HISTORY_RENDER_BATCH_SIZE));
+    }, 32);
+
+    return () => window.clearTimeout(timeout);
+  }, [entries.length, visibleCount]);
 
   return (
     <div className="flex-1 flex flex-col overflow-hidden">
@@ -52,14 +68,7 @@ export function HistoryPage() {
               </div>
             ) : entries.length === 0 ? (
               <div className="flex flex-col items-center justify-center h-full text-center py-12">
-                <div
-                  className={cn(
-                    'w-16 h-16 rounded-2xl flex items-center justify-center mb-4',
-                    'bg-primary/10 text-primary',
-                  )}
-                >
-                  <FolderDown className="w-8 h-8" />
-                </div>
+                <EmptyStateIllustration className="mb-5" icon={FolderDown} />
                 <h3 className="text-lg font-semibold mb-2">{t('library.emptyTitle')}</h3>
                 <p className="text-sm text-muted-foreground max-w-md">
                   {t('library.emptyDescription')}
@@ -67,7 +76,7 @@ export function HistoryPage() {
               </div>
             ) : (
               <div className="space-y-2 pb-4">
-                {entries.map((entry) => (
+                {visibleEntries.map((entry) => (
                   <HistoryItem key={entry.id} entry={entry} />
                 ))}
               </div>

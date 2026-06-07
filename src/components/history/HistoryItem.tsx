@@ -21,7 +21,7 @@ import {
   Sparkles,
   Trash2,
 } from 'lucide-react';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { CollectionManagerDialog } from '@/components/history/CollectionManagerDialog';
 import { HistoryTagsCollectionsDialog } from '@/components/history/HistoryTagsCollectionsDialog';
@@ -66,6 +66,16 @@ function formatRelativeTime(
   return date.toLocaleDateString();
 }
 
+function createSummaryPreview(summary: string): string {
+  return summary
+    .replace(/```[\s\S]*?```/g, ' ')
+    .replace(/`([^`]+)`/g, '$1')
+    .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')
+    .replace(/[#>*_~|-]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
 export function HistoryItem({ entry }: HistoryItemProps) {
   const { t } = useTranslation('pages');
   const {
@@ -87,6 +97,7 @@ export function HistoryItem({ entry }: HistoryItemProps) {
   const [localSummary, setLocalSummary] = useState<string | undefined>(entry.summary);
   const [showFullSummary, setShowFullSummary] = useState(false);
   const [thumbError, setThumbError] = useState(false);
+  const [thumbLoaded, setThumbLoaded] = useState(false);
   const [isRenameEditorOpen, setIsRenameEditorOpen] = useState(false);
   const [isTaggingDialogOpen, setIsTaggingDialogOpen] = useState(false);
   const [isCollectionsManagerOpen, setIsCollectionsManagerOpen] = useState(false);
@@ -105,12 +116,30 @@ export function HistoryItem({ entry }: HistoryItemProps) {
   const canPlayAudio = isPlayableAudioEntry(entry);
   const isCurrentAudio = currentEntry?.id === entry.id;
   const isActivePlayback = isCurrentAudio && isPlaying;
+  const thumbnailUrl = entry.thumbnail ? entry.thumbnail.replace(/^http:\/\//, 'https://') : null;
+  const shouldDeferSummaryMarkdown = localSummary
+    ? !showFullSummary && localSummary.length > 200
+    : false;
+  const summaryPreview = useMemo(
+    () => (localSummary && shouldDeferSummaryMarkdown ? createSummaryPreview(localSummary) : ''),
+    [localSummary, shouldDeferSummaryMarkdown],
+  );
 
   // Reset local summary when entry changes (important for component reuse)
   useEffect(() => {
     setLocalSummary(entry.summary);
     setShowFullSummary(false);
   }, [entry.summary]);
+
+  useEffect(() => {
+    if (!thumbnailUrl) {
+      setThumbLoaded(false);
+      setThumbError(false);
+      return;
+    }
+    setThumbLoaded(false);
+    setThumbError(false);
+  }, [thumbnailUrl]);
 
   // Get background task status from context
   const task = ai.getSummaryTask(entry.id);
@@ -242,15 +271,28 @@ export function HistoryItem({ entry }: HistoryItemProps) {
     <div className="flex gap-4">
       {/* Thumbnail */}
       <div className="relative flex-shrink-0 w-32 h-20 sm:w-40 sm:h-24 rounded-lg overflow-hidden bg-muted">
-        {entry.thumbnail && !thumbError ? (
-          <img
-            src={entry.thumbnail.replace(/^http:\/\//, 'https://')}
-            alt=""
-            className="w-full h-full object-cover"
-            loading="lazy"
-            onError={() => setThumbError(true)}
-            referrerPolicy="no-referrer"
-          />
+        {thumbnailUrl && !thumbError ? (
+          <>
+            {!thumbLoaded && (
+              <div className="absolute inset-0 bg-muted">
+                <div className="h-full w-full animate-pulse bg-[linear-gradient(110deg,hsl(var(--muted)),hsl(var(--background)/0.75),hsl(var(--muted)))] bg-[length:200%_100%]" />
+              </div>
+            )}
+            <img
+              src={thumbnailUrl}
+              alt=""
+              className={cn(
+                'w-full h-full object-cover transition-opacity duration-300',
+                thumbLoaded ? 'opacity-100' : 'opacity-0',
+              )}
+              loading="lazy"
+              decoding="async"
+              fetchPriority="low"
+              onLoad={() => setThumbLoaded(true)}
+              onError={() => setThumbError(true)}
+              referrerPolicy="no-referrer"
+            />
+          </>
         ) : (
           <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-muted to-muted/50">
             <FileVideo className="w-10 h-10 text-muted-foreground/30" />
@@ -380,7 +422,15 @@ export function HistoryItem({ entry }: HistoryItemProps) {
                         className="text-xs text-muted-foreground overflow-hidden"
                         style={!showFullSummary ? { maxHeight: '7.5em' } : undefined}
                       >
-                        <SimpleMarkdown content={localSummary} />
+                        {shouldDeferSummaryMarkdown ? (
+                          <p className="leading-relaxed">
+                            {summaryPreview.length > 260
+                              ? `${summaryPreview.slice(0, 260).trimEnd()}...`
+                              : summaryPreview}
+                          </p>
+                        ) : (
+                          <SimpleMarkdown content={localSummary} />
+                        )}
                       </div>
                       {localSummary.length > 200 && (
                         <button

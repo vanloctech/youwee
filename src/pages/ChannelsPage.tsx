@@ -29,6 +29,7 @@ import {
 } from '@/components/download/ThumbnailStatusBadge';
 import { FFmpegRequiredDialog } from '@/components/FFmpegRequiredDialog';
 import { ThemePicker } from '@/components/settings/ThemePicker';
+import { EmptyStateIllustration } from '@/components/shared/EmptyStateIllustration';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -1033,9 +1034,7 @@ export function ChannelsPage() {
             {/* Empty state */}
             {!browseLoading && browseVideos.length === 0 && !browseError && !browseChannelName && (
               <div className="flex flex-col items-center justify-center h-full text-center">
-                <div className="w-16 h-16 rounded-2xl bg-primary/5 flex items-center justify-center mb-4">
-                  <Tv className="w-7 h-7 text-primary/40" />
-                </div>
+                <EmptyStateIllustration className="mb-5" icon={Tv} size="sm" />
                 <h3 className="text-sm font-medium text-muted-foreground mb-1">
                   {followedChannels.length === 0 ? t('noChannels') : t('browseChannel')}
                 </h3>

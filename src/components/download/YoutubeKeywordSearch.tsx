@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { EmptyStateIllustration } from '@/components/shared/EmptyStateIllustration';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
@@ -491,7 +492,7 @@ export function YoutubeKeywordSearch({
   const busy = disabled || isSearching || isLoadingMore || isAdding;
 
   return (
-    <div className="flex flex-col h-full bg-background rounded-xl border border-border/50 overflow-hidden shadow-sm relative">
+    <div className="flex flex-col h-full overflow-hidden relative">
       {/* Search Form */}
       <div className="flex-shrink-0 border-b border-border/50 bg-card/20">
         <div className="p-4 sm:p-6 sm:pb-5">
@@ -718,9 +719,7 @@ export function YoutubeKeywordSearch({
           </div>
         ) : !hasResults ? (
           <div className="absolute inset-0 flex flex-col items-center justify-center p-6 text-center">
-            <div className="w-20 h-20 rounded-3xl bg-background flex items-center justify-center mb-5 border border-border/50 shadow-sm">
-              <Video className="w-10 h-10 text-muted-foreground/40" />
-            </div>
+            <EmptyStateIllustration className="mb-6" icon={Search} />
             <h3 className="text-lg font-semibold text-foreground mb-1.5">
               {t('urlInput.keyword.emptyTitle')}
             </h3>

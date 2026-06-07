@@ -18,6 +18,7 @@ import {
 import { useCallback, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ThemePicker } from '@/components/settings/ThemePicker';
+import { EmptyStateIllustration } from '@/components/shared/EmptyStateIllustration';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -650,9 +651,7 @@ export function SummaryPage({ onNavigateToSettings }: SummaryPageProps) {
         {/* Empty State */}
         {!result && !error && !isLoading && (
           <div className="flex-1 flex flex-col items-center justify-center text-center py-12">
-            <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mb-4">
-              <Sparkles className="w-8 h-8 text-primary" />
-            </div>
+            <EmptyStateIllustration className="mb-5" icon={Sparkles} />
             <h3 className="text-lg font-medium mb-2">{t('summary.emptyTitle')}</h3>
             <p className="text-sm text-muted-foreground max-w-md">
               {t('summary.emptyDescription')}

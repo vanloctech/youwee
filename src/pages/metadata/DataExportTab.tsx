@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import { type ReactNode, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { EmptyStateIllustration } from '@/components/shared/EmptyStateIllustration';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
@@ -359,15 +360,7 @@ export function DataExportTab() {
       <div className="flex-1 flex flex-col overflow-hidden px-4 sm:px-6 pt-3">
         {rows.length === 0 ? (
           <div className="flex-1 flex flex-col items-center justify-center text-center py-12">
-            <div className="relative mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-primary/10">
-              {isExtracting && (
-                <>
-                  <span className="absolute inset-0 rounded-full border border-primary/25 animate-ping" />
-                  <span className="absolute -inset-2 rounded-full border border-primary/10" />
-                </>
-              )}
-              <DatabaseZap className="w-8 h-8 text-primary" />
-            </div>
+            <EmptyStateIllustration className="mb-5" icon={DatabaseZap} isActive={isExtracting} />
             <h3 className="text-lg font-medium mb-2">{t('data.emptyTitle')}</h3>
             {isExtracting ? (
               <div className="mt-1 w-full max-w-sm rounded-xl border border-primary/15 bg-primary/5 p-3 text-left shadow-sm">

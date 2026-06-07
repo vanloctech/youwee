@@ -20,6 +20,23 @@ const LogContext = createContext<LogContextType | null>(null);
 
 const LOG_STDERR_KEY = 'youwee_log_stderr';
 
+function areLogsEqual(current: LogEntry[], next: LogEntry[]): boolean {
+  if (current.length !== next.length) return false;
+
+  return current.every((log, index) => {
+    const nextLog = next[index];
+    return (
+      nextLog &&
+      log.id === nextLog.id &&
+      log.timestamp === nextLog.timestamp &&
+      log.log_type === nextLog.log_type &&
+      log.message === nextLog.message &&
+      log.details === nextLog.details &&
+      log.url === nextLog.url
+    );
+  });
+}
+
 export function LogProvider({ children }: { children: ReactNode }) {
   const [logs, setLogs] = useState<LogEntry[]>([]);
   const [filter, setFilter] = useState<LogFilter>('all');
@@ -45,7 +62,7 @@ export function LogProvider({ children }: { children: ReactNode }) {
         search: searchParam,
         limit: 500,
       });
-      setLogs(result);
+      setLogs((current) => (areLogsEqual(current, result) ? current : result));
     } catch (error) {
       console.error('Failed to fetch logs:', error);
     } finally {

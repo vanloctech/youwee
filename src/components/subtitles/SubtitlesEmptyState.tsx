@@ -1,5 +1,6 @@
 import { Subtitles } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+import { EmptyStateIllustration } from '@/components/shared/EmptyStateIllustration';
 import { SubtitlesQuickActions } from './SubtitlesQuickActions';
 
 interface SubtitlesEmptyStateProps {
@@ -22,9 +23,7 @@ export function SubtitlesEmptyState({
       <div className="h-full p-2 sm:p-3">
         <div className="max-w-4xl mx-auto space-y-5">
           <div className="text-center space-y-2">
-            <div className="inline-flex h-14 w-14 items-center justify-center rounded-2xl bg-primary/10 text-primary">
-              <Subtitles className="w-7 h-7" />
-            </div>
+            <EmptyStateIllustration className="mx-auto" icon={Subtitles} size="sm" />
             <h2 className="text-xl sm:text-2xl font-semibold">{t('emptyState.title')}</h2>
             <p className="text-sm text-muted-foreground">{t('emptyState.description')}</p>
             <p className="text-xs text-muted-foreground">{t('emptyState.hint')}</p>
