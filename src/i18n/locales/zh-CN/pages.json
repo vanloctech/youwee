@@ -344,6 +344,7 @@
     "modeSequence": "顺序播放",
     "modeRepeatOne": "单曲循环",
     "modeShuffle": "随机播放",
+    "minimize": "最小化播放器",
     "close": "关闭播放器"
   }
 }
