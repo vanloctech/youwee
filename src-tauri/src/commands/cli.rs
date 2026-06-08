@@ -166,6 +166,9 @@ fn is_accepted_cli_url(url: &str) -> bool {
     if url.contains(char::is_whitespace) {
         return false;
     }
+    if url.contains('\\') {
+        return false;
+    }
 
     let Ok(parsed) = Url::parse(url) else {
         return false;
@@ -229,9 +232,8 @@ fn is_private_or_local_host(hostname: &str) -> bool {
 /// Build a structured CLI download request from parsed CLI arguments.
 /// Returns `None` when no usable URL is present.
 pub fn build_cli_download_request(args: &CliDownloadArgs) -> Option<CliDownloadRequest> {
-    let url = args.url.as_ref()?.trim();
-    let url = url.trim_matches('"').trim_matches('\'');
-    if !is_accepted_cli_url(url) {
+    let url = normalize_cli_url_arg(args.url.as_ref()?);
+    if !is_accepted_cli_url(&url) {
         return None;
     }
 
@@ -266,7 +268,7 @@ pub fn build_cli_download_request(args: &CliDownloadArgs) -> Option<CliDownloadR
     let download_sections = normalize_cli_download_sections(args.download_sections.as_deref());
 
     Some(CliDownloadRequest {
-        url: url.to_string(),
+        url,
         target,
         action,
         media,
@@ -282,6 +284,55 @@ pub fn build_cli_download_request(args: &CliDownloadArgs) -> Option<CliDownloadR
         live_from_start: args.live_from_start,
         trusted_local: true,
     })
+}
+
+fn normalize_cli_url_arg(value: &str) -> String {
+    let trimmed = value.trim().trim_matches('"').trim_matches('\'');
+    let mut normalized = String::with_capacity(trimmed.len());
+    let mut chars = trimmed.chars().peekable();
+
+    while let Some(ch) = chars.next() {
+        if ch == '\\' {
+            if let Some(next) = chars.peek().copied() {
+                if is_shell_escaped_url_char(next) {
+                    normalized.push(next);
+                    chars.next();
+                    continue;
+                }
+            }
+        }
+        normalized.push(ch);
+    }
+
+    normalized
+}
+
+fn is_shell_escaped_url_char(ch: char) -> bool {
+    matches!(
+        ch,
+        '?' | '='
+            | '&'
+            | '#'
+            | '%'
+            | '+'
+            | ':'
+            | '/'
+            | '.'
+            | '_'
+            | '-'
+            | '~'
+            | '@'
+            | '!'
+            | '$'
+            | '\''
+            | '('
+            | ')'
+            | '*'
+            | ','
+            | ';'
+            | '['
+            | ']'
+    )
 }
 
 fn normalize_cli_quality(value: Option<&str>, audio: bool) -> String {
@@ -574,6 +625,31 @@ mod tests {
     }
 
     #[test]
+    fn cli_request_unescapes_shell_quoted_url_punctuation() {
+        let args = CliDownloadArgs {
+            url: Some(r"https://www.youtube.com/watch\?v\=f6COwmcIA3E".to_string()),
+            audio: true,
+            ..Default::default()
+        };
+
+        let request = build_cli_download_request(&args).expect("expected CLI request");
+
+        assert_eq!(request.url, "https://www.youtube.com/watch?v=f6COwmcIA3E");
+        assert_eq!(request.media, "audio");
+        assert_eq!(request.quality, "auto");
+    }
+
+    #[test]
+    fn cli_request_rejects_unhandled_backslash_urls() {
+        let args = CliDownloadArgs {
+            url: Some(r"https://www.youtube.com\watch?v=f6COwmcIA3E".to_string()),
+            ..Default::default()
+        };
+
+        assert!(build_cli_download_request(&args).is_none());
+    }
+
+    #[test]
     fn cli_request_rejects_non_http_urls() {
         let args = CliDownloadArgs {
             url: Some("file:///tmp/video.mp4".to_string()),
@@ -610,7 +686,10 @@ mod tests {
 
         assert_eq!(request.url, "https://example.com/video");
         assert_eq!(request.quality, "480");
-        assert_eq!(request.output_path.as_deref(), Some("/Users/example/Videos"));
+        assert_eq!(
+            request.output_path.as_deref(),
+            Some("/Users/example/Videos")
+        );
         assert_eq!(request.action, "queue_only");
         assert_eq!(request.target, "universal");
     }
