@@ -7,6 +7,9 @@ Youwee 的所有重要更改都将记录在此文件中。
 
 ## [Unreleased]
 
+### 新增
+- **数据导出 YouTube 关键词来源** - 新增 YouTube 关键词来源，可在 Data Export 中导出搜索结果
+
 ### 变更
 - **CLI 设置与文档** - 优化 General 设置中的 CLI 卡片，补齐所有支持语言的 CLI 本地化，并扩展 CLI 指南中的 macOS、Windows 和 Linux 安装说明
 

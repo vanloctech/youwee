@@ -147,6 +147,10 @@ export function detectSourceFromText(text: string): ExportSource {
   if (!firstInput) return 'auto';
 
   const lower = firstInput.toLowerCase();
+  if (!lower.startsWith('http://') && !lower.startsWith('https://')) {
+    return 'youtube_keyword';
+  }
+
   if (lower.includes('youtube.com') || lower.includes('youtu.be')) {
     if (lower.includes('list=') || lower.includes('/playlist')) return 'youtube_playlist';
     if (
@@ -167,6 +171,7 @@ export function sourceLabelKey(source: ExportSource): string {
     auto: 'data.sources.auto',
     youtube_playlist: 'data.sources.youtubePlaylist',
     youtube_channel: 'data.sources.youtubeChannel',
+    youtube_keyword: 'data.sources.youtubeKeyword',
     url_list: 'data.sources.urlList',
   };
   return keys[source];

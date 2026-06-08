@@ -45,6 +45,7 @@
       "auto": "Tự động",
       "youtubePlaylist": "YouTube Playlist",
       "youtubeChannel": "YouTube Channel",
+      "youtubeKeyword": "Từ khóa YouTube",
       "urlList": "Danh sách URL"
     },
     "detectedSource": "Nhận diện",
@@ -53,6 +54,7 @@
     "placeholders": {
       "youtube_playlist": "Dán URL playlist YouTube...",
       "youtube_channel": "Dán URL kênh YouTube...",
+      "youtube_keyword": "Nhập từ khóa tìm kiếm YouTube...",
       "url_list": "Dán URL video, mỗi dòng một URL..."
     },
     "inputCount": "{{count}} đầu vào",

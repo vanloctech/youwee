@@ -12,7 +12,7 @@ import {
   TableProperties,
   Trash2,
 } from 'lucide-react';
-import { type ReactNode, useMemo, useState } from 'react';
+import { type ReactNode, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { EmptyStateIllustration } from '@/components/shared/EmptyStateIllustration';
 import { Button } from '@/components/ui/button';
@@ -53,11 +53,20 @@ const SOURCE_OPTIONS: { value: ExportSource; icon: ReactNode; labelKey: string }
     labelKey: 'data.sources.youtubeChannel',
   },
   {
+    value: 'youtube_keyword',
+    icon: <Search className="w-4 h-4" />,
+    labelKey: 'data.sources.youtubeKeyword',
+  },
+  {
     value: 'url_list',
     icon: <Link2 className="w-4 h-4" />,
     labelKey: 'data.sources.urlList',
   },
 ];
+
+function clampLimitInput(value: string, max: number): number {
+  return Math.min(max, Math.max(1, Number(value) || 1));
+}
 
 export function DataExportTab() {
   const { t } = useTranslation('metadata');
@@ -85,6 +94,7 @@ export function DataExportTab() {
   const [selectedFields, setSelectedFields] = useState<FieldId[]>(DEFAULT_FIELDS);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [exporting, setExporting] = useState(false);
+  const [limitInput, setLimitInput] = useState(() => String(limit));
 
   const filteredRows = useMemo(() => {
     const query = search.trim().toLowerCase();
@@ -107,8 +117,26 @@ export function DataExportTab() {
     .filter((line) => line && !line.startsWith('#')).length;
   const detectedSource = detectSourceFromText(inputText);
   const effectiveSource = source === 'auto' ? detectedSource : source;
+  const isKeywordSource = effectiveSource === 'youtube_keyword';
+  const maxLimit = isKeywordSource ? 100 : 5000;
+  const inputPlaceholder =
+    source === 'auto' ? t('data.placeholder') : t(`data.placeholders.${source}`);
+
+  useEffect(() => {
+    const nextLimit = Math.min(limit, maxLimit);
+    if (nextLimit !== limit) {
+      setLimit(nextLimit);
+    }
+    setLimitInput(String(nextLimit));
+  }, [limit, maxLimit, setLimit]);
 
   const getFieldLabel = (field: FieldId) => t(`data.columnsMap.${field}`);
+
+  const commitLimitInput = () => {
+    const nextLimit = clampLimitInput(limitInput, maxLimit);
+    setLimit(nextLimit);
+    setLimitInput(String(nextLimit));
+  };
 
   const toggleRow = (id: string) => {
     setSelectedIds((current) => {
@@ -215,7 +243,7 @@ export function DataExportTab() {
   };
 
   return (
-    <div className="flex-1 flex flex-col overflow-hidden">
+    <div className="flex h-full min-h-0 flex-1 flex-col overflow-hidden">
       <div className="flex-shrink-0 p-4 sm:p-6 space-y-3">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <div className="flex items-center gap-2 rounded-lg bg-muted/40 px-2.5 py-1.5 text-xs text-muted-foreground">
@@ -257,7 +285,7 @@ export function DataExportTab() {
             value={inputText}
             onChange={(event) => setInputText(event.target.value)}
             disabled={isExtracting}
-            placeholder={t('data.placeholder')}
+            placeholder={inputPlaceholder}
             className="min-h-[92px] resize-none bg-background/50 border-border/50 font-mono text-sm"
           />
           {inputCount > 0 && (
@@ -273,10 +301,23 @@ export function DataExportTab() {
             <Input
               type="number"
               min={1}
-              max={5000}
-              value={limit}
+              max={maxLimit}
+              value={limitInput}
               disabled={isExtracting}
-              onChange={(event) => setLimit(Math.max(1, Number(event.target.value) || 1))}
+              onBlur={commitLimitInput}
+              onChange={(event) => {
+                const value = event.target.value;
+                setLimitInput(value);
+                const parsed = Number(value);
+                if (Number.isFinite(parsed) && parsed >= 1) {
+                  setLimit(Math.min(maxLimit, parsed));
+                }
+              }}
+              onKeyDown={(event) => {
+                if (event.key === 'Enter') {
+                  event.currentTarget.blur();
+                }
+              }}
               className="h-8 w-24 bg-background/60"
             />
           </div>
@@ -285,7 +326,7 @@ export function DataExportTab() {
             <button
               type="button"
               onClick={() => setDetailMode(false)}
-              disabled={isExtracting}
+              disabled={isExtracting || isKeywordSource}
               className={cn(
                 'px-3 py-1.5 rounded-md text-xs font-medium transition-all',
                 !detailMode ? 'bg-primary/10 text-primary' : 'text-muted-foreground',
@@ -296,7 +337,7 @@ export function DataExportTab() {
             <button
               type="button"
               onClick={enableDetailMode}
-              disabled={isExtracting}
+              disabled={isExtracting || isKeywordSource}
               className={cn(
                 'px-3 py-1.5 rounded-md text-xs font-medium transition-all',
                 detailMode ? 'bg-primary/10 text-primary' : 'text-muted-foreground',
@@ -357,7 +398,7 @@ export function DataExportTab() {
 
       <div className="mx-4 sm:mx-6 h-px bg-gradient-to-r from-transparent via-border/40 to-transparent" />
 
-      <div className="flex-1 flex flex-col overflow-hidden px-4 sm:px-6 pt-3">
+      <div className="flex min-h-0 flex-1 flex-col overflow-hidden px-4 sm:px-6 pt-3">
         {rows.length === 0 ? (
           <div className="flex-1 flex flex-col items-center justify-center text-center py-12">
             <EmptyStateIllustration className="mb-5" icon={DatabaseZap} isActive={isExtracting} />
@@ -395,7 +436,7 @@ export function DataExportTab() {
             )}
           </div>
         ) : (
-          <>
+          <div className="grid min-h-0 flex-1 grid-rows-[auto_minmax(0,1fr)]">
             <div className="flex flex-col gap-2 pb-3 sm:flex-row sm:items-center sm:justify-between">
               <div className="space-y-0.5">
                 <p className="text-sm font-medium truncate">{title || t('data.results')}</p>
@@ -449,7 +490,7 @@ export function DataExportTab() {
               </div>
             </div>
 
-            <div className="flex-1 overflow-auto rounded-xl border border-border/50 bg-background/30">
+            <div className="min-h-0 overflow-auto overscroll-contain rounded-xl border border-border/50 bg-background/30">
               <table className="min-w-full border-separate border-spacing-0 text-left text-sm">
                 <thead className="sticky top-0 z-10 bg-background/95 backdrop-blur">
                   <tr>
@@ -506,7 +547,7 @@ export function DataExportTab() {
                 </tbody>
               </table>
             </div>
-          </>
+          </div>
         )}
       </div>
     </div>

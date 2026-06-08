@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **Data Export YouTube keyword source** - Added a YouTube keyword source so search results can be exported from Data Export
+
 ### Changed
 
 ### Fixed

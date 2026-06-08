@@ -47,6 +47,7 @@
       "auto": "Auto",
       "youtubePlaylist": "YouTube Playlist",
       "youtubeChannel": "YouTube Channel",
+      "youtubeKeyword": "Mot-clé YouTube",
       "urlList": "URL list"
     },
     "detectedSource": "Detected",
@@ -55,6 +56,7 @@
     "placeholders": {
       "youtube_playlist": "Paste a YouTube playlist URL...",
       "youtube_channel": "Paste a YouTube channel URL...",
+      "youtube_keyword": "Saisissez des mots-clés de recherche YouTube...",
       "url_list": "Paste video URLs, one per line..."
     },
     "inputCount": "{{count}} input",

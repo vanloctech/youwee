@@ -13,9 +13,10 @@ use tokio::process::Command;
 use crate::database::{add_history_internal, add_log_internal};
 use crate::services::{
     build_site_header_args, get_deno_path, get_ffmpeg_path, get_ytdlp_path, get_ytdlp_source,
-    run_ytdlp_with_stderr_and_cookies, system_ytdlp_not_found_message,
+    run_ytdlp_with_stderr_and_cookies, search_youtube_videos_internal,
+    system_ytdlp_not_found_message,
 };
-use crate::types::{BackendError, DependencySource};
+use crate::types::{BackendError, DependencySource, YoutubeSearchVideo};
 use crate::utils::{normalize_url, sanitize_output_path, validate_url, CommandExt};
 
 pub static METADATA_CANCEL_FLAG: AtomicBool = AtomicBool::new(false);
@@ -48,6 +49,7 @@ pub enum ExportSource {
     Auto,
     YoutubePlaylist,
     YoutubeChannel,
+    YoutubeKeyword,
     UrlList,
 }
 
@@ -101,6 +103,7 @@ fn export_source_key(source: &ExportSource) -> &'static str {
         ExportSource::Auto => "auto",
         ExportSource::YoutubePlaylist => "youtube_playlist",
         ExportSource::YoutubeChannel => "youtube_channel",
+        ExportSource::YoutubeKeyword => "youtube_keyword",
         ExportSource::UrlList => "url_list",
     }
 }
@@ -125,7 +128,9 @@ fn detect_platform(source: &ExportSource, extractor: Option<&str>, url: Option<&
     } else {
         match source {
             ExportSource::Auto => "other".to_string(),
-            ExportSource::YoutubePlaylist | ExportSource::YoutubeChannel => "youtube".to_string(),
+            ExportSource::YoutubePlaylist
+            | ExportSource::YoutubeChannel
+            | ExportSource::YoutubeKeyword => "youtube".to_string(),
             ExportSource::UrlList => "other".to_string(),
         }
     }
@@ -180,12 +185,105 @@ fn fallback_url(id: &str) -> Option<String> {
     Some(format!("https://www.youtube.com/watch?v={}", id))
 }
 
+fn duration_text_to_seconds(value: Option<&str>) -> Option<f64> {
+    let value = value?.trim();
+    if value.is_empty() {
+        return None;
+    }
+
+    let mut total = 0u32;
+    for part in value.split(':') {
+        let number = part.trim().parse::<u32>().ok()?;
+        total = total.checked_mul(60)?.checked_add(number)?;
+    }
+
+    Some(f64::from(total))
+}
+
+fn parse_view_count_text(value: Option<&str>) -> Option<i64> {
+    let value = value?.trim().to_lowercase();
+    if value.is_empty() {
+        return None;
+    }
+
+    let numeric = value
+        .chars()
+        .skip_while(|ch| !ch.is_ascii_digit())
+        .take_while(|ch| ch.is_ascii_digit() || *ch == '.' || *ch == ',')
+        .collect::<String>();
+
+    if numeric.is_empty() {
+        return None;
+    }
+
+    let multiplier = if value.contains("tỷ") || value.contains('b') {
+        1_000_000_000f64
+    } else if value.contains("triệu") || value.contains("tr") || value.contains('m') {
+        1_000_000f64
+    } else if value.contains("nghìn") || value.contains('k') {
+        1_000f64
+    } else {
+        1f64
+    };
+
+    if (multiplier - 1f64).abs() < f64::EPSILON {
+        let digits = numeric
+            .chars()
+            .filter(|ch| ch.is_ascii_digit())
+            .collect::<String>();
+        return digits.parse::<i64>().ok();
+    }
+
+    let normalized = numeric.replace(',', ".");
+    normalized
+        .parse::<f64>()
+        .ok()
+        .map(|count| (count * multiplier).round() as i64)
+}
+
+fn row_from_youtube_search_video(video: YoutubeSearchVideo) -> ExportRow {
+    let metadata_text = [video.view_count_text.clone(), video.published_time_text.clone()]
+        .into_iter()
+        .flatten()
+        .filter(|value| !value.is_empty())
+        .collect::<Vec<_>>()
+        .join(" • ");
+
+    ExportRow {
+        id: video.id,
+        title: Some(video.title),
+        url: Some(video.url),
+        platform: Some("youtube".to_string()),
+        uploader: video.channel,
+        thumbnail: video.thumbnail,
+        duration_seconds: duration_text_to_seconds(video.duration.as_deref()),
+        upload_date: video.published_time_text,
+        timestamp: None,
+        view_count: parse_view_count_text(video.view_count_text.as_deref()),
+        like_count: None,
+        comment_count: None,
+        share_count: None,
+        description: if metadata_text.is_empty() {
+            None
+        } else {
+            Some(metadata_text)
+        },
+        tags: None,
+        playlist_index: None,
+        extractor: Some("youtube_search".to_string()),
+    }
+}
+
 fn detect_export_source(url: &str, selected_source: &ExportSource) -> ExportSource {
     if !matches!(selected_source, ExportSource::Auto) {
         return selected_source.clone();
     }
 
     let lower = url.to_lowercase();
+    if !lower.starts_with("http://") && !lower.starts_with("https://") {
+        return ExportSource::YoutubeKeyword;
+    }
+
     if lower.contains("youtube.com") || lower.contains("youtu.be") {
         if lower.contains("list=") || lower.contains("/playlist") {
             return ExportSource::YoutubePlaylist;
@@ -346,6 +444,18 @@ async fn run_export_ytdlp(
     Ok(parse_ytdlp_rows(source, &output.stdout, &normalized_url))
 }
 
+async fn run_export_youtube_keyword(
+    query: &str,
+    limit: Option<u32>,
+) -> Result<Vec<ExportRow>, String> {
+    let response = search_youtube_videos_internal(query.to_string(), limit, None, None).await?;
+    Ok(response
+        .videos
+        .into_iter()
+        .map(row_from_youtube_search_video)
+        .collect())
+}
+
 #[tauri::command]
 pub async fn extract_data_rows(
     app: AppHandle,
@@ -355,7 +465,7 @@ pub async fn extract_data_rows(
 
     let lines = parse_input_lines(&input.text);
     if lines.is_empty() {
-        return Err(BackendError::from_message("No input URLs found").to_wire_string());
+        return Err(BackendError::from_message("No input found").to_wire_string());
     }
 
     let mut all_rows = Vec::new();
@@ -370,16 +480,23 @@ pub async fn extract_data_rows(
 
         let effective_source = detect_export_source(&line, &input.source);
 
-        match run_export_ytdlp(
-            &app,
-            &effective_source,
-            &line,
-            input.limit,
-            input.detail_mode,
-            &input,
-        )
-        .await
-        {
+        let export_result = if matches!(effective_source, ExportSource::YoutubeKeyword) {
+            run_export_youtube_keyword(&line, input.limit)
+                .await
+                .map(|rows| (rows, Some(line.clone())))
+        } else {
+            run_export_ytdlp(
+                &app,
+                &effective_source,
+                &line,
+                input.limit,
+                input.detail_mode,
+                &input,
+            )
+            .await
+        };
+
+        match export_result {
             Ok((mut rows, source_title)) => {
                 if title.is_none() {
                     title = source_title;

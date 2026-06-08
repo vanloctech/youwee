@@ -34,10 +34,16 @@ export function MetadataPage() {
           </TabsList>
         </div>
 
-        <TabsContent value="data" className="flex-1 min-h-0 mt-0 overflow-hidden">
+        <TabsContent
+          value="data"
+          className="mt-0 min-h-0 flex-1 overflow-hidden data-[state=active]:flex"
+        >
           <DataExportTab />
         </TabsContent>
-        <TabsContent value="assets" className="flex-1 min-h-0 mt-0 overflow-hidden">
+        <TabsContent
+          value="assets"
+          className="mt-0 min-h-0 flex-1 overflow-hidden data-[state=active]:flex"
+        >
           <AssetsExportTab />
         </TabsContent>
       </Tabs>

@@ -703,7 +703,12 @@ export interface PlaylistVideoEntry {
 
 export type YoutubeChannelContentType = 'videos' | 'shorts' | 'streams' | 'videos_shorts';
 
-export type ExportSource = 'auto' | 'youtube_playlist' | 'youtube_channel' | 'url_list';
+export type ExportSource =
+  | 'auto'
+  | 'youtube_playlist'
+  | 'youtube_channel'
+  | 'youtube_keyword'
+  | 'url_list';
 
 export type ExportFormat =
   | 'csv'
