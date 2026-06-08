@@ -183,6 +183,12 @@
       "title": "Chưa có video",
       "description": "Dán URL YouTube ở trên để bắt đầu tải video"
     },
+    "filters": {
+      "all": "Tất cả",
+      "active": "Đang xử lý",
+      "emptyTitle": "Không có video ở trạng thái này",
+      "showAll": "Hiện tất cả video"
+    },
     "status": {
       "pending": "Đang chờ",
       "fetching": "Đang lấy",

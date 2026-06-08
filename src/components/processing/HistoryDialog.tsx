@@ -20,6 +20,7 @@ import {
 } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { EmptyStateIllustration } from '@/components/shared/EmptyStateIllustration';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
@@ -550,13 +551,11 @@ export function HistoryDialog({
               <div className="p-3 space-y-1">
                 {filteredHistory.length === 0 ? (
                   <div className="flex flex-col items-center justify-center py-12 text-center">
-                    <div className="w-12 h-12 rounded-full bg-muted/50 flex items-center justify-center mb-3">
-                      {hasActiveFilters ? (
-                        <SlidersHorizontal className="w-6 h-6 text-muted-foreground/50" />
-                      ) : (
-                        <History className="w-6 h-6 text-muted-foreground/50" />
-                      )}
-                    </div>
+                    <EmptyStateIllustration
+                      className="mb-4"
+                      icon={hasActiveFilters ? SlidersHorizontal : History}
+                      size="sm"
+                    />
                     <p className="text-sm text-muted-foreground">
                       {hasActiveFilters
                         ? t('processing.historyDialog.noResults')
@@ -752,9 +751,7 @@ export function HistoryDialog({
               </ScrollArea>
             ) : (
               <div className="flex-1 flex flex-col items-center justify-center text-center p-6">
-                <div className="w-16 h-16 rounded-full bg-muted/50 flex items-center justify-center mb-4">
-                  <FileVideo className="w-8 h-8 text-muted-foreground/50" />
-                </div>
+                <EmptyStateIllustration className="mb-5" icon={FileVideo} size="sm" />
                 <p className="text-muted-foreground">{t('processing.historyDialog.selectJob')}</p>
               </div>
             )}

@@ -89,12 +89,19 @@
       "moreCount": "1 790 de plus",
       "viewFullList": "Voir la liste complète des sites pris en charge"
     },
+    "filters": {
+      "all": "Tout",
+      "active": "Actif",
+      "emptyTitle": "Aucune vidéo avec cet état",
+      "showAll": "Afficher toutes les vidéos"
+    },
     "status": {
       "pending": "En attente",
       "fetching": "Récupération",
       "downloading": "Téléchargement",
       "completed": "Terminé",
       "failed": "Échec",
+      "skipped": "Ignoré",
       "failedHint": "Voir la page Journaux pour les détails",
       "retrying": "Nouvelle tentative {{current}}/{{total}} dans {{seconds}}s"
     },

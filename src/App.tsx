@@ -5,7 +5,6 @@ import { DenoDialog } from '@/components/DenoDialog';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { MeteorTransition } from '@/components/effects/MeteorTransition';
 import { FFmpegDialog } from '@/components/FFmpegDialog';
-import { LegalDisclaimerDialog } from '@/components/LegalDisclaimerDialog';
 import type { Page } from '@/components/layout';
 import { MainLayout } from '@/components/layout';
 import { MusicPlayer } from '@/components/player';
@@ -188,7 +187,6 @@ function AppContent() {
       {showFfmpegDialog && <FFmpegDialog onDismiss={() => setShowFfmpegDialog(false)} />}
 
       {showDenoDialog && <DenoDialog onDismiss={() => setShowDenoDialog(false)} />}
-      <LegalDisclaimerDialog />
       <MeteorTransition
         isActive={isTransitioning}
         oldMode={oldMode}

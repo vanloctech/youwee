@@ -14,7 +14,6 @@ import {
   normalizeExternalVideoUrl,
   parseExternalDeepLink,
 } from '@/lib/external-link';
-import { hasAcceptedLegalDisclaimer } from '@/lib/legal-disclaimer';
 import type { ExternalEnqueueOptions, Quality, SubtitleFormat, SubtitleMode } from '@/lib/types';
 
 type StartLockRef = MutableRefObject<{
@@ -188,7 +187,7 @@ export function useExternalDownloadLinks(
         }
       }
 
-      let allowAutoStart = request.action === 'download_now' && hasAcceptedLegalDisclaimer();
+      let allowAutoStart = request.action === 'download_now';
       if (allowAutoStart && !request.trustedLocal) {
         const host = (() => {
           try {

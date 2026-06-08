@@ -91,12 +91,19 @@
       "moreCount": "1,790 more",
       "viewFullList": "View full list of supported sites"
     },
+    "filters": {
+      "all": "All",
+      "active": "Active",
+      "emptyTitle": "No videos in this status",
+      "showAll": "Show all videos"
+    },
     "status": {
       "pending": "Pending",
       "fetching": "Fetching",
       "downloading": "Downloading",
       "completed": "Completed",
       "failed": "Failed",
+      "skipped": "Skipped",
       "failedHint": "View Logs page for details",
       "retrying": "Retry {{current}}/{{total}} in {{seconds}}s"
     },

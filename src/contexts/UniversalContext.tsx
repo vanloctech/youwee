@@ -26,7 +26,6 @@ import {
   isRetryableError,
   waitWithCancellation,
 } from '@/lib/download-retry';
-import { hasAcceptedLegalDisclaimer } from '@/lib/legal-disclaimer';
 import {
   buildCookieProxyInvokeOptions,
   loadCookieSettings,
@@ -789,8 +788,6 @@ export function UniversalProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const startDownload = useCallback(async () => {
-    if (!hasAcceptedLegalDisclaimer()) return;
-
     const hasPendingItems = () =>
       itemsRef.current.some((item) => item.status === 'pending' || item.status === 'error');
 

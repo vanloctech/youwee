@@ -1,13 +1,33 @@
 import { ScrollText, Terminal } from 'lucide-react';
+import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { LogEntry, LogToolbar } from '@/components/logs';
 import { ThemePicker } from '@/components/settings/ThemePicker';
+import { EmptyStateIllustration } from '@/components/shared/EmptyStateIllustration';
 import { useLogs } from '@/contexts/LogContext';
-import { cn } from '@/lib/utils';
+
+const INITIAL_VISIBLE_LOGS = 40;
+const LOG_RENDER_BATCH_SIZE = 120;
 
 export function LogsPage() {
   const { t } = useTranslation('pages');
   const { logs, loading } = useLogs();
+  const [visibleCount, setVisibleCount] = useState(INITIAL_VISIBLE_LOGS);
+  const visibleLogs = useMemo(() => logs.slice(0, visibleCount), [logs, visibleCount]);
+
+  useEffect(() => {
+    setVisibleCount(logs.length === 0 ? 0 : Math.min(INITIAL_VISIBLE_LOGS, logs.length));
+  }, [logs]);
+
+  useEffect(() => {
+    if (visibleCount >= logs.length) return;
+
+    const timeout = window.setTimeout(() => {
+      setVisibleCount((current) => Math.min(logs.length, current + LOG_RENDER_BATCH_SIZE));
+    }, 32);
+
+    return () => window.clearTimeout(timeout);
+  }, [logs.length, visibleCount]);
 
   return (
     <div className="flex-1 flex flex-col overflow-hidden min-w-0">
@@ -39,14 +59,7 @@ export function LogsPage() {
               </div>
             ) : logs.length === 0 ? (
               <div className="flex flex-col items-center justify-center h-full text-center py-12">
-                <div
-                  className={cn(
-                    'w-16 h-16 rounded-2xl flex items-center justify-center mb-4',
-                    'bg-primary/10 text-primary',
-                  )}
-                >
-                  <ScrollText className="w-8 h-8" />
-                </div>
+                <EmptyStateIllustration className="mb-5" icon={ScrollText} />
                 <h3 className="text-lg font-semibold mb-2">{t('logs.emptyTitle')}</h3>
                 <p className="text-sm text-muted-foreground max-w-md">
                   {t('logs.emptyDescription')}
@@ -62,7 +75,7 @@ export function LogsPage() {
               </div>
             ) : (
               <div className="space-y-3 pb-4">
-                {logs.map((log) => (
+                {visibleLogs.map((log) => (
                   <LogEntry key={log.id} log={log} />
                 ))}
               </div>
@@ -73,7 +86,7 @@ export function LogsPage() {
           {logs.length > 0 && (
             <div className="flex-shrink-0 py-3 border-t border-white/[0.08]">
               <p className="text-xs text-muted-foreground text-center">
-                {t('logs.stats', { count: logs.length })}
+                {t('logs.stats', { count: visibleLogs.length })}
               </p>
             </div>
           )}

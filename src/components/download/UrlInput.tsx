@@ -7,7 +7,6 @@ import {
   List,
   Loader2,
   Plus,
-  Search,
 } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -289,16 +288,13 @@ export function UrlInput({
             onClick={onOpenKeywordSearch}
             disabled={disabled}
             className={cn(
-              'group inline-flex h-9 items-center gap-2 rounded-xl border border-primary/25 bg-primary/10 px-3 text-xs font-semibold text-primary shadow-sm shadow-primary/10 transition-all',
-              'hover:border-primary/45 hover:bg-primary hover:text-primary-foreground hover:shadow-md hover:shadow-primary/20',
+              'inline-flex h-9 items-center rounded-lg bg-primary px-3 text-xs font-semibold text-primary-foreground shadow-sm shadow-primary/20 transition-colors',
+              'hover:bg-primary/90',
               'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2 focus-visible:ring-offset-background',
-              'disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-primary/10 disabled:hover:text-primary',
+              'disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-primary',
             )}
             title={t('urlInput.keyword.hint')}
           >
-            <span className="flex h-5 w-5 items-center justify-center rounded-full bg-primary text-primary-foreground transition-colors group-hover:bg-primary-foreground group-hover:text-primary">
-              <Search className="h-3.5 w-3.5" />
-            </span>
             <span>{t('urlInput.keyword.openButton')}</span>
           </button>
         </div>

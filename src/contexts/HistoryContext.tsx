@@ -154,6 +154,65 @@ function buildResolvedHistoryFilters(filters: HistoryAdvancedFilters): HistoryAd
   };
 }
 
+function areHistoryTagsEqual(current: HistoryTag[], next: HistoryTag[]): boolean {
+  if (current.length !== next.length) return false;
+
+  return current.every((tag, index) => {
+    const nextTag = next[index];
+    return (
+      nextTag &&
+      tag.id === nextTag.id &&
+      tag.name === nextTag.name &&
+      tag.itemCount === nextTag.itemCount
+    );
+  });
+}
+
+function areHistoryCollectionsEqual(
+  current: HistoryCollection[],
+  next: HistoryCollection[],
+): boolean {
+  if (current.length !== next.length) return false;
+
+  return current.every((collection, index) => {
+    const nextCollection = next[index];
+    return (
+      nextCollection &&
+      collection.id === nextCollection.id &&
+      collection.name === nextCollection.name &&
+      collection.color === nextCollection.color &&
+      collection.itemCount === nextCollection.itemCount
+    );
+  });
+}
+
+function areHistoryEntriesEqual(current: HistoryEntry[], next: HistoryEntry[]): boolean {
+  if (current.length !== next.length) return false;
+
+  return current.every((entry, index) => {
+    const nextEntry = next[index];
+    return (
+      nextEntry &&
+      entry.id === nextEntry.id &&
+      entry.url === nextEntry.url &&
+      entry.title === nextEntry.title &&
+      entry.thumbnail === nextEntry.thumbnail &&
+      entry.filepath === nextEntry.filepath &&
+      entry.filesize === nextEntry.filesize &&
+      entry.duration === nextEntry.duration &&
+      entry.quality === nextEntry.quality &&
+      entry.format === nextEntry.format &&
+      entry.source === nextEntry.source &&
+      entry.downloaded_at === nextEntry.downloaded_at &&
+      entry.file_exists === nextEntry.file_exists &&
+      entry.summary === nextEntry.summary &&
+      entry.time_range === nextEntry.time_range &&
+      areHistoryTagsEqual(entry.tags, nextEntry.tags) &&
+      areHistoryCollectionsEqual(entry.collections, nextEntry.collections)
+    );
+  });
+}
+
 interface RenameDownloadedFileResult {
   newFilepath: string;
   newTitle: string;
@@ -161,6 +220,7 @@ interface RenameDownloadedFileResult {
 
 export function HistoryProvider({ children }: { children: ReactNode }) {
   const [entries, setEntries] = useState<HistoryEntry[]>([]);
+  const entriesRef = useRef<HistoryEntry[]>([]);
   const [historyVersion, setHistoryVersion] = useState(0);
   const [filter, setFilter] = useState<HistoryFilter>('all');
   const [search, setSearch] = useState('');
@@ -183,6 +243,10 @@ export function HistoryProvider({ children }: { children: ReactNode }) {
   });
   const [redownloadTasks, setRedownloadTasks] = useState<Map<string, RedownloadTask>>(new Map());
   const lastAssetScopeKeyRef = useRef('');
+
+  useEffect(() => {
+    entriesRef.current = entries;
+  }, [entries]);
 
   // Listen for download progress events for re-downloads
   useEffect(() => {
@@ -276,9 +340,12 @@ export function HistoryProvider({ children }: { children: ReactNode }) {
         }),
       ]);
 
-      setEntries(result);
-      setTotalCount(count);
-      setHistoryVersion((prev) => prev + 1);
+      if (!areHistoryEntriesEqual(entriesRef.current, result)) {
+        entriesRef.current = result;
+        setEntries(result);
+        setHistoryVersion((prev) => prev + 1);
+      }
+      setTotalCount((current) => (current === count ? current : count));
 
       const scopeCandidates = result
         .filter((entry) => entry.filepath.trim())

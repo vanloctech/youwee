@@ -65,9 +65,19 @@ All must pass before a commit succeeds.
 
 ## i18n
 
-- Namespaces: `common`, `settings`, `pages`, `channels`, `download`, `universal`
-- Locales: `en`, `vi`, `zh-CN` in `src/i18n/locales/{lang}/`
-- When adding new UI text, add keys to ALL 3 locales
+- Namespaces: `common`, `settings`, `pages`, `channels`, `download`, `universal`, `gallery`, `metadata`, `subtitles`, plus any future feature-specific namespaces already present in `src/i18n/locales/{lang}/`
+- Primary locales: `en`, `vi`, `zh-CN`
+- Supported locale directories currently live in `src/i18n/locales/{lang}/`
+- When adding new UI text, add keys to **every existing locale directory**, not only the 3 primary locales
+- Before finishing i18n work, compare the touched namespace across all locale directories and ensure no locale is missing the new keys
+
+## SDK Rules
+
+- SDK source lives in `sdk-js/src/`; generated build output lives in `sdk-js/dist/`
+- When changing SDK TypeScript source, run `bun run build:sdk`
+- When adding or changing public SDK APIs, update `sdk-js/README.md` and add an `Unreleased` entry in `sdk-js/CHANGELOG.md`
+- Do not bump `sdk-js/package.json` version unless the user explicitly asks for an SDK release/version bump
+- Keep SDK TypeScript strict and avoid `any` in public API types unless there is a clear compatibility reason
 
 ## UI Design Patterns
 
@@ -79,7 +89,8 @@ All must pass before a commit succeeds.
 ## Architecture Patterns
 
 - Per-item settings are **snapshotted** at add-time from global settings, stored as `item.settings`
-- History is stored in SQLite (`logs.db`), managed via `src-tauri/src/database/history.rs`
+- App data is stored in SQLite (`youwee.db`), initialized in `src-tauri/src/database/connection.rs`
+- `logs.db` is the legacy database filename; keep automatic migration to `youwee.db` and preserve the legacy file as a backup
 - DB migrations use `ALTER TABLE ... ADD COLUMN` with `.ok()` to ignore "already exists" errors
 - FFmpeg is bundled (not system) on macOS — rebuilt with `--enable-securetransport` for TLS support
 - `download_sections` format: `"*MM:SS-MM:SS"` (with `*` prefix for yt-dlp). Strip `*` before storing in history.

@@ -7,11 +7,14 @@ và dự án tuân theo [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+## [0.17.0] - 2026-06-07
+
 ### Thêm mới
 - **Giao diện dòng lệnh** - Thêm CLI local `youwee` với nút cài đặt, request tải có cấu trúc và các tùy chọn chất lượng, chế độ âm thanh, chỉ thêm vào queue, playlist, phụ đề, cắt đoạn tải, tải live từ đầu và bỏ qua live
 - **Bỏ qua live** - Thêm cài đặt tải xuống để bỏ qua video đang phát trực tiếp trong giao diện YouTube và Universal
 - **Tìm kiếm tóm tắt AI** - Thêm tìm kiếm Thư viện dùng SQLite FTS5 trên tiêu đề, URL, đường dẫn file và các bản tóm tắt AI đã lưu, kèm lựa chọn phạm vi tìm trong tất cả nội dung, chỉ chi tiết hoặc chỉ tóm tắt AI
 - **Tìm YouTube theo từ khóa** - Thêm màn hình tìm video YouTube theo từ khóa riêng với bộ lọc ngày tải lên, thời lượng, thứ tự ưu tiên và tính năng video, cho phép chọn kết quả rồi thêm trực tiếp vào hàng đợi tải
+- **Tab trạng thái hàng đợi** - Thêm tab trạng thái gọn cho hàng đợi YouTube và Universal để lọc video theo trạng thái tải
 - **Cầu nối tìm kiếm YouTube cho Plugin SDK** - Mở app-managed YouTube keyword search cho plugin JavaScript qua `ctx.youwee.youtube.searchVideos(...)`, kèm bộ lọc có kiểu dữ liệu rõ ràng và hỗ trợ continuation
 
 ### Thay đổi

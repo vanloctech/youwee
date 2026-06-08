@@ -21,6 +21,7 @@ import {
 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { EmptyStateIllustration } from '@/components/shared/EmptyStateIllustration';
 import { SubtitlePopoverContent } from '@/components/shared/SubtitlePopoverContent';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -349,9 +350,7 @@ export function AssetsExportTab() {
       <div className="flex-1 flex flex-col overflow-hidden px-4 sm:px-6 pt-3">
         {items.length === 0 ? (
           <div className="flex-1 flex flex-col items-center justify-center text-center py-12">
-            <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mb-4">
-              <FileCode2 className="w-8 h-8 text-primary" />
-            </div>
+            <EmptyStateIllustration className="mb-5" icon={FileCode2} />
             <h3 className="text-lg font-medium mb-2">{t('emptyQueue')}</h3>
             <p className="text-sm text-muted-foreground max-w-md">{t('emptyQueueHint')}</p>
           </div>
