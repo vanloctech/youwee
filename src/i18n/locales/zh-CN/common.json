@@ -65,6 +65,8 @@
     "YT_VIDEO_UNAVAILABLE": "该视频不可用。",
     "YT_NO_SUBTITLES": "该视频没有可用字幕。",
     "YT_SKIPPED_LIVE": "已跳过直播视频（状态：{{liveStatus}}）。",
+    "YT_SKIPPED_UPCOMING_LIVE": "已跳过即将开始的直播，因为已启用“跳过直播”。",
+    "YT_UPCOMING_LIVE": "该直播尚未开始。请在开始后重试，或启用“跳过直播”。",
     "YT_COOKIE_DB_LOCKED": "浏览器 Cookie 数据库已锁定。请关闭浏览器后重试，或使用 Cookie 文件模式。",
     "YT_FRESH_COOKIES_REQUIRED": "需要最新登录 Cookie。请在浏览器重新登录后重试。",
     "NETWORK_TIMEOUT": "网络超时，请重试。",

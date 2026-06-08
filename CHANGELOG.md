@@ -9,10 +9,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 - **Data Export YouTube keyword source** - Added a YouTube keyword source so search results can be exported from Data Export
+- **CLI output folder** - Added `--output` / `-o` so each CLI-queued download can use its own absolute output folder
 
 ### Changed
 
 ### Fixed
+- **Escaped pasted URLs** - Normalize shell-escaped URL punctuation in Download, Universal, and Gallery inputs so pasted links like `watch\?v\=...` enqueue the intended video
+- **CLI escaped URLs** - Normalize shell-escaped URL punctuation so quoted YouTube URLs like `watch\?v\=...` download the intended video
+- **Scheduled livestream errors** - Show clear upcoming livestream messages instead of grouping scheduled YouTube lives into generic skipped or unspecified errors
 - **Windows CLI output** - Fixed `youwee -V` and `youwee --help` not printing output in Windows terminals
 
 ## [0.17.0] - 2026-06-07

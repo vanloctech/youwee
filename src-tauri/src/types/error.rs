@@ -18,6 +18,7 @@ pub mod code {
     pub const YT_VIDEO_UNAVAILABLE: &str = "YT_VIDEO_UNAVAILABLE";
     pub const YT_NO_SUBTITLES: &str = "YT_NO_SUBTITLES";
     pub const YT_SKIPPED_LIVE: &str = "YT_SKIPPED_LIVE";
+    pub const YT_UPCOMING_LIVE: &str = "YT_UPCOMING_LIVE";
     pub const YT_COOKIE_DB_LOCKED: &str = "YT_COOKIE_DB_LOCKED";
     pub const YT_FRESH_COOKIES_REQUIRED: &str = "YT_FRESH_COOKIES_REQUIRED";
     pub const NETWORK_TIMEOUT: &str = "NETWORK_TIMEOUT";
@@ -190,6 +191,13 @@ pub fn infer_error_code(message: &str) -> &'static str {
     }
     if m.contains("video unavailable") || m.contains("this video is unavailable") {
         return code::YT_VIDEO_UNAVAILABLE;
+    }
+    if m.contains("this live event will begin")
+        || m.contains("premieres in")
+        || m.contains("premiere will begin")
+        || m.contains("live event has not started")
+    {
+        return code::YT_UPCOMING_LIVE;
     }
     if m.contains("no subtitles") || m.contains("subtitles are disabled") {
         return code::YT_NO_SUBTITLES;

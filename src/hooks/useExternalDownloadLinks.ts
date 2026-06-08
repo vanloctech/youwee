@@ -31,6 +31,7 @@ interface CliDownloadRequestPayload {
   action: string;
   media: string;
   quality: string;
+  output_path?: string | null;
   skip_live?: boolean;
   download_playlist?: boolean | null;
   subtitle_mode?: string;
@@ -80,6 +81,26 @@ function parseDownloadSections(section: string | null | undefined):
   return { timeRangeStart: start, timeRangeEnd: end };
 }
 
+function normalizeCliOutputPath(path: string | null | undefined): string | undefined {
+  const normalized = path?.trim().replace(/^['"]+|['"]+$/g, '') ?? '';
+  const hasControlCharacter = [...normalized].some((char) => {
+    const code = char.charCodeAt(0);
+    return code <= 31 || code === 127;
+  });
+  if (!normalized || normalized.length > 4096 || hasControlCharacter) {
+    return undefined;
+  }
+  if (
+    normalized.startsWith('/') ||
+    normalized.startsWith('\\\\') ||
+    normalized.startsWith('//') ||
+    /^[A-Za-z]:[\\/]/.test(normalized)
+  ) {
+    return normalized;
+  }
+  return undefined;
+}
+
 function normalizeCliDownloadRequest(
   payload: CliDownloadRequestPayload,
 ): ExternalDownloadRequest | null {
@@ -106,7 +127,11 @@ function normalizeCliDownloadRequest(
             ? (qualityParam as Quality)
             : 'best',
         };
+  const outputPath = normalizeCliOutputPath(payload.output_path);
   const downloadSections = parseDownloadSections(payload.download_sections);
+  if (outputPath) {
+    enqueueOptions.outputPath = outputPath;
+  }
   if (payload.skip_live === true) {
     enqueueOptions.skipLive = true;
   }

@@ -58,6 +58,7 @@ youwee "https://www.youtube.com/watch?v=3TE5aR7EHus" --quality 720
 | `<url>` (positional) | | Video URL to download |
 | `--url <url>` | `-u` | Video URL (alternative to positional) |
 | `--quality <q>` | `-q` | Video: `best`, `8k`, `4k`, `2k`, `1080`, `720`, `480`, `360`. Audio: `128` or `auto` |
+| `--output <dir>` | `-o` | Absolute output folder for this queued download |
 | `--audio` | `-a` | Download audio only |
 | `--queue-only` | | Add to queue without starting the download |
 | `--target <t>` | `-t` | Routing: `auto` (default), `youtube`, `universal` |
@@ -73,8 +74,10 @@ youwee "https://www.youtube.com/watch?v=3TE5aR7EHus" --quality 720
 | `--help` | `-h` | Show help |
 | `--version` | `-V` | Show version |
 
-Unknown or out-of-allowlist values are ignored and fall back to defaults. Only
-public `http`/`https` URLs are accepted; local/private URLs are rejected.
+Unknown or out-of-allowlist values are ignored and fall back to defaults. Output
+folders must be absolute paths, including Unix paths like `/Users/me/Videos`,
+Windows paths like `C:\Users\me\Videos`, or UNC paths like `\\server\share`.
+Only public `http`/`https` URLs are accepted; local/private URLs are rejected.
 
 ## Examples
 
@@ -84,6 +87,9 @@ youwee https://www.youtube.com/watch?v=3TE5aR7EHus
 
 # Download 720p
 youwee --url "https://www.youtube.com/watch?v=3TE5aR7EHus" --quality 720
+
+# Save this queued download to a specific folder
+youwee "https://www.youtube.com/watch?v=3TE5aR7EHus" --output "/Users/me/Videos"
 
 # Audio only
 youwee -a "https://www.youtube.com/watch?v=3TE5aR7EHus"

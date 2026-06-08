@@ -22,9 +22,9 @@ use crate::database::add_history_internal;
 use crate::database::add_log_internal;
 use crate::database::update_history_download;
 use crate::services::{
-    build_site_header_args, enqueue_post_download_workflow, get_deno_path, get_ffmpeg_path,
-    get_ytdlp_path, get_ytdlp_source, resolve_download_workflow_snapshot,
-    run_ytdlp_with_stderr_and_cookies, system_ytdlp_not_found_message,
+    build_cookie_args, build_proxy_args, build_site_header_args, enqueue_post_download_workflow,
+    get_deno_path, get_ffmpeg_path, get_ytdlp_path, get_ytdlp_source, is_upcoming_live_error,
+    resolve_download_workflow_snapshot, run_ytdlp_with_stderr, system_ytdlp_not_found_message,
 };
 use crate::types::{
     BackendError, DependencySource, DownloadProgress, PluginWorkflowStepSnapshot,
@@ -79,20 +79,33 @@ async fn skipped_live_status(
     args.push("--".to_string());
     args.push(url.to_string());
 
-    let args_ref: Vec<&str> = args.iter().map(|arg| arg.as_str()).collect();
-    let output = run_ytdlp_with_stderr_and_cookies(
-        app,
-        &args_ref,
+    let mut extra_args = build_site_header_args(url);
+    extra_args.extend(build_cookie_args(
         cookie_mode,
         cookie_browser,
         cookie_browser_profile,
         cookie_file_path,
-        proxy_url,
-    )
-    .await?;
+    ));
+    extra_args.extend(build_proxy_args(proxy_url));
+    if let Some(separator_index) = args.iter().position(|arg| arg == "--") {
+        args.splice(separator_index..separator_index, extra_args);
+    }
+
+    let command_str = format!("yt-dlp {}", args.join(" "));
+    add_log_internal("command", &command_str, None, Some(url)).ok();
+
+    let args_ref: Vec<&str> = args.iter().map(|arg| arg.as_str()).collect();
+    let output = run_ytdlp_with_stderr(app, &args_ref).await?;
+
+    if !output.stderr.trim().is_empty() {
+        add_log_internal("stderr", output.stderr.trim(), None, Some(url)).ok();
+    }
 
     if !output.success {
         let message = output.stderr.trim();
+        if is_upcoming_live_error(message) {
+            return Ok(Some("is_upcoming".to_string()));
+        }
         return Err(BackendError::from_message(if message.is_empty() {
             "Failed to check live status before download.".to_string()
         } else {

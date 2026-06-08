@@ -75,6 +75,12 @@
           "description": "Video quality: best, 8k, 4k, 2k, 1080, 720, 480, 360. For audio use 128 or auto."
         },
         {
+          "name": "output",
+          "short": "o",
+          "takesValue": true,
+          "description": "Absolute output folder for this queued download"
+        },
+        {
           "name": "audio",
           "short": "a",
           "takesValue": false,

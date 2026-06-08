@@ -192,6 +192,7 @@ export interface ExternalEnqueueOptions {
   mediaType?: 'video' | 'audio';
   quality?: Quality;
   audioBitrate?: AudioBitrate;
+  outputPath?: string;
   downloadPlaylist?: boolean;
   playlistLimit?: number | null;
   subtitleMode?: SubtitleMode;
