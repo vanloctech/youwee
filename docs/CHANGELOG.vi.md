@@ -7,6 +7,12 @@ và dự án tuân theo [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+### Thay đổi
+- **Cài đặt và tài liệu CLI** - Tinh chỉnh card CLI trong General settings, bổ sung bản dịch CLI cho toàn bộ ngôn ngữ được hỗ trợ, và mở rộng hướng dẫn CLI với ghi chú cài đặt cho macOS, Windows và Linux
+
+### Sửa lỗi
+- **Output CLI trên Windows** - Sửa lỗi `youwee -V` và `youwee --help` không in kết quả trong terminal Windows
+
 ## [0.17.0] - 2026-06-07
 
 ### Thêm mới

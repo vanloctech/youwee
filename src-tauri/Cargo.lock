@@ -6735,6 +6735,7 @@ dependencies = [
  "tauri-plugin-updater",
  "tokio",
  "uuid",
+ "windows-sys 0.61.2",
  "xz2",
  "zip 0.6.6",
 ]

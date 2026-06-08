@@ -7,6 +7,12 @@ Youwee 的所有重要更改都将记录在此文件中。
 
 ## [Unreleased]
 
+### 变更
+- **CLI 设置与文档** - 优化 General 设置中的 CLI 卡片，补齐所有支持语言的 CLI 本地化，并扩展 CLI 指南中的 macOS、Windows 和 Linux 安装说明
+
+### 修复
+- **Windows CLI 输出** - 修复 `youwee -V` 和 `youwee --help` 在 Windows 终端中不输出内容的问题
+
 ## [0.17.0] - 2026-06-07
 
 ### 新增
