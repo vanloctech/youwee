@@ -15,6 +15,7 @@ Youwee 的所有重要更改都将记录在此文件中。
 - **CLI 设置与文档** - 优化 General 设置中的 CLI 卡片，补齐所有支持语言的 CLI 本地化，并扩展 CLI 指南中的 macOS、Windows 和 Linux 安装说明
 
 ### 修复
+- **粘贴转义 URL** - 在 Download、Universal 和 Gallery 输入框中规范化被 shell 转义的 URL 标点，使 `watch\?v\=...` 形式的链接仍能加入目标视频
 - **CLI 转义 URL** - 规范化被 shell 转义的 URL 标点，使 `watch\?v\=...` 形式的 YouTube URL 仍能下载目标视频
 - **已排期直播错误** - 为即将开始的 YouTube 直播显示更明确的提示，不再归入通用的 skipped 或 unspecified 错误
 - **Windows CLI 输出** - 修复 `youwee -V` 和 `youwee --help` 在 Windows 终端中不输出内容的问题

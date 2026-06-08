@@ -40,6 +40,7 @@ import {
   loadPostDownloadWorkflowSteps,
   refreshPostDownloadWorkflowSteps,
 } from '@/lib/post-download-plugins';
+import { normalizeShellEscapedUrl } from '@/lib/sources';
 import type {
   AudioBitrate,
   CookieSettings,
@@ -533,7 +534,7 @@ export function DownloadProvider({ children }: { children: ReactNode }) {
   const parseUrls = useCallback((text: string): string[] => {
     return text
       .split('\n')
-      .map((line) => line.trim())
+      .map(normalizeShellEscapedUrl)
       .filter((line) => {
         // Skip empty lines and comments
         if (!line || line.startsWith('#')) return false;

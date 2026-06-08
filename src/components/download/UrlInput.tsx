@@ -21,6 +21,7 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
+import { normalizeShellEscapedUrl } from '@/lib/sources';
 import { cn } from '@/lib/utils';
 import { VideoPreview } from './VideoPreview';
 
@@ -39,7 +40,7 @@ interface UrlInputProps {
 function extractFirstUrl(text: string): string | null {
   const lines = text.split('\n');
   for (const line of lines) {
-    const trimmed = line.trim();
+    const trimmed = normalizeShellEscapedUrl(line);
     if (trimmed && !trimmed.startsWith('#')) {
       if (trimmed.includes('youtube.com') || trimmed.includes('youtu.be')) {
         return trimmed;
@@ -61,7 +62,7 @@ function countUrls(text: string): number {
     .trim()
     .split('\n')
     .filter((l) => {
-      const trimmed = l.trim();
+      const trimmed = normalizeShellEscapedUrl(l);
       return (
         trimmed &&
         !trimmed.startsWith('#') &&
