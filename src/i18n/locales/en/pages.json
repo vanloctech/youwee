@@ -344,6 +344,7 @@
     "modeSequence": "Play in order",
     "modeRepeatOne": "Repeat current track",
     "modeShuffle": "Shuffle",
+    "minimize": "Minimize player",
     "close": "Close player"
   }
 }

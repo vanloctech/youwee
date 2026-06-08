@@ -181,7 +181,7 @@ At minimum, your workspace should depend on:
 ```json
 {
   "dependencies": {
-    "youwee-sdk": "^2.1.0"
+    "youwee-sdk": "^2.2.0"
   }
 }
 ```
@@ -384,7 +384,7 @@ Example:
   },
   "compatibility": {
     "appVersion": ">=0.15.0 <0.16.0",
-    "sdkVersion": ">=2.1.0 <3.0.0"
+    "sdkVersion": ">=2.2.0 <3.0.0"
   },
   "triggers": [
     "download.completed"
@@ -586,7 +586,7 @@ for (const video of results.videos) {
 
 Requirements:
 
-- use a `youwee-sdk` release that includes `ctx.youwee.youtube.searchVideos(...)` and set the plugin compatibility range accordingly
+- use `youwee-sdk` `>=2.2.0` and set the plugin compatibility range accordingly
 - `plugin.json` must request `"network": true`
 - the user must approve the plugin's network permission in Youwee
 - the plugin does **not** provide cookies, authorization headers, visitor IDs, or YouTube session identifiers

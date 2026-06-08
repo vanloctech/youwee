@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+### Fixed
+- **Windows CLI output** - Fixed `youwee -V` and `youwee --help` not printing output in Windows terminals
+
+## [0.17.0] - 2026-06-07
+
 ### Added
 - **Command-line interface** - Added a local `youwee` CLI with install controls, structured download requests, and options for quality, audio mode, queue-only, playlist handling, subtitles, download sections, live-from-start, and skip-live behavior
 - **Skip live streams** - Added a download setting to skip currently live videos from the YouTube and Universal interfaces

@@ -15,7 +15,6 @@ import {
   RefreshCw,
   Settings,
   Share2,
-  ShieldCheck,
 } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -379,28 +378,26 @@ function AboutSettingsContent({
         </div>
 
         {/* ── Responsible Use Notice ── */}
-        <div className="rounded-xl border border-dashed border-amber-500/30 bg-amber-500/5 p-4">
-          <div className="flex items-start gap-3">
-            <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg bg-amber-500/10 text-amber-600 dark:text-amber-400">
-              <AlertTriangle className="h-4 w-4" />
-            </div>
-            <div className="min-w-0 space-y-2">
-              <div className="flex flex-wrap items-center gap-2">
-                <p className="text-sm font-semibold">{tCommon('legalDisclaimer.title')}</p>
-                <span className="inline-flex items-center gap-1 rounded bg-emerald-500/10 px-2 py-0.5 text-[11px] font-medium text-emerald-600 dark:text-emerald-400">
-                  <ShieldCheck className="h-3 w-3" />
-                  {tCommon('legalDisclaimer.accept')}
-                </span>
+        <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-amber-500/5 via-amber-500/5 to-orange-500/5 p-5">
+          <div className="flex flex-col space-y-3">
+            <div className="flex flex-wrap items-center gap-2.5">
+              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-amber-500/10">
+                <AlertTriangle className="h-4 w-4 text-amber-600 dark:text-amber-400" />
               </div>
-              <p className="text-xs leading-relaxed text-muted-foreground">
-                {tCommon('legalDisclaimer.description')}
-              </p>
-              <p className="rounded-md bg-background/60 p-3 text-xs leading-relaxed text-muted-foreground">
-                {tCommon('legalDisclaimer.notice')}
-              </p>
-              <p className="text-xs leading-relaxed text-muted-foreground">
-                {tCommon('legalDisclaimer.responsibility')}
-              </p>
+              <h3 className="text-[15px] font-bold text-foreground tracking-tight">
+                {tCommon('legalDisclaimer.title')}
+              </h3>
+            </div>
+
+            <div className="space-y-3.5 text-[13px] leading-relaxed text-muted-foreground mt-1">
+              <p>{tCommon('legalDisclaimer.description')}</p>
+              <div className="relative overflow-hidden rounded-xl bg-background/60 p-4 shadow-sm backdrop-blur-sm">
+                <div className="absolute left-0 top-0 bottom-0 w-1 bg-gradient-to-b from-amber-400 to-orange-500" />
+                <p className="font-medium text-foreground/90">
+                  {tCommon('legalDisclaimer.notice')}
+                </p>
+              </div>
+              <p>{tCommon('legalDisclaimer.responsibility')}</p>
             </div>
           </div>
         </div>

@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { localizeProgressError, localizeUnknownError } from '@/lib/backend-error';
-import { hasAcceptedLegalDisclaimer } from '@/lib/legal-disclaimer';
 import { buildCookieProxyInvokeOptions, loadNetworkSettings } from '@/lib/network-config';
 import {
   enqueuePluginWorkflowTrigger,
@@ -745,8 +744,6 @@ export function useChannelsController(): ChannelsContextType {
   // Download selected videos (with concurrency pool + per-channel subfolder)
   const downloadSelectedVideos = useCallback(
     async (overrideQuality?: string, overrideFormat?: string, overrideVideoCodec?: string) => {
-      if (!hasAcceptedLegalDisclaimer()) return;
-
       const videosToDownload = browseVideos.filter((v) => selectedVideoIds.has(v.id));
       if (videosToDownload.length === 0) return;
 
@@ -1166,8 +1163,6 @@ export function useChannelsController(): ChannelsContextType {
   // Listen for auto-download events from backend polling
   useEffect(() => {
     const unlisten = onChannelAutoDownload(async (event: { payload: ChannelAutoDownloadEvent }) => {
-      if (!hasAcceptedLegalDisclaimer()) return;
-
       const {
         channel_id,
         channel_name,

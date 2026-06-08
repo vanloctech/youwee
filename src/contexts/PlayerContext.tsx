@@ -299,8 +299,10 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
   const seek = useCallback((time: number) => {
     const audio = audioRef.current;
     if (!audio) return;
-    audio.currentTime = time;
-    setCurrentTime(time);
+    const maxTime = Number.isFinite(audio.duration) && audio.duration > 0 ? audio.duration : time;
+    const nextTime = Math.min(maxTime, Math.max(0, time));
+    audio.currentTime = nextTime;
+    setCurrentTime(nextTime);
   }, []);
 
   const setVolume = useCallback((vol: number) => {

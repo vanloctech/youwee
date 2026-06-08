@@ -57,7 +57,7 @@ pub fn print_cli_usage_and_should_exit(argv: &[String]) -> bool {
         .skip(1)
         .any(|arg| arg == "--help" || arg == "-h")
     {
-        println!("{}", cli_help_text(command_name(argv)));
+        print_cli_text(&cli_help_text(command_name(argv)));
         return true;
     }
 
@@ -66,11 +66,50 @@ pub fn print_cli_usage_and_should_exit(argv: &[String]) -> bool {
         .skip(1)
         .any(|arg| arg == "--version" || arg == "-V")
     {
-        println!("Youwee {}", env!("CARGO_PKG_VERSION"));
+        print_cli_text(&format!("Youwee {}", env!("CARGO_PKG_VERSION")));
         return true;
     }
 
     false
+}
+
+fn print_cli_text(text: &str) {
+    #[cfg(windows)]
+    if print_to_windows_parent_console(text) {
+        return;
+    }
+
+    println!("{}", text);
+}
+
+#[cfg(windows)]
+fn print_to_windows_parent_console(text: &str) -> bool {
+    use windows_sys::Win32::System::Console::{
+        AttachConsole, FreeConsole, GetStdHandle, WriteConsoleW, ATTACH_PARENT_PROCESS,
+        STD_OUTPUT_HANDLE,
+    };
+
+    unsafe {
+        if AttachConsole(ATTACH_PARENT_PROCESS) == 0 {
+            return false;
+        }
+
+        let mut output = text.to_string();
+        output.push_str("\r\n");
+        let wide: Vec<u16> = output.encode_utf16().collect();
+        let mut written = 0;
+        let handle = GetStdHandle(STD_OUTPUT_HANDLE);
+        let ok = WriteConsoleW(
+            handle,
+            wide.as_ptr().cast(),
+            wide.len() as u32,
+            &mut written,
+            std::ptr::null_mut(),
+        ) != 0;
+
+        FreeConsole();
+        ok
+    }
 }
 
 fn command_name(argv: &[String]) -> &str {
@@ -615,6 +654,13 @@ mod tests {
     #[test]
     fn cli_help_request_exits_before_app_start() {
         let argv = vec!["youwee".to_string(), "--help".to_string()];
+
+        assert!(print_cli_usage_and_should_exit(&argv));
+    }
+
+    #[test]
+    fn cli_version_request_exits_before_app_start() {
+        let argv = vec!["youwee".to_string(), "-V".to_string()];
 
         assert!(print_cli_usage_and_should_exit(&argv));
     }
