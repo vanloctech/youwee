@@ -194,6 +194,11 @@ pub fn run() {
                                 cli_args.quality = Some(value.to_string());
                             }
                         }
+                        if let Some(data) = matches.args.get("output") {
+                            if let Some(value) = data.value.as_str() {
+                                cli_args.output_path = Some(value.to_string());
+                            }
+                        }
                         if let Some(data) = matches.args.get("target") {
                             if let Some(value) = data.value.as_str() {
                                 cli_args.target = Some(value.to_string());

@@ -120,7 +120,7 @@ Chỉ sử dụng Youwee với nội dung bạn sở hữu, được phép sử 
 
 Mở rộng Youwee bằng plugin `.ywp` đã ký cho workflow sau khi tải xong, như gửi thông báo, upload file hoặc tích hợp dịch vụ bên thứ ba.
 
-- Trang plugin: [Youwee Plugins](http://localhost:5175/plugins)
+- Trang plugin: [Youwee Plugins](https://youwee.app/vi/plugins)
 - Plugin khuyến nghị và hướng dẫn cài đặt: [PLUGINS.vi.md](PLUGINS.vi.md)
 - SDK: [sdk-js/README.md](../sdk-js/README.md) · [youwee-sdk](https://www.npmjs.com/package/youwee-sdk)
 
@@ -168,7 +168,7 @@ Dự án này được cấp phép theo MIT License - xem file [LICENSE](../LICE
 ## Liên hệ
 
 - **Website**: [youwee.app](https://youwee.app)
-- **Tài liệu**: [Docs](http://localhost:5175/docs)
+- **Tài liệu**: [Docs](https://github.com/vanloctech/youwee/blob/develop/docs/README.vi.md)
 - **Discord**: [Youwee Community](https://discord.gg/yCrs9hcw)
 - **GitHub**: [@vanloctech](https://github.com/vanloctech)
 - **Issues**: [GitHub Issues](https://github.com/vanloctech/youwee/issues)

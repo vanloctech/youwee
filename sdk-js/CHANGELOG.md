@@ -6,6 +6,8 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [2.2.0] - 2026-06-07
+
 ### Added
 - **YouTube keyword search bridge** - Added `ctx.youwee.youtube.searchVideos(...)` with typed search filters, continuation support, and app-managed YouTube result parsing for plugins that have approved network permission.
 

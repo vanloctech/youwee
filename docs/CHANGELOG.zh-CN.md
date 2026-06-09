@@ -8,6 +8,21 @@ Youwee 的所有重要更改都将记录在此文件中。
 ## [Unreleased]
 
 ### 新增
+- **数据导出 YouTube 关键词来源** - 新增 YouTube 关键词来源，可在 Data Export 中导出搜索结果
+- **CLI 输出文件夹** - 新增 `--output` / `-o`，让每个通过 CLI 加入队列的下载使用自己的绝对输出文件夹
+
+### 变更
+- **CLI 设置与文档** - 优化 General 设置中的 CLI 卡片，补齐所有支持语言的 CLI 本地化，并扩展 CLI 指南中的 macOS、Windows 和 Linux 安装说明
+
+### 修复
+- **粘贴转义 URL** - 在 Download、Universal 和 Gallery 输入框中规范化被 shell 转义的 URL 标点，使 `watch\?v\=...` 形式的链接仍能加入目标视频
+- **CLI 转义 URL** - 规范化被 shell 转义的 URL 标点，使 `watch\?v\=...` 形式的 YouTube URL 仍能下载目标视频
+- **已排期直播错误** - 为即将开始的 YouTube 直播显示更明确的提示，不再归入通用的 skipped 或 unspecified 错误
+- **Windows CLI 输出** - 修复 `youwee -V` 和 `youwee --help` 在 Windows 终端中不输出内容的问题
+
+## [0.17.0] - 2026-06-07
+
+### 新增
 - **命令行界面** - 新增本地 `youwee` CLI，包含安装入口、结构化下载请求，并支持质量、音频模式、仅加入队列、播放列表、字幕、下载片段、从头下载直播和跳过直播等选项
 - **跳过直播** - 在 YouTube 和 Universal 界面新增下载设置，可跳过当前正在直播的视频
 - **AI 摘要搜索** - 新增基于 SQLite FTS5 的媒体库搜索，可检索标题、URL、文件路径和已保存的 AI 摘要，并提供全部内容、仅详情或仅 AI 摘要的搜索范围控制

@@ -45,6 +45,7 @@
       "auto": "自动",
       "youtubePlaylist": "YouTube 播放列表",
       "youtubeChannel": "YouTube 频道",
+      "youtubeKeyword": "YouTube 关键词",
       "urlList": "URL 列表"
     },
     "detectedSource": "已识别",
@@ -53,6 +54,7 @@
     "placeholders": {
       "youtube_playlist": "粘贴 YouTube 播放列表 URL...",
       "youtube_channel": "粘贴 YouTube 频道 URL...",
+      "youtube_keyword": "输入 YouTube 搜索关键词...",
       "url_list": "粘贴视频 URL，每行一个..."
     },
     "inputCount": "{{count}} 个输入",

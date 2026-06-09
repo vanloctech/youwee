@@ -65,6 +65,8 @@
     "YT_VIDEO_UNAVAILABLE": "This video is unavailable.",
     "YT_NO_SUBTITLES": "No subtitles are available for this video.",
     "YT_SKIPPED_LIVE": "Skipped live video (status: {{liveStatus}}).",
+    "YT_SKIPPED_UPCOMING_LIVE": "Skipped upcoming livestream because Skip live streams is enabled.",
+    "YT_UPCOMING_LIVE": "This live event has not started yet. Try again after it starts, or enable Skip live streams.",
     "YT_COOKIE_DB_LOCKED": "Browser cookie database is locked. Close the browser and retry, or use cookie file mode.",
     "YT_FRESH_COOKIES_REQUIRED": "Fresh login cookies are required. Refresh browser login and retry.",
     "NETWORK_TIMEOUT": "Network timeout. Please try again.",

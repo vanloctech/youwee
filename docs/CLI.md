@@ -17,6 +17,40 @@ youwee --url <url> [options]
 
 If Youwee is already running, the new URL is sent to the running instance.
 
+## Installation
+
+Open **Settings → General → Command line (CLI)** and install the terminal
+command from there.
+
+### macOS
+
+Youwee creates a `youwee` symlink at `/usr/local/bin/youwee` when possible. If
+that location is not writable, it falls back to `~/.local/bin/youwee`.
+
+### Windows
+
+Youwee creates a `youwee.cmd` shim in the current user's WindowsApps command
+directory. Open a new PowerShell or Command Prompt window after installing.
+
+If Windows reports that `youwee` is not recognized, check the CLI card in
+Settings. The WindowsApps command directory shown there must be present in
+`PATH`.
+
+### Linux
+
+The `.deb` package installs `/usr/bin/youwee`. For AppImage-style usage, Youwee
+creates a `~/.local/bin/youwee` symlink when installing from Settings.
+
+Make sure the displayed install directory is in `PATH`.
+
+### Check
+
+```powershell
+youwee -V
+youwee --help
+youwee "https://www.youtube.com/watch?v=3TE5aR7EHus" --quality 720
+```
+
 ## Options
 
 | Flag | Alias | Description |
@@ -24,6 +58,7 @@ If Youwee is already running, the new URL is sent to the running instance.
 | `<url>` (positional) | | Video URL to download |
 | `--url <url>` | `-u` | Video URL (alternative to positional) |
 | `--quality <q>` | `-q` | Video: `best`, `8k`, `4k`, `2k`, `1080`, `720`, `480`, `360`. Audio: `128` or `auto` |
+| `--output <dir>` | `-o` | Absolute output folder for this queued download |
 | `--audio` | `-a` | Download audio only |
 | `--queue-only` | | Add to queue without starting the download |
 | `--target <t>` | `-t` | Routing: `auto` (default), `youtube`, `universal` |
@@ -37,9 +72,12 @@ If Youwee is already running, the new URL is sent to the running instance.
 | `--download-sections <range>` | | Download a time range, e.g. `00:30-02:10` |
 | `--live-from-start` | | Download livestreams from the beginning |
 | `--help` | `-h` | Show help |
+| `--version` | `-V` | Show version |
 
-Unknown or out-of-allowlist values are ignored and fall back to defaults. Only
-public `http`/`https` URLs are accepted; local/private URLs are rejected.
+Unknown or out-of-allowlist values are ignored and fall back to defaults. Output
+folders must be absolute paths, including Unix paths like `/Users/me/Videos`,
+Windows paths like `C:\Users\me\Videos`, or UNC paths like `\\server\share`.
+Only public `http`/`https` URLs are accepted; local/private URLs are rejected.
 
 ## Examples
 
@@ -49,6 +87,9 @@ youwee https://www.youtube.com/watch?v=3TE5aR7EHus
 
 # Download 720p
 youwee --url "https://www.youtube.com/watch?v=3TE5aR7EHus" --quality 720
+
+# Save this queued download to a specific folder
+youwee "https://www.youtube.com/watch?v=3TE5aR7EHus" --output "/Users/me/Videos"
 
 # Audio only
 youwee -a "https://www.youtube.com/watch?v=3TE5aR7EHus"

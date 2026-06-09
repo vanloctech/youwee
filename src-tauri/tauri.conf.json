@@ -1,7 +1,7 @@
 {
   "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
   "productName": "Youwee",
-  "version": "0.16.0",
+  "version": "0.17.0",
   "identifier": "com.vanloctech.youwee",
   "build": {
     "frontendDist": "../dist",
@@ -73,6 +73,12 @@
           "short": "q",
           "takesValue": true,
           "description": "Video quality: best, 8k, 4k, 2k, 1080, 720, 480, 360. For audio use 128 or auto."
+        },
+        {
+          "name": "output",
+          "short": "o",
+          "takesValue": true,
+          "description": "Absolute output folder for this queued download"
         },
         {
           "name": "audio",

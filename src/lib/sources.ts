@@ -167,11 +167,35 @@ export function detectSource(extractor?: string): SourceInfo {
  */
 export function isValidUrl(text: string): boolean {
   try {
-    const url = new URL(text);
+    const url = new URL(normalizeShellEscapedUrl(text));
     return url.protocol === 'http:' || url.protocol === 'https:';
   } catch {
     return false;
   }
+}
+
+export function normalizeShellEscapedUrl(text: string): string {
+  const trimmed = text.trim();
+  let normalized = '';
+
+  for (let index = 0; index < trimmed.length; index += 1) {
+    const current = trimmed[index];
+    const next = trimmed[index + 1];
+
+    if (current === '\\' && next && isShellEscapedUrlChar(next)) {
+      normalized += next;
+      index += 1;
+      continue;
+    }
+
+    normalized += current;
+  }
+
+  return normalized;
+}
+
+function isShellEscapedUrlChar(char: string): boolean {
+  return "?=&#%+:/._-~@!$'()*,;[]".includes(char);
 }
 
 /**
@@ -180,7 +204,7 @@ export function isValidUrl(text: string): boolean {
 export function parseUniversalUrls(text: string): string[] {
   return text
     .split('\n')
-    .map((line) => line.trim())
+    .map(normalizeShellEscapedUrl)
     .filter((line) => {
       // Skip empty lines and comments
       if (!line || line.startsWith('#')) return false;

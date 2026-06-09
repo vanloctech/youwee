@@ -23,6 +23,7 @@ const NON_RETRYABLE_CODES = new Set([
   'YT_PRIVATE_VIDEO',
   'YT_VIDEO_UNAVAILABLE',
   'YT_SKIPPED_LIVE',
+  'YT_UPCOMING_LIVE',
   'YT_AGE_RESTRICTED',
   'YT_MEMBERS_ONLY',
   'YT_SIGNIN_REQUIRED',
@@ -74,6 +75,14 @@ export function inferBackendErrorCode(message: string): string {
     return 'YT_GEO_RESTRICTED';
   }
   if (m.includes('video unavailable')) return 'YT_VIDEO_UNAVAILABLE';
+  if (
+    m.includes('this live event will begin') ||
+    m.includes('premieres in') ||
+    m.includes('premiere will begin') ||
+    m.includes('live event has not started')
+  ) {
+    return 'YT_UPCOMING_LIVE';
+  }
   if (m.includes('skipped live video')) return 'YT_SKIPPED_LIVE';
   if (m.includes('no subtitles')) return 'YT_NO_SUBTITLES';
   if (m.includes('no transcript available')) return 'TRANSCRIPT_NOT_AVAILABLE';
@@ -164,7 +173,10 @@ export function localizeBackendError(payload: BackendErrorPayload): string {
     return payload.message;
   }
 
-  const key = `common:backendErrors.${payload.code}`;
+  const key =
+    payload.code === 'YT_SKIPPED_LIVE' && payload.params?.liveStatus === 'is_upcoming'
+      ? 'common:backendErrors.YT_SKIPPED_UPCOMING_LIVE'
+      : `common:backendErrors.${payload.code}`;
   const translated = i18n.t(key, payload.params ?? {});
   return translated === key ? payload.message : translated;
 }

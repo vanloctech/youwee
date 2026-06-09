@@ -40,6 +40,7 @@ import {
   loadPostDownloadWorkflowSteps,
   refreshPostDownloadWorkflowSteps,
 } from '@/lib/post-download-plugins';
+import { normalizeShellEscapedUrl } from '@/lib/sources';
 import type {
   AudioBitrate,
   CookieSettings,
@@ -77,6 +78,31 @@ const isAbsolutePath = (path: string): boolean => {
   if (/^[A-Za-z]:[\\/]/.test(path)) return true;
   return false;
 };
+
+async function resolveDefaultOutputPath(): Promise<string> {
+  try {
+    let path = await downloadDir();
+
+    if (!isAbsolutePath(path)) {
+      const home = await homeDir();
+      if (home) {
+        path = `${home}Downloads`;
+      }
+    }
+
+    return isAbsolutePath(path) ? path : '';
+  } catch (error) {
+    console.error('Failed to get download directory:', error);
+    try {
+      const home = await homeDir();
+      const fallbackPath = home ? `${home}Downloads` : '';
+      return isAbsolutePath(fallbackPath) ? fallbackPath : '';
+    } catch (fallbackError) {
+      console.error('Failed to get home directory:', fallbackError);
+      return '';
+    }
+  }
+}
 
 // Load settings from localStorage
 function loadSavedSettings(): Partial<DownloadSettings> {
@@ -419,43 +445,13 @@ export function DownloadProvider({ children }: { children: ReactNode }) {
       // Only fetch default if no saved path
       if (settings.outputPath) return;
 
-      try {
-        // Try Tauri's downloadDir first
-        let path = await downloadDir();
-
-        // Validate path is absolute (cross-platform)
-        if (!isAbsolutePath(path)) {
-          // Fallback to home directory + Downloads (for ChromeOS/Linux)
-          const home = await homeDir();
-          if (home) {
-            path = `${home}Downloads`;
-          }
-        }
-
-        // Only set if we have a valid absolute path
-        if (isAbsolutePath(path)) {
-          setSettings((s) => {
-            const newSettings = { ...s, outputPath: path };
-            saveSettings(newSettings);
-            return newSettings;
-          });
-        }
-      } catch (error) {
-        console.error('Failed to get download directory:', error);
-        // Try homeDir as final fallback
-        try {
-          const home = await homeDir();
-          if (home) {
-            const fallbackPath = `${home}Downloads`;
-            setSettings((s) => {
-              const newSettings = { ...s, outputPath: fallbackPath };
-              saveSettings(newSettings);
-              return newSettings;
-            });
-          }
-        } catch (fallbackError) {
-          console.error('Failed to get home directory:', fallbackError);
-        }
+      const path = await resolveDefaultOutputPath();
+      if (path) {
+        setSettings((s) => {
+          const newSettings = { ...s, outputPath: path };
+          saveSettings(newSettings);
+          return newSettings;
+        });
       }
     };
     getDefaultPath();
@@ -538,7 +534,7 @@ export function DownloadProvider({ children }: { children: ReactNode }) {
   const parseUrls = useCallback((text: string): string[] => {
     return text
       .split('\n')
-      .map((line) => line.trim())
+      .map(normalizeShellEscapedUrl)
       .filter((line) => {
         // Skip empty lines and comments
         if (!line || line.startsWith('#')) return false;
@@ -721,6 +717,18 @@ export function DownloadProvider({ children }: { children: ReactNode }) {
       }
 
       const currentSettings = settingsRef.current;
+      let outputPath = options?.outputPath || currentSettings.outputPath;
+      if (!outputPath) {
+        outputPath = await resolveDefaultOutputPath();
+        if (outputPath) {
+          setSettings((s) => {
+            const newSettings = { ...s, outputPath };
+            settingsRef.current = newSettings;
+            saveSettings(newSettings);
+            return newSettings;
+          });
+        }
+      }
       const workflowSnapshots = loadPluginWorkflowSnapshots();
       const mediaType = options?.mediaType === 'audio' ? 'audio' : 'video';
       const videoQuality =
@@ -730,7 +738,7 @@ export function DownloadProvider({ children }: { children: ReactNode }) {
       const settingsSnapshot: ItemDownloadSettings = {
         quality: mediaType === 'audio' ? 'audio' : videoQuality,
         format: mediaType === 'audio' ? 'mp3' : 'mp4',
-        outputPath: currentSettings.outputPath,
+        outputPath,
         downloadPlaylist: options?.downloadPlaylist ?? false,
         playlistLimit: options?.playlistLimit ?? null,
         videoCodec: currentSettings.videoCodec,
@@ -1155,7 +1163,7 @@ export function DownloadProvider({ children }: { children: ReactNode }) {
           await invoke('download_video', {
             id: item.id,
             url: item.url,
-            outputPath: itemSettings?.outputPath ?? settings.outputPath,
+            outputPath: itemSettings?.outputPath || settings.outputPath,
             quality: itemSettings?.quality ?? settings.quality,
             format: itemSettings?.format ?? settings.format,
             downloadPlaylist: itemSettings?.downloadPlaylist ?? false,

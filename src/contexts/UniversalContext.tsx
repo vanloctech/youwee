@@ -75,6 +75,31 @@ const isAbsolutePath = (path: string): boolean => {
   return false;
 };
 
+async function resolveDefaultOutputPath(): Promise<string> {
+  try {
+    let path = await downloadDir();
+
+    if (!isAbsolutePath(path)) {
+      const home = await homeDir();
+      if (home) {
+        path = `${home}Downloads`;
+      }
+    }
+
+    return isAbsolutePath(path) ? path : '';
+  } catch (error) {
+    console.error('Failed to get download directory:', error);
+    try {
+      const home = await homeDir();
+      const fallbackPath = home ? `${home}Downloads` : '';
+      return isAbsolutePath(fallbackPath) ? fallbackPath : '';
+    } catch (fallbackError) {
+      console.error('Failed to get home directory:', fallbackError);
+      return '';
+    }
+  }
+}
+
 // Simplified settings for Universal downloads (no codec, subtitles, playlist)
 export interface UniversalSettings {
   quality: Quality;
@@ -318,43 +343,13 @@ export function UniversalProvider({ children }: { children: ReactNode }) {
     const getDefaultPath = async () => {
       if (settings.outputPath) return;
 
-      try {
-        // Try Tauri's downloadDir first
-        let path = await downloadDir();
-
-        // Validate path is absolute (cross-platform)
-        if (!isAbsolutePath(path)) {
-          // Fallback to home directory + Downloads (for ChromeOS/Linux)
-          const home = await homeDir();
-          if (home) {
-            path = `${home}Downloads`;
-          }
-        }
-
-        // Only set if we have a valid absolute path
-        if (isAbsolutePath(path)) {
-          setSettings((s) => {
-            const newSettings = { ...s, outputPath: path };
-            saveSettings(newSettings);
-            return newSettings;
-          });
-        }
-      } catch (error) {
-        console.error('Failed to get download directory:', error);
-        // Try homeDir as final fallback
-        try {
-          const home = await homeDir();
-          if (home) {
-            const fallbackPath = `${home}Downloads`;
-            setSettings((s) => {
-              const newSettings = { ...s, outputPath: fallbackPath };
-              saveSettings(newSettings);
-              return newSettings;
-            });
-          }
-        } catch (fallbackError) {
-          console.error('Failed to get home directory:', fallbackError);
-        }
+      const path = await resolveDefaultOutputPath();
+      if (path) {
+        setSettings((s) => {
+          const newSettings = { ...s, outputPath: path };
+          saveSettings(newSettings);
+          return newSettings;
+        });
       }
     };
     getDefaultPath();
@@ -614,6 +609,18 @@ export function UniversalProvider({ children }: { children: ReactNode }) {
       }
 
       const currentSettings = settingsRef.current;
+      let outputPath = options?.outputPath || currentSettings.outputPath;
+      if (!outputPath) {
+        outputPath = await resolveDefaultOutputPath();
+        if (outputPath) {
+          setSettings((s) => {
+            const newSettings = { ...s, outputPath };
+            settingsRef.current = newSettings;
+            saveSettings(newSettings);
+            return newSettings;
+          });
+        }
+      }
       const mediaType = options?.mediaType === 'audio' ? 'audio' : 'video';
       const videoQuality =
         options?.quality && options.quality !== 'audio' ? options.quality : 'best';
@@ -624,7 +631,7 @@ export function UniversalProvider({ children }: { children: ReactNode }) {
       const settingsSnapshot: ItemUniversalSettings = {
         quality: mediaType === 'audio' ? 'audio' : videoQuality,
         format: mediaType === 'audio' ? 'mp3' : 'mp4',
-        outputPath: currentSettings.outputPath,
+        outputPath,
         audioBitrate: mediaType === 'audio' ? audioBitrate : currentSettings.audioBitrate,
         useAria2: aria2Settings.useAria2,
         aria2Args: aria2Settings.aria2Args,
@@ -853,7 +860,7 @@ export function UniversalProvider({ children }: { children: ReactNode }) {
           await invoke('download_video', {
             id: item.id,
             url: item.url,
-            outputPath: itemSettings?.outputPath ?? settings.outputPath,
+            outputPath: itemSettings?.outputPath || settings.outputPath,
             quality: itemSettings?.quality ?? settings.quality,
             format: itemSettings?.format ?? settings.format,
             downloadPlaylist: false,

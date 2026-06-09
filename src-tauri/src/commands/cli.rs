@@ -18,6 +18,7 @@ pub struct CliDownloadRequest {
     pub action: String,
     pub media: String,
     pub quality: String,
+    pub output_path: Option<String>,
     pub skip_live: bool,
     pub download_playlist: Option<bool>,
     pub subtitle_mode: Option<String>,
@@ -38,6 +39,7 @@ pub struct ExternalCliDownloadEventPayload {
 pub struct CliDownloadArgs {
     pub url: Option<String>,
     pub quality: Option<String>,
+    pub output_path: Option<String>,
     pub audio: bool,
     pub queue_only: bool,
     pub target: Option<String>,
@@ -57,7 +59,7 @@ pub fn print_cli_usage_and_should_exit(argv: &[String]) -> bool {
         .skip(1)
         .any(|arg| arg == "--help" || arg == "-h")
     {
-        println!("{}", cli_help_text(command_name(argv)));
+        print_cli_text(&cli_help_text(command_name(argv)));
         return true;
     }
 
@@ -66,11 +68,50 @@ pub fn print_cli_usage_and_should_exit(argv: &[String]) -> bool {
         .skip(1)
         .any(|arg| arg == "--version" || arg == "-V")
     {
-        println!("Youwee {}", env!("CARGO_PKG_VERSION"));
+        print_cli_text(&format!("Youwee {}", env!("CARGO_PKG_VERSION")));
         return true;
     }
 
     false
+}
+
+fn print_cli_text(text: &str) {
+    #[cfg(windows)]
+    if print_to_windows_parent_console(text) {
+        return;
+    }
+
+    println!("{}", text);
+}
+
+#[cfg(windows)]
+fn print_to_windows_parent_console(text: &str) -> bool {
+    use windows_sys::Win32::System::Console::{
+        AttachConsole, FreeConsole, GetStdHandle, WriteConsoleW, ATTACH_PARENT_PROCESS,
+        STD_OUTPUT_HANDLE,
+    };
+
+    unsafe {
+        if AttachConsole(ATTACH_PARENT_PROCESS) == 0 {
+            return false;
+        }
+
+        let mut output = text.to_string();
+        output.push_str("\r\n");
+        let wide: Vec<u16> = output.encode_utf16().collect();
+        let mut written = 0;
+        let handle = GetStdHandle(STD_OUTPUT_HANDLE);
+        let ok = WriteConsoleW(
+            handle,
+            wide.as_ptr().cast(),
+            wide.len() as u32,
+            &mut written,
+            std::ptr::null_mut(),
+        ) != 0;
+
+        FreeConsole();
+        ok
+    }
 }
 
 fn command_name(argv: &[String]) -> &str {
@@ -99,6 +140,7 @@ Arguments:
 Options:
   -u, --url <URL>       Video URL to download (alternative to positional URL)
   -q, --quality <VALUE> Video quality: best, 8k, 4k, 2k, 1080, 720, 480, 360. For audio use 128 or auto
+  -o, --output <DIR>    Absolute output folder for this queued download
   -a, --audio           Download audio only
       --queue-only      Only add the URL to the queue without starting the download
   -t, --target <VALUE>  Routing target: auto, youtube, or universal
@@ -122,6 +164,9 @@ fn is_accepted_cli_url(url: &str) -> bool {
         return false;
     }
     if url.contains(char::is_whitespace) {
+        return false;
+    }
+    if url.contains('\\') {
         return false;
     }
 
@@ -187,14 +232,14 @@ fn is_private_or_local_host(hostname: &str) -> bool {
 /// Build a structured CLI download request from parsed CLI arguments.
 /// Returns `None` when no usable URL is present.
 pub fn build_cli_download_request(args: &CliDownloadArgs) -> Option<CliDownloadRequest> {
-    let url = args.url.as_ref()?.trim();
-    let url = url.trim_matches('"').trim_matches('\'');
-    if !is_accepted_cli_url(url) {
+    let url = normalize_cli_url_arg(args.url.as_ref()?);
+    if !is_accepted_cli_url(&url) {
         return None;
     }
 
     let media = if args.audio { "audio" } else { "video" }.to_string();
     let quality = normalize_cli_quality(args.quality.as_deref(), args.audio);
+    let output_path = normalize_cli_output_path(args.output_path.as_deref());
     let action = if args.queue_only {
         "queue_only"
     } else {
@@ -223,11 +268,12 @@ pub fn build_cli_download_request(args: &CliDownloadArgs) -> Option<CliDownloadR
     let download_sections = normalize_cli_download_sections(args.download_sections.as_deref());
 
     Some(CliDownloadRequest {
-        url: url.to_string(),
+        url,
         target,
         action,
         media,
         quality,
+        output_path,
         skip_live: args.skip_live,
         download_playlist: args.download_playlist,
         subtitle_mode,
@@ -238,6 +284,55 @@ pub fn build_cli_download_request(args: &CliDownloadArgs) -> Option<CliDownloadR
         live_from_start: args.live_from_start,
         trusted_local: true,
     })
+}
+
+fn normalize_cli_url_arg(value: &str) -> String {
+    let trimmed = value.trim().trim_matches('"').trim_matches('\'');
+    let mut normalized = String::with_capacity(trimmed.len());
+    let mut chars = trimmed.chars().peekable();
+
+    while let Some(ch) = chars.next() {
+        if ch == '\\' {
+            if let Some(next) = chars.peek().copied() {
+                if is_shell_escaped_url_char(next) {
+                    normalized.push(next);
+                    chars.next();
+                    continue;
+                }
+            }
+        }
+        normalized.push(ch);
+    }
+
+    normalized
+}
+
+fn is_shell_escaped_url_char(ch: char) -> bool {
+    matches!(
+        ch,
+        '?' | '='
+            | '&'
+            | '#'
+            | '%'
+            | '+'
+            | ':'
+            | '/'
+            | '.'
+            | '_'
+            | '-'
+            | '~'
+            | '@'
+            | '!'
+            | '$'
+            | '\''
+            | '('
+            | ')'
+            | '*'
+            | ','
+            | ';'
+            | '['
+            | ']'
+    )
 }
 
 fn normalize_cli_quality(value: Option<&str>, audio: bool) -> String {
@@ -255,6 +350,34 @@ fn normalize_cli_quality(value: Option<&str>, audio: bool) -> String {
     } else {
         fallback.to_string()
     }
+}
+
+fn normalize_cli_output_path(value: Option<&str>) -> Option<String> {
+    let path = value?.trim().trim_matches('"').trim_matches('\'');
+    if path.is_empty()
+        || path.len() > 4096
+        || path.contains('\0')
+        || path.chars().any(|c| c.is_control())
+        || !is_cross_platform_absolute_path(path)
+    {
+        return None;
+    }
+    Some(path.to_string())
+}
+
+fn is_cross_platform_absolute_path(path: &str) -> bool {
+    if path.starts_with('/') {
+        return true;
+    }
+    if path.starts_with("\\\\") || path.starts_with("//") {
+        return true;
+    }
+
+    let bytes = path.as_bytes();
+    bytes.len() >= 3
+        && bytes[0].is_ascii_alphabetic()
+        && bytes[1] == b':'
+        && (bytes[2] == b'\\' || bytes[2] == b'/')
 }
 
 fn normalize_cli_target(value: Option<&str>) -> String {
@@ -353,6 +476,11 @@ pub fn parse_cli_args_from_argv(argv: &[String]) -> CliDownloadArgs {
                     args.quality = Some(value.clone());
                 }
             }
+            "--output" | "--output-dir" | "-o" => {
+                if let Some(value) = iter.next() {
+                    args.output_path = Some(value.clone());
+                }
+            }
             "--target" | "-t" => {
                 if let Some(value) = iter.next() {
                     args.target = Some(value.clone());
@@ -391,6 +519,10 @@ pub fn parse_cli_args_from_argv(argv: &[String]) -> CliDownloadArgs {
                     args.url = Some(rest.to_string());
                 } else if let Some(rest) = other.strip_prefix("--quality=") {
                     args.quality = Some(rest.to_string());
+                } else if let Some(rest) = other.strip_prefix("--output=") {
+                    args.output_path = Some(rest.to_string());
+                } else if let Some(rest) = other.strip_prefix("--output-dir=") {
+                    args.output_path = Some(rest.to_string());
                 } else if let Some(rest) = other.strip_prefix("--target=") {
                     args.target = Some(rest.to_string());
                 } else if let Some(rest) = other.strip_prefix("--subtitle-mode=") {
@@ -433,6 +565,7 @@ pub fn enqueue_cli_download_requests(requests: Vec<CliDownloadRequest>) {
                     && existing.action == request.action
                     && existing.media == request.media
                     && existing.quality == request.quality
+                    && existing.output_path == request.output_path
                     && existing.skip_live == request.skip_live
                     && existing.download_playlist == request.download_playlist
                     && existing.subtitle_mode == request.subtitle_mode
@@ -492,6 +625,31 @@ mod tests {
     }
 
     #[test]
+    fn cli_request_unescapes_shell_quoted_url_punctuation() {
+        let args = CliDownloadArgs {
+            url: Some(r"https://www.youtube.com/watch\?v\=f6COwmcIA3E".to_string()),
+            audio: true,
+            ..Default::default()
+        };
+
+        let request = build_cli_download_request(&args).expect("expected CLI request");
+
+        assert_eq!(request.url, "https://www.youtube.com/watch?v=f6COwmcIA3E");
+        assert_eq!(request.media, "audio");
+        assert_eq!(request.quality, "auto");
+    }
+
+    #[test]
+    fn cli_request_rejects_unhandled_backslash_urls() {
+        let args = CliDownloadArgs {
+            url: Some(r"https://www.youtube.com\watch?v=f6COwmcIA3E".to_string()),
+            ..Default::default()
+        };
+
+        assert!(build_cli_download_request(&args).is_none());
+    }
+
+    #[test]
     fn cli_request_rejects_non_http_urls() {
         let args = CliDownloadArgs {
             url: Some("file:///tmp/video.mp4".to_string()),
@@ -517,6 +675,8 @@ mod tests {
             "youwee".to_string(),
             "https://example.com/video".to_string(),
             "--quality=480".to_string(),
+            "--output".to_string(),
+            "/Users/example/Videos".to_string(),
             "--queue-only".to_string(),
             "--target".to_string(),
             "universal".to_string(),
@@ -526,8 +686,49 @@ mod tests {
 
         assert_eq!(request.url, "https://example.com/video");
         assert_eq!(request.quality, "480");
+        assert_eq!(
+            request.output_path.as_deref(),
+            Some("/Users/example/Videos")
+        );
         assert_eq!(request.action, "queue_only");
         assert_eq!(request.target, "universal");
+    }
+
+    #[test]
+    fn cli_request_accepts_cross_platform_absolute_output_paths() {
+        let unix_args = CliDownloadArgs {
+            url: Some("https://example.com/video".to_string()),
+            output_path: Some("/Users/example/Videos".to_string()),
+            ..Default::default()
+        };
+        let unix_request = build_cli_download_request(&unix_args).expect("expected CLI request");
+        assert_eq!(
+            unix_request.output_path.as_deref(),
+            Some("/Users/example/Videos")
+        );
+
+        let windows_args = CliDownloadArgs {
+            url: Some("https://example.com/video".to_string()),
+            output_path: Some(r"C:\Users\example\Videos".to_string()),
+            ..Default::default()
+        };
+        let windows_request =
+            build_cli_download_request(&windows_args).expect("expected CLI request");
+        assert_eq!(
+            windows_request.output_path.as_deref(),
+            Some(r"C:\Users\example\Videos")
+        );
+
+        let unc_args = CliDownloadArgs {
+            url: Some("https://example.com/video".to_string()),
+            output_path: Some(r"\\server\share\Videos".to_string()),
+            ..Default::default()
+        };
+        let unc_request = build_cli_download_request(&unc_args).expect("expected CLI request");
+        assert_eq!(
+            unc_request.output_path.as_deref(),
+            Some(r"\\server\share\Videos")
+        );
     }
 
     #[test]
@@ -582,6 +783,7 @@ mod tests {
             subtitle_langs: Some("en,../../secret,vi".to_string()),
             subtitle_format: Some("txt".to_string()),
             download_sections: Some("not a range".to_string()),
+            output_path: Some("relative/videos".to_string()),
             ..Default::default()
         };
 
@@ -591,6 +793,7 @@ mod tests {
         assert_eq!(request.subtitle_langs, vec!["en", "vi"]);
         assert_eq!(request.subtitle_format.as_deref(), Some("srt"));
         assert_eq!(request.download_sections, None);
+        assert_eq!(request.output_path, None);
     }
 
     #[test]
@@ -615,6 +818,13 @@ mod tests {
     #[test]
     fn cli_help_request_exits_before_app_start() {
         let argv = vec!["youwee".to_string(), "--help".to_string()];
+
+        assert!(print_cli_usage_and_should_exit(&argv));
+    }
+
+    #[test]
+    fn cli_version_request_exits_before_app_start() {
+        let argv = vec!["youwee".to_string(), "-V".to_string()];
 
         assert!(print_cli_usage_and_should_exit(&argv));
     }

@@ -469,6 +469,16 @@ pub async fn run_ytdlp_with_stderr(app: &AppHandle, args: &[&str]) -> Result<Ytd
 pub fn parse_ytdlp_error(stderr: &str) -> Option<BackendError> {
     let stderr_lower = stderr.to_lowercase();
 
+    if is_upcoming_live_error(stderr) {
+        return Some(
+            BackendError::new(
+                crate::types::code::YT_UPCOMING_LIVE,
+                "This live event has not started yet. Try again after it starts, or enable Skip live streams.",
+            )
+            .with_retryable(false),
+        );
+    }
+
     // Browser cookie database locked / unavailable
     if stderr_lower.contains("could not copy")
         && stderr_lower.contains("cookie")
@@ -605,6 +615,13 @@ pub fn parse_ytdlp_error(stderr: &str) -> Option<BackendError> {
     }
 
     None
+}
+
+pub fn is_upcoming_live_error(stderr: &str) -> bool {
+    let normalized = stderr.to_lowercase();
+    normalized.contains("this live event will begin")
+        || normalized.contains("premieres in")
+        || normalized.contains("premiere will begin")
 }
 
 /// Helper to run yt-dlp command and get JSON output
@@ -1070,6 +1087,27 @@ mod tests {
     #[test]
     fn build_site_header_args_ignores_bilibili_text_outside_host() {
         assert!(build_site_header_args("https://example.com/watch?url=bilibili.com").is_empty());
+    }
+
+    #[test]
+    fn parse_ytdlp_error_detects_upcoming_live() {
+        let error = parse_ytdlp_error(
+            "ERROR: [youtube] p_k8zlee-kQ: This live event will begin in 3 hours.",
+        )
+        .expect("upcoming live error should be parsed");
+
+        assert_eq!(error.code(), crate::types::code::YT_UPCOMING_LIVE);
+        assert_eq!(error.to_wire().retryable, Some(false));
+    }
+
+    #[test]
+    fn is_upcoming_live_error_detects_premiere_messages() {
+        assert!(is_upcoming_live_error(
+            "ERROR: [youtube] abc: This video premieres in 2 hours."
+        ));
+        assert!(is_upcoming_live_error(
+            "ERROR: [youtube] abc: The premiere will begin shortly."
+        ));
     }
 
     #[test]

@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { isValidUrl } from '@/lib/sources';
+import { isValidUrl, normalizeShellEscapedUrl } from '@/lib/sources';
 import { cn } from '@/lib/utils';
 
 interface GalleryUrlInputProps {
@@ -19,7 +19,7 @@ function countUrls(text: string): number {
     .trim()
     .split('\n')
     .filter((line) => {
-      const trimmed = line.trim();
+      const trimmed = normalizeShellEscapedUrl(line);
       return trimmed && !trimmed.startsWith('#') && isValidUrl(trimmed);
     }).length;
 }
