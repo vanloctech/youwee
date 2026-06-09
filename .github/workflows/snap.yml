@@ -30,6 +30,9 @@ on:
 permissions:
   contents: read
 
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
 jobs:
   snap:
     runs-on: ubuntu-22.04
@@ -39,12 +42,12 @@ jobs:
         uses: actions/checkout@v5
 
       - name: Prepare input directory
-        run: mkdir -p snap/input
+        run: mkdir -p snap/local/input
 
       - name: Download deb from URL
         if: inputs.deb_url != ''
         run: |
-          curl -L --fail --show-error --output snap/input/Youwee-Linux.deb "${{ inputs.deb_url }}"
+          curl -L --fail --show-error --output snap/local/input/Youwee-Linux.deb "${{ inputs.deb_url }}"
 
       - name: Download deb from GitHub release
         if: inputs.deb_url == ''
@@ -61,15 +64,15 @@ jobs:
           gh release download "$RELEASE_TAG" \
             --repo "${{ github.repository }}" \
             --pattern "Youwee-Linux.deb" \
-            --dir snap/input
+            --dir snap/local/input
 
       - name: Inspect deb package
         id: deb
         run: |
           set -eu
-          DEB_FILE="$(find snap/input -maxdepth 1 -type f -name '*.deb' | sort | head -n 1)"
+          DEB_FILE="$(find snap/local/input -maxdepth 1 -type f -name '*.deb' | sort | head -n 1)"
           if [ -z "$DEB_FILE" ]; then
-            echo "No .deb file found in snap/input."
+            echo "No .deb file found in snap/local/input."
             exit 1
           fi
 

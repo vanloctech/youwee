@@ -1,11 +1,17 @@
 name: youwee
 base: core22
 version: '0.17.0'
+title: Youwee
 summary: Ultimate yt-dlp GUI & Video Downloader - Free & Open Source
 description: |
   Youwee is a modern desktop app for downloading, organizing, and processing
   online videos with yt-dlp, FFmpeg, AI summary, channel tracking, subtitles, and
   post-download workflows.
+license: MIT
+website: https://youwee.app
+contact: https://discord.gg/yCrs9hcw
+issues: https://github.com/vanloctech/youwee/issues
+source-code: https://github.com/vanloctech/youwee
 
 grade: stable
 confinement: strict
@@ -58,9 +64,9 @@ parts:
     override-build: |
       set -eu
 
-      DEB_FILE="$(find snap/input -maxdepth 1 -type f -name '*.deb' | sort | head -n 1)"
+      DEB_FILE="$(find snap/local/input -maxdepth 1 -type f -name '*.deb' | sort | head -n 1)"
       if [ -z "$DEB_FILE" ]; then
-        echo "No .deb file found in snap/input."
+        echo "No .deb file found in snap/local/input."
         exit 1
       fi
 
