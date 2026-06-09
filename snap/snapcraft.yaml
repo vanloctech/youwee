@@ -1,0 +1,77 @@
+name: youwee
+base: core22
+version: '0.17.0'
+summary: Ultimate yt-dlp GUI & Video Downloader - Free & Open Source
+description: |
+  Youwee is a modern desktop app for downloading, organizing, and processing
+  online videos with yt-dlp, FFmpeg, AI summary, channel tracking, subtitles, and
+  post-download workflows.
+
+grade: stable
+confinement: strict
+
+layout:
+  /usr/lib/$SNAPCRAFT_ARCH_TRIPLET/webkit2gtk-4.1:
+    bind: $SNAP/usr/lib/$SNAPCRAFT_ARCH_TRIPLET/webkit2gtk-4.1
+
+apps:
+  youwee:
+    command: usr/bin/youwee
+    desktop: usr/share/applications/Youwee.desktop
+    extensions: [gnome]
+    plugs:
+      - network
+      - home
+      - removable-media
+      - single-instance-plug
+
+slots:
+  single-instance:
+    interface: dbus
+    bus: session
+    name: org.com_vanloctech_youwee.SingleInstance
+
+plugs:
+  single-instance-plug:
+    interface: dbus
+    bus: session
+    name: org.com_vanloctech_youwee.SingleInstance
+
+package-repositories:
+  - type: apt
+    components: [main]
+    suites: [noble]
+    key-id: 78E1918602959B9C59103100F1831DDAFC42E99D
+    url: http://ppa.launchpad.net/snappy-dev/snapcraft-daily/ubuntu
+
+parts:
+  youwee:
+    plugin: dump
+    source: .
+    build-packages:
+      - dpkg
+    stage-packages:
+      - libwebkit2gtk-4.1-0
+      - libayatana-appindicator3-1
+      - libssl3
+      - xdg-utils
+    override-build: |
+      set -eu
+
+      DEB_FILE="$(find snap/input -maxdepth 1 -type f -name '*.deb' | sort | head -n 1)"
+      if [ -z "$DEB_FILE" ]; then
+        echo "No .deb file found in snap/input."
+        exit 1
+      fi
+
+      dpkg -x "$DEB_FILE" "$SNAPCRAFT_PART_INSTALL/"
+
+      test -x "$SNAPCRAFT_PART_INSTALL/usr/bin/youwee"
+      test -x "$SNAPCRAFT_PART_INSTALL/usr/bin/youwee-yt-dlp"
+      test -f "$SNAPCRAFT_PART_INSTALL/usr/share/applications/Youwee.desktop"
+      test -f "$SNAPCRAFT_PART_INSTALL/usr/share/icons/hicolor/32x32/apps/youwee.png"
+
+      sed -i \
+        -e "s|^Icon=.*|Icon=/usr/share/icons/hicolor/32x32/apps/youwee.png|g" \
+        -e "s|^Exec=.*|Exec=youwee %U|g" \
+        "$SNAPCRAFT_PART_INSTALL/usr/share/applications/Youwee.desktop"

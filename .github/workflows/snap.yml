@@ -1,0 +1,110 @@
+name: Snap Package
+
+on:
+  workflow_dispatch:
+    inputs:
+      release_tag:
+        description: 'GitHub release tag to package, for example v0.17.0. Ignored when deb_url is set.'
+        required: false
+        type: string
+      deb_url:
+        description: 'Direct URL to Youwee-Linux.deb. Use this for old/test artifacts not attached to a release.'
+        required: false
+        type: string
+      channel:
+        description: 'Snap Store channel to publish to when publish is enabled.'
+        required: true
+        default: edge
+        type: choice
+        options:
+          - edge
+          - beta
+          - candidate
+          - stable
+      publish:
+        description: 'Publish the generated snap to the Snap Store.'
+        required: true
+        default: false
+        type: boolean
+
+permissions:
+  contents: read
+
+jobs:
+  snap:
+    runs-on: ubuntu-22.04
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
+      - name: Prepare input directory
+        run: mkdir -p snap/input
+
+      - name: Download deb from URL
+        if: inputs.deb_url != ''
+        run: |
+          curl -L --fail --show-error --output snap/input/Youwee-Linux.deb "${{ inputs.deb_url }}"
+
+      - name: Download deb from GitHub release
+        if: inputs.deb_url == ''
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ inputs.release_tag }}
+        run: |
+          set -eu
+          if [ -z "$RELEASE_TAG" ]; then
+            echo "Set release_tag or deb_url when running this workflow."
+            exit 1
+          fi
+
+          gh release download "$RELEASE_TAG" \
+            --repo "${{ github.repository }}" \
+            --pattern "Youwee-Linux.deb" \
+            --dir snap/input
+
+      - name: Inspect deb package
+        id: deb
+        run: |
+          set -eu
+          DEB_FILE="$(find snap/input -maxdepth 1 -type f -name '*.deb' | sort | head -n 1)"
+          if [ -z "$DEB_FILE" ]; then
+            echo "No .deb file found in snap/input."
+            exit 1
+          fi
+
+          VERSION="$(dpkg-deb -f "$DEB_FILE" Version | sed 's/-.*//')"
+          if [ -z "$VERSION" ]; then
+            echo "Could not read package version from $DEB_FILE."
+            exit 1
+          fi
+
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "Using $DEB_FILE"
+          echo "Detected version: $VERSION"
+          dpkg-deb -c "$DEB_FILE" | grep -E 'usr/bin/youwee$|usr/bin/youwee-yt-dlp$|usr/share/applications/Youwee.desktop|usr/share/icons/hicolor/32x32/apps/youwee.png'
+
+      - name: Set snap version from deb
+        run: |
+          sed -i "s/^version: .*/version: '${{ steps.deb.outputs.version }}'/" snap/snapcraft.yaml
+          grep '^version:' snap/snapcraft.yaml
+
+      - name: Build snap
+        id: build
+        uses: snapcore/action-build@v1
+
+      - name: Upload snap artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: youwee-snap-${{ steps.deb.outputs.version }}
+          path: ${{ steps.build.outputs.snap }}
+          if-no-files-found: error
+
+      - name: Publish snap
+        if: inputs.publish
+        uses: snapcore/action-publish@v1
+        env:
+          SNAPCRAFT_STORE_CREDENTIALS: ${{ secrets.SNAPCRAFT_STORE_CREDENTIALS }}
+        with:
+          snap: ${{ steps.build.outputs.snap }}
+          release: ${{ inputs.channel }}
