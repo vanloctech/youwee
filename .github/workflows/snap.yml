@@ -96,9 +96,23 @@ jobs:
         run: |
           grep -E '^(name|version|title|summary|license|website|contact|donation|issues|source-code):' snap/snapcraft.yaml
 
+      - name: Install Snapcraft
+        run: sudo snap install snapcraft --classic --channel stable
+
       - name: Build snap
         id: build
-        uses: snapcore/action-build@v1
+        run: |
+          set -eu
+          snapcraft pack --destructive-mode
+
+          SNAP_FILE="$(find . -maxdepth 1 -type f -name 'youwee_*.snap' | sort | head -n 1)"
+          if [ -z "$SNAP_FILE" ]; then
+            echo "No snap package was created."
+            exit 1
+          fi
+
+          echo "snap=$SNAP_FILE" >> "$GITHUB_OUTPUT"
+          echo "Created $SNAP_FILE"
 
       - name: Upload snap artifact
         uses: actions/upload-artifact@v4
@@ -109,9 +123,14 @@ jobs:
 
       - name: Publish snap
         if: inputs.publish
-        uses: snapcore/action-publish@v1
         env:
           SNAPCRAFT_STORE_CREDENTIALS: ${{ secrets.SNAPCRAFT_STORE_CREDENTIALS }}
-        with:
-          snap: ${{ steps.build.outputs.snap }}
-          release: ${{ inputs.channel }}
+        run: |
+          set -eu
+          if [ -z "$SNAPCRAFT_STORE_CREDENTIALS" ]; then
+            echo "SNAPCRAFT_STORE_CREDENTIALS is required when publish is true."
+            exit 1
+          fi
+
+          printf '%s' "$SNAPCRAFT_STORE_CREDENTIALS" | snapcraft login --with -
+          snapcraft upload --release="${{ inputs.channel }}" "${{ steps.build.outputs.snap }}"
