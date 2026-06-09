@@ -495,21 +495,21 @@ jobs:
           
           # Start with header
           cat > RELEASE_BODY.md << 'HEADER'
-          # 🎬 Youwee ${{ github.ref_name }}
+          # Youwee ${{ github.ref_name }}
           
           A modern, beautiful YouTube downloader built with Tauri.
           
           HEADER
           
           # Add What's New section from changelog
-          echo "## ✨ What's New" >> RELEASE_BODY.md
+          echo "## What's New" >> RELEASE_BODY.md
           echo "" >> RELEASE_BODY.md
           cat CHANGELOG_EXTRACT.md >> RELEASE_BODY.md
           echo "" >> RELEASE_BODY.md
           
           # Add download section
           cat >> RELEASE_BODY.md << 'DOWNLOADS'
-          ## 📥 Download
+          ## Download
           
           | Platform | File | Description |
           |----------|------|-------------|
@@ -527,15 +527,15 @@ jobs:
           - **macOS**: 10.15 (Catalina) or later  
           - **Linux**: Ubuntu 22.04 or equivalent
           
-          ## 🔧 Optional
+          ## Optional
           - **FFmpeg** - for best video/audio quality (auto-download available in Settings)
           - **Bun Runtime** - if you can only download 360p from YouTube (auto-download available in Settings)
 
-          ## 🌐 Browser Extension Install
+          ## Browser Extension Install
           - Chromium: download `Youwee-Extension-Chromium.zip` -> extract -> open `chrome://extensions` -> enable Developer mode -> **Load unpacked**.
           - Firefox: download `Youwee-Extension-Firefox-signed.xpi` and open it directly to install.
 
-          ## 🔐 Verify Downloads
+          ## Verify Downloads
           
           Download `SHA256SUMS.txt` and verify:
           ```bash
