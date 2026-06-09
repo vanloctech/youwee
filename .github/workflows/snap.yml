@@ -92,6 +92,10 @@ jobs:
           sed -i "s/^version: .*/version: '${{ steps.deb.outputs.version }}'/" snap/snapcraft.yaml
           grep '^version:' snap/snapcraft.yaml
 
+      - name: Show snap metadata
+        run: |
+          grep -E '^(name|version|title|summary|license|website|contact|donation|issues|source-code):' snap/snapcraft.yaml
+
       - name: Build snap
         id: build
         uses: snapcore/action-build@v1
