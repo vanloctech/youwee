@@ -1,4 +1,4 @@
-import { Atom, FolderOpen, Info, Plus } from 'lucide-react';
+import { Atom, ExternalLink, FolderOpen, Info, Plus } from 'lucide-react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
@@ -33,8 +33,11 @@ import type { PostDownloadPluginsCardController } from './usePostDownloadPlugins
 
 type PluginWorkspaceActionsProps = {
   onAttachWorkspace: PostDownloadPluginsCardController['handleAttachWorkspace'];
-  onOpenCreateDialog: PostDownloadPluginsCardController['openCreateDialog'];
   onOpenGuide: () => void;
+};
+
+type PluginCreateWorkspaceActionProps = {
+  onOpenCreateDialog: PostDownloadPluginsCardController['openCreateDialog'];
 };
 
 type PluginWorkspaceCreateFlowProps = Pick<
@@ -73,15 +76,22 @@ type PluginWorkspaceCreateFlowProps = Pick<
   | 'updateCreatePluginForm'
 >;
 
+const PLUGINS_PAGE_URL = 'https://youwee.app/plugins';
+
 export const PluginWorkspaceActions = memo(function PluginWorkspaceActions({
   onAttachWorkspace,
-  onOpenCreateDialog,
   onOpenGuide,
 }: PluginWorkspaceActionsProps) {
   const { t } = useTranslation('settings');
 
   return (
     <>
+      <Button variant="outline" size="sm" className="border-dashed" asChild>
+        <a href={PLUGINS_PAGE_URL} target="_blank" rel="noopener noreferrer">
+          <ExternalLink className="h-4 w-4" />
+          Docs
+        </a>
+      </Button>
       <Button variant="outline" size="sm" className="border-dashed" onClick={onOpenGuide}>
         <Info className="h-4 w-4" />
         {t('download.pluginOverviewGuideButton')}
@@ -95,11 +105,20 @@ export const PluginWorkspaceActions = memo(function PluginWorkspaceActions({
         <Atom className="h-4 w-4" />
         {t('download.pluginAttachWorkspace')}
       </Button>
-      <Button size="sm" onClick={onOpenCreateDialog}>
-        <Plus className="h-4 w-4" />
-        {t('download.pluginCreateWorkspace')}
-      </Button>
     </>
+  );
+});
+
+export const PluginCreateWorkspaceAction = memo(function PluginCreateWorkspaceAction({
+  onOpenCreateDialog,
+}: PluginCreateWorkspaceActionProps) {
+  const { t } = useTranslation('settings');
+
+  return (
+    <Button size="sm" onClick={onOpenCreateDialog}>
+      <Plus className="h-4 w-4" />
+      {t('download.pluginCreateWorkspace')}
+    </Button>
   );
 });
 

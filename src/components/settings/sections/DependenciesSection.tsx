@@ -183,11 +183,15 @@ export function DependenciesSection({ highlightId }: DependenciesSectionProps) {
     },
   ];
 
-  // Backend default is `auto` (backward compatibility). In UI, display it as App managed.
+  // yt-dlp keeps `auto` for backward compatibility. In UI, display it as App managed.
   const ytdlpSourceUi: Exclude<DependencySource, 'auto'> =
     ytdlpSource === 'system' ? 'system' : 'app';
+  // Legacy FFmpeg `auto` can resolve to system FFmpeg, so display the resolved source.
   const ffmpegSourceUi: Exclude<DependencySource, 'auto'> =
-    ffmpegSource === 'system' ? 'system' : 'app';
+    ffmpegSource === 'system' || (ffmpegSource === 'auto' && ffmpegStatus?.is_system)
+      ? 'system'
+      : 'app';
+  const isFfmpegSystemSource = ffmpegSourceUi === 'system';
 
   return (
     <>
@@ -532,7 +536,7 @@ export function DependenciesSection({ highlightId }: DependenciesSectionProps) {
                       <span className="text-destructive">{ffmpegError}</span>
                     ) : ffmpegStatus?.installed === false ? (
                       <span className="text-amber-500">
-                        {ffmpegSource === 'system'
+                        {isFfmpegSystemSource
                           ? t('dependencies.systemFfmpegNotFound')
                           : t('dependencies.requiredFor2K4K8K')}
                       </span>
@@ -540,10 +544,10 @@ export function DependenciesSection({ highlightId }: DependenciesSectionProps) {
                       <span className="text-primary">
                         {t('dependencies.available', { version: ffmpegUpdateInfo.latest_version })}
                       </span>
+                    ) : isFfmpegSystemSource ? (
+                      t('dependencies.systemFfmpeg')
                     ) : ffmpegUpdateInfo && !ffmpegUpdateInfo.has_update ? (
                       <span className="text-emerald-500">{t('dependencies.upToDate')}</span>
-                    ) : ffmpegStatus?.is_system ? (
-                      t('dependencies.systemFfmpeg')
                     ) : (
                       t('dependencies.audioVideoProcessing')
                     )}
@@ -553,7 +557,7 @@ export function DependenciesSection({ highlightId }: DependenciesSectionProps) {
               <div className="flex items-center gap-2">
                 {ffmpegUpdateInfo?.has_update &&
                   !ffmpegStatus?.is_system &&
-                  ffmpegSource !== 'system' && (
+                  !isFfmpegSystemSource && (
                     <Button size="sm" onClick={downloadFfmpeg} disabled={ffmpegDownloading}>
                       {ffmpegDownloading ? (
                         <Loader2 className="w-4 h-4 animate-spin" />
@@ -562,21 +566,19 @@ export function DependenciesSection({ highlightId }: DependenciesSectionProps) {
                       )}
                     </Button>
                   )}
-                {ffmpegStatus?.installed === false &&
-                  !ffmpegLoading &&
-                  ffmpegSource !== 'system' && (
-                    <Button size="sm" onClick={downloadFfmpeg} disabled={ffmpegDownloading}>
-                      {ffmpegDownloading ? (
-                        <Loader2 className="w-4 h-4 animate-spin" />
-                      ) : (
-                        t('dependencies.install')
-                      )}
-                    </Button>
-                  )}
+                {ffmpegStatus?.installed === false && !ffmpegLoading && !isFfmpegSystemSource && (
+                  <Button size="sm" onClick={downloadFfmpeg} disabled={ffmpegDownloading}>
+                    {ffmpegDownloading ? (
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                    ) : (
+                      t('dependencies.install')
+                    )}
+                  </Button>
+                )}
                 <Button
                   variant="ghost"
                   size="icon"
-                  onClick={ffmpegSource === 'system' ? checkFfmpeg : checkFfmpegUpdate}
+                  onClick={isFfmpegSystemSource ? checkFfmpeg : checkFfmpegUpdate}
                   disabled={
                     ffmpegLoading ||
                     ffmpegDownloading ||

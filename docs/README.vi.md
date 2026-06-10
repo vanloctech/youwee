@@ -9,19 +9,18 @@
   ![Русский](https://img.shields.io/badge/lang-Русский-1F5FBF)
   ![العربية](https://img.shields.io/badge/lang-%D8%A7%D9%84%D8%B9%D8%B1%D8%A8%D9%8A%D8%A9-0A8F6A)
   ![ไทย](https://img.shields.io/badge/lang-%E0%B9%84%E0%B8%97%E0%B8%A2-7B1FA2)
+  ![Português](https://img.shields.io/badge/lang-Português-009C3B)
   [![Vote for next language](https://img.shields.io/badge/Vote-Ngôn_ngữ_tiếp_theo-orange?logo=github)](https://github.com/vanloctech/youwee/discussions/18)
 
   <img src="../src-tauri/icons/icon.png" alt="Youwee Logo" width="128" height="128">
   
-  **Ứng dụng tải video YouTube hiện đại, đẹp mắt được xây dựng với Tauri và React**
+  **GUI yt-dlp & trình tải/xử lý video đẹp mắt, toàn diện - miễn phí & mã nguồn mở**
 
   [![Downloads](https://img.shields.io/github/downloads/vanloctech/youwee/total?label=Downloads)](https://github.com/vanloctech/youwee/releases)
   [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
   [![Reddit](https://img.shields.io/badge/Reddit-r%2Fyouwee-FF4500?logo=reddit&logoColor=white)](https://www.reddit.com/r/youwee)
   [![Website](https://img.shields.io/badge/Website-youwee.app-0EA5E9)](https://youwee.app)
   [![Discord](https://img.shields.io/badge/Discord-Community-5865F2?logo=discord&logoColor=white)](https://discord.gg/yCrs9hcw)
-  [![Tauri](https://img.shields.io/badge/Tauri-2.0-FFC131?logo=tauri&logoColor=white)](https://tauri.app/)
-  [![React](https://img.shields.io/badge/React-19-61DAFB?logo=react&logoColor=white)](https://react.dev/)
 </div>
 
 ---
@@ -44,7 +43,7 @@
 - **SponsorBlock** — Tự động bỏ qua sponsor, intro, outro và đoạn tự quảng bá với các chế độ xóa/đánh dấu/tùy chỉnh
 - **Thư viện Tải xuống** — Theo dõi và quản lý tất cả các bản tải
 - **6 Giao diện Đẹp** — Midnight, Aurora, Sunset, Ocean, Forest, Candy
-- **Nhanh & Nhẹ** — Xây dựng với Tauri cho hiệu suất tối ưu
+- **Nhanh & Nhẹ** — Thiết kế để dùng ít tài nguyên
 
 ## Ảnh chụp màn hình
 
@@ -114,7 +113,7 @@ Chỉ sử dụng Youwee với nội dung bạn sở hữu, được phép sử 
 - Gửi link từ tab hiện tại sang Youwee chỉ với 1 lần bấm (`Download now` hoặc `Add to queue`)
 - Nút nổi hỗ trợ chọn `Video/Audio` + chất lượng trên các trang được hỗ trợ
 - Popup hoạt động với mọi tab HTTP/HTTPS hợp lệ
-- Hướng dẫn: [docs/browser-extension.vi.md](browser-extension.vi.md)
+- Hướng dẫn: [youwee.app/docs/browser-extension](https://youwee.app/docs/browser-extension)
 
 ### Plugin
 

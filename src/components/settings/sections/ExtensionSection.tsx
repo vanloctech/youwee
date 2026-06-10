@@ -9,8 +9,7 @@ interface ExtensionSectionProps {
 }
 
 const RELEASES_LATEST_URL = 'https://github.com/vanloctech/youwee/releases/latest';
-const EXTENSION_DOCS_URL =
-  'https://github.com/vanloctech/youwee/blob/main/docs/browser-extension.md';
+const EXTENSION_DOCS_URL = 'https://youwee.app/docs/browser-extension';
 const CHROMIUM_DOWNLOAD_URL =
   'https://github.com/vanloctech/youwee/releases/latest/download/Youwee-Extension-Chromium.zip';
 const FIREFOX_DOWNLOAD_URL =

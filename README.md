@@ -9,19 +9,18 @@
   ![Русский](https://img.shields.io/badge/lang-Русский-1F5FBF)
   ![العربية](https://img.shields.io/badge/lang-%D8%A7%D9%84%D8%B9%D8%B1%D8%A8%D9%8A%D8%A9-0A8F6A)
   ![ไทย](https://img.shields.io/badge/lang-%E0%B9%84%E0%B8%97%E0%B8%A2-7B1FA2)
+  ![Português](https://img.shields.io/badge/lang-Português-009C3B)
   [![Vote for next language](https://img.shields.io/badge/Vote-Next_Language-orange?logo=github)](https://github.com/vanloctech/youwee/discussions/18)
 
   <img src="src-tauri/icons/icon.png" alt="Youwee Logo" width="128" height="128">
   
-  **A modern, beautiful YouTube video downloader built with Tauri and React**
+  **Beautiful and Ultimate yt-dlp GUI & Video Downloader - Processing - Free & Open Source**
 
   [![Downloads](https://img.shields.io/github/downloads/vanloctech/youwee/total?label=Downloads)](https://github.com/vanloctech/youwee/releases)
   [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
   [![Reddit](https://img.shields.io/badge/Reddit-r%2Fyouwee-FF4500?logo=reddit&logoColor=white)](https://www.reddit.com/r/youwee)
   [![Website](https://img.shields.io/badge/Website-youwee.app-0EA5E9)](https://youwee.app)
   [![Discord](https://img.shields.io/badge/Discord-Community-5865F2?logo=discord&logoColor=white)](https://discord.gg/yCrs9hcw)
-  [![Tauri](https://img.shields.io/badge/Tauri-2.0-FFC131?logo=tauri&logoColor=white)](https://tauri.app/)
-  [![React](https://img.shields.io/badge/React-19-61DAFB?logo=react&logoColor=white)](https://react.dev/)
 
 <a href="https://www.producthunt.com/products/youwee/reviews/new?utm_source=badge-product_review&utm_medium=badge&utm_source=badge-youwee" target="_blank"><img src="https://api.producthunt.com/widgets/embed-image/v1/product_review.svg?product_id=1154224&theme=light" alt="Youwee - A modern YouTube downloader @yt-dlp GUI for cross-platform | Product Hunt" width="250" height="54"></a>
 </div>
@@ -49,7 +48,7 @@
 - **Speed Limit** — Control download bandwidth (KB/s, MB/s, GB/s)
 - **Download Library** — Track and manage all your downloads
 - **6 Beautiful Themes** — Midnight, Aurora, Sunset, Ocean, Forest, Candy
-- **Fast & Lightweight** — Built with Tauri for minimal resource usage
+- **Fast & Lightweight** — Designed for minimal resource usage
 
 ## Screenshots
 ![Youwee](docs/screenshots/youwee-youtube.png)
@@ -118,7 +117,7 @@ Use Youwee only with content you own, have permission to use, or are legally all
 - One-click send current page to Youwee with `Download now` or `Add to queue`
 - Floating button supports `Video/Audio` + quality selection on supported sites
 - Popup works on any valid HTTP/HTTPS tab
-- Guide: [docs/browser-extension.md](docs/browser-extension.md)
+- Guide: [youwee.app/docs/browser-extension](https://youwee.app/docs/browser-extension)
 
 ### Plugins
 
