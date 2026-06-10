@@ -140,6 +140,16 @@
     "addStopTime": "+ Thêm giờ dừng",
     "setSchedule": "Đặt lịch",
     "cancel": "Hủy lịch",
-    "startNow": "Tải ngay"
+    "startNow": "Tải ngay",
+    "preset_in15m": "Sau 15 phút",
+    "preset_in30m": "Sau 30 phút",
+    "subtitle": "Tự động bắt đầu hàng đợi vào thời gian đã chọn.",
+    "quickPresets": "Lịch nhanh",
+    "removeStopTime": "Bỏ",
+    "today": "Hôm nay",
+    "tomorrow": "Ngày mai",
+    "preview": "Xem trước:",
+    "previewStart": "bắt đầu {{time}}",
+    "previewStop": "dừng {{time}}"
   }
 }

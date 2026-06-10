@@ -140,6 +140,16 @@
     "addStopTime": "+ Add stop time",
     "setSchedule": "Set Schedule",
     "cancel": "Cancel schedule",
-    "startNow": "Start Now"
+    "startNow": "Start Now",
+    "preset_in15m": "In 15 min",
+    "preset_in30m": "In 30 min",
+    "subtitle": "Start the queue automatically at a chosen time.",
+    "quickPresets": "Quick presets",
+    "removeStopTime": "Remove",
+    "today": "Today",
+    "tomorrow": "Tomorrow",
+    "preview": "Preview:",
+    "previewStart": "starts {{time}}",
+    "previewStop": "stops {{time}}"
   }
 }

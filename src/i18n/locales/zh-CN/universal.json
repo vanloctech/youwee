@@ -140,6 +140,16 @@
     "addStopTime": "+ 添加停止时间",
     "setSchedule": "设置定时",
     "cancel": "取消定时",
-    "startNow": "立即开始"
+    "startNow": "立即开始",
+    "preset_in15m": "15分钟后",
+    "preset_in30m": "30分钟后",
+    "subtitle": "在指定时间自动开始队列。",
+    "quickPresets": "快捷预设",
+    "removeStopTime": "移除",
+    "today": "今天",
+    "tomorrow": "明天",
+    "preview": "预览：",
+    "previewStart": "开始 {{time}}",
+    "previewStop": "停止 {{time}}"
   }
 }

@@ -13,6 +13,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **CLI output folder** - Added `--output` / `-o` so each CLI-queued download can use its own absolute output folder
 
 ### Changed
+- **Schedule controls** - Refined the schedule popover and active schedule state with quicker presets, clearer preview text, and a more compact countdown display
 
 ### Fixed
 - **yt-dlp bundled version** - Prefer the sidecar shipped with the current app build so old app-managed binaries no longer mask newer bundled releases

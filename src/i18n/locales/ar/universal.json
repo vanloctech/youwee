@@ -138,6 +138,16 @@
     "addStopTime": "+ إضافة وقت إيقاف",
     "setSchedule": "تعيين الجدولة",
     "cancel": "إلغاء الجدولة",
-    "startNow": "ابدأ الآن"
+    "startNow": "ابدأ الآن",
+    "preset_in15m": "بعد 15 دقيقة",
+    "preset_in30m": "بعد 30 دقيقة",
+    "subtitle": "ابدأ قائمة الانتظار تلقائيًا في الوقت المحدد.",
+    "quickPresets": "اختصارات",
+    "removeStopTime": "إزالة",
+    "today": "اليوم",
+    "tomorrow": "غدًا",
+    "preview": "معاينة:",
+    "previewStart": "يبدأ {{time}}",
+    "previewStop": "يتوقف {{time}}"
   }
 }

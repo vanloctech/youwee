@@ -1,8 +1,9 @@
-import { Clock, Play, Square, Trash2, X } from 'lucide-react';
+import { Play, Square, Trash2 } from 'lucide-react';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { BrowserCookieErrorDialog } from '@/components/BrowserCookieErrorDialog';
 import {
+  ScheduleActiveControls,
   SchedulePopover,
   UniversalQueueList,
   UniversalSettingsPanel,
@@ -14,7 +15,7 @@ import { ThemePicker } from '@/components/settings/ThemePicker';
 import { Button } from '@/components/ui/button';
 import { useDependencies } from '@/contexts/DependenciesContext';
 import { useUniversal } from '@/contexts/UniversalContext';
-import { formatTime, useSchedule } from '@/hooks/useSchedule';
+import { useSchedule } from '@/hooks/useSchedule';
 import { loadCookieSettings } from '@/lib/network-config';
 import type { Quality } from '@/lib/types';
 import { cn } from '@/lib/utils';
@@ -190,46 +191,16 @@ export function UniversalPage({ onNavigateToSettings }: UniversalPageProps) {
                   />
                 </>
               ) : schedule.isScheduled && !isDownloading ? (
-                <>
-                  {/* Schedule active display */}
-                  <div className="flex-1 h-11 px-4 rounded-xl bg-muted/50 border border-border/50 flex items-center gap-2.5">
-                    <Clock className="w-4 h-4 text-primary shrink-0" />
-                    <div className="flex-1 min-w-0">
-                      <span className="text-sm font-medium">
-                        {formatTime(schedule.schedule?.startAt ?? 0)}
-                      </span>
-                      <span className="text-xs text-muted-foreground ml-1.5">
-                        {schedule.countdown}
-                      </span>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={schedule.cancelSchedule}
-                      className="text-muted-foreground hover:text-foreground p-0.5"
-                      title={t('schedule.cancel')}
-                    >
-                      <X className="w-4 h-4" />
-                    </button>
-                  </div>
-
-                  {/* Start Now button */}
-                  <button
-                    type="button"
-                    className={cn(
-                      'h-11 px-4 rounded-xl font-medium text-sm',
-                      'btn-gradient flex items-center justify-center gap-1.5',
-                      'shadow-lg shadow-primary/20',
-                    )}
-                    onClick={() => {
-                      schedule.cancelSchedule();
-                      handleStartDownload();
-                    }}
-                    title={t('schedule.startNow')}
-                  >
-                    <Play className="w-4 h-4" />
-                    <span>{t('schedule.startNow')}</span>
-                  </button>
-                </>
+                <ScheduleActiveControls
+                  schedule={schedule.schedule}
+                  countdown={schedule.countdown}
+                  onCancel={schedule.cancelSchedule}
+                  onStartNow={() => {
+                    schedule.cancelSchedule();
+                    handleStartDownload();
+                  }}
+                  ns="universal"
+                />
               ) : (
                 <Button
                   className="flex-1 h-11 text-sm sm:text-base rounded-xl"

@@ -231,7 +231,17 @@
     "addStopTime": "+ เพิ่มเวลาหยุด",
     "setSchedule": "ตั้งเวลา",
     "cancel": "ยกเลิกการตั้งเวลา",
-    "startNow": "เริ่มตอนนี้"
+    "startNow": "เริ่มตอนนี้",
+    "preset_in15m": "ใน 15 นาที",
+    "preset_in30m": "ใน 30 นาที",
+    "subtitle": "เริ่มคิวอัตโนมัติตามเวลาที่เลือก",
+    "quickPresets": "ตัวเลือกด่วน",
+    "removeStopTime": "ลบ",
+    "today": "วันนี้",
+    "tomorrow": "พรุ่งนี้",
+    "preview": "ตัวอย่าง:",
+    "previewStart": "เริ่ม {{time}}",
+    "previewStop": "หยุด {{time}}"
   },
   "languages": {
     "en": "อังกฤษ",
