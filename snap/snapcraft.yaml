@@ -26,6 +26,10 @@ apps:
     command: usr/bin/youwee
     desktop: usr/share/applications/Youwee.desktop
     extensions: [gnome]
+    environment:
+      GTK_MODULES: ''
+      WEBKIT_DISABLE_DMABUF_RENDERER: '1'
+      WEBKIT_DMABUF_RENDERER_DISABLE_GBM: '1'
     plugs:
       - network
       - home
