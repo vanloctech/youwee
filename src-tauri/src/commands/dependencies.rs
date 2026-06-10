@@ -1,17 +1,17 @@
 use crate::services::{
-    check_deno_internal, check_deno_update_internal, check_ffmpeg_internal,
-    check_ffmpeg_update_internal, check_gallerydl_internal, get_all_ytdlp_versions,
-    get_channel_api_url, get_deno_download_url, get_ffmpeg_download_info, get_ffmpeg_path,
-    get_ffmpeg_source, get_ytdlp_channel, get_ytdlp_channel_download_url, get_ytdlp_download_info,
-    get_ytdlp_source, get_ytdlp_version_internal, parse_ffmpeg_version, set_ffmpeg_source,
-    set_ytdlp_channel, set_ytdlp_source, system_ffmpeg_upgrade_message,
-    system_ytdlp_upgrade_message, verify_sha256, DenoUpdateInfo, FfmpegUpdateInfo,
+    DenoUpdateInfo, FfmpegUpdateInfo, check_deno_internal, check_deno_update_internal,
+    check_ffmpeg_internal, check_ffmpeg_update_internal, check_gallerydl_internal,
+    get_all_ytdlp_versions, get_channel_api_url, get_deno_download_url, get_ffmpeg_download_info,
+    get_ffmpeg_path, get_ffmpeg_source, get_ytdlp_channel, get_ytdlp_channel_download_url,
+    get_ytdlp_download_info, get_ytdlp_source, get_ytdlp_version_internal, parse_ffmpeg_version,
+    set_ffmpeg_source, set_ytdlp_channel, set_ytdlp_source, system_ffmpeg_upgrade_message,
+    system_ytdlp_upgrade_message, verify_sha256,
 };
 use crate::types::{
     BackendError, DenoStatus, DependencySource, FfmpegStatus, GalleryDlStatus, YtdlpAllVersions,
     YtdlpChannel, YtdlpChannelUpdateInfo, YtdlpVersionInfo,
 };
-use crate::utils::{extract_deno_zip, extract_tar_gz, extract_tar_xz, extract_zip, CommandExt};
+use crate::utils::{CommandExt, extract_deno_zip, extract_tar_gz, extract_tar_xz, extract_zip};
 use futures_util::StreamExt;
 use serde::{Deserialize, Serialize};
 use std::process::Stdio;
@@ -754,6 +754,20 @@ pub async fn download_ffmpeg(app: AppHandle) -> Result<String, String> {
         .await
         .map_err(|e| format!("Failed to verify FFmpeg installation: {}", e))?;
 
+    if !output.status.success() {
+        let stderr = String::from_utf8_lossy(&output.stderr).trim().to_string();
+        let stdout = String::from_utf8_lossy(&output.stdout).trim().to_string();
+        let details = if !stderr.is_empty() {
+            stderr
+        } else if !stdout.is_empty() {
+            stdout
+        } else {
+            format!("exit code {}", output.status)
+        };
+
+        return Err(format!("Failed to verify FFmpeg installation: {}", details));
+    }
+
     Ok(parse_ffmpeg_version(&String::from_utf8_lossy(
         &output.stdout,
     )))
@@ -1123,7 +1137,7 @@ pub async fn get_browser_profiles(browser: String) -> Result<Vec<BrowserProfile>
                 // Find "name": "value" pattern
                 if let Some(name_start) = profile_section.find("\"name\"") {
                     let after_name = &profile_section[name_start + 6..]; // skip "name"
-                                                                         // Find the colon and then the opening quote
+                    // Find the colon and then the opening quote
                     if let Some(colon_pos) = after_name.find(':') {
                         let after_colon = &after_name[colon_pos + 1..];
                         // Skip whitespace and find opening quote

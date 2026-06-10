@@ -12,6 +12,7 @@ pub fn extract_tar_gz_sync(
 
     let decoder = GzDecoder::new(Cursor::new(data));
     let mut archive = Archive::new(decoder);
+    let mut found_target = false;
 
     for entry in archive
         .entries()
@@ -27,12 +28,19 @@ pub fn extract_tar_gz_sync(
         if let Some(name) = path.file_name() {
             let name_str = name.to_string_lossy();
             if name_str == target_binary || name_str == "ffprobe" {
+                if name_str == target_binary {
+                    found_target = true;
+                }
                 let dest_path = dest_dir.join(&*name_str);
                 entry
                     .unpack(&dest_path)
                     .map_err(|e| format!("Failed to extract {}: {}", name_str, e))?;
             }
         }
+    }
+
+    if !found_target {
+        return Err(format!("{} not found in archive", target_binary));
     }
 
     Ok(())
@@ -49,6 +57,7 @@ pub fn extract_tar_xz_sync(
 
     let decoder = XzDecoder::new(Cursor::new(data));
     let mut archive = Archive::new(decoder);
+    let mut found_target = false;
 
     for entry in archive
         .entries()
@@ -63,12 +72,19 @@ pub fn extract_tar_xz_sync(
         if let Some(name) = path.file_name() {
             let name_str = name.to_string_lossy();
             if name_str == target_binary || name_str == "ffprobe" {
+                if name_str == target_binary {
+                    found_target = true;
+                }
                 let dest_path = dest_dir.join(&*name_str);
                 entry
                     .unpack(&dest_path)
                     .map_err(|e| format!("Failed to extract {}: {}", name_str, e))?;
             }
         }
+    }
+
+    if !found_target {
+        return Err(format!("{} not found in archive", target_binary));
     }
 
     Ok(())
@@ -84,6 +100,7 @@ pub fn extract_zip_sync(
 
     let cursor = Cursor::new(data);
     let mut archive = ZipArchive::new(cursor).map_err(|e| format!("Failed to open zip: {}", e))?;
+    let mut found_target = false;
 
     for i in 0..archive.len() {
         let mut file = archive
@@ -92,14 +109,17 @@ pub fn extract_zip_sync(
 
         let name = file.name().to_string();
 
+        let file_name = Path::new(&name)
+            .file_name()
+            .ok_or_else(|| "Invalid file name".to_string())?;
+        let file_name_str = file_name.to_string_lossy();
+        let is_target = file_name_str == target_binary;
+
         // Look for ffmpeg/ffprobe binaries
-        if name.ends_with(&target_binary)
-            || name.ends_with("ffprobe")
-            || name.ends_with("ffprobe.exe")
-        {
-            let file_name = Path::new(&name)
-                .file_name()
-                .ok_or_else(|| "Invalid file name".to_string())?;
+        if is_target || file_name_str == "ffprobe" || file_name_str == "ffprobe.exe" {
+            if is_target {
+                found_target = true;
+            }
             let dest_path = dest_dir.join(file_name);
 
             let mut outfile = std::fs::File::create(&dest_path)
@@ -107,6 +127,10 @@ pub fn extract_zip_sync(
             std::io::copy(&mut file, &mut outfile)
                 .map_err(|e| format!("Failed to extract: {}", e))?;
         }
+    }
+
+    if !found_target {
+        return Err(format!("{} not found in archive", target_binary));
     }
 
     Ok(())

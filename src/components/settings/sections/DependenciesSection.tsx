@@ -530,18 +530,18 @@ export function DependenciesSection({ highlightId }: DependenciesSectionProps) {
                       </span>
                     ) : ffmpegError ? (
                       <span className="text-destructive">{ffmpegError}</span>
-                    ) : ffmpegUpdateInfo?.has_update ? (
-                      <span className="text-primary">
-                        {t('dependencies.available', { version: ffmpegUpdateInfo.latest_version })}
-                      </span>
-                    ) : ffmpegUpdateInfo && !ffmpegUpdateInfo.has_update ? (
-                      <span className="text-emerald-500">{t('dependencies.upToDate')}</span>
                     ) : ffmpegStatus?.installed === false ? (
                       <span className="text-amber-500">
                         {ffmpegSource === 'system'
                           ? t('dependencies.systemFfmpegNotFound')
                           : t('dependencies.requiredFor2K4K8K')}
                       </span>
+                    ) : ffmpegUpdateInfo?.has_update ? (
+                      <span className="text-primary">
+                        {t('dependencies.available', { version: ffmpegUpdateInfo.latest_version })}
+                      </span>
+                    ) : ffmpegUpdateInfo && !ffmpegUpdateInfo.has_update ? (
+                      <span className="text-emerald-500">{t('dependencies.upToDate')}</span>
                     ) : ffmpegStatus?.is_system ? (
                       t('dependencies.systemFfmpeg')
                     ) : (

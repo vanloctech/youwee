@@ -500,13 +500,17 @@ fn setup_tray(app: &tauri::App) -> Result<(), Box<dyn std::error::Error>> {
         .item(&quit)
         .build()?;
 
+    #[cfg(target_os = "macos")]
+    let icon = tauri::image::Image::from_bytes(include_bytes!("../icons/tray-template.png"))
+        .expect("Failed to load tray icon");
+    #[cfg(not(target_os = "macos"))]
     let icon = tauri::image::Image::from_bytes(include_bytes!("../icons/32x32.png"))
         .expect("Failed to load tray icon");
 
     let app_handle = app.handle().clone();
     let app_handle_menu = app.handle().clone();
 
-    TrayIconBuilder::with_id("main-tray")
+    let tray_builder = TrayIconBuilder::with_id("main-tray")
         .icon(icon)
         .tooltip("Youwee")
         .menu(&menu)
@@ -555,8 +559,12 @@ fn setup_tray(app: &tauri::App) -> Result<(), Box<dyn std::error::Error>> {
             {
                 show_main_window(&app_handle);
             }
-        })
-        .build(app)?;
+        });
+
+    #[cfg(target_os = "macos")]
+    let tray_builder = tray_builder.icon_as_template(true);
+
+    tray_builder.build(app)?;
 
     // Populate tray menu with channel info
     rebuild_tray_menu(&app.handle());
