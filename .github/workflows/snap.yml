@@ -103,7 +103,7 @@ jobs:
         id: build
         run: |
           set -eu
-          snapcraft pack --destructive-mode
+          sudo snapcraft pack --destructive-mode
 
           SNAP_FILE="$(find . -maxdepth 1 -type f -name 'youwee_*.snap' | sort | head -n 1)"
           if [ -z "$SNAP_FILE" ]; then
@@ -111,6 +111,7 @@ jobs:
             exit 1
           fi
 
+          sudo chown "$USER:$USER" "$SNAP_FILE"
           echo "snap=$SNAP_FILE" >> "$GITHUB_OUTPUT"
           echo "Created $SNAP_FILE"
 
@@ -133,8 +134,8 @@ jobs:
           fi
 
           LOGIN_FILE="$(mktemp)"
+          trap 'rm -f "$LOGIN_FILE"' EXIT
           printf '%s' "$SNAPCRAFT_STORE_CREDENTIALS" > "$LOGIN_FILE"
           snapcraft login --with "$LOGIN_FILE"
-          rm -f "$LOGIN_FILE"
 
           snapcraft upload --release="${{ inputs.channel }}" "${{ steps.build.outputs.snap }}"
