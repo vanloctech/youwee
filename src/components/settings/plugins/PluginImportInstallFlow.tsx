@@ -44,13 +44,7 @@ export const PluginImportInstallActions = memo(function PluginImportInstallActio
   const { t } = useTranslation('settings');
 
   return (
-    <Button
-      variant="outline"
-      size="sm"
-      className="border-dashed"
-      onClick={handleImportPackage}
-      disabled={inspecting}
-    >
+    <Button size="sm" onClick={handleImportPackage} disabled={inspecting}>
       <PackageOpen className="h-4 w-4" />
       {t('download.pluginImportPlugin')}
     </Button>

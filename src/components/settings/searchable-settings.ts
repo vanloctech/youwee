@@ -363,6 +363,13 @@ export const SEARCHABLE_SETTINGS: SearchableSetting[] = [
     keywords: ['github', 'source', 'code', 'repository', 'open source'],
     section: 'about',
   },
+  {
+    id: 'app-version',
+    labelKey: 'about.website',
+    descriptionKey: 'about.docs',
+    keywords: ['website', 'docs', 'documentation', 'guide', 'help', 'youwee.app'],
+    section: 'about',
+  },
 
   // System (in General)
   {

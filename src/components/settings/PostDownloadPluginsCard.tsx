@@ -6,6 +6,7 @@ import {
 } from './plugins/PluginImportInstallFlow';
 import { PluginLogsWorkflowsFlow } from './plugins/PluginLogsWorkflowsFlow';
 import {
+  PluginCreateWorkspaceAction,
   PluginWorkspaceActions,
   PluginWorkspaceCreateFlow,
 } from './plugins/PluginWorkspaceCreateFlow';
@@ -17,9 +18,14 @@ export function PostDownloadPluginsCard() {
     () => ({
       onOpenGuide: () => controller.setRuntimeGuideOpen(true),
       onAttachWorkspace: controller.handleAttachWorkspace,
+    }),
+    [controller.handleAttachWorkspace, controller.setRuntimeGuideOpen],
+  );
+  const createWorkspaceActionProps = useMemo(
+    () => ({
       onOpenCreateDialog: controller.openCreateDialog,
     }),
-    [controller.handleAttachWorkspace, controller.openCreateDialog, controller.setRuntimeGuideOpen],
+    [controller.openCreateDialog],
   );
   const workspaceFlowProps = useMemo(
     () => ({
@@ -266,6 +272,7 @@ export function PostDownloadPluginsCard() {
       <div className="flex flex-wrap justify-end gap-2">
         <PluginWorkspaceActions {...workspaceActionsProps} />
         <PluginImportInstallActions {...importActionsProps} />
+        <PluginCreateWorkspaceAction {...createWorkspaceActionProps} />
       </div>
 
       <PluginWorkspaceCreateFlow {...workspaceFlowProps} />

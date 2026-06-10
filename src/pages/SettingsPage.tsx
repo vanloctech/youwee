@@ -9,6 +9,7 @@ import {
   Download,
   ExternalLink,
   FileText,
+  Globe,
   Heart,
   Info,
   Loader2,
@@ -186,6 +187,8 @@ function AboutSettingsContent({
   const [copied, setCopied] = useState(false);
 
   const appUrl = 'https://github.com/vanloctech/youwee';
+  const websiteUrl = 'https://youwee.app';
+  const docsUrl = 'https://youwee.app/docs';
   const buyMeACoffeeUrl = 'https://buymeacoffee.com/vanloctech';
   const redditUrl = 'https://www.reddit.com/r/youwee/';
   const productHuntUrl =
@@ -355,6 +358,24 @@ function AboutSettingsContent({
 
             {/* Quick Links */}
             <div className="flex flex-wrap items-center gap-2 mt-4 pt-4 border-t border-border/30">
+              <a
+                href={websiteUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-background/60 hover:bg-background text-xs font-medium transition-all hover:shadow-sm"
+              >
+                <Globe className="w-3.5 h-3.5 text-muted-foreground" />
+                {t('about.website')}
+              </a>
+              <a
+                href={docsUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-background/60 hover:bg-background text-xs font-medium transition-all hover:shadow-sm"
+              >
+                <FileText className="w-3.5 h-3.5 text-muted-foreground" />
+                {t('about.docs')}
+              </a>
               <a
                 href="https://github.com/vanloctech/youwee/blob/main/LICENSE"
                 target="_blank"
