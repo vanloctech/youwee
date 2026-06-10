@@ -132,5 +132,9 @@ jobs:
             exit 1
           fi
 
-          printf '%s' "$SNAPCRAFT_STORE_CREDENTIALS" | snapcraft login --with -
+          LOGIN_FILE="$(mktemp)"
+          printf '%s' "$SNAPCRAFT_STORE_CREDENTIALS" > "$LOGIN_FILE"
+          snapcraft login --with "$LOGIN_FILE"
+          rm -f "$LOGIN_FILE"
+
           snapcraft upload --release="${{ inputs.channel }}" "${{ steps.build.outputs.snap }}"
