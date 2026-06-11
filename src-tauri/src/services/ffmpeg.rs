@@ -1,11 +1,12 @@
 use crate::types::{DependencySource, FfmpegStatus};
-use crate::utils::{find_system_binary, unix_system_binary_dirs, CommandExt};
+use crate::utils::{CommandExt, find_system_binary, unix_system_binary_dirs};
 use std::path::PathBuf;
 use std::process::Stdio;
 use tauri::{AppHandle, Manager};
 use tokio::process::Command;
 
 const SOURCE_CONFIG_FILE: &str = "ffmpeg-source.txt";
+const RELEASE_VERSION_FILE: &str = "ffmpeg-release-version.txt";
 
 pub fn system_ffmpeg_upgrade_message() -> String {
     #[cfg(target_os = "macos")]
@@ -31,6 +32,45 @@ fn get_ffmpeg_source_config_path(app: &AppHandle) -> Option<PathBuf> {
         .app_data_dir()
         .ok()
         .map(|p| p.join("bin").join(SOURCE_CONFIG_FILE))
+}
+
+fn get_ffmpeg_release_version_path(app: &AppHandle) -> Option<PathBuf> {
+    app.path()
+        .app_data_dir()
+        .ok()
+        .map(|p| p.join("bin").join(RELEASE_VERSION_FILE))
+}
+
+pub async fn read_app_ffmpeg_release_version(app: &AppHandle) -> Option<String> {
+    let version_path = get_ffmpeg_release_version_path(app)?;
+    let content = tokio::fs::read_to_string(&version_path).await.ok()?;
+    let version = content.trim();
+
+    if version.is_empty() {
+        None
+    } else {
+        Some(version.to_string())
+    }
+}
+
+pub async fn write_app_ffmpeg_release_version(
+    app: &AppHandle,
+    version: &str,
+) -> Result<(), String> {
+    let version_path =
+        get_ffmpeg_release_version_path(app).ok_or("Failed to get FFmpeg version path")?;
+
+    if let Some(parent) = version_path.parent() {
+        tokio::fs::create_dir_all(parent)
+            .await
+            .map_err(|e| format!("Failed to create bin directory: {}", e))?;
+    }
+
+    tokio::fs::write(&version_path, version)
+        .await
+        .map_err(|e| format!("Failed to save FFmpeg release version: {}", e))?;
+
+    Ok(())
 }
 
 pub async fn get_ffmpeg_source(app: &AppHandle) -> DependencySource {
@@ -103,9 +143,16 @@ pub async fn check_ffmpeg_internal(app: &AppHandle) -> Result<FfmpegStatus, Stri
         if let Ok(output) = cmd.output().await {
             if output.status.success() {
                 let stdout = String::from_utf8_lossy(&output.stdout);
-                let version = parse_ffmpeg_version(&stdout);
+                let binary_version = parse_ffmpeg_version(&stdout);
                 let app_path = get_app_ffmpeg_path(app);
                 let is_system = app_path.as_ref().map(|p| p != &ffmpeg_path).unwrap_or(true);
+                let version = if is_system {
+                    binary_version
+                } else {
+                    read_app_ffmpeg_release_version(app)
+                        .await
+                        .unwrap_or(binary_version)
+                };
 
                 return Ok(FfmpegStatus {
                     installed: true,
@@ -150,6 +197,18 @@ fn extract_date_from_version(version: &str) -> Option<String> {
         Some(format!("{}-{}-{}", &caps[1], &caps[2], &caps[3]))
     } else {
         None
+    }
+}
+
+fn ffmpeg_version_has_update(current_version: &str, latest_version: &str) -> bool {
+    let current_normalized = current_version.replace('.', "-");
+    let latest_normalized = latest_version.replace('.', "-");
+    let current_date = extract_date_from_version(&current_normalized);
+    let latest_date = extract_date_from_version(&latest_normalized);
+
+    match (current_date, latest_date) {
+        (Some(curr), Some(lat)) => lat > curr,
+        _ => false,
     }
 }
 
@@ -244,6 +303,12 @@ pub struct FfmpegUpdateInfo {
     pub release_url: Option<String>,
 }
 
+#[derive(Debug, Clone)]
+pub struct FfmpegReleaseInfo {
+    pub version: String,
+    pub html_url: Option<String>,
+}
+
 /// Get the GitHub API URL for checking latest release
 fn get_ffmpeg_release_api_url() -> &'static str {
     #[cfg(target_os = "macos")]
@@ -262,6 +327,53 @@ fn get_ffmpeg_release_api_url() -> &'static str {
     {
         ""
     }
+}
+
+pub fn normalize_ffmpeg_release_version(tag_name: &str) -> String {
+    tag_name
+        .trim()
+        .strip_prefix("ffmpeg-")
+        .unwrap_or(tag_name.trim())
+        .trim_start_matches('v')
+        .to_string()
+}
+
+pub async fn get_latest_ffmpeg_release_info() -> Result<FfmpegReleaseInfo, String> {
+    let api_url = get_ffmpeg_release_api_url();
+    if api_url.is_empty() {
+        return Err("Unsupported platform".to_string());
+    }
+
+    let client = reqwest::Client::builder()
+        .user_agent("Youwee/0.6.0")
+        .timeout(std::time::Duration::from_secs(30))
+        .build()
+        .map_err(|e| format!("Failed to create HTTP client: {}", e))?;
+
+    let response = client
+        .get(api_url)
+        .send()
+        .await
+        .map_err(|e| format!("Failed to fetch release info: {}", e))?;
+
+    if !response.status().is_success() {
+        return Err(format!(
+            "Failed to fetch release info: HTTP {}",
+            response.status()
+        ));
+    }
+
+    let json: serde_json::Value = response
+        .json()
+        .await
+        .map_err(|e| format!("Failed to parse release info: {}", e))?;
+
+    let tag_name = json["tag_name"].as_str().ok_or("No tag_name in release")?;
+
+    Ok(FfmpegReleaseInfo {
+        version: normalize_ffmpeg_release_version(tag_name),
+        html_url: json["html_url"].as_str().map(|s| s.to_string()),
+    })
 }
 
 /// Check if FFmpeg update is available
@@ -290,61 +402,14 @@ pub async fn check_ffmpeg_update_internal(app: &AppHandle) -> Result<FfmpegUpdat
         });
     }
 
-    let api_url = get_ffmpeg_release_api_url();
-    if api_url.is_empty() {
-        return Err("Unsupported platform".to_string());
-    }
-
-    // Fetch latest release from GitHub API
-    let client = reqwest::Client::builder()
-        .user_agent("Youwee/0.4.1")
-        .timeout(std::time::Duration::from_secs(30))
-        .build()
-        .map_err(|e| format!("Failed to create HTTP client: {}", e))?;
-
-    let response = client
-        .get(api_url)
-        .send()
-        .await
-        .map_err(|e| format!("Failed to fetch release info: {}", e))?;
-
-    if !response.status().is_success() {
-        return Err(format!(
-            "Failed to fetch release info: HTTP {}",
-            response.status()
-        ));
-    }
-
-    let json: serde_json::Value = response
-        .json()
-        .await
-        .map_err(|e| format!("Failed to parse release info: {}", e))?;
-
-    let tag_name = json["tag_name"].as_str().ok_or("No tag_name in release")?;
-
-    let html_url = json["html_url"].as_str().map(|s| s.to_string());
-
-    // Extract version from tag (remove 'v' or 'ffmpeg-' prefix if present)
-    let latest_version = tag_name
-        .trim_start_matches('v')
-        .trim_start_matches("ffmpeg-")
-        .to_string();
+    let latest_release = get_latest_ffmpeg_release_info().await?;
+    let latest_version = latest_release.version;
 
     // Compare versions by extracting date parts
     // Current version format: "git-2026-01-25-1e1dde8" -> extract "2026-01-25"
     // Latest version format: "2026.01.25" or "ffmpeg-2026.01.25" -> extract "2026.01.25"
     let has_update = if let Some(ref current) = current_version {
-        // Extract date from current version (format: git-YYYY-MM-DD-hash)
-        let current_date = extract_date_from_version(current);
-        // Normalize latest version (replace . with -)
-        let latest_normalized = latest_version.replace('.', "-");
-        let latest_date = extract_date_from_version(&latest_normalized);
-
-        // Compare dates - if latest is newer, there's an update
-        match (current_date, latest_date) {
-            (Some(curr), Some(lat)) => lat > curr,
-            _ => false, // Can't compare, assume no update
-        }
+        ffmpeg_version_has_update(current, &latest_version)
     } else {
         false
     };
@@ -353,6 +418,32 @@ pub async fn check_ffmpeg_update_internal(app: &AppHandle) -> Result<FfmpegUpdat
         has_update,
         current_version,
         latest_version: Some(latest_version),
-        release_url: html_url,
+        release_url: latest_release.html_url,
     })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{ffmpeg_version_has_update, normalize_ffmpeg_release_version};
+
+    #[test]
+    fn normalizes_ffmpeg_macos_release_tags() {
+        assert_eq!(
+            normalize_ffmpeg_release_version("ffmpeg-2026.06.11"),
+            "2026.06.11"
+        );
+        assert_eq!(
+            normalize_ffmpeg_release_version("v2026.06.11"),
+            "2026.06.11"
+        );
+    }
+
+    #[test]
+    fn compares_binary_git_versions_with_release_versions() {
+        assert!(ffmpeg_version_has_update(
+            "git-2026-06-10-5f998e3",
+            "2026.06.11"
+        ));
+        assert!(!ffmpeg_version_has_update("2026.06.11", "2026.06.11"));
+    }
 }

@@ -17,6 +17,7 @@ và dự án tuân theo [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - **Cài đặt và tài liệu CLI** - Tinh chỉnh card CLI trong General settings, bổ sung bản dịch CLI cho toàn bộ ngôn ngữ được hỗ trợ, và mở rộng hướng dẫn CLI với ghi chú cài đặt cho macOS, Windows và Linux
 
 ### Sửa lỗi
+- **Cập nhật FFmpeg app-managed** - Lưu version release của gói FFmpeg app-managed đã cài để check update không còn lặp khi binary FFmpeg báo version build git nội bộ
 - **Trạng thái FFmpeg** - Hiển thị FFmpeg hệ thống được tự phát hiện là System thay vì App managed, và báo lỗi verify cài đặt app-managed rõ hơn
 - **Phiên bản yt-dlp bundled** - Ưu tiên sidecar đi kèm bản app hiện tại để binary app-managed cũ không che bản bundled mới hơn
 - **Nguồn yt-dlp trong Channel** - Sửa luồng duyệt Channel để dùng đúng nguồn/channel yt-dlp đã chọn, gồm Stable và System

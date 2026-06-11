@@ -17,6 +17,7 @@ Youwee 的所有重要更改都将记录在此文件中。
 - **CLI 设置与文档** - 优化 General 设置中的 CLI 卡片，补齐所有支持语言的 CLI 本地化，并扩展 CLI 指南中的 macOS、Windows 和 Linux 安装说明
 
 ### 修复
+- **应用管理 FFmpeg 更新** - 记录已安装应用管理 FFmpeg 的 release 版本，避免二进制报告内部 git 构建版本时重复提示更新
 - **FFmpeg 依赖状态** - 将自动检测到的系统 FFmpeg 显示为 System 而不是 App managed，并提供更清晰的应用管理安装验证错误
 - **yt-dlp 内置版本** - 优先使用当前应用构建随附的 sidecar，避免旧的应用管理二进制遮蔽更新的内置版本
 - **频道 yt-dlp 来源** - 修复频道浏览未正确使用所选 yt-dlp 来源/通道的问题，包括 Stable 和 System
