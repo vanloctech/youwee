@@ -2,6 +2,22 @@
 @tailwind components;
 @tailwind utilities;
 
+@font-face {
+  font-family: "Nunito";
+  font-style: normal;
+  font-weight: 200 1000;
+  font-display: swap;
+  src: url("./assets/fonts/nunito/Nunito-Regular-Variable.ttf") format("truetype");
+}
+
+@font-face {
+  font-family: "Nunito";
+  font-style: italic;
+  font-weight: 200 1000;
+  font-display: swap;
+  src: url("./assets/fonts/nunito/Nunito-Italic-Variable.ttf") format("truetype");
+}
+
 @layer base {
   :root {
     --background: 0 0% 100%;

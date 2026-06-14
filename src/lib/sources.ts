@@ -1,132 +1,150 @@
+import type { IconDefinition } from '@fortawesome/fontawesome-svg-core';
+import {
+  faFacebook,
+  faFlickr,
+  faInstagram,
+  faLinkedin,
+  faPinterest,
+  faReddit,
+  faSoundcloud,
+  faSpotify,
+  faTiktok,
+  faTumblr,
+  faTwitch,
+  faTwitter,
+  faVimeo,
+  faVine,
+  faVk,
+  faYoutube,
+} from '@fortawesome/free-brands-svg-icons';
+import { faCirclePlay, faGlobe, faTable } from '@fortawesome/free-solid-svg-icons';
 import type { SourcePlatform } from './types';
 
 export interface SourceInfo {
   platform: SourcePlatform;
-  faIcon: string; // Font Awesome v4 icon class (e.g., "fa-youtube-play")
+  icon: IconDefinition;
   color: string;
   label: string;
 }
 
-// Font Awesome v4 brand icons mapping
-// Reference: https://fontawesome.com/v4/icons/#brand
 const SOURCE_MAP: Record<string, SourceInfo> = {
   youtube: {
     platform: 'youtube',
-    faIcon: 'fa-youtube-play',
+    icon: faYoutube,
     color: 'text-red-500',
     label: 'YouTube',
   },
   tiktok: {
     platform: 'tiktok',
-    faIcon: 'fa-music', // TikTok not in FA v4, use music as fallback
+    icon: faTiktok,
     color: 'text-pink-500',
     label: 'TikTok',
   },
   instagram: {
     platform: 'instagram',
-    faIcon: 'fa-instagram',
+    icon: faInstagram,
     color: 'text-purple-500',
     label: 'Instagram',
   },
   twitter: {
     platform: 'twitter',
-    faIcon: 'fa-twitter',
+    icon: faTwitter,
     color: 'text-sky-400',
     label: 'X/Twitter',
   },
   facebook: {
     platform: 'facebook',
-    faIcon: 'fa-facebook',
+    icon: faFacebook,
     color: 'text-blue-600',
     label: 'Facebook',
   },
   vimeo: {
     platform: 'vimeo',
-    faIcon: 'fa-vimeo',
+    icon: faVimeo,
     color: 'text-cyan-500',
     label: 'Vimeo',
   },
   twitch: {
     platform: 'twitch',
-    faIcon: 'fa-twitch',
+    icon: faTwitch,
     color: 'text-purple-400',
     label: 'Twitch',
   },
   bilibili: {
     platform: 'bilibili',
-    faIcon: 'fa-play-circle',
+    icon: faCirclePlay,
     color: 'text-cyan-500',
     label: 'Bilibili',
   },
   youku: {
     platform: 'other',
-    faIcon: 'fa-play-circle',
+    icon: faCirclePlay,
     color: 'text-blue-500',
     label: 'Youku',
   },
   soundcloud: {
     platform: 'soundcloud',
-    faIcon: 'fa-soundcloud',
+    icon: faSoundcloud,
     color: 'text-orange-500',
     label: 'SoundCloud',
   },
   dailymotion: {
     platform: 'dailymotion',
-    faIcon: 'fa-play-circle', // Dailymotion not in FA v4
+    icon: faCirclePlay,
     color: 'text-blue-400',
     label: 'Dailymotion',
   },
   dataexport: {
     platform: 'data_export',
-    faIcon: 'fa-table',
+    icon: faTable,
     color: 'text-emerald-400',
     label: 'Data Export',
   },
   reddit: {
     platform: 'other',
-    faIcon: 'fa-reddit',
+    icon: faReddit,
     color: 'text-orange-600',
     label: 'Reddit',
   },
   vine: {
     platform: 'other',
-    faIcon: 'fa-vine',
+    icon: faVine,
     color: 'text-green-500',
     label: 'Vine',
   },
   spotify: {
     platform: 'other',
-    faIcon: 'fa-spotify',
+    icon: faSpotify,
     color: 'text-green-500',
     label: 'Spotify',
   },
   tumblr: {
     platform: 'other',
-    faIcon: 'fa-tumblr',
+    icon: faTumblr,
     color: 'text-blue-900',
     label: 'Tumblr',
   },
   flickr: {
     platform: 'other',
-    faIcon: 'fa-flickr',
+    icon: faFlickr,
     color: 'text-pink-500',
     label: 'Flickr',
   },
   vk: {
     platform: 'other',
-    faIcon: 'fa-vk',
+    icon: faVk,
     color: 'text-blue-500',
     label: 'VK',
   },
   pinterest: {
     platform: 'other',
-    faIcon: 'fa-pinterest',
+    icon: faPinterest,
     color: 'text-red-600',
     label: 'Pinterest',
   },
   linkedin: {
     platform: 'other',
-    faIcon: 'fa-linkedin',
+    icon: faLinkedin,
     color: 'text-blue-700',
     label: 'LinkedIn',
   },
@@ -134,7 +152,7 @@ const SOURCE_MAP: Record<string, SourceInfo> = {
 
 const DEFAULT_SOURCE: SourceInfo = {
   platform: 'other',
-  faIcon: 'fa-globe',
+  icon: faGlobe,
   color: 'text-muted-foreground',
   label: 'Video',
 };

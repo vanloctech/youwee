@@ -1,7 +1,22 @@
+import type { IconDefinition } from '@fortawesome/fontawesome-svg-core';
+import {
+  faFacebook,
+  faInstagram,
+  faReddit,
+  faSoundcloud,
+  faSpotify,
+  faTiktok,
+  faTumblr,
+  faTwitch,
+  faTwitter,
+  faVimeo,
+} from '@fortawesome/free-brands-svg-icons';
+import { faPlus } from '@fortawesome/free-solid-svg-icons';
 import { CheckCircle2, ExternalLink, Globe } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { EmptyStateIllustration } from '@/components/shared/EmptyStateIllustration';
+import { FaIcon } from '@/components/shared/FaIcon';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -17,18 +32,17 @@ import {
 } from './QueueStatusFilter';
 import { UniversalQueueItem } from './UniversalQueueItem';
 
-// Popular supported sites with Font Awesome v4 icons
-const POPULAR_SITES = [
-  { name: 'TikTok', faIcon: 'fa-music', color: 'text-pink-500' },
-  { name: 'Instagram', faIcon: 'fa-instagram', color: 'text-purple-500' },
-  { name: 'Twitter/X', faIcon: 'fa-twitter', color: 'text-sky-400' },
-  { name: 'Facebook', faIcon: 'fa-facebook', color: 'text-blue-600' },
-  { name: 'Vimeo', faIcon: 'fa-vimeo', color: 'text-cyan-500' },
-  { name: 'Twitch', faIcon: 'fa-twitch', color: 'text-purple-400' },
-  { name: 'SoundCloud', faIcon: 'fa-soundcloud', color: 'text-orange-500' },
-  { name: 'Reddit', faIcon: 'fa-reddit', color: 'text-orange-600' },
-  { name: 'Spotify', faIcon: 'fa-spotify', color: 'text-green-500' },
-  { name: 'Tumblr', faIcon: 'fa-tumblr', color: 'text-blue-900' },
+const POPULAR_SITES: Array<{ name: string; icon: IconDefinition; color: string }> = [
+  { name: 'TikTok', icon: faTiktok, color: 'text-pink-500' },
+  { name: 'Instagram', icon: faInstagram, color: 'text-purple-500' },
+  { name: 'Twitter/X', icon: faTwitter, color: 'text-sky-400' },
+  { name: 'Facebook', icon: faFacebook, color: 'text-blue-600' },
+  { name: 'Vimeo', icon: faVimeo, color: 'text-cyan-500' },
+  { name: 'Twitch', icon: faTwitch, color: 'text-purple-400' },
+  { name: 'SoundCloud', icon: faSoundcloud, color: 'text-orange-500' },
+  { name: 'Reddit', icon: faReddit, color: 'text-orange-600' },
+  { name: 'Spotify', icon: faSpotify, color: 'text-green-500' },
+  { name: 'Tumblr', icon: faTumblr, color: 'text-blue-900' },
 ];
 
 interface UniversalQueueListProps {
@@ -92,12 +106,12 @@ export function UniversalQueueList({
                 site.color,
               )}
             >
-              <i className={cn('fa', site.faIcon, 'text-[10px]')} aria-hidden="true" />
+              <FaIcon icon={site.icon} className="text-[10px]" />
               <span>{site.name}</span>
             </span>
           ))}
           <span className="inline-flex items-center gap-1.5 px-2 py-1 rounded-full bg-muted/50 text-[11px] text-muted-foreground">
-            <i className="fa fa-plus text-[10px]" aria-hidden="true" />
+            <FaIcon icon={faPlus} className="text-[10px]" />
             <span>{t('queue.empty.moreCount')}</span>
           </span>
         </div>

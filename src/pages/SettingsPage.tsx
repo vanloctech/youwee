@@ -1,3 +1,13 @@
+import type { IconDefinition } from '@fortawesome/fontawesome-svg-core';
+import {
+  faFacebook,
+  faGithub,
+  faReddit,
+  faTelegram,
+  faTwitter,
+  faWeibo,
+  faWhatsapp,
+} from '@fortawesome/free-brands-svg-icons';
 import { getVersion } from '@tauri-apps/api/app';
 import {
   AlertTriangle,
@@ -34,6 +44,7 @@ import {
   type SettingsSectionId,
   SettingsSidebar,
 } from '@/components/settings';
+import { FaIcon } from '@/components/shared/FaIcon';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -198,11 +209,18 @@ function AboutSettingsContent({
   const encodedUrl = encodeURIComponent(appUrl);
   const encodedText = encodeURIComponent(shareText);
 
-  const shareLinks = [
+  const shareLinks: Array<{
+    key: string;
+    label: string;
+    icon: IconDefinition;
+    color: string;
+    hoverBg: string;
+    href: string;
+  }> = [
     {
       key: 'x',
       label: 'X',
-      faIcon: 'fa-twitter',
+      icon: faTwitter,
       color: 'text-sky-400',
       hoverBg: 'hover:bg-sky-500/10',
       href: `https://x.com/intent/tweet?text=${encodedText}&url=${encodedUrl}`,
@@ -210,7 +228,7 @@ function AboutSettingsContent({
     {
       key: 'facebook',
       label: 'Facebook',
-      faIcon: 'fa-facebook',
+      icon: faFacebook,
       color: 'text-blue-600 dark:text-blue-400',
       hoverBg: 'hover:bg-blue-500/10',
       href: `https://www.facebook.com/sharer/sharer.php?u=${encodedUrl}`,
@@ -218,7 +236,7 @@ function AboutSettingsContent({
     {
       key: 'reddit',
       label: 'Reddit',
-      faIcon: 'fa-reddit',
+      icon: faReddit,
       color: 'text-orange-500',
       hoverBg: 'hover:bg-orange-500/10',
       href: `https://www.reddit.com/submit?url=${encodedUrl}&title=${encodedText}`,
@@ -226,7 +244,7 @@ function AboutSettingsContent({
     {
       key: 'telegram',
       label: 'Telegram',
-      faIcon: 'fa-telegram',
+      icon: faTelegram,
       color: 'text-sky-500',
       hoverBg: 'hover:bg-sky-500/10',
       href: `https://t.me/share/url?url=${encodedUrl}&text=${encodedText}`,
@@ -234,7 +252,7 @@ function AboutSettingsContent({
     {
       key: 'whatsapp',
       label: 'WhatsApp',
-      faIcon: 'fa-whatsapp',
+      icon: faWhatsapp,
       color: 'text-green-500',
       hoverBg: 'hover:bg-green-500/10',
       href: `https://wa.me/?text=${encodeURIComponent(`${shareText} ${appUrl}`)}`,
@@ -242,7 +260,7 @@ function AboutSettingsContent({
     {
       key: 'weibo',
       label: 'Weibo',
-      faIcon: 'fa-weibo',
+      icon: faWeibo,
       color: 'text-rose-500',
       hoverBg: 'hover:bg-rose-500/10',
       href: `https://service.weibo.com/share/share.php?url=${encodedUrl}&title=${encodedText}`,
@@ -429,9 +447,9 @@ function AboutSettingsContent({
           <div className="rounded-xl bg-muted/30 p-4 transition-all hover:bg-muted/40">
             <div className="flex items-center gap-2.5 mb-2">
               <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-violet-500/10">
-                <i
-                  className="fa fa-github text-[16px] text-violet-600 dark:text-violet-400"
-                  aria-hidden="true"
+                <FaIcon
+                  icon={faGithub}
+                  className="text-[16px] text-violet-600 dark:text-violet-400"
                 />
               </div>
               <p className="text-sm font-semibold">{t('about.communityTitle')}</p>
@@ -446,7 +464,7 @@ function AboutSettingsContent({
                 rel="noopener noreferrer"
                 className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-background/60 hover:bg-background text-xs font-medium transition-all hover:shadow-sm"
               >
-                <i className="fa fa-github text-[14px]" aria-hidden="true" />
+                <FaIcon icon={faGithub} className="text-[14px]" />
                 GitHub
               </a>
               <a
@@ -455,7 +473,7 @@ function AboutSettingsContent({
                 rel="noopener noreferrer"
                 className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-background/60 hover:bg-orange-500/10 text-xs font-medium transition-all text-orange-500 hover:shadow-sm"
               >
-                <i className="fa fa-reddit text-[12px]" aria-hidden="true" />
+                <FaIcon icon={faReddit} className="text-[12px]" />
                 Reddit
               </a>
             </div>
@@ -534,7 +552,7 @@ function AboutSettingsContent({
                   item.hoverBg,
                 )}
               >
-                <i className={cn('fa', item.faIcon, 'text-[13px]')} aria-hidden="true" />
+                <FaIcon icon={item.icon} className="text-[13px]" />
                 {item.label}
               </a>
             ))}

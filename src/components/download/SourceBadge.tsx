@@ -1,3 +1,4 @@
+import { FaIcon } from '@/components/shared/FaIcon';
 import { detectSource } from '@/lib/sources';
 import { cn } from '@/lib/utils';
 
@@ -18,7 +19,7 @@ export function SourceBadge({ extractor, className }: SourceBadgeProps) {
         className,
       )}
     >
-      <i className={cn('fa', source.faIcon, 'text-[11px]')} aria-hidden="true" />
+      <FaIcon icon={source.icon} className="text-[11px]" />
       <span>{source.label}</span>
     </span>
   );

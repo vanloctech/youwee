@@ -1,3 +1,5 @@
+import { faGithub } from '@fortawesome/free-brands-svg-icons';
+import { faGlobe as faGlobeIcon } from '@fortawesome/free-solid-svg-icons';
 import {
   AlertCircle,
   Check,
@@ -12,6 +14,7 @@ import {
 } from 'lucide-react';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { FaIcon } from '@/components/shared/FaIcon';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -477,7 +480,7 @@ export function DependenciesSection({ highlightId }: DependenciesSectionProps) {
               rel="noopener noreferrer"
               className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground mt-3 pt-3 border-t border-border/50"
             >
-              <i className="fa fa-github text-[12px]" aria-hidden="true" />
+              <FaIcon icon={faGithub} className="text-[12px]" />
               yt-dlp/yt-dlp
               <ExternalLink className="w-3 h-3" />
             </a>
@@ -747,7 +750,7 @@ export function DependenciesSection({ highlightId }: DependenciesSectionProps) {
               rel="noopener noreferrer"
               className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground mt-3 pt-3 border-t border-border/50"
             >
-              <i className="fa fa-globe text-[12px]" aria-hidden="true" />
+              <FaIcon icon={faGlobeIcon} className="text-[12px]" />
               deno.land
               <ExternalLink className="w-3 h-3" />
             </a>
@@ -820,7 +823,7 @@ export function DependenciesSection({ highlightId }: DependenciesSectionProps) {
               rel="noopener noreferrer"
               className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground mt-3 pt-3 border-t border-border/50"
             >
-              <i className="fa fa-github text-[12px]" aria-hidden="true" />
+              <FaIcon icon={faGithub} className="text-[12px]" />
               mikf/gallery-dl
               <ExternalLink className="w-3 h-3" />
             </a>

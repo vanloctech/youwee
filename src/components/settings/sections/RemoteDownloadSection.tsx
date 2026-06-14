@@ -1,3 +1,4 @@
+import { faTelegram } from '@fortawesome/free-brands-svg-icons';
 import {
   AlertCircle,
   BookOpen,
@@ -13,6 +14,7 @@ import {
 } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { FaIcon } from '@/components/shared/FaIcon';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -195,7 +197,7 @@ export function RemoteDownloadSection({ highlightId }: RemoteDownloadSectionProp
       <SettingsSection
         title={t('remoteDownload.telegramRemote')}
         description={t('remoteDownload.telegramRemoteDesc')}
-        icon={<i className="fa fa-telegram text-[20px] text-white" aria-hidden="true" />}
+        icon={<FaIcon icon={faTelegram} className="text-[20px] text-white" />}
         iconClassName="bg-gradient-to-br from-blue-500 to-cyan-600 shadow-blue-500/20"
       >
         {/* Enable toggle + status */}
@@ -297,10 +299,7 @@ export function RemoteDownloadSection({ highlightId }: RemoteDownloadSectionProp
                       <DialogContent className="max-w-lg">
                         <DialogHeader>
                           <DialogTitle className="flex items-center gap-2">
-                            <i
-                              className="fa fa-telegram text-[18px] text-blue-500"
-                              aria-hidden="true"
-                            />
+                            <FaIcon icon={faTelegram} className="text-[18px] text-blue-500" />
                             {t('remoteDownload.telegramSetupGuideTitle')}
                           </DialogTitle>
                           <DialogDescription>
@@ -467,7 +466,7 @@ export function RemoteDownloadSection({ highlightId }: RemoteDownloadSectionProp
               <DialogContent className="max-w-lg">
                 <DialogHeader>
                   <DialogTitle className="flex items-center gap-2">
-                    <i className="fa fa-telegram text-[18px] text-blue-500" aria-hidden="true" />
+                    <FaIcon icon={faTelegram} className="text-[18px] text-blue-500" />
                     {t('remoteDownload.telegramGuideTitle')}
                   </DialogTitle>
                   <DialogDescription>{t('remoteDownload.telegramGuideIntro')}</DialogDescription>

@@ -25,6 +25,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { CollectionManagerDialog } from '@/components/history/CollectionManagerDialog';
 import { HistoryTagsCollectionsDialog } from '@/components/history/HistoryTagsCollectionsDialog';
+import { FaIcon } from '@/components/shared/FaIcon';
 import { SimpleMarkdown } from '@/components/ui/simple-markdown';
 import { useAI } from '@/contexts/AIContext';
 import { useHistory } from '@/contexts/HistoryContext';
@@ -306,7 +307,7 @@ export function HistoryItem({ entry }: HistoryItemProps) {
             sourceConfig.color,
           )}
         >
-          <i className={`fa ${sourceConfig.faIcon} text-[9px]`} aria-hidden="true" />
+          <FaIcon icon={sourceConfig.icon} className="text-[9px]" />
           <span className="hidden sm:inline">{sourceLabel}</span>
         </div>
 
