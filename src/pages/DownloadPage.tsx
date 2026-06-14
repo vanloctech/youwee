@@ -248,6 +248,9 @@ export function DownloadPage({ onNavigateToSettings }: DownloadPageProps) {
                       onSchedule={schedule.setSchedule}
                       disabled={pendingCount === 0}
                       ns="download"
+                      triggerVariant="inline"
+                      triggerLabel={t('schedule.setSchedule')}
+                      triggerClassName="h-11 flex-shrink-0 rounded-xl border-border/50 bg-transparent px-4 text-sm font-medium hover:bg-white/10"
                     />
                   </>
                 ) : schedule.isScheduled && !isDownloading ? (

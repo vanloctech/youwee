@@ -381,7 +381,6 @@
 }
 
 .btn-gradient:hover {
-  transform: translateY(-1px);
   box-shadow:
     0 4px 20px hsl(var(--gradient-from) / 0.3),
     0 2px 10px hsl(var(--gradient-to) / 0.2);
