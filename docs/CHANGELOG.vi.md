@@ -8,9 +8,12 @@ và dự án tuân theo [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ## [Unreleased]
 
 ### Thay đổi
+- **Font và icon giao diện** - Đóng gói sẵn font và icon để giao diện hiển thị ổn định mà không phụ thuộc vào CDN bên ngoài
+- **Bố cục chi tiết plugin** - Đổi phần chi tiết plugin đã import trong Cài đặt sang dạng tab cho Thông tin, Quyền được yêu cầu, và Runtime & tương thích
 - **Nút tải thêm trong Kênh** - Đổi nút Tải thêm ở màn hình duyệt Kênh và chi tiết kênh đã theo dõi sang kiểu floating giống Tìm YouTube theo từ khóa
 
 ### Sửa lỗi
+- **Ẩn hiện trình phát nhạc** - Sửa lỗi trình phát nhạc khi thu gọn vẫn để lại lớp phủ vô hình, có thể chặn nút bên dưới và làm nhạc phát lại từ đầu khi người dùng bấm vào vùng bị che
 - **Trạng thái hoàn tất của Kênh** - Sửa lỗi video trong kênh đã theo dõi bị mất trạng thái hoàn tất sau khi mở lại app bằng cách lưu chắc trạng thái tải thủ công và khôi phục theo đúng video ID cùng file lịch sử còn tồn tại
 - **Theo dõi trùng kênh** - Trả về record kênh đã theo dõi hiện có khi follow lại cùng URL để tránh đồng bộ video vào channel id không tồn tại
 

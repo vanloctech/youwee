@@ -81,15 +81,6 @@ export function LogsPage() {
               </div>
             )}
           </div>
-
-          {/* Footer stats */}
-          {logs.length > 0 && (
-            <div className="flex-shrink-0 py-3 border-t border-white/[0.08]">
-              <p className="text-xs text-muted-foreground text-center">
-                {t('logs.stats', { count: visibleLogs.length })}
-              </p>
-            </div>
-          )}
         </div>
       </div>
     </div>

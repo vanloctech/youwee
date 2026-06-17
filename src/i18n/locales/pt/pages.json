@@ -168,7 +168,6 @@
     "loading": "Carregando registros...",
     "emptyTitle": "Nenhum registro a exibir",
     "emptyDescription": "Você tem um terminal de comando nativo no aplicativo para debugar os erros aqui...",
-    "stats": "{{count}} Registros no terminal • Auto-recarrega em 5s",
     "toolbar": {
       "searchPlaceholder": "Pesquisar nos registros...",
       "filterAll": "Tudo",

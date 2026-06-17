@@ -168,7 +168,6 @@
     "loading": "Chargement des journaux...",
     "emptyTitle": "Aucun journal pour le moment",
     "emptyDescription": "Les journaux apparaîtront ici lorsque vous commencerez à télécharger des vidéos. Vous verrez les commandes yt-dlp exécutées, les messages de succès/erreur et la sortie de débogage.",
-    "stats": "Affichage de {{count}} entrées de journal · Actualisation automatique toutes les 5 secondes",
     "toolbar": {
       "searchPlaceholder": "Rechercher dans les journaux...",
       "filterAll": "Tous",

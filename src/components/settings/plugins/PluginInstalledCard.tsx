@@ -3,8 +3,10 @@ import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Switch } from '@/components/ui/switch';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import type { PluginSummary } from '@/lib/types';
 import { cn } from '@/lib/utils';
+import { PluginConfigCard } from './PluginConfigCard';
 import { PluginPackageInfoCard } from './PluginPackageInfoCard';
 import { PluginPermissionsConfigCard } from './PluginPermissionsConfigCard';
 import { PluginRuntimeCompatibilityCard } from './PluginRuntimeCompatibilityCard';
@@ -170,12 +172,42 @@ export function PluginInstalledCard({
               </Button>
             </div>
 
-            <div className="space-y-3">
-              <PluginPackageInfoCard controller={controller} plugin={plugin} />
-              <PluginRuntimeCompatibilityCard controller={controller} plugin={plugin} />
-            </div>
+            <Tabs defaultValue="information" className="space-y-3">
+              <TabsList className="grid h-auto w-full grid-cols-3 rounded-lg bg-muted/40 p-1">
+                <TabsTrigger
+                  value="information"
+                  className="min-h-9 whitespace-normal px-2 py-1.5 text-[11px] leading-tight"
+                >
+                  {t('download.pluginPackageTitle')}
+                </TabsTrigger>
+                <TabsTrigger
+                  value="permissions"
+                  className="min-h-9 whitespace-normal px-2 py-1.5 text-[11px] leading-tight"
+                >
+                  {t('download.pluginPermissionsTitle')}
+                </TabsTrigger>
+                <TabsTrigger
+                  value="compatibility"
+                  className="min-h-9 whitespace-normal px-2 py-1.5 text-[11px] leading-tight"
+                >
+                  {t('download.pluginCompatibilityTitle')}
+                </TabsTrigger>
+              </TabsList>
 
-            <PluginPermissionsConfigCard controller={controller} plugin={plugin} />
+              <TabsContent value="information" className="mt-0">
+                <PluginPackageInfoCard controller={controller} plugin={plugin} />
+              </TabsContent>
+              <TabsContent value="permissions" className="mt-0">
+                <PluginPermissionsConfigCard controller={controller} plugin={plugin} />
+              </TabsContent>
+              <TabsContent value="compatibility" className="mt-0">
+                <PluginRuntimeCompatibilityCard controller={controller} plugin={plugin} />
+              </TabsContent>
+            </Tabs>
+
+            {plugin.manifest.configFields.length > 0 && (
+              <PluginConfigCard controller={controller} plugin={plugin} />
+            )}
           </div>
         </CollapsibleContent>
       </div>

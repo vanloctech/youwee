@@ -168,7 +168,6 @@
     "loading": "Loading logs...",
     "emptyTitle": "No logs yet",
     "emptyDescription": "Logs will appear here when you start downloading videos. You'll see the yt-dlp commands executed, success/error messages, and debug output.",
-    "stats": "Showing {{count}} log entries · Auto-refreshes every 5 seconds",
     "toolbar": {
       "searchPlaceholder": "Search logs...",
       "filterAll": "All",

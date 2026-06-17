@@ -168,7 +168,6 @@
     "loading": "加载日志中...",
     "emptyTitle": "暂无日志",
     "emptyDescription": "开始下载视频后日志将显示在此处。您将看到执行的 yt-dlp 命令、成功/错误消息和调试输出。",
-    "stats": "显示 {{count}} 条日志 · 每 5 秒自动刷新",
     "toolbar": {
       "searchPlaceholder": "搜索日志...",
       "filterAll": "全部",

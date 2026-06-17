@@ -3,7 +3,6 @@ import { useTranslation } from 'react-i18next';
 import { Switch } from '@/components/ui/switch';
 import type { PluginSummary } from '@/lib/types';
 import { cn } from '@/lib/utils';
-import { PluginConfigFieldEditor } from './PluginConfigFieldEditor';
 import {
   getFilesystemPermissionLabel,
   getToolPermissionLabel,
@@ -13,12 +12,7 @@ import type { PostDownloadPluginsCardController } from './usePostDownloadPlugins
 
 type PluginPermissionsConfigCardControllerProps = Pick<
   PostDownloadPluginsCardController,
-  | 'getConfigDraftValue'
-  | 'handleApprovePermissions'
-  | 'handleClearPluginConfig'
-  | 'handlePickPluginConfigPath'
-  | 'handleSavePluginConfig'
-  | 'setConfigDraftValue'
+  'handleApprovePermissions'
 >;
 
 export function PluginPermissionsConfigCard({
@@ -158,26 +152,6 @@ export function PluginPermissionsConfigCard({
           </div>
         </div>
       )}
-
-      <div className="mt-4 space-y-3 border-t border-border/50 pt-3">
-        <div className="space-y-1">
-          <p className="text-xs font-medium">{t('download.pluginConfigTitle')}</p>
-          <p className="text-[11px] text-muted-foreground">{t('download.pluginConfigDesc')}</p>
-        </div>
-
-        {plugin.manifest.configFields.length === 0 ? (
-          <p className="text-[11px] text-muted-foreground">{t('download.pluginConfigEmpty')}</p>
-        ) : (
-          plugin.manifest.configFields.map((field) => (
-            <PluginConfigFieldEditor
-              key={`${plugin.manifest.id}-${field.key}`}
-              controller={controller}
-              plugin={plugin}
-              field={field}
-            />
-          ))
-        )}
-      </div>
     </div>
   );
 }

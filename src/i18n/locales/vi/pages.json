@@ -168,7 +168,6 @@
     "loading": "Đang tải nhật ký...",
     "emptyTitle": "Chưa có nhật ký",
     "emptyDescription": "Nhật ký sẽ xuất hiện ở đây khi bạn bắt đầu tải video. Bạn sẽ thấy các lệnh yt-dlp được thực thi, thông báo thành công/lỗi và đầu ra debug.",
-    "stats": "Hiển thị {{count}} mục nhật ký · Tự động làm mới mỗi 5 giây",
     "toolbar": {
       "searchPlaceholder": "Tìm kiếm nhật ký...",
       "filterAll": "Tất cả",
