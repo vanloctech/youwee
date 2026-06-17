@@ -2,6 +2,7 @@ import {
   ArrowLeft,
   CheckSquare,
   Download,
+  ListPlus,
   Loader2,
   RefreshCw,
   Settings,
@@ -649,34 +650,41 @@ export function ChannelDetailView({ channel, onBack }: ChannelDetailViewProps) {
         </div>
       )}
 
-      <div className="flex-1 overflow-y-auto px-4 sm:px-6">
-        {browseLoading && <ChannelFetchLoadingState progress={browseFetchProgress} />}
+      <div className="relative flex-1 min-h-0">
+        <div className="h-full overflow-y-auto px-4 sm:px-6">
+          {browseLoading && <ChannelFetchLoadingState progress={browseFetchProgress} />}
 
-        {browseVideos.length > 0 && (
-          <div className="space-y-2 pb-4">
-            {browseVideos.map((video) => (
-              <ChannelVideoListItem
-                key={video.id}
-                video={video}
-                isSelected={selectedVideoIds.has(video.id)}
-                videoState={videoStates.get(video.id)}
-                onToggle={() => toggleVideoSelection(video.id)}
-              />
-            ))}
-            {(browseHasMore || browseLoadingMore) && (
-              <div className="flex justify-center pt-3">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={loadMoreChannelVideos}
-                  disabled={browseLoadingMore}
-                  className="rounded-md border border-dashed"
-                >
-                  {browseLoadingMore && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
-                  {t('loadMore')}
-                </Button>
-              </div>
-            )}
+          {browseVideos.length > 0 && (
+            <div className="space-y-2 pb-20">
+              {browseVideos.map((video) => (
+                <ChannelVideoListItem
+                  key={video.id}
+                  video={video}
+                  isSelected={selectedVideoIds.has(video.id)}
+                  videoState={videoStates.get(video.id)}
+                  onToggle={() => toggleVideoSelection(video.id)}
+                />
+              ))}
+            </div>
+          )}
+        </div>
+
+        {(browseHasMore || browseLoadingMore) && browseVideos.length > 0 && (
+          <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-10 px-4 pointer-events-none animate-in slide-in-from-bottom-4 fade-in duration-300">
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={loadMoreChannelVideos}
+              disabled={browseLoadingMore}
+              className="h-9 px-4 rounded-full text-sm font-medium bg-background/80 hover:bg-background/90 backdrop-blur-2xl supports-[backdrop-filter]:bg-background/60 border border-border/50 shadow-[0_8px_30px_rgb(0,0,0,0.12)] dark:shadow-[0_8px_30px_rgb(0,0,0,0.3)] ring-1 ring-white/10 pointer-events-auto"
+            >
+              {browseLoadingMore ? (
+                <Loader2 className="w-4 h-4 sm:mr-1.5 animate-spin" />
+              ) : (
+                <ListPlus className="w-4 h-4 sm:mr-1.5" />
+              )}
+              <span>{t('loadMore')}</span>
+            </Button>
           </div>
         )}
       </div>
