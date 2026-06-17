@@ -745,6 +745,15 @@ pub async fn get_saved_channel_videos(
     database::get_channel_videos_db(channel_id, status, limit)
 }
 
+/// Get channel videos from DB by exact video IDs
+#[tauri::command]
+pub async fn get_saved_channel_videos_by_video_ids(
+    channel_id: String,
+    video_ids: Vec<String>,
+) -> Result<Vec<ChannelVideo>, String> {
+    database::get_channel_videos_by_video_ids_db(channel_id, video_ids)
+}
+
 /// Update a channel video's status
 #[tauri::command]
 pub async fn update_channel_video_status(id: String, status: String) -> Result<(), String> {

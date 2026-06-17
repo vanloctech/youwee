@@ -441,6 +441,7 @@ pub fn run() {
             commands::update_channel_settings,
             commands::save_channel_videos,
             commands::get_saved_channel_videos,
+            commands::get_saved_channel_videos_by_video_ids,
             commands::update_channel_video_status,
             commands::update_channel_video_status_by_video_id,
             commands::get_new_videos_count,

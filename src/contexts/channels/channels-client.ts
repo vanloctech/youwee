@@ -133,6 +133,13 @@ export async function getSavedChannelVideos(input: {
   return invoke<ChannelVideo[]>('get_saved_channel_videos', input);
 }
 
+export async function getSavedChannelVideosByVideoIds(input: {
+  channelId: string;
+  videoIds: string[];
+}): Promise<ChannelVideo[]> {
+  return invoke<ChannelVideo[]>('get_saved_channel_videos_by_video_ids', input);
+}
+
 export async function downloadVideoCommand(input: Record<string, unknown>): Promise<void> {
   await invoke('download_video', input);
 }

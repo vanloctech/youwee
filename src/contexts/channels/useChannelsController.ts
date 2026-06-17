@@ -16,6 +16,7 @@ import type {
   YoutubeChannelContentType,
 } from '@/lib/types';
 import { DEFAULT_SPONSORBLOCK_CATEGORIES } from '@/lib/types';
+import { persistManualChannelDownloadCompletion } from './channel-downloads';
 import {
   type ChannelAutoDownloadEvent,
   downloadVideoCommand,
@@ -25,6 +26,7 @@ import {
   getFollowedChannels,
   getNewVideosCount,
   getSavedChannelVideos,
+  getSavedChannelVideosByVideoIds,
   onChannelAutoDownload,
   onChannelFetchProgress,
   onChannelNewVideos,
@@ -636,10 +638,9 @@ export function useChannelsController(): ChannelsContextType {
 
           // Load statuses from DB and merge into videoStates
           try {
-            const savedVideos = await getSavedChannelVideos({
+            const savedVideos = await getSavedChannelVideosByVideoIds({
               channelId: followedChannel.id,
-              status: null,
-              limit: videos.length + 50,
+              videoIds: videos.map((video) => video.id),
             });
 
             // Build a map: YouTube videoId -> DB status
@@ -881,39 +882,51 @@ export function useChannelsController(): ChannelsContextType {
         });
 
         try {
-          await downloadVideoCommand({
-            id: downloadId,
-            url: video.url,
-            outputPath: currentOutputPath,
-            quality,
-            format,
-            downloadPlaylist: false,
-            videoCodec,
-            audioBitrate,
-            playlistLimit: null,
-            subtitleMode,
-            subtitleLangs: subtitleLangs.join(','),
-            subtitleEmbed,
-            subtitleFormat,
-            logStderr,
-            useBunRuntime,
-            useActualPlayerJs,
-            ...networkOptions,
-            embedMetadata,
-            embedThumbnail,
-            liveFromStart,
-            speedLimit,
-            useAria2,
-            aria2Args,
-            sponsorblockRemove: sponsorBlockArgs.remove,
-            sponsorblockMark: sponsorBlockArgs.mark,
-            historyId: null,
-            title: video.title || null,
-            thumbnail: video.thumbnail || null,
-            source: detectPlatform(browseUrl) || 'youtube',
-            pluginWorkflowSnapshots: workflowSnapshots,
-            postDownloadWorkflowSteps: loadPostDownloadWorkflowSteps(),
-            downloadKind: 'channel-manual',
+          await persistManualChannelDownloadCompletion({
+            downloadVideo: () =>
+              downloadVideoCommand({
+                id: downloadId,
+                url: video.url,
+                outputPath: currentOutputPath,
+                quality,
+                format,
+                downloadPlaylist: false,
+                videoCodec,
+                audioBitrate,
+                playlistLimit: null,
+                subtitleMode,
+                subtitleLangs: subtitleLangs.join(','),
+                subtitleEmbed,
+                subtitleFormat,
+                logStderr,
+                useBunRuntime,
+                useActualPlayerJs,
+                ...networkOptions,
+                embedMetadata,
+                embedThumbnail,
+                liveFromStart,
+                speedLimit,
+                useAria2,
+                aria2Args,
+                sponsorblockRemove: sponsorBlockArgs.remove,
+                sponsorblockMark: sponsorBlockArgs.mark,
+                historyId: null,
+                title: video.title || null,
+                thumbnail: video.thumbnail || null,
+                source: detectPlatform(browseUrl) || 'youtube',
+                pluginWorkflowSnapshots: workflowSnapshots,
+                postDownloadWorkflowSteps: loadPostDownloadWorkflowSteps(),
+                downloadKind: 'channel-manual',
+              }),
+            markDownloaded: () =>
+              updateChannelVideoStatusByVideoId({
+                channelUrl: browseUrl,
+                videoId: video.id,
+                status: 'downloaded',
+              }),
+            onPersistError: (error) => {
+              console.error('Failed to update video status in DB:', error);
+            },
           });
         } catch (error) {
           const msg = localizeUnknownError(error);
