@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.17.2] - 2026-06-17
+
 ### Changed
 - **Interface font and icons** - Bundled the app font and icons so the interface stays consistent without relying on external CDN resources
 - **Plugin details layout** - Changed imported plugin details in Settings to use tabs for Information, Requested Permissions, and Runtime & Compatibility
