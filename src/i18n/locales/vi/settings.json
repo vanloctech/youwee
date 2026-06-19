@@ -432,10 +432,13 @@
     "retryDelay": "Độ trễ",
     "secondsShort": "giây",
     "customYtdlpArgs": "Tham số yt-dlp tùy chỉnh",
-    "customYtdlpArgsDesc": "Thêm cờ bổ sung vào mọi lệnh yt-dlp",
+    "customYtdlpArgsDesc": "Nâng cao: thêm cờ bổ sung vào mọi lệnh yt-dlp",
     "customYtdlpArgsLabel": "Tham số bổ sung",
     "customYtdlpArgsLabelDesc": "Cờ thô truyền trực tiếp cho yt-dlp (ví dụ: --no-check-certificates --ignore-errors)",
-    "customYtdlpArgsPlaceholder": "--no-check-certificates"
+    "customYtdlpArgsPlaceholder": "--no-check-certificates",
+    "customYtdlpArgsWarningTitle": "Tính năng nâng cao — sử dụng cẩn thận",
+    "customYtdlpArgsWarningBody": "Các cờ này được truyền trực tiếp cho yt-dlp. Các cờ nguy hiểm như --exec, --config-location và --cookies sẽ tự động bị chặn để đảm bảo an toàn.",
+    "customYtdlpArgsBlocked": "Cờ bị chặn: --exec, --exec-before-download, --config-location, --batch-file, --download-archive, --cookies, --cookies-from-browser, --load-info-json, --plugin-dirs"
   },
   "plugins": {
     "title": "Plugin",

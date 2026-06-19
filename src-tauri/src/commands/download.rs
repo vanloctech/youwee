@@ -392,6 +392,41 @@ pub(crate) fn shell_split_args(s: &str) -> Vec<String> {
     tokens
 }
 
+/// Flags that can execute arbitrary commands, access filesystem, or change network behavior
+/// in ways the app doesn't normally control.
+const DANGEROUS_YTDLP_FLAGS: &[&str] = &[
+    "--exec",
+    "--exec-before-download",
+    "--config-location",
+    "--config-locations",
+    "--batch-file",
+    "--download-archive",
+    "--cookies",
+    "--cookies-from-browser",
+    "--output-na-placeholder",
+    "--load-info-json",
+    "--plugin-dirs",
+];
+
+/// Validate custom yt-dlp arguments, rejecting dangerous flags.
+/// Returns Ok(filtered_tokens) or Err(reason).
+pub(crate) fn validate_custom_ytdlp_args(raw: &str) -> Result<Vec<String>, String> {
+    let tokens = shell_split_args(raw);
+    for token in &tokens {
+        let flag = token.to_lowercase();
+        // Check exact match and prefix match (--exec=something)
+        for dangerous in DANGEROUS_YTDLP_FLAGS {
+            if flag == *dangerous || flag.starts_with(&format!("{}=", dangerous)) {
+                return Err(format!(
+                    "Blocked dangerous flag '{}'. This flag can execute arbitrary commands or access sensitive data.",
+                    token
+                ));
+            }
+        }
+    }
+    Ok(tokens)
+}
+
 fn normalize_aria2_args(raw_args: &str) -> Option<String> {
     let trimmed = raw_args.trim();
     if trimmed.is_empty() {
@@ -747,9 +782,16 @@ pub async fn download_video(
     if let Some(ref raw) = custom_ytdlp_args {
         let trimmed = raw.trim();
         if !trimmed.is_empty() {
-            // Split on whitespace, respecting simple quoted tokens
-            for token in shell_split_args(trimmed) {
-                args.push(token);
+            match validate_custom_ytdlp_args(trimmed) {
+                Ok(tokens) => {
+                    for token in tokens {
+                        args.push(token);
+                    }
+                }
+                Err(reason) => {
+                    log::warn!("Custom yt-dlp args rejected: {}", reason);
+                    return Err(BackendError::from_message(reason).to_wire_string());
+                }
             }
         }
     }

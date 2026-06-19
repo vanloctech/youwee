@@ -142,8 +142,15 @@ pub async fn get_video_transcript(
         if let Some(ref raw) = custom_ytdlp_args {
             let trimmed = raw.trim();
             if !trimmed.is_empty() {
-                for token in super::download::shell_split_args(trimmed) {
-                    subtitle_args.push(token);
+                match super::download::validate_custom_ytdlp_args(trimmed) {
+                    Ok(tokens) => {
+                        for token in tokens {
+                            subtitle_args.push(token);
+                        }
+                    }
+                    Err(reason) => {
+                        log::warn!("Custom yt-dlp args rejected: {}", reason);
+                    }
                 }
             }
         }
@@ -812,8 +819,16 @@ pub async fn get_video_info(
     if let Some(ref raw) = custom_ytdlp_args {
         let trimmed = raw.trim();
         if !trimmed.is_empty() {
-            for token in super::download::shell_split_args(trimmed) {
-                extra_args.push(token);
+            match super::download::validate_custom_ytdlp_args(trimmed) {
+                Ok(tokens) => {
+                    for token in tokens {
+                        extra_args.push(token);
+                    }
+                }
+                Err(reason) => {
+                    log::warn!("Custom yt-dlp args rejected: {}", reason);
+                    return Err(BackendError::from_message(reason).to_wire_string());
+                }
             }
         }
     }
@@ -1026,8 +1041,16 @@ pub async fn get_playlist_entries(
     if let Some(ref raw) = custom_ytdlp_args {
         let trimmed = raw.trim();
         if !trimmed.is_empty() {
-            for token in super::download::shell_split_args(trimmed) {
-                args.push(token);
+            match super::download::validate_custom_ytdlp_args(trimmed) {
+                Ok(tokens) => {
+                    for token in tokens {
+                        args.push(token);
+                    }
+                }
+                Err(reason) => {
+                    log::warn!("Custom yt-dlp args rejected: {}", reason);
+                    return Err(BackendError::from_message(reason).to_wire_string());
+                }
             }
         }
     }

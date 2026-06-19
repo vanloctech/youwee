@@ -432,10 +432,13 @@
     "retryDelay": "间隔",
     "secondsShort": "秒",
     "customYtdlpArgs": "自定义 yt-dlp 参数",
-    "customYtdlpArgsDesc": "为每条 yt-dlp 命令追加额外标志",
+    "customYtdlpArgsDesc": "高级：为每条 yt-dlp 命令追加额外标志",
     "customYtdlpArgsLabel": "额外参数",
     "customYtdlpArgsLabelDesc": "直接传递给 yt-dlp 的原始标志（例如 --no-check-certificates --ignore-errors）",
-    "customYtdlpArgsPlaceholder": "--no-check-certificates"
+    "customYtdlpArgsPlaceholder": "--no-check-certificates",
+    "customYtdlpArgsWarningTitle": "高级功能 — 请谨慎使用",
+    "customYtdlpArgsWarningBody": "这些标志直接传递给 yt-dlp。危险标志如 --exec、--config-location 和 --cookies 会被自动阻止以确保安全。",
+    "customYtdlpArgsBlocked": "已阻止的标志：--exec, --exec-before-download, --config-location, --batch-file, --download-archive, --cookies, --cookies-from-browser, --load-info-json, --plugin-dirs"
   },
   "plugins": {
     "title": "插件",

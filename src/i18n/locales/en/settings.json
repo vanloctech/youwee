@@ -432,10 +432,13 @@
     "retryDelay": "Delay",
     "secondsShort": "s",
     "customYtdlpArgs": "Custom yt-dlp Arguments",
-    "customYtdlpArgsDesc": "Append extra flags to every yt-dlp command",
+    "customYtdlpArgsDesc": "Advanced: append extra flags to every yt-dlp command",
     "customYtdlpArgsLabel": "Extra Arguments",
     "customYtdlpArgsLabelDesc": "Raw flags passed directly to yt-dlp (e.g. --no-check-certificates --ignore-errors)",
-    "customYtdlpArgsPlaceholder": "--no-check-certificates"
+    "customYtdlpArgsPlaceholder": "--no-check-certificates",
+    "customYtdlpArgsWarningTitle": "Advanced feature — use with caution",
+    "customYtdlpArgsWarningBody": "These flags are passed directly to yt-dlp. Dangerous flags like --exec, --config-location, and --cookies are automatically blocked for safety.",
+    "customYtdlpArgsBlocked": "Blocked flags: --exec, --exec-before-download, --config-location, --batch-file, --download-archive, --cookies, --cookies-from-browser, --load-info-json, --plugin-dirs"
   },
   "plugins": {
     "title": "Plugins",

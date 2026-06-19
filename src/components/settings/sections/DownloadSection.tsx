@@ -385,7 +385,7 @@ export function DownloadSection({ highlightId }: DownloadSectionProps) {
 
       <SettingsDivider />
 
-      {/* Custom yt-dlp Arguments */}
+      {/* Custom yt-dlp Arguments — Advanced/Danger Mode */}
       <SettingsSection
         title={t('download.customYtdlpArgs')}
         description={t('download.customYtdlpArgsDesc')}
@@ -393,6 +393,15 @@ export function DownloadSection({ highlightId }: DownloadSectionProps) {
         iconClassName="bg-gradient-to-br from-zinc-500 to-slate-600 shadow-zinc-500/20"
       >
         <SettingsCard>
+          {/* Warning banner */}
+          <div className="flex items-start gap-2 p-3 rounded-lg bg-amber-500/10 border border-amber-500/20 mb-3">
+            <ShieldCheck className="w-4 h-4 text-amber-600 dark:text-amber-400 mt-0.5 flex-shrink-0" />
+            <div className="text-xs text-amber-700 dark:text-amber-300">
+              <p className="font-medium">{t('download.customYtdlpArgsWarningTitle')}</p>
+              <p className="mt-0.5 opacity-80">{t('download.customYtdlpArgsWarningBody')}</p>
+            </div>
+          </div>
+
           <SettingsRow
             id="custom-ytdlp-args"
             label={t('download.customYtdlpArgsLabel')}
@@ -403,9 +412,19 @@ export function DownloadSection({ highlightId }: DownloadSectionProps) {
               value={settings.customYtdlpArgs}
               onChange={(e) => updateCustomYtdlpArgs(e.target.value)}
               placeholder={t('download.customYtdlpArgsPlaceholder')}
-              className="h-9 w-full bg-background md:w-[340px]"
+              className={cn(
+                'h-9 w-full bg-background md:w-[340px]',
+                settings.customYtdlpArgs && 'border-amber-500/50',
+              )}
             />
           </SettingsRow>
+
+          {/* Blocked flags info */}
+          <div className="px-3 pb-3 pt-1">
+            <p className="text-[10px] text-muted-foreground">
+              {t('download.customYtdlpArgsBlocked')}
+            </p>
+          </div>
         </SettingsCard>
       </SettingsSection>
     </div>
