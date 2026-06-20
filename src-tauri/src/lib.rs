@@ -21,6 +21,7 @@ use std::sync::Mutex;
 use tauri::menu::{MenuBuilder, MenuItemBuilder, SubmenuBuilder};
 use tauri::tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent};
 use tauri::{Emitter, Manager};
+use tauri_plugin_deep_link::DeepLinkExt;
 
 /// Whether to hide the dock icon when closing the window (macOS only)
 static HIDE_DOCK_ON_CLOSE: AtomicBool = AtomicBool::new(false);
@@ -69,6 +70,19 @@ fn show_main_window(app_handle: &tauri::AppHandle) {
         let _ = window.show();
         let _ = window.set_focus();
     }
+}
+
+fn dispatch_external_links(app_handle: &tauri::AppHandle, links: Vec<String>) {
+    if links.is_empty() {
+        return;
+    }
+
+    commands::enqueue_external_links(links.clone());
+    let _ = app_handle.emit(
+        "external-open-url",
+        commands::ExternalOpenUrlEventPayload { urls: links },
+    );
+    show_main_window(app_handle);
 }
 
 /// Tauri command: set the hide-dock-on-close preference
@@ -123,11 +137,7 @@ pub fn run() {
             let links = commands::extract_external_links_from_argv(&argv);
             let has_links = !links.is_empty();
             if has_links {
-                commands::enqueue_external_links(links.clone());
-                let _ = app.emit(
-                    "external-open-url",
-                    commands::ExternalOpenUrlEventPayload { urls: links },
-                );
+                dispatch_external_links(app, links);
             }
 
             // CLI style invocation (youwee <url> [--quality ...]) while the app
@@ -169,6 +179,17 @@ pub fn run() {
             if has_initial_links {
                 commands::enqueue_external_links(initial_links);
             }
+
+            let app_handle = app.handle().clone();
+            app.deep_link().on_open_url(move |event| {
+                let urls = event
+                    .urls()
+                    .into_iter()
+                    .map(|url| url.to_string())
+                    .collect::<Vec<_>>();
+                let links = commands::extract_external_links_from_argv(&urls);
+                dispatch_external_links(&app_handle, links);
+            });
 
             // CLI invocation (youwee <url> [--quality ...]) on cold start.
             // Use the declared CLI schema when available, falling back to a

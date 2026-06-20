@@ -7,6 +7,9 @@ và dự án tuân theo [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+### Sửa lỗi
+- **Tải từ extension khi app chưa mở** - Sửa lỗi bấm `Download now` trong browser extension chỉ mở Youwee nhưng không thêm video khi app desktop chưa chạy sẵn
+
 ## [0.17.2] - 2026-06-17
 
 ### Thay đổi
