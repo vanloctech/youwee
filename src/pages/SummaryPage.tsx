@@ -15,7 +15,7 @@ import {
   Square,
   X,
 } from 'lucide-react';
-import { useCallback, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { ThemePicker } from '@/components/settings/ThemePicker';
 import { EmptyStateIllustration } from '@/components/shared/EmptyStateIllustration';
@@ -37,6 +37,9 @@ import { cn } from '@/lib/utils';
 
 interface SummaryPageProps {
   onNavigateToSettings?: (section?: string) => void;
+  externalUrl?: string;
+  externalRequestId?: number;
+  onExternalRequestConsumed?: () => void;
 }
 
 interface VideoInfo {
@@ -59,7 +62,12 @@ function providerRequiresApiKey(provider: string) {
   return provider !== 'ollama' && provider !== 'lmstudio';
 }
 
-export function SummaryPage({ onNavigateToSettings }: SummaryPageProps) {
+export function SummaryPage({
+  onNavigateToSettings,
+  externalUrl,
+  externalRequestId,
+  onExternalRequestConsumed,
+}: SummaryPageProps) {
   const { t } = useTranslation('pages');
   const ai = useAI();
   const { cookieSettings, getProxyUrl } = useDownload();
@@ -88,127 +96,146 @@ export function SummaryPage({ onNavigateToSettings }: SummaryPageProps) {
 
   // Cancellation ref
   const isCancelledRef = useRef(false);
+  const lastExternalRequestIdRef = useRef<number | null>(null);
 
-  const handleSummarize = useCallback(async () => {
-    if (!url.trim()) {
-      setError(t('summary.errors.enterUrl'));
-      return;
-    }
+  const runSummary = useCallback(
+    async (inputUrl: string) => {
+      const normalizedUrl = inputUrl.trim();
 
-    if (!isYouTubeUrl(url)) {
-      setError(t('summary.errors.invalidUrl'));
-      return;
-    }
-
-    if (!ai.config.enabled) {
-      setError(t('summary.errors.aiNotEnabled'));
-      return;
-    }
-
-    if (requiresApiKey && !ai.config.api_key) {
-      setError(t('summary.errors.noApiKey'));
-      return;
-    }
-
-    setIsLoading(true);
-    setError(null);
-    setResult(null);
-    setSaved(false);
-    isCancelledRef.current = false;
-
-    let activeStep = '';
-    const updateLoadingStatus = (status: string) => {
-      activeStep = status;
-      setLoadingStatus(status);
-    };
-
-    try {
-      // Step 1: Fetch video info
-      updateLoadingStatus(t('summary.loading.fetchingInfo'));
-      const videoInfoResponse = await invoke<{
-        info: {
-          title: string;
-          thumbnail?: string;
-          duration?: number;
-        };
-      }>('get_video_basic_info', {
-        url: url.trim(),
-        cookieMode: cookieSettings.mode,
-        cookieBrowser: cookieSettings.browser || null,
-        cookieBrowserProfile: cookieSettings.browserProfile || null,
-        cookieFilePath: cookieSettings.filePath || null,
-        proxyUrl: getProxyUrl() || null,
-      });
-
-      if (isCancelledRef.current) return;
-
-      console.log('Video info response:', videoInfoResponse);
-      const videoInfo = videoInfoResponse.info;
-      console.log('Video info:', videoInfo);
-
-      if (!videoInfo || !videoInfo.title) {
-        throw new Error('Failed to fetch video information');
+      if (!normalizedUrl) {
+        setError(t('summary.errors.enterUrl'));
+        return;
       }
 
-      // Step 2: Fetch transcript
-      updateLoadingStatus(t('summary.loading.fetchingTranscript'));
-      const transcript = await invoke<string>('get_video_transcript', {
-        url: url.trim(),
-        languages: transcriptLanguages,
-        cookieMode: cookieSettings.mode,
-        cookieBrowser: cookieSettings.browser || null,
-        cookieBrowserProfile: cookieSettings.browserProfile || null,
-        cookieFilePath: cookieSettings.filePath || null,
-        proxyUrl: getProxyUrl() || null,
-      });
-
-      if (isCancelledRef.current) return;
-
-      if (!transcript || transcript.trim() === '') {
-        throw new Error('No transcript available for this video');
+      if (!isYouTubeUrl(normalizedUrl)) {
+        setError(t('summary.errors.invalidUrl'));
+        return;
       }
 
-      // Step 3: Generate summary with local settings
-      updateLoadingStatus(t('summary.loading.generating'));
-      const summaryResult = await invoke<{ summary: string }>('generate_summary_with_options', {
-        transcript,
-        style: summaryStyle,
-        language: summaryLanguage,
-        title: videoInfo.title,
-      });
+      if (!ai.config.enabled) {
+        setError(t('summary.errors.aiNotEnabled'));
+        return;
+      }
 
-      if (isCancelledRef.current) return;
+      if (requiresApiKey && !ai.config.api_key) {
+        setError(t('summary.errors.noApiKey'));
+        return;
+      }
 
-      setResult({
-        summary: summaryResult.summary,
-        videoInfo: {
-          url: url.trim(),
+      setIsLoading(true);
+      setError(null);
+      setResult(null);
+      setSaved(false);
+      isCancelledRef.current = false;
+
+      let activeStep = '';
+      const updateLoadingStatus = (status: string) => {
+        activeStep = status;
+        setLoadingStatus(status);
+      };
+
+      try {
+        // Step 1: Fetch video info
+        updateLoadingStatus(t('summary.loading.fetchingInfo'));
+        const videoInfoResponse = await invoke<{
+          info: {
+            title: string;
+            thumbnail?: string;
+            duration?: number;
+          };
+        }>('get_video_basic_info', {
+          url: normalizedUrl,
+          cookieMode: cookieSettings.mode,
+          cookieBrowser: cookieSettings.browser || null,
+          cookieBrowserProfile: cookieSettings.browserProfile || null,
+          cookieFilePath: cookieSettings.filePath || null,
+          proxyUrl: getProxyUrl() || null,
+        });
+
+        if (isCancelledRef.current) return;
+
+        console.log('Video info response:', videoInfoResponse);
+        const videoInfo = videoInfoResponse.info;
+        console.log('Video info:', videoInfo);
+
+        if (!videoInfo || !videoInfo.title) {
+          throw new Error('Failed to fetch video information');
+        }
+
+        // Step 2: Fetch transcript
+        updateLoadingStatus(t('summary.loading.fetchingTranscript'));
+        const transcript = await invoke<string>('get_video_transcript', {
+          url: normalizedUrl,
+          languages: transcriptLanguages,
+          cookieMode: cookieSettings.mode,
+          cookieBrowser: cookieSettings.browser || null,
+          cookieBrowserProfile: cookieSettings.browserProfile || null,
+          cookieFilePath: cookieSettings.filePath || null,
+          proxyUrl: getProxyUrl() || null,
+        });
+
+        if (isCancelledRef.current) return;
+
+        if (!transcript || transcript.trim() === '') {
+          throw new Error('No transcript available for this video');
+        }
+
+        // Step 3: Generate summary with local settings
+        updateLoadingStatus(t('summary.loading.generating'));
+        const summaryResult = await invoke<{ summary: string }>('generate_summary_with_options', {
+          transcript,
+          style: summaryStyle,
+          language: summaryLanguage,
           title: videoInfo.title,
-          thumbnail: videoInfo.thumbnail,
-          duration: videoInfo.duration,
-        },
-      });
-    } catch (err) {
-      if (isCancelledRef.current) return;
-      const message = localizeUnknownError(err);
-      setError(activeStep ? `${activeStep}: ${message}` : message);
-    } finally {
-      if (!isCancelledRef.current) {
-        setIsLoading(false);
-        setLoadingStatus('');
+        });
+
+        if (isCancelledRef.current) return;
+
+        setResult({
+          summary: summaryResult.summary,
+          videoInfo: {
+            url: normalizedUrl,
+            title: videoInfo.title,
+            thumbnail: videoInfo.thumbnail,
+            duration: videoInfo.duration,
+          },
+        });
+      } catch (err) {
+        if (isCancelledRef.current) return;
+        const message = localizeUnknownError(err);
+        setError(activeStep ? `${activeStep}: ${message}` : message);
+      } finally {
+        if (!isCancelledRef.current) {
+          setIsLoading(false);
+          setLoadingStatus('');
+        }
       }
-    }
-  }, [
-    url,
-    ai.config,
-    requiresApiKey,
-    summaryStyle,
-    summaryLanguage,
-    transcriptLanguages,
-    cookieSettings,
-    getProxyUrl,
-    t,
-  ]);
+    },
+    [
+      ai.config,
+      requiresApiKey,
+      summaryStyle,
+      summaryLanguage,
+      transcriptLanguages,
+      cookieSettings,
+      getProxyUrl,
+      t,
+    ],
+  );
+
+  const handleSummarize = useCallback(() => {
+    void runSummary(url);
+  }, [runSummary, url]);
+
+  useEffect(() => {
+    if (!externalUrl || !externalRequestId) return;
+    if (lastExternalRequestIdRef.current === externalRequestId) return;
+
+    lastExternalRequestIdRef.current = externalRequestId;
+    setUrl(externalUrl);
+    onExternalRequestConsumed?.();
+    void runSummary(externalUrl);
+  }, [externalRequestId, externalUrl, onExternalRequestConsumed, runSummary]);
 
   const handleStop = useCallback(() => {
     isCancelledRef.current = true;

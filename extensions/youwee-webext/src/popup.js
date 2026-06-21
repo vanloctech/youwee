@@ -27,6 +27,7 @@
   const madeWithByEl = document.getElementById('madeWithBy');
   const downloadBtn = document.getElementById('downloadBtn');
   const queueBtn = document.getElementById('queueBtn');
+  const summaryBtn = document.getElementById('summaryBtn');
   let mediaMode = 'video';
 
   function queryTabs(query) {
@@ -281,6 +282,7 @@
     if (mediaAudioBtn) mediaAudioBtn.textContent = t('floatingMediaAudio', 'Audio');
     downloadBtn.textContent = t('popupPrimaryAction', 'Download now with Youwee');
     queueBtn.textContent = t('popupQueueAction', 'Add to queue in Youwee');
+    summaryBtn.textContent = t('popupSummaryAction', 'AI Summary');
     madeWithPrefixEl.textContent = t('popupMadeWith', 'Made with');
     madeWithByEl.textContent = t('popupBy', 'by');
     updateFloatingToggleUi();
@@ -295,6 +297,8 @@
       setStatus(t('popupStatusInvalid', 'This tab cannot be sent to Youwee.'), 'error');
       downloadBtn.disabled = true;
       queueBtn.disabled = true;
+      summaryBtn.disabled = true;
+      summaryBtn.title = '';
       copyUrlIconBtn.disabled = true;
       if (mediaVideoBtn) mediaVideoBtn.disabled = true;
       if (mediaAudioBtn) mediaAudioBtn.disabled = true;
@@ -303,9 +307,14 @@
     }
 
     currentUrl = ext.normalizeVideoUrl(url);
+    const canSummarize = ext.isYouTubeUrl(currentUrl);
     urlValueEl.textContent = currentUrl;
     downloadBtn.disabled = false;
     queueBtn.disabled = false;
+    summaryBtn.disabled = !canSummarize;
+    summaryBtn.title = canSummarize
+      ? ''
+      : t('floatingSummaryUnavailable', 'Summary is available for YouTube videos');
     copyUrlIconBtn.disabled = false;
     if (mediaVideoBtn) mediaVideoBtn.disabled = false;
     if (mediaAudioBtn) mediaAudioBtn.disabled = false;
@@ -353,6 +362,30 @@
     }
   }
 
+  async function handleSummaryClick() {
+    if (!currentUrl) return;
+
+    try {
+      if (Number.isInteger(activeTabId)) {
+        await sendMessageToTab(activeTabId, {
+          type: 'youwee:open-deep-link',
+          url: currentUrl,
+          action: 'summary',
+        });
+      } else {
+        ext.openSummaryDeepLink(currentUrl);
+      }
+      setStatus(t('popupStatusSummaryOpening', 'Opening AI Summary in Youwee...'), 'ok');
+    } catch {
+      try {
+        ext.openSummaryDeepLink(currentUrl);
+        setStatus(t('popupStatusSummaryOpening', 'Opening AI Summary in Youwee...'), 'ok');
+      } catch {
+        setStatus(t('popupStatusOpenFailed', 'Failed to open Youwee.'), 'error');
+      }
+    }
+  }
+
   async function handleCopyClick() {
     if (!currentUrl) return;
     try {
@@ -383,6 +416,9 @@
     });
     queueBtn.addEventListener('click', () => {
       void handleDownloadClick('queue_only');
+    });
+    summaryBtn.addEventListener('click', () => {
+      void handleSummaryClick();
     });
     copyUrlIconBtn.addEventListener('click', () => {
       void handleCopyClick();

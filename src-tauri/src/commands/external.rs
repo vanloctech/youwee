@@ -34,7 +34,7 @@ fn is_valid_external_link(link: &str) -> bool {
     if trimmed.is_empty() || trimmed.len() > MAX_EXTERNAL_LINK_LENGTH {
         return false;
     }
-    if !trimmed.starts_with("youwee://download") {
+    if !trimmed.starts_with("youwee://download") && !trimmed.starts_with("youwee://summary") {
         return false;
     }
     trimmed.contains("v=1") && trimmed.contains("url=")
@@ -100,6 +100,21 @@ mod tests {
         assert_eq!(
             links,
             vec!["youwee://download?v=1&url=https%3A%2F%2Fexample.com%2Fvideo"]
+        );
+    }
+
+    #[test]
+    fn summary_deep_link_extraction_uses_same_pending_queue() {
+        let argv = vec![
+            "youwee".to_string(),
+            "youwee://summary?v=1&url=https%3A%2F%2Fwww.youtube.com%2Fwatch%3Fv%3Dabc123".to_string(),
+        ];
+
+        let links = extract_external_links_from_argv(&argv);
+
+        assert_eq!(
+            links,
+            vec!["youwee://summary?v=1&url=https%3A%2F%2Fwww.youtube.com%2Fwatch%3Fv%3Dabc123"]
         );
     }
 }

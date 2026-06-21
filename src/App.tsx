@@ -50,6 +50,10 @@ function AppContent() {
   const [currentPage, setCurrentPage] = useState<Page>('youtube');
   const [settingsInitialSection, setSettingsInitialSection] =
     useState<SettingsSectionId>('general');
+  const [externalSummaryRequest, setExternalSummaryRequest] = useState<{
+    id: number;
+    url: string;
+  } | null>(null);
   const [showFfmpegDialog, setShowFfmpegDialog] = useState(false);
   const [showDenoDialog, setShowDenoDialog] = useState(false);
   const [ffmpegChecked, setFfmpegChecked] = useState(false);
@@ -58,13 +62,27 @@ function AppContent() {
     useDependencies();
   const { isTransitioning, oldMode, applyPendingTheme, onTransitionComplete } = useTheme();
   const externalStartLockRef = useRef({ youtube: false, universal: false });
+  const externalSummaryRequestIdRef = useRef(0);
 
   const openSettingsPage = useCallback((section: SettingsSectionId = 'general') => {
     setSettingsInitialSection(section);
     setCurrentPage('settings');
   }, []);
 
-  useExternalDownloadLinks(setCurrentPage, externalStartLockRef);
+  const openExternalSummary = useCallback((url: string) => {
+    externalSummaryRequestIdRef.current += 1;
+    setExternalSummaryRequest({
+      id: externalSummaryRequestIdRef.current,
+      url,
+    });
+    setCurrentPage('summary');
+  }, []);
+
+  const clearExternalSummaryRequest = useCallback(() => {
+    setExternalSummaryRequest(null);
+  }, []);
+
+  useExternalDownloadLinks(setCurrentPage, externalStartLockRef, openExternalSummary);
   useTelegramRemoteCommands(setCurrentPage, externalStartLockRef);
   useTrayDownloadStatus();
   useTrayEvents(setCurrentPage, openSettingsPage, updater.checkForUpdate);
@@ -152,6 +170,9 @@ function AppContent() {
         {currentPage === 'channels' && <ChannelsPage />}
         {currentPage === 'summary' && (
           <SummaryPage
+            externalRequestId={externalSummaryRequest?.id}
+            externalUrl={externalSummaryRequest?.url}
+            onExternalRequestConsumed={clearExternalSummaryRequest}
             onNavigateToSettings={(section) => {
               openSettingsPage(section === 'ai' ? 'ai' : 'general');
             }}

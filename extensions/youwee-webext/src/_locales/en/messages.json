@@ -41,8 +41,17 @@
   "floatingButtonAddQueue": {
     "message": "Add to queue"
   },
+  "floatingButtonSummary": {
+    "message": "AI Summary"
+  },
   "floatingButtonOpening": {
     "message": "Opening Youwee..."
+  },
+  "floatingButtonSummaryOpening": {
+    "message": "Opening summary..."
+  },
+  "floatingSummaryUnavailable": {
+    "message": "Summary is available for YouTube videos"
   },
   "floatingButtonQueueSent": {
     "message": "Sent to queue"
@@ -79,6 +88,9 @@
   },
   "popupQueueAction": {
     "message": "Add to queue"
+  },
+  "popupSummaryAction": {
+    "message": "AI Summary"
   },
   "popupCopyUrl": {
     "message": "Copy URL"
@@ -124,6 +136,9 @@
   },
   "popupStatusQueued": {
     "message": "Sent to queue in Youwee."
+  },
+  "popupStatusSummaryOpening": {
+    "message": "Opening AI Summary in Youwee..."
   },
   "popupStatusOpenFailed": {
     "message": "Failed to open Youwee."

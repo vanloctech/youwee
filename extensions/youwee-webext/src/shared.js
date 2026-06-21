@@ -268,8 +268,25 @@
     )}&source=${encodeURIComponent(source)}`;
   }
 
+  function buildSummaryDeepLink(rawUrl, sourceLabel) {
+    const normalizedUrl = normalizeVideoUrl(rawUrl);
+    const source = sourceLabel || detectSourceLabel();
+    return `youwee://summary?v=1&url=${encodeURIComponent(
+      normalizedUrl,
+    )}&source=${encodeURIComponent(source)}`;
+  }
+
   function openDeepLink(rawUrl, sourceLabel, options = {}) {
     const deepLink = buildDeepLink(rawUrl, sourceLabel, options);
+    return openProtocolLink(deepLink);
+  }
+
+  function openSummaryDeepLink(rawUrl, sourceLabel) {
+    const deepLink = buildSummaryDeepLink(rawUrl, sourceLabel);
+    return openProtocolLink(deepLink);
+  }
+
+  function openProtocolLink(deepLink) {
     const anchor = document.createElement('a');
     anchor.href = deepLink;
     anchor.rel = 'noopener';
@@ -336,7 +353,9 @@
     resolvePlayerElement,
     computePlayerDockPosition,
     buildDeepLink,
+    buildSummaryDeepLink,
     openDeepLink,
+    openSummaryDeepLink,
     copyToClipboard,
     getExtensionApi,
     t,

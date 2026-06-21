@@ -14,6 +14,12 @@ export interface ExternalLinkRequest {
   source: string | null;
 }
 
+export interface ExternalSummaryLinkRequest {
+  raw: string;
+  url: string;
+  source: string | null;
+}
+
 const MAX_EXTERNAL_DEEPLINK_LENGTH = 4096;
 const TRUSTED_EXTERNAL_SOURCES = new Set(['ext-chromium', 'ext-firefox']);
 
@@ -191,6 +197,47 @@ export function parseExternalDeepLink(raw: string): ExternalLinkRequest | null {
     target,
     action,
     enqueueOptions: parseEnqueueOptions(parsed),
+    source: normalizeExternalSource(parsed.searchParams.get('source')),
+  };
+}
+
+export function parseExternalSummaryDeepLink(raw: string): ExternalSummaryLinkRequest | null {
+  if (!raw || raw.length > MAX_EXTERNAL_DEEPLINK_LENGTH) {
+    return null;
+  }
+
+  let parsed: URL;
+  try {
+    parsed = new URL(raw);
+  } catch {
+    return null;
+  }
+
+  if (parsed.protocol !== 'youwee:' || parsed.hostname !== 'summary') {
+    return null;
+  }
+
+  if (parsed.searchParams.get('v') !== '1') {
+    return null;
+  }
+
+  const urlParam = parsed.searchParams.get('url')?.trim();
+  if (!urlParam || !isSafeUrl(urlParam)) {
+    return null;
+  }
+
+  const normalizedUrl = normalizeExternalVideoUrl(urlParam);
+  if (
+    !isSafeUrl(normalizedUrl) ||
+    !isPublicHttpUrl(normalizedUrl) ||
+    !isYouTubeUrl(normalizedUrl)
+  ) {
+    return null;
+  }
+
+  return {
+    raw,
+    url: normalizedUrl,
     source: normalizeExternalSource(parsed.searchParams.get('source')),
   };
 }

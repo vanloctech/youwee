@@ -41,8 +41,17 @@
   "floatingButtonAddQueue": {
     "message": "Thêm vào queue"
   },
+  "floatingButtonSummary": {
+    "message": "Tóm tắt AI"
+  },
   "floatingButtonOpening": {
     "message": "Đang mở Youwee..."
+  },
+  "floatingButtonSummaryOpening": {
+    "message": "Đang mở tóm tắt..."
+  },
+  "floatingSummaryUnavailable": {
+    "message": "Tóm tắt chỉ hỗ trợ video YouTube"
   },
   "floatingButtonQueueSent": {
     "message": "Đã thêm vào queue"
@@ -79,6 +88,9 @@
   },
   "popupQueueAction": {
     "message": "Thêm vào queue"
+  },
+  "popupSummaryAction": {
+    "message": "Tóm tắt AI"
   },
   "popupCopyUrl": {
     "message": "Sao chép URL"
@@ -124,6 +136,9 @@
   },
   "popupStatusQueued": {
     "message": "Đã gửi vào queue của Youwee."
+  },
+  "popupStatusSummaryOpening": {
+    "message": "Đang mở AI Summary trong Youwee..."
   },
   "popupStatusOpenFailed": {
     "message": "Mở Youwee thất bại."

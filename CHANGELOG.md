@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Extension AI Summary** - Added a Summary button in the browser extension to open YouTube videos directly in AI Summary
 - **AI summary token limit** - Added an optional Settings field to set maximum output tokens for generated summaries
 
 ### Fixed

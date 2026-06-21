@@ -13,6 +13,7 @@ import {
   isYouTubeUrl,
   normalizeExternalVideoUrl,
   parseExternalDeepLink,
+  parseExternalSummaryDeepLink,
 } from '@/lib/external-link';
 import type { ExternalEnqueueOptions, Quality, SubtitleFormat, SubtitleMode } from '@/lib/types';
 
@@ -171,6 +172,7 @@ function normalizeCliDownloadRequest(
 export function useExternalDownloadLinks(
   setCurrentPage: (page: Page) => void,
   startLockRef: StartLockRef,
+  handleExternalSummaryUrl?: (url: string) => void,
 ) {
   const download = useDownload();
   const universal = useUniversal();
@@ -279,7 +281,13 @@ export function useExternalDownloadLinks(
   const handleExternalLink = useCallback(
     async (rawLink: string) => {
       const parsed = parseExternalDeepLink(rawLink);
-      if (!parsed) return;
+      if (!parsed) {
+        const summary = parseExternalSummaryDeepLink(rawLink);
+        if (summary) {
+          handleExternalSummaryUrl?.(summary.url);
+        }
+        return;
+      }
 
       await handleExternalDownloadRequest({
         url: parsed.url,
@@ -290,7 +298,7 @@ export function useExternalDownloadLinks(
         trustedLocal: false,
       });
     },
-    [handleExternalDownloadRequest],
+    [handleExternalDownloadRequest, handleExternalSummaryUrl],
   );
 
   const handleCliDownloadRequest = useCallback(

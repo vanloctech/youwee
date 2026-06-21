@@ -295,6 +295,11 @@
         cursor: pointer;
       }
 
+      .actions button:disabled {
+        opacity: 0.48;
+        cursor: not-allowed;
+      }
+
       .primary {
         background: linear-gradient(135deg, #ef4444, #f97316);
         color: #fff;
@@ -304,6 +309,13 @@
         background: rgba(148, 163, 184, 0.12);
         border-color: rgba(148, 163, 184, 0.32);
         color: #f8fafc;
+      }
+
+      .summary {
+        grid-column: 1 / -1;
+        background: rgba(168, 85, 247, 0.14);
+        border-color: rgba(168, 85, 247, 0.38);
+        color: #e9d5ff;
       }
 
       .status {
@@ -424,6 +436,7 @@
       <div class="actions">
         <button id="downloadBtn" type="button" class="primary"></button>
         <button id="queueBtn" type="button" class="secondary"></button>
+        <button id="summaryBtn" type="button" class="summary"></button>
       </div>
 
       <div id="status" class="status" hidden></div>

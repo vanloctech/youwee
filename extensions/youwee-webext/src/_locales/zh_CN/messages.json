@@ -41,8 +41,17 @@
   "floatingButtonAddQueue": {
     "message": "加入队列"
   },
+  "floatingButtonSummary": {
+    "message": "AI 摘要"
+  },
   "floatingButtonOpening": {
     "message": "正在打开 Youwee..."
+  },
+  "floatingButtonSummaryOpening": {
+    "message": "正在打开摘要..."
+  },
+  "floatingSummaryUnavailable": {
+    "message": "摘要仅支持 YouTube 视频"
   },
   "floatingButtonQueueSent": {
     "message": "已加入队列"
@@ -79,6 +88,9 @@
   },
   "popupQueueAction": {
     "message": "加入队列"
+  },
+  "popupSummaryAction": {
+    "message": "AI 摘要"
   },
   "popupCopyUrl": {
     "message": "复制链接"
@@ -124,6 +136,9 @@
   },
   "popupStatusQueued": {
     "message": "已发送到 Youwee 队列。"
+  },
+  "popupStatusSummaryOpening": {
+    "message": "正在 Youwee 中打开 AI 摘要..."
   },
   "popupStatusOpenFailed": {
     "message": "打开 Youwee 失败。"

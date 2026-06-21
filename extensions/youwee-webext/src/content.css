@@ -216,6 +216,17 @@
   border-color: rgba(148, 163, 184, 0.35);
 }
 
+.youwee-floating__action--summary {
+  background: rgba(168, 85, 247, 0.16);
+  border-color: rgba(168, 85, 247, 0.38);
+  color: #e9d5ff;
+}
+
+.youwee-floating__action:disabled {
+  opacity: 0.48;
+  cursor: not-allowed;
+}
+
 .youwee-floating__feedback {
   margin-top: 8px;
   min-height: 18px;

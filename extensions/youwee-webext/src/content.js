@@ -241,6 +241,15 @@
   }
 
   function openDeepLink(action, sourceUrl) {
+    if (action === 'summary') {
+      try {
+        ext.openSummaryDeepLink(sourceUrl || location.href);
+        return { ok: true, options: { action } };
+      } catch (error) {
+        return { ok: false, error };
+      }
+    }
+
     const options = getCurrentOptions(action);
 
     try {
@@ -260,6 +269,11 @@
 
     if (action === 'queue_only') {
       setFeedback(ext.t('floatingButtonQueueSent', 'Sent to queue'), 'ok');
+      return;
+    }
+
+    if (action === 'summary') {
+      setFeedback(ext.t('floatingButtonSummaryOpening', 'Opening summary...'), 'ok');
       return;
     }
 
@@ -299,6 +313,7 @@
 
   function buildWidget() {
     const logoUrl = api?.runtime?.getURL?.('icons/logo-64.png') || '';
+    const canSummarize = ext.isYouTubeUrl(location.href);
 
     const container = document.createElement('div');
     container.id = ROOT_ID;
@@ -374,6 +389,15 @@
         <button type="button" class="youwee-floating__action youwee-floating__action--secondary" data-action="queue_only">
           ${ext.t('floatingButtonAddQueue', 'Add to queue')}
         </button>
+        <button
+          type="button"
+          class="youwee-floating__action youwee-floating__action--summary"
+          data-action="summary"
+          ${canSummarize ? '' : 'disabled'}
+          title="${canSummarize ? '' : ext.t('floatingSummaryUnavailable', 'Summary is available for YouTube videos')}"
+        >
+          ${ext.t('floatingButtonSummary', 'AI Summary')}
+        </button>
       </div>
       <div class="youwee-floating__feedback" aria-live="polite"></div>
     `;
@@ -414,6 +438,11 @@
     dropdown.querySelector('[data-action="queue_only"]')?.addEventListener('click', (event) => {
       if (!isTrustedUserEvent(event)) return;
       onActionClick('queue_only');
+    });
+
+    dropdown.querySelector('[data-action="summary"]')?.addEventListener('click', (event) => {
+      if (!isTrustedUserEvent(event)) return;
+      onActionClick('summary');
     });
 
     dropdown.querySelector('[data-action="collapse"]')?.addEventListener('click', (event) => {
@@ -500,6 +529,23 @@
     api.runtime.onMessage.addListener((message, sender, sendResponse) => {
       if (sender?.id && sender.id !== api.runtime.id) return false;
       if (message?.type !== 'youwee:open-deep-link') return false;
+
+      if (message.action === 'summary') {
+        try {
+          const targetUrl =
+            typeof message.url === 'string' && message.url ? message.url : location.href;
+          if (!ext.parseHttpUrl(targetUrl)) {
+            sendResponse?.({ ok: false, error: 'Invalid URL' });
+            return false;
+          }
+          ext.openSummaryDeepLink(targetUrl);
+          sendResponse?.({ ok: true });
+        } catch (error) {
+          sendResponse?.({ ok: false, error: String(error) });
+        }
+
+        return false;
+      }
 
       const options = {
         action: ext.normalizeAction(message.action),
