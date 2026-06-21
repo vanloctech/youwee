@@ -8,6 +8,7 @@
 
 .youwee-floating__launcher,
 .youwee-floating__tab {
+  transform: none;
   user-select: none;
 }
 
@@ -27,20 +28,6 @@
   color: #f8fafc;
   cursor: pointer;
   backdrop-filter: blur(18px);
-  transition:
-    background 0.16s ease,
-    border-color 0.16s ease,
-    box-shadow 0.16s ease;
-}
-
-.youwee-floating__launcher:hover {
-  border-color: rgba(255, 255, 255, 0.16);
-  background:
-    radial-gradient(circle at 20% 0%, rgba(244, 63, 94, 0.3), transparent 42%),
-    rgba(15, 23, 42, 0.9);
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.1),
-    0 18px 44px rgba(0, 0, 0, 0.38);
 }
 
 .youwee-floating__tab {
@@ -253,15 +240,6 @@
   font-size: 12px;
   font-weight: 700;
   cursor: pointer;
-  transition:
-    background 0.15s ease,
-    border-color 0.15s ease,
-    box-shadow 0.15s ease,
-    color 0.15s ease;
-}
-
-.youwee-floating__action:hover:not(:disabled) {
-  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.2);
 }
 
 .youwee-floating__action svg {
@@ -283,27 +261,15 @@
   box-shadow: 0 14px 30px rgba(244, 63, 94, 0.22);
 }
 
-.youwee-floating__action--primary:hover:not(:disabled) {
-  background: linear-gradient(135deg, #fb7185, #fb923c);
-}
-
 .youwee-floating__action--secondary {
   background: rgba(248, 250, 252, 0.07);
   border-color: rgba(255, 255, 255, 0.1);
-}
-
-.youwee-floating__action--secondary:hover:not(:disabled) {
-  background: rgba(248, 250, 252, 0.11);
 }
 
 .youwee-floating__action--summary {
   background: rgba(168, 85, 247, 0.12);
   border-color: rgba(168, 85, 247, 0.32);
   color: #e9d5ff;
-}
-
-.youwee-floating__action--summary:hover:not(:disabled) {
-  background: rgba(168, 85, 247, 0.18);
 }
 
 .youwee-floating__action:disabled {
