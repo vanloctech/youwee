@@ -8,6 +8,7 @@ import {
   useCallback,
   useContext,
   useEffect,
+  useMemo,
   useRef,
   useState,
 } from 'react';
@@ -290,19 +291,34 @@ export function MetadataProvider({ children }: { children: ReactNode }) {
     });
   }, []);
 
-  const value: MetadataContextType = {
-    items,
-    isFetching,
-    settings,
-    addUrls,
-    removeItem,
-    clearAll,
-    clearCompleted,
-    startFetch,
-    stopFetch,
-    selectOutputFolder,
-    updateSettings,
-  };
+  const value: MetadataContextType = useMemo(
+    () => ({
+      items,
+      isFetching,
+      settings,
+      addUrls,
+      removeItem,
+      clearAll,
+      clearCompleted,
+      startFetch,
+      stopFetch,
+      selectOutputFolder,
+      updateSettings,
+    }),
+    [
+      items,
+      isFetching,
+      settings,
+      addUrls,
+      removeItem,
+      clearAll,
+      clearCompleted,
+      startFetch,
+      stopFetch,
+      selectOutputFolder,
+      updateSettings,
+    ],
+  );
 
   return <MetadataContext.Provider value={value}>{children}</MetadataContext.Provider>;
 }

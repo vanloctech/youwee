@@ -8,6 +8,7 @@ import {
   useCallback,
   useContext,
   useEffect,
+  useMemo,
   useRef,
   useState,
 } from 'react';
@@ -507,23 +508,42 @@ export function GalleryDlProvider({ children }: { children: ReactNode }) {
     }
   }, [settings.concurrentDownloads]);
 
-  const value: GalleryDlContextType = {
-    items,
-    focusedItemId,
-    isDownloading,
-    settings,
-    error,
-    addFromText,
-    importFromFile,
-    importFromClipboard,
-    selectOutputFolder,
-    removeItem,
-    clearAll,
-    clearCompleted,
-    startDownload,
-    stopDownload,
-    updateConcurrentDownloads,
-  };
+  const value: GalleryDlContextType = useMemo(
+    () => ({
+      items,
+      focusedItemId,
+      isDownloading,
+      settings,
+      error,
+      addFromText,
+      importFromFile,
+      importFromClipboard,
+      selectOutputFolder,
+      removeItem,
+      clearAll,
+      clearCompleted,
+      startDownload,
+      stopDownload,
+      updateConcurrentDownloads,
+    }),
+    [
+      items,
+      focusedItemId,
+      isDownloading,
+      settings,
+      error,
+      addFromText,
+      importFromFile,
+      importFromClipboard,
+      selectOutputFolder,
+      removeItem,
+      clearAll,
+      clearCompleted,
+      startDownload,
+      stopDownload,
+      updateConcurrentDownloads,
+    ],
+  );
 
   return <GalleryDlContext.Provider value={value}>{children}</GalleryDlContext.Provider>;
 }

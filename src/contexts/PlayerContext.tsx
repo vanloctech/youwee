@@ -5,6 +5,7 @@ import {
   useCallback,
   useContext,
   useEffect,
+  useMemo,
   useRef,
   useState,
 } from 'react';
@@ -415,32 +416,50 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
 
   const currentEntry = queue[currentIndex] ?? null;
 
-  return (
-    <PlayerContext.Provider
-      value={{
-        queue,
-        currentIndex,
-        currentEntry,
-        isPlaying,
-        duration,
-        currentTime,
-        volume,
-        playbackRate,
-        mode,
-        playFrom,
-        togglePlay,
-        playNext,
-        playPrev,
-        seek,
-        setVolume,
-        setPlaybackRate,
-        setMode,
-        close,
-      }}
-    >
-      {children}
-    </PlayerContext.Provider>
+  const value = useMemo(
+    () => ({
+      queue,
+      currentIndex,
+      currentEntry,
+      isPlaying,
+      duration,
+      currentTime,
+      volume,
+      playbackRate,
+      mode,
+      playFrom,
+      togglePlay,
+      playNext,
+      playPrev,
+      seek,
+      setVolume,
+      setPlaybackRate,
+      setMode,
+      close,
+    }),
+    [
+      queue,
+      currentIndex,
+      currentEntry,
+      isPlaying,
+      duration,
+      currentTime,
+      volume,
+      playbackRate,
+      mode,
+      playFrom,
+      togglePlay,
+      playNext,
+      playPrev,
+      seek,
+      setVolume,
+      setPlaybackRate,
+      setMode,
+      close,
+    ],
   );
+
+  return <PlayerContext.Provider value={value}>{children}</PlayerContext.Provider>;
 }
 
 export function usePlayer() {

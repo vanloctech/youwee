@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "test": "bun test",
     "build": "tsc -b && vite build",
     "build:sdk": "tsc -p sdk-js/tsconfig.json",
     "lint": "biome check .",

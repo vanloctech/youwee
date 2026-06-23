@@ -140,7 +140,7 @@ describe('youwee-sdk createContext', () => {
     process.env.YOUWEE_PLUGIN_PROVIDER = 'deno';
     process.env.YOUWEE_PLUGIN_PROVIDER_SOURCE = 'system';
     process.env.YOUWEE_PLUGIN_TIMEOUT_MS = '60000';
-    process.env.YOUWEE_FFMPEG_PATH = '/usr/local/bin/ffmpeg';
+    process.env.YOUWEE_PLUGIN_BRIDGE_TOOLS = 'ffmpeg';
     process.env.MY_SECRET = 'secret-value';
     process.env.YOUWEE_PLUGIN_CONFIG_JSON = JSON.stringify({
       apiToken: 'token-123',
@@ -165,22 +165,27 @@ describe('youwee-sdk createContext', () => {
     expect(ctx.youwee.plugin.id).toBe('plugin-1');
     expect(ctx.youwee.runtime.provider).toBe('deno');
     expect(ctx.youwee.tools.ffmpeg.available).toBe(true);
-    expect(ctx.youwee.tools.ffmpeg.path).toBe('/usr/local/bin/ffmpeg');
+    expect(ctx.youwee.tools.ffmpeg.path).toBe(null);
     expect(ctx.youwee.sdk.checkAppVersion('>=0.13.0 <0.14.0').compatible).toBe(true);
   });
 
-  test('exposes filesystem helpers', async () => {
+  test('routes filesystem helpers through the app bridge', async () => {
+    delete process.env.YOUWEE_PLUGIN_BRIDGE_URL;
     const ctx = createContext(samplePayload);
-    const tempDir = await ctx.youwee.fs.tempDir('youwee-sdk-fs-');
-    const textFile = join(tempDir, 'note.txt');
 
-    await ctx.youwee.fs.ensureDir(tempDir);
-    await ctx.youwee.fs.writeText(textFile, 'hello');
+    expect(typeof ctx.youwee.fs.exists).toBe('function');
+    expect(typeof ctx.youwee.fs.readText).toBe('function');
+    expect(typeof ctx.youwee.fs.writeText).toBe('function');
+    expect(typeof ctx.youwee.fs.ensureDir).toBe('function');
+    expect(typeof ctx.youwee.fs.tempDir).toBe('function');
 
-    expect(await ctx.youwee.fs.exists(textFile)).toBe(true);
-    expect(await ctx.youwee.fs.readText(textFile)).toBe('hello');
-
-    rmSync(tempDir, { recursive: true, force: true });
+    // Without a delegated app bridge, filesystem access is denied by design.
+    await expect(ctx.youwee.fs.tempDir('youwee-sdk-fs-')).rejects.toThrow(
+      'Youwee plugin bridge is not available',
+    );
+    await expect(ctx.youwee.fs.readText('/tmp/whatever.txt')).rejects.toThrow(
+      'Youwee plugin bridge is not available',
+    );
   });
 
   test('loads plugin locale files and falls back correctly', () => {
@@ -318,9 +323,10 @@ describe('youwee-sdk manifest helpers', () => {
     expect(packageJson).toContain(
       `"keygen": "bunx youwee-sdk keygen ./plugin.youwee-plugin-key.json"`,
     );
-    expect(packageJson).toContain('node_modules/youwee-sdk/dist/runtime-cli.js src/plugin.js');
+    expect(packageJson).toContain('node_modules/youwee-sdk/dist/runtime-cli.js src/plugin.ts');
     expect(packageJson).toContain('deno run');
-    expect(packageJson).toContain('--allow-run');
+    expect(packageJson).toContain('--allow-read=.');
+    expect(packageJson).not.toContain('--allow-run');
   });
 
   test('rejects invalid compatibility syntax in manifests', () => {
@@ -764,7 +770,7 @@ describe('youwee-sdk runtime-cli', () => {
     });
   });
 
-  test('uses Deno.Command for tool runners inside the Deno runtime', async () => {
+  test('blocks tool runners without a delegated app bridge inside the Deno runtime', async () => {
     if (spawnSync('deno', ['--version'], { stdio: 'ignore' }).status !== 0) {
       return;
     }
@@ -793,14 +799,22 @@ describe('youwee-sdk runtime-cli', () => {
           meta: { name: "Tool Runner", version: "0.1.0" },
           hooks: {
             "download.completed": async (ctx) => {
-              const result = await ctx.youwee.tools.ffmpeg.run([
-                "eval",
-                "console.log('ffmpeg tool ok')",
-              ]);
-              return ctx.ok("tool ok", {
-                stdout: result.stdout.trim(),
-                stderr: result.stderr.trim(),
-                exitCode: result.code,
+              const available = ctx.youwee.tools.ffmpeg.available;
+              let blocked = false;
+              let errorMessage = "";
+              try {
+                await ctx.youwee.tools.ffmpeg.run([
+                  "eval",
+                  "console.log('ffmpeg tool ok')",
+                ]);
+              } catch (error) {
+                blocked = true;
+                errorMessage = error instanceof Error ? error.message : String(error);
+              }
+              return ctx.ok("tool boundary enforced", {
+                available,
+                blocked,
+                errorMessage,
               });
             },
           },
@@ -828,6 +842,9 @@ describe('youwee-sdk runtime-cli', () => {
         {
           env: {
             ...process.env,
+            YOUWEE_PLUGIN_BRIDGE_TOOLS: '',
+            YOUWEE_PLUGIN_BRIDGE_URL: '',
+            YOUWEE_PLUGIN_BRIDGE_TOKEN: '',
             YOUWEE_FFMPEG_PATH: denoPath,
           },
           stdio: ['pipe', 'pipe', 'pipe'],
@@ -858,17 +875,16 @@ describe('youwee-sdk runtime-cli', () => {
 
     expect(exitCode).toBe(0);
     expect(stderr.trim()).toBe('');
-    expect(JSON.parse(stdout)).toEqual({
-      success: true,
-      message: 'tool ok',
-      metadata: {
-        stdout: 'ffmpeg tool ok',
-        stderr: '',
-        exitCode: 0,
-      },
-      artifacts: null,
-      mutations: null,
-    });
+    const parsed = JSON.parse(stdout) as {
+      success: boolean;
+      message: string;
+      metadata: { available: boolean; blocked: boolean; errorMessage: string };
+    };
+    expect(parsed.success).toBe(true);
+    expect(parsed.message).toBe('tool boundary enforced');
+    expect(parsed.metadata.available).toBe(false);
+    expect(parsed.metadata.blocked).toBe(true);
+    expect(parsed.metadata.errorMessage).toContain('not available');
   });
 
   test('strips linker environment variables before loading the plugin module', async () => {
@@ -1038,8 +1054,8 @@ module.exports = definePlugin({
 
       expect(exitCode).toBe(0);
       expect(stderr.trim()).toBe('');
-      expect(stdout).toContain('cli-pack-0.1.0.ywp');
-      expect(existsSync(join(tempDir, 'release', 'cli-pack-0.1.0.ywp'))).toBe(true);
+      expect(stdout).toContain('cli-pack.ywp');
+      expect(existsSync(join(tempDir, 'release', 'cli-pack.ywp'))).toBe(true);
     } finally {
       rmSync(tempDir, { recursive: true, force: true });
     }
@@ -1053,59 +1069,37 @@ describe('youwee-sdk ai helpers', () => {
     expect(parseJsonFromModelOutput('[1,2,3]')).toEqual([1, 2, 3]);
   });
 
-  test('exposes summarize and extractJson helpers', async () => {
+  test('disables summarize and extractJson until a delegated AI bridge exists', async () => {
     process.env.YOUWEE_AI_ENABLED = 'true';
     process.env.YOUWEE_AI_PROVIDER = 'openai';
     process.env.YOUWEE_AI_MODEL = 'gpt-test';
     process.env.YOUWEE_AI_API_KEY = 'secret';
 
-    const calls: Array<{ url: string; body: unknown }> = [];
+    let fetchCalls = 0;
     const originalFetch = globalThis.fetch;
-
-    globalThis.fetch = (async (url: string | URL | Request, init?: RequestInit) => {
-      const body = init?.body ? JSON.parse(String(init.body)) : null;
-      calls.push({ url: String(url), body });
-
-      const promptText = JSON.stringify(body);
-      const content = promptText.includes('valid JSON only')
-        ? '```json\n{"tag":"ok"}\n```'
-        : 'Short summary';
-
-      return new Response(
-        JSON.stringify({
-          choices: [
-            {
-              message: {
-                content,
-              },
-            },
-          ],
-        }),
-        {
-          status: 200,
-          headers: { 'Content-Type': 'application/json' },
-        },
-      );
+    globalThis.fetch = (async () => {
+      fetchCalls += 1;
+      return new Response('{}', { status: 200 });
     }) as typeof fetch;
 
     try {
       const ai = createAIBridge();
-      const summary = await ai.summarize({
-        text: 'Long body of text',
-        title: 'Demo',
-        maxSentences: 2,
-      });
-      const extracted = await ai.extractJson<{ tag: string }>({
-        prompt: 'Return { "tag": "ok" }',
-        schemaDescription: '{ "tag": "string" }',
-        validate(value) {
-          return Boolean(value && typeof value === 'object' && 'tag' in value);
-        },
-      });
 
-      expect(summary).toBe('Short summary');
-      expect(extracted).toEqual({ tag: 'ok' });
-      expect(calls.length).toBe(2);
+      expect(ai.available()).toBe(false);
+      expect(ai.getConfig().enabled).toBe(false);
+
+      await expect(
+        ai.summarize({ text: 'Long body of text', title: 'Demo', maxSentences: 2 }),
+      ).rejects.toThrow('Plugin AI helpers are disabled');
+      await expect(
+        ai.extractJson<{ tag: string }>({
+          prompt: 'Return { "tag": "ok" }',
+          schemaDescription: '{ "tag": "string" }',
+        }),
+      ).rejects.toThrow('Plugin AI helpers are disabled');
+
+      // No API key must ever leave the SDK via a direct provider call.
+      expect(fetchCalls).toBe(0);
     } finally {
       globalThis.fetch = originalFetch;
     }
