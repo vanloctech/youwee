@@ -49,6 +49,135 @@ fn extract_time_range(download_sections: &Option<String>) -> Option<String> {
     })
 }
 
+fn number_width(total: Option<u32>) -> usize {
+    total
+        .filter(|value| *value >= 100)
+        .map(|value| value.to_string().len())
+        .unwrap_or(2)
+}
+
+fn build_playlist_prefix(
+    enabled: bool,
+    playlist_index: Option<u32>,
+    playlist_total: Option<u32>,
+) -> Option<String> {
+    if !enabled {
+        return None;
+    }
+
+    let width = number_width(playlist_total);
+    playlist_index
+        .map(|index| format!("{index:0width$} - "))
+        .or_else(|| Some(format!("%(playlist_index)0{width}d - ")))
+}
+
+fn build_output_template(
+    output_path: &str,
+    number_playlist_items: bool,
+    playlist_index: Option<u32>,
+    playlist_total: Option<u32>,
+) -> String {
+    let prefix = build_playlist_prefix(number_playlist_items, playlist_index, playlist_total)
+        .unwrap_or_default();
+    format!("{output_path}/{prefix}%(title)s.%(ext)s")
+}
+
+fn build_chapter_output_template(
+    output_path: &str,
+    number_playlist_items: bool,
+    playlist_index: Option<u32>,
+    playlist_total: Option<u32>,
+    number_chapter_files: bool,
+) -> String {
+    let playlist_prefix =
+        build_playlist_prefix(number_playlist_items, playlist_index, playlist_total)
+            .unwrap_or_default();
+    let chapter_prefix = if number_chapter_files {
+        "%(section_number)02d - "
+    } else {
+        ""
+    };
+    format!("{output_path}/{playlist_prefix}{chapter_prefix}%(section_title)s.%(ext)s")
+}
+
+fn parse_printed_filepaths(contents: &str) -> Vec<String> {
+    let mut paths = Vec::new();
+    for line in contents.lines() {
+        let path = line.trim();
+        if path.is_empty() || paths.iter().any(|existing| existing == path) {
+            continue;
+        }
+        paths.push(path.to_string());
+    }
+    paths
+}
+
+fn output_filepaths(printed_filepaths: &[String], final_filepath: &Option<String>) -> Vec<String> {
+    if !printed_filepaths.is_empty() {
+        return printed_filepaths.to_vec();
+    }
+    final_filepath.iter().cloned().collect()
+}
+
+fn title_from_filepath(filepath: &str) -> Option<String> {
+    std::path::Path::new(filepath)
+        .file_stem()
+        .and_then(|s| s.to_str())
+        .map(|s| s.to_string())
+}
+
+#[cfg(test)]
+mod playlist_chapter_tests {
+    use super::*;
+
+    #[test]
+    fn output_template_is_unchanged_when_numbering_is_off() {
+        assert_eq!(
+            build_output_template("/tmp/out", false, None, None),
+            "/tmp/out/%(title)s.%(ext)s"
+        );
+    }
+
+    #[test]
+    fn output_template_uses_frontend_playlist_index_for_expanded_playlist_items() {
+        assert_eq!(
+            build_output_template("/tmp/out", true, Some(3), Some(120)),
+            "/tmp/out/003 - %(title)s.%(ext)s"
+        );
+    }
+
+    #[test]
+    fn chapter_template_numbers_chapters_without_playlist_prefix() {
+        assert_eq!(
+            build_chapter_output_template("/tmp/out", false, None, None, true),
+            "/tmp/out/%(section_number)02d - %(section_title)s.%(ext)s"
+        );
+    }
+
+    #[test]
+    fn chapter_template_uses_playlist_and_chapter_numbers_when_both_are_enabled() {
+        assert_eq!(
+            build_chapter_output_template("/tmp/out", true, Some(3), Some(120), true),
+            "/tmp/out/003 - %(section_number)02d - %(section_title)s.%(ext)s"
+        );
+    }
+
+    #[test]
+    fn printed_filepaths_preserve_multiple_output_files() {
+        let filepaths =
+            parse_printed_filepaths("/tmp/video.mp4\n/tmp/01 - Intro.mp4\n/tmp/02 - End.mp4\n");
+
+        assert_eq!(
+            filepaths,
+            vec![
+                "/tmp/video.mp4".to_string(),
+                "/tmp/01 - Intro.mp4".to_string(),
+                "/tmp/02 - End.mp4".to_string(),
+            ]
+        );
+    }
+}
+
 async fn skipped_live_status(
     app: &AppHandle,
     url: &str,
@@ -504,6 +633,11 @@ pub async fn download_video(
     quality: String,
     format: String,
     download_playlist: bool,
+    playlist_index: Option<u32>,
+    playlist_total: Option<u32>,
+    number_playlist_items: Option<bool>,
+    split_embedded_chapters: Option<bool>,
+    number_chapter_files: Option<bool>,
     video_codec: String,
     audio_bitrate: String,
     playlist_limit: Option<u32>,
@@ -608,7 +742,15 @@ pub async fn download_video(
     let sanitized_path = sanitize_output_path(&output_path)
         .map_err(|e| BackendError::from_message(e).to_wire_string())?;
     let format_string = build_format_string(&quality, &format, &video_codec);
-    let output_template = format!("{}/%(title)s.%(ext)s", sanitized_path);
+    let number_playlist_items = number_playlist_items.unwrap_or(false);
+    let split_embedded_chapters = split_embedded_chapters.unwrap_or(false);
+    let number_chapter_files = number_chapter_files.unwrap_or(true);
+    let output_template = build_output_template(
+        &sanitized_path,
+        number_playlist_items,
+        playlist_index,
+        playlist_total,
+    );
 
     // Use a temp file to capture the final filepath from yt-dlp.
     // On Windows with non-UTF-8 locales (e.g. Chinese/GBK), stdout is encoded
@@ -639,6 +781,21 @@ pub async fn download_video(
         "--file-access-retries".to_string(),
         "2".to_string(),
     ];
+
+    if split_embedded_chapters {
+        args.push("--split-chapters".to_string());
+        args.push("-o".to_string());
+        args.push(format!(
+            "chapter:{}",
+            build_chapter_output_template(
+                &sanitized_path,
+                number_playlist_items,
+                playlist_index,
+                playlist_total,
+                number_chapter_files,
+            )
+        ));
+    }
 
     // Auto use Deno runtime for YouTube (required for JS extractor)
     // Use --js-runtimes instead of --extractor-args (handles spaces in path correctly)
@@ -1013,6 +1170,7 @@ pub async fn download_video(
             let mut total_filesize: u64 = 0;
             let mut current_stream_size: Option<u64> = None;
             let mut final_filepath: Option<String> = None;
+            let mut printed_filepaths: Vec<String> = Vec::new();
             let mut recent_output: VecDeque<String> = VecDeque::new();
 
             let quality_display = match quality.as_str() {
@@ -1235,9 +1393,9 @@ pub async fn download_video(
 
                         // Primary filepath source: read from --print-to-file temp file (UTF-8)
                         if let Ok(contents) = std::fs::read_to_string(&filepath_tmp) {
-                            let path = contents.trim().to_string();
-                            if !path.is_empty() {
-                                final_filepath = Some(path);
+                            printed_filepaths = parse_printed_filepaths(&contents);
+                            if let Some(path) = printed_filepaths.first() {
+                                final_filepath = Some(path.clone());
                             }
                         }
                         std::fs::remove_file(&filepath_tmp).ok();
@@ -1259,13 +1417,12 @@ pub async fn download_video(
                             });
 
                             let display_title = current_title.clone().or_else(|| {
-                                final_filepath.as_ref().and_then(|path| {
-                                    std::path::Path::new(path)
-                                        .file_stem()
-                                        .and_then(|s| s.to_str())
-                                        .map(|s| s.to_string())
-                                })
+                                final_filepath
+                                    .as_ref()
+                                    .and_then(|path| title_from_filepath(path))
                             });
+                            let output_paths =
+                                output_filepaths(&printed_filepaths, &final_filepath);
 
                             // Log success
                             let success_msg = format!(
@@ -1285,48 +1442,58 @@ pub async fn download_video(
                             add_log_internal("success", &success_msg, Some(&details), Some(&url))
                                 .ok();
 
-                            // Save to history (update existing or create new)
-                            let progress_history_id = if let Some(ref filepath) = final_filepath {
-                                // Extract time range from download_sections (strip "*" prefix)
+                            // Save each emitted output to history. The first file remains the
+                            // queue representative; split chapters are extra history rows.
+                            let mut progress_history_id = None;
+                            for (index, filepath) in output_paths.iter().enumerate() {
                                 let time_range = extract_time_range(&download_sections);
-
-                                if let Some(ref hist_id) = history_id {
-                                    // Update existing history entry (re-download)
-                                    update_history_download(
-                                        hist_id.clone(),
-                                        filepath.clone(),
-                                        reported_filesize,
-                                        quality_display.clone(),
-                                        Some(format.clone()),
-                                        time_range,
-                                    )
-                                    .ok();
-                                    Some(hist_id.clone())
-                                } else {
-                                    // Create new history entry
-                                    let src = source.clone().or_else(|| detect_source(&url));
-                                    let thumb =
-                                        thumbnail.clone().or_else(|| generate_thumbnail_url(&url));
-
-                                    add_history_internal(
-                                        url.clone(),
-                                        display_title
-                                            .clone()
-                                            .unwrap_or_else(|| "Unknown".to_string()),
-                                        thumb,
-                                        filepath.clone(),
-                                        reported_filesize,
-                                        None,
-                                        quality_display.clone(),
-                                        Some(format.clone()),
-                                        src,
-                                        time_range,
-                                    )
+                                let file_filesize = std::fs::metadata(filepath)
                                     .ok()
+                                    .map(|m| m.len())
+                                    .or(if index == 0 { reported_filesize } else { None });
+                                let entry_title = if index == 0 {
+                                    display_title
+                                        .clone()
+                                        .unwrap_or_else(|| "Unknown".to_string())
+                                } else {
+                                    title_from_filepath(filepath)
+                                        .or_else(|| display_title.clone())
+                                        .unwrap_or_else(|| "Unknown".to_string())
+                                };
+
+                                if index == 0 {
+                                    if let Some(ref hist_id) = history_id {
+                                        update_history_download(
+                                            hist_id.clone(),
+                                            filepath.clone(),
+                                            file_filesize,
+                                            quality_display.clone(),
+                                            Some(format.clone()),
+                                            time_range,
+                                        )
+                                        .ok();
+                                        progress_history_id = Some(hist_id.clone());
+                                        continue;
+                                    }
                                 }
-                            } else {
-                                None
-                            };
+
+                                let history_row_id = add_history_internal(
+                                    url.clone(),
+                                    entry_title,
+                                    thumbnail.clone().or_else(|| generate_thumbnail_url(&url)),
+                                    filepath.clone(),
+                                    file_filesize,
+                                    None,
+                                    quality_display.clone(),
+                                    Some(format.clone()),
+                                    source.clone().or_else(|| detect_source(&url)),
+                                    time_range,
+                                )
+                                .ok();
+                                if index == 0 {
+                                    progress_history_id = history_row_id;
+                                }
+                            }
 
                             let progress = DownloadProgress {
                                 id: id.clone(),
@@ -1349,20 +1516,33 @@ pub async fn download_video(
                                 elapsed_time: None,
                             };
                             app.emit("download-progress", progress).ok();
-                            if let Some(ref filepath) = final_filepath {
+                            for (index, filepath) in output_paths.iter().enumerate() {
+                                let file_filesize = std::fs::metadata(filepath)
+                                    .ok()
+                                    .map(|m| m.len())
+                                    .or(if index == 0 { reported_filesize } else { None });
+                                let plugin_title = if index == 0 {
+                                    display_title.clone()
+                                } else {
+                                    title_from_filepath(filepath).or_else(|| display_title.clone())
+                                };
                                 run_completed_plugins(
                                     &app,
                                     &completed_workflow_steps,
                                     &id,
                                     source.clone().or_else(|| detect_source(&url)),
                                     filepath,
-                                    reported_filesize,
+                                    file_filesize,
                                     Some(format.clone()),
                                     quality_display.clone().or_else(|| Some(quality.clone())),
                                     &url,
-                                    display_title.clone(),
+                                    plugin_title,
                                     thumbnail.clone().or_else(|| generate_thumbnail_url(&url)),
-                                    progress_history_id.clone(),
+                                    if index == 0 {
+                                        progress_history_id.clone()
+                                    } else {
+                                        None
+                                    },
                                     extract_time_range(&download_sections),
                                     &download_kind,
                                 )
@@ -1565,6 +1745,7 @@ async fn handle_tokio_download(
     let mut total_filesize: u64 = 0;
     let mut current_stream_size: Option<u64> = None;
     let mut final_filepath: Option<String> = None;
+    let mut printed_filepaths: Vec<String> = Vec::new();
     let recent_output = Arc::new(Mutex::new(VecDeque::new()));
     let stderr_filepath: Arc<Mutex<Option<String>>> = Arc::new(Mutex::new(None));
 
@@ -1842,9 +2023,9 @@ async fn handle_tokio_download(
     // This is reliable on all platforms, especially Windows with non-UTF-8 locales
     // where stdout encoding (GBK) corrupts Unicode characters in file paths.
     if let Ok(contents) = std::fs::read_to_string(&filepath_tmp) {
-        let path = contents.trim().to_string();
-        if !path.is_empty() {
-            final_filepath = Some(path);
+        printed_filepaths = parse_printed_filepaths(&contents);
+        if let Some(path) = printed_filepaths.first() {
+            final_filepath = Some(path.clone());
         }
     }
     // Clean up the temp file
@@ -1877,13 +2058,11 @@ async fn handle_tokio_download(
 
         // Fallback: extract title from final_filepath if current_title is None
         let display_title = current_title.or_else(|| {
-            final_filepath.as_ref().and_then(|path| {
-                std::path::Path::new(path)
-                    .file_stem()
-                    .and_then(|s| s.to_str())
-                    .map(|s| s.to_string())
-            })
+            final_filepath
+                .as_ref()
+                .and_then(|path| title_from_filepath(path))
         });
+        let output_paths = output_filepaths(&printed_filepaths, &final_filepath);
 
         let success_msg = format!(
             "Downloaded: {}",
@@ -1901,45 +2080,56 @@ async fn handle_tokio_download(
         );
         add_log_internal("success", &success_msg, Some(&details), Some(&url)).ok();
 
-        // Save to history (update existing or create new)
-        let progress_history_id = if let Some(ref filepath) = final_filepath {
-            // Extract time range from download_sections (strip "*" prefix)
+        let mut progress_history_id = None;
+        for (index, filepath) in output_paths.iter().enumerate() {
             let time_range = extract_time_range(&download_sections);
-
-            if let Some(ref hist_id) = history_id {
-                update_history_download(
-                    hist_id.clone(),
-                    filepath.clone(),
-                    reported_filesize,
-                    quality_display.clone(),
-                    Some(format.clone()),
-                    time_range,
-                )
-                .ok();
-                Some(hist_id.clone())
-            } else {
-                let src = source.clone().or_else(|| detect_source(&url));
-                let thumb = thumbnail.clone().or_else(|| generate_thumbnail_url(&url));
-
-                add_history_internal(
-                    url.clone(),
-                    display_title
-                        .clone()
-                        .unwrap_or_else(|| "Unknown".to_string()),
-                    thumb,
-                    filepath.clone(),
-                    reported_filesize,
-                    None,
-                    quality_display.clone(),
-                    Some(format.clone()),
-                    src,
-                    time_range,
-                )
+            let file_filesize = std::fs::metadata(filepath)
                 .ok()
+                .map(|m| m.len())
+                .or(if index == 0 { reported_filesize } else { None });
+            let entry_title = if index == 0 {
+                display_title
+                    .clone()
+                    .unwrap_or_else(|| "Unknown".to_string())
+            } else {
+                title_from_filepath(filepath)
+                    .or_else(|| display_title.clone())
+                    .unwrap_or_else(|| "Unknown".to_string())
+            };
+
+            if index == 0 {
+                if let Some(ref hist_id) = history_id {
+                    update_history_download(
+                        hist_id.clone(),
+                        filepath.clone(),
+                        file_filesize,
+                        quality_display.clone(),
+                        Some(format.clone()),
+                        time_range,
+                    )
+                    .ok();
+                    progress_history_id = Some(hist_id.clone());
+                    continue;
+                }
             }
-        } else {
-            None
-        };
+
+            let history_row_id = add_history_internal(
+                url.clone(),
+                entry_title,
+                thumbnail.clone().or_else(|| generate_thumbnail_url(&url)),
+                filepath.clone(),
+                file_filesize,
+                None,
+                quality_display.clone(),
+                Some(format.clone()),
+                source.clone().or_else(|| detect_source(&url)),
+                time_range,
+            )
+            .ok();
+            if index == 0 {
+                progress_history_id = history_row_id;
+            }
+        }
 
         let progress = DownloadProgress {
             id: id.clone(),
@@ -1962,20 +2152,33 @@ async fn handle_tokio_download(
             elapsed_time: None,
         };
         app.emit("download-progress", progress).ok();
-        if let Some(ref filepath) = final_filepath {
+        for (index, filepath) in output_paths.iter().enumerate() {
+            let file_filesize = std::fs::metadata(filepath)
+                .ok()
+                .map(|m| m.len())
+                .or(if index == 0 { reported_filesize } else { None });
+            let plugin_title = if index == 0 {
+                display_title.clone()
+            } else {
+                title_from_filepath(filepath).or_else(|| display_title.clone())
+            };
             run_completed_plugins(
                 &app,
                 &completed_workflow_steps,
                 &id,
                 source.clone().or_else(|| detect_source(&url)),
                 filepath,
-                reported_filesize,
+                file_filesize,
                 Some(format.clone()),
                 quality_display.clone().or_else(|| Some(quality.clone())),
                 &url,
-                display_title.clone(),
+                plugin_title,
                 thumbnail.clone().or_else(|| generate_thumbnail_url(&url)),
-                progress_history_id.clone(),
+                if index == 0 {
+                    progress_history_id.clone()
+                } else {
+                    None
+                },
                 extract_time_range(&download_sections),
                 &download_kind,
             )

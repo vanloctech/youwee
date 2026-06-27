@@ -8,6 +8,8 @@ và dự án tuân theo [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ## [Unreleased]
 
 ### Thêm mới
+- **Đánh số file playlist** - Thêm cài đặt Tải xuống để thêm số thứ tự playlist vào đầu tên file khi tải playlist
+- **Tách chapter có sẵn** - Thêm cài đặt Tải xuống để tách chapter có sẵn trong video thành file riêng và tùy chọn đánh số file chapter
 - **AI Summary trong extension** - Thêm nút Tóm tắt trong browser extension để mở video YouTube trực tiếp ở màn AI Summary
 - **Giới hạn token cho AI Summary** - Thêm ô tùy chọn trong Cài đặt để chỉnh số token đầu ra tối đa khi tạo bản tóm tắt
 

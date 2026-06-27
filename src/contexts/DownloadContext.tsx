@@ -20,13 +20,17 @@ import {
   localizeProgressError,
 } from '@/lib/backend-error';
 import {
-  AUTO_RETRY_LIMITS,
   clampAutoRetryDelaySeconds,
   clampAutoRetryMaxAttempts,
   isNonRetryableError,
   isRetryableError,
   waitWithCancellation,
 } from '@/lib/download-retry';
+import {
+  buildItemDownloadSettingsSnapshot,
+  createDefaultDownloadSettings,
+  serializeDownloadSettings,
+} from '@/lib/download-settings';
 import {
   buildCookieProxyInvokeOptions,
   buildProxyUrl,
@@ -66,7 +70,6 @@ import type {
   YoutubeSearchQueueResult,
   YoutubeSearchVideo,
 } from '@/lib/types';
-import { DEFAULT_SPONSORBLOCK_CATEGORIES } from '@/lib/types';
 import { extractYouTubeVideoId } from '@/lib/youtube-url';
 
 const STORAGE_KEY = 'youwee-settings';
@@ -150,46 +153,7 @@ function buildSponsorBlockArgs(settings: DownloadSettings): {
 // Save settings to localStorage
 function saveSettings(settings: DownloadSettings) {
   try {
-    localStorage.setItem(
-      STORAGE_KEY,
-      JSON.stringify({
-        outputPath: settings.outputPath,
-        quality: settings.quality,
-        format: settings.format,
-        downloadPlaylist: settings.downloadPlaylist,
-        videoCodec: settings.videoCodec,
-        audioBitrate: settings.audioBitrate,
-        concurrentDownloads: settings.concurrentDownloads,
-        playlistLimit: settings.playlistLimit,
-        autoCheckUpdate: settings.autoCheckUpdate,
-        subtitleMode: settings.subtitleMode,
-        subtitleLangs: settings.subtitleLangs,
-        subtitleEmbed: settings.subtitleEmbed,
-        subtitleFormat: settings.subtitleFormat,
-        useBunRuntime: settings.useBunRuntime,
-        useActualPlayerJs: settings.useActualPlayerJs,
-        embedMetadata: settings.embedMetadata,
-        embedThumbnail: settings.embedThumbnail,
-        liveFromStart: settings.liveFromStart,
-        skipLive: settings.skipLive,
-        speedLimitEnabled: settings.speedLimitEnabled,
-        speedLimitValue: settings.speedLimitValue,
-        speedLimitUnit: settings.speedLimitUnit,
-        useAria2: settings.useAria2,
-        aria2Args: settings.aria2Args,
-        autoRetryEnabled: settings.autoRetryEnabled,
-        autoRetryMaxAttempts: settings.autoRetryMaxAttempts,
-        autoRetryDelaySeconds: settings.autoRetryDelaySeconds,
-        persistDownloadQueue: settings.persistDownloadQueue,
-        sponsorBlock: settings.sponsorBlock,
-        sponsorBlockMode: settings.sponsorBlockMode,
-        sponsorBlockCategories: settings.sponsorBlockCategories,
-        telegramEnabled: settings.telegramEnabled,
-        telegramBotToken: settings.telegramBotToken,
-        telegramAllowedChatIds: settings.telegramAllowedChatIds,
-        telegramPlainUrlAction: settings.telegramPlainUrlAction,
-      }),
-    );
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(serializeDownloadSettings(settings)));
   } catch (e) {
     console.error('Failed to save settings:', e);
   }
@@ -302,59 +266,7 @@ export function DownloadProvider({ children }: { children: ReactNode }) {
   // Load saved settings on init
   const [settings, setSettings] = useState<DownloadSettings>(() => {
     const saved = loadSavedSettings();
-    return {
-      quality: saved.quality || 'best',
-      format: saved.format || 'mp4',
-      outputPath: saved.outputPath || '',
-      downloadPlaylist: saved.downloadPlaylist || false,
-      videoCodec: saved.videoCodec || 'auto',
-      audioBitrate: saved.audioBitrate || 'auto',
-      concurrentDownloads: saved.concurrentDownloads || 1,
-      playlistLimit: saved.playlistLimit || 0, // 0 = unlimited
-      autoCheckUpdate: saved.autoCheckUpdate !== false, // Default to true
-      // Subtitle settings
-      subtitleMode: saved.subtitleMode || 'off',
-      subtitleLangs: saved.subtitleLangs || ['en', 'vi'],
-      subtitleEmbed: saved.subtitleEmbed || false,
-      subtitleFormat: saved.subtitleFormat || 'srt',
-      // YouTube specific settings
-      useBunRuntime: saved.useBunRuntime || false,
-      useActualPlayerJs: saved.useActualPlayerJs || false,
-      // Post-processing settings
-      embedMetadata: saved.embedMetadata !== false, // Default to true
-      embedThumbnail: saved.embedThumbnail === true, // Default to false (requires FFmpeg)
-      // Live stream settings
-      liveFromStart: saved.liveFromStart === true, // Default to false
-      skipLive: saved.skipLive === true, // Default to false
-      // Speed limit settings
-      speedLimitEnabled: saved.speedLimitEnabled === true, // Default to false (unlimited)
-      speedLimitValue: saved.speedLimitValue || 10,
-      speedLimitUnit: saved.speedLimitUnit || 'M',
-      // External downloader settings
-      useAria2: saved.useAria2 === true, // Default to false
-      aria2Args: saved.aria2Args || '',
-      // Auto retry settings
-      autoRetryEnabled: saved.autoRetryEnabled === true, // Default to false
-      autoRetryMaxAttempts: clampAutoRetryMaxAttempts(
-        saved.autoRetryMaxAttempts || AUTO_RETRY_LIMITS.maxAttempts.default,
-      ),
-      autoRetryDelaySeconds: clampAutoRetryDelaySeconds(
-        saved.autoRetryDelaySeconds || AUTO_RETRY_LIMITS.delaySeconds.default,
-      ),
-      // Queue persistence
-      persistDownloadQueue: saved.persistDownloadQueue === true,
-      // SponsorBlock settings
-      sponsorBlock: saved.sponsorBlock === true, // Default to false
-      sponsorBlockMode: saved.sponsorBlockMode || 'remove',
-      sponsorBlockCategories: saved.sponsorBlockCategories || {
-        ...DEFAULT_SPONSORBLOCK_CATEGORIES,
-      },
-      // Telegram remote control settings
-      telegramEnabled: saved.telegramEnabled === true,
-      telegramBotToken: saved.telegramBotToken || '',
-      telegramAllowedChatIds: saved.telegramAllowedChatIds || '',
-      telegramPlainUrlAction: saved.telegramPlainUrlAction === 'add' ? 'add' : 'download',
-    };
+    return createDefaultDownloadSettings(saved);
   });
 
   // Load cookie settings on init
@@ -645,26 +557,14 @@ export function DownloadProvider({ children }: { children: ReactNode }) {
       const workflowSnapshots = loadPluginWorkflowSnapshots();
 
       // Snapshot current settings for these items
-      const settingsSnapshot: ItemDownloadSettings = {
-        quality: currentSettings.quality,
-        format: currentSettings.format,
-        outputPath: currentSettings.outputPath,
-        videoCodec: currentSettings.videoCodec,
-        audioBitrate: currentSettings.audioBitrate,
-        useAria2: currentSettings.useAria2,
-        aria2Args: currentSettings.aria2Args,
-        subtitleMode: currentSettings.subtitleMode,
-        subtitleLangs: [...currentSettings.subtitleLangs],
-        subtitleEmbed: currentSettings.subtitleEmbed,
-        subtitleFormat: currentSettings.subtitleFormat,
-        liveFromStart: currentSettings.liveFromStart,
-        skipLive: currentSettings.skipLive,
+      const settingsSnapshot = buildItemDownloadSettingsSnapshot(currentSettings, {
         pluginWorkflowSnapshots: workflowSnapshots,
         postDownloadWorkflowSteps: loadPostDownloadWorkflowSteps(),
-        autoRetryEnabled: currentSettings.autoRetryEnabled,
-        autoRetryMaxAttempts: currentSettings.autoRetryMaxAttempts,
-        autoRetryDelaySeconds: currentSettings.autoRetryDelaySeconds,
-      };
+        overrides: {
+          downloadPlaylist: false,
+          playlistLimit: null,
+        },
+      });
 
       const newItems: DownloadItem[] = urls
         .filter((url) => !currentItems.some((item) => item.url === url))
@@ -737,30 +637,26 @@ export function DownloadProvider({ children }: { children: ReactNode }) {
         options?.quality && options.quality !== 'audio' ? options.quality : 'best';
       const audioBitrate = options?.audioBitrate === '128' ? '128' : 'auto';
 
-      const settingsSnapshot: ItemDownloadSettings = {
-        quality: mediaType === 'audio' ? 'audio' : videoQuality,
-        format: mediaType === 'audio' ? 'mp3' : 'mp4',
-        outputPath,
-        downloadPlaylist: options?.downloadPlaylist ?? false,
-        playlistLimit: options?.playlistLimit ?? null,
-        videoCodec: currentSettings.videoCodec,
-        audioBitrate: mediaType === 'audio' ? audioBitrate : currentSettings.audioBitrate,
-        useAria2: currentSettings.useAria2,
-        aria2Args: currentSettings.aria2Args,
-        subtitleMode: options?.subtitleMode ?? currentSettings.subtitleMode,
-        subtitleLangs: options?.subtitleLangs ?? [...currentSettings.subtitleLangs],
-        subtitleEmbed: options?.subtitleEmbed ?? currentSettings.subtitleEmbed,
-        subtitleFormat: options?.subtitleFormat ?? currentSettings.subtitleFormat,
-        timeRangeStart: options?.timeRangeStart,
-        timeRangeEnd: options?.timeRangeEnd,
-        liveFromStart: options?.liveFromStart ?? currentSettings.liveFromStart,
-        skipLive: options?.skipLive ?? currentSettings.skipLive,
+      const settingsSnapshot = buildItemDownloadSettingsSnapshot(currentSettings, {
         pluginWorkflowSnapshots: workflowSnapshots,
         postDownloadWorkflowSteps: loadPostDownloadWorkflowSteps(),
-        autoRetryEnabled: currentSettings.autoRetryEnabled,
-        autoRetryMaxAttempts: currentSettings.autoRetryMaxAttempts,
-        autoRetryDelaySeconds: currentSettings.autoRetryDelaySeconds,
-      };
+        overrides: {
+          quality: mediaType === 'audio' ? 'audio' : videoQuality,
+          format: mediaType === 'audio' ? 'mp3' : 'mp4',
+          outputPath,
+          downloadPlaylist: options?.downloadPlaylist ?? false,
+          playlistLimit: options?.playlistLimit ?? null,
+          audioBitrate: mediaType === 'audio' ? audioBitrate : currentSettings.audioBitrate,
+          subtitleMode: options?.subtitleMode ?? currentSettings.subtitleMode,
+          subtitleLangs: options?.subtitleLangs ?? [...currentSettings.subtitleLangs],
+          subtitleEmbed: options?.subtitleEmbed ?? currentSettings.subtitleEmbed,
+          subtitleFormat: options?.subtitleFormat ?? currentSettings.subtitleFormat,
+          timeRangeStart: options?.timeRangeStart,
+          timeRangeEnd: options?.timeRangeEnd,
+          liveFromStart: options?.liveFromStart ?? currentSettings.liveFromStart,
+          skipLive: options?.skipLive ?? currentSettings.skipLive,
+        },
+      });
 
       const newItem: DownloadItem = {
         id: crypto.randomUUID(),
@@ -790,26 +686,14 @@ export function DownloadProvider({ children }: { children: ReactNode }) {
 
       const workflowSnapshots = loadPluginWorkflowSnapshots();
       const currentSettings = settingsRef.current;
-      const settingsSnapshot: ItemDownloadSettings = {
-        quality: currentSettings.quality,
-        format: currentSettings.format,
-        outputPath: currentSettings.outputPath,
-        videoCodec: currentSettings.videoCodec,
-        audioBitrate: currentSettings.audioBitrate,
-        useAria2: currentSettings.useAria2,
-        aria2Args: currentSettings.aria2Args,
-        subtitleMode: currentSettings.subtitleMode,
-        subtitleLangs: [...currentSettings.subtitleLangs],
-        subtitleEmbed: currentSettings.subtitleEmbed,
-        subtitleFormat: currentSettings.subtitleFormat,
-        liveFromStart: currentSettings.liveFromStart,
-        skipLive: currentSettings.skipLive,
+      const settingsSnapshot = buildItemDownloadSettingsSnapshot(currentSettings, {
         pluginWorkflowSnapshots: workflowSnapshots,
         postDownloadWorkflowSteps: loadPostDownloadWorkflowSteps(),
-        autoRetryEnabled: currentSettings.autoRetryEnabled,
-        autoRetryMaxAttempts: currentSettings.autoRetryMaxAttempts,
-        autoRetryDelaySeconds: currentSettings.autoRetryDelaySeconds,
-      };
+        overrides: {
+          downloadPlaylist: false,
+          playlistLimit: null,
+        },
+      });
 
       const currentItems = itemsRef.current;
       const seenUrls = new Set(currentItems.map((item) => item.url));
@@ -877,26 +761,14 @@ export function DownloadProvider({ children }: { children: ReactNode }) {
 
         // Snapshot current settings for these items
         const workflowSnapshots = loadPluginWorkflowSnapshots();
-        const settingsSnapshot: ItemDownloadSettings = {
-          quality: settingsRef.current.quality,
-          format: settingsRef.current.format,
-          outputPath: settingsRef.current.outputPath,
-          videoCodec: settingsRef.current.videoCodec,
-          audioBitrate: settingsRef.current.audioBitrate,
-          useAria2: settingsRef.current.useAria2,
-          aria2Args: settingsRef.current.aria2Args,
-          subtitleMode: settingsRef.current.subtitleMode,
-          subtitleLangs: [...settingsRef.current.subtitleLangs],
-          subtitleEmbed: settingsRef.current.subtitleEmbed,
-          subtitleFormat: settingsRef.current.subtitleFormat,
-          liveFromStart: settingsRef.current.liveFromStart,
-          skipLive: settingsRef.current.skipLive,
+        const settingsSnapshot = buildItemDownloadSettingsSnapshot(settingsRef.current, {
           pluginWorkflowSnapshots: workflowSnapshots,
           postDownloadWorkflowSteps: loadPostDownloadWorkflowSteps(),
-          autoRetryEnabled: settingsRef.current.autoRetryEnabled,
-          autoRetryMaxAttempts: settingsRef.current.autoRetryMaxAttempts,
-          autoRetryDelaySeconds: settingsRef.current.autoRetryDelaySeconds,
-        };
+          overrides: {
+            downloadPlaylist: false,
+            playlistLimit: null,
+          },
+        });
 
         // Add items with titles and thumbnails from playlist data
         const currentItems = itemsRef.current;
@@ -1175,6 +1047,11 @@ export function DownloadProvider({ children }: { children: ReactNode }) {
             quality: itemSettings?.quality ?? settings.quality,
             format: itemSettings?.format ?? settings.format,
             downloadPlaylist: itemSettings?.downloadPlaylist ?? false,
+            playlistIndex: item.playlistIndex ?? null,
+            playlistTotal: item.playlistTotal ?? null,
+            numberPlaylistItems: itemSettings?.numberPlaylistItems ?? false,
+            splitEmbeddedChapters: itemSettings?.splitEmbeddedChapters ?? false,
+            numberChapterFiles: itemSettings?.numberChapterFiles ?? true,
             videoCodec: itemSettings?.videoCodec ?? settings.videoCodec,
             audioBitrate: itemSettings?.audioBitrate ?? settings.audioBitrate,
             playlistLimit:

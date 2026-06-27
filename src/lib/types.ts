@@ -72,6 +72,9 @@ export interface ItemDownloadSettings {
   timeRangeEnd?: string;
   liveFromStart?: boolean;
   skipLive?: boolean;
+  numberPlaylistItems?: boolean;
+  splitEmbeddedChapters?: boolean;
+  numberChapterFiles?: boolean;
   pluginWorkflowSnapshots?: PluginWorkflowSnapshotMap;
   postDownloadWorkflowSteps?: PluginWorkflowStepSnapshot[];
   autoRetryEnabled: boolean;
@@ -227,6 +230,9 @@ export interface DownloadSettings {
   // Post-processing settings
   embedMetadata: boolean; // Embed metadata (title, artist, description) into downloaded files
   embedThumbnail: boolean; // Embed thumbnail as cover art (requires FFmpeg)
+  numberPlaylistItems: boolean; // Prefix expanded playlist items with their playlist number
+  splitEmbeddedChapters: boolean; // Split downloaded media into embedded chapter files
+  numberChapterFiles: boolean; // Prefix chapter files with chapter numbers when splitting
   // Live stream settings
   liveFromStart: boolean; // Download live streams from the beginning
   skipLive: boolean; // Skip live streams instead of downloading them
