@@ -110,6 +110,7 @@ pub(super) fn build_chain_state(payload: &PostDownloadPluginPayload) -> PluginCh
         quality: payload.quality.clone(),
         extra_files: Vec::new(),
         metadata: None,
+        recovered: false,
     }
 }
 
@@ -186,6 +187,9 @@ pub(super) fn merge_chain_mutation(
                 chain_state.metadata = Some(metadata_patch.clone());
             }
         }
+    }
+    if mutation.recovered.unwrap_or(false) {
+        chain_state.recovered = true;
     }
 }
 

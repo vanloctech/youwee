@@ -27,6 +27,7 @@ import {
   isRetryableError,
   waitWithCancellation,
 } from '@/lib/download-retry';
+import { refreshItemPluginWorkflowSnapshots } from '@/lib/download-settings';
 import {
   buildCookieProxyInvokeOptions,
   loadCookieSettings,
@@ -36,6 +37,7 @@ import {
   enqueuePluginWorkflowTrigger,
   loadPluginWorkflowSnapshots,
   loadPostDownloadWorkflowSteps,
+  refreshPluginWorkflowSnapshots,
   refreshPostDownloadWorkflowSteps,
 } from '@/lib/post-download-plugins';
 import { parseUniversalUrls } from '@/lib/sources';
@@ -374,8 +376,14 @@ export function UniversalProvider({ children }: { children: ReactNode }) {
         setCookieError({ show: true, itemId: progress.id, kind: 'db_locked' });
       }
 
-      setItems((currentItems) =>
-        currentItems.map((item) =>
+      setItems((currentItems) => {
+        const status: DownloadItem['status'] =
+          progress.status === 'finished'
+            ? 'completed'
+            : progress.status === 'error'
+              ? 'error'
+              : 'downloading';
+        const nextItems = currentItems.map((item) =>
           item.id === progress.id
             ? {
                 ...item,
@@ -383,12 +391,7 @@ export function UniversalProvider({ children }: { children: ReactNode }) {
                 speed: progress.speed,
                 eta: progress.eta,
                 title: progress.title || item.title,
-                status:
-                  progress.status === 'finished'
-                    ? 'completed'
-                    : progress.status === 'error'
-                      ? 'error'
-                      : 'downloading',
+                status,
                 error: localizeProgressError(
                   progress.error_code,
                   progress.error_message,
@@ -412,8 +415,10 @@ export function UniversalProvider({ children }: { children: ReactNode }) {
                   : {}),
               }
             : item,
-        ),
-      );
+        );
+        itemsRef.current = nextItems;
+        return nextItems;
+      });
     });
 
     return () => {
@@ -946,6 +951,10 @@ export function UniversalProvider({ children }: { children: ReactNode }) {
           );
           return;
         } catch (error) {
+          if (itemsRef.current.some((i) => i.id === item.id && i.status === 'completed')) {
+            return;
+          }
+
           const parsedError = extractBackendError(error);
           const errorMessage = localizeBackendError(parsedError);
           if (parsedError.code === 'YT_SKIPPED_LIVE') {
@@ -1189,27 +1198,34 @@ export function UniversalProvider({ children }: { children: ReactNode }) {
   // Retry a failed download (reset item and restart)
   const retryFailedDownload = useCallback(
     (itemId: string) => {
-      // Reset item status to pending
-      setItems((currentItems) =>
-        currentItems.map((item) =>
-          item.id === itemId
-            ? {
-                ...item,
-                status: 'pending',
-                progress: 0,
-                error: undefined,
-                errorCode: undefined,
-                retryState: undefined,
-              }
-            : item,
-        ),
-      );
-      // Clear cookie error
-      setCookieError(null);
-      // Use a short delay to ensure state update before starting download
-      setTimeout(() => {
-        startDownload();
-      }, 100);
+      void (async () => {
+        const pluginWorkflowSnapshots = await refreshPluginWorkflowSnapshots();
+
+        // Reset item status to pending and treat retry as a fresh workflow run.
+        setItems((currentItems) =>
+          currentItems.map((item) =>
+            item.id === itemId
+              ? {
+                  ...item,
+                  status: 'pending',
+                  progress: 0,
+                  error: undefined,
+                  errorCode: undefined,
+                  retryState: undefined,
+                  settings: item.settings
+                    ? refreshItemPluginWorkflowSnapshots(item.settings, pluginWorkflowSnapshots)
+                    : item.settings,
+                }
+              : item,
+          ),
+        );
+        // Clear cookie error
+        setCookieError(null);
+        // Use a short delay to ensure state update before starting download
+        setTimeout(() => {
+          startDownload();
+        }, 100);
+      })();
     },
     [startDownload],
   );

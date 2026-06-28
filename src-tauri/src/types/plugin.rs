@@ -508,6 +508,8 @@ pub enum PluginWorkflowRunStatus {
 #[serde(rename_all = "camelCase")]
 pub struct PluginChainMutation {
     #[serde(default)]
+    pub recovered: Option<bool>,
+    #[serde(default)]
     pub active_filepath: Option<String>,
     #[serde(default)]
     pub active_filename: Option<String>,
@@ -545,6 +547,8 @@ pub struct PluginChainState {
     pub extra_files: Vec<String>,
     #[serde(default)]
     pub metadata: Option<Value>,
+    #[serde(default)]
+    pub recovered: bool,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

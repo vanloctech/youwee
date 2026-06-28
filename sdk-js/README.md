@@ -841,12 +841,24 @@ return {
 
 Supported mutation fields:
 
+- `recovered`
 - `activeFilepath`
 - `activeFilename`
 - `extraFiles`
 - `metadataPatch`
 
 These mutations are merged into workflow chain state and passed to later plugins in the same run.
+
+For `download.failed` fallback plugins, return `recovered: true` with `activeFilepath`
+when the plugin successfully creates a replacement file. Youwee validates the file path,
+adds the recovered file to history, and marks the original queue item as completed.
+
+```ts
+return ctx.ok("Recovered download", null, null, {
+  recovered: true,
+  activeFilepath: recoveredFilepath,
+});
+```
 
 ---
 

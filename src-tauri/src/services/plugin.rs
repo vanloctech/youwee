@@ -10,9 +10,12 @@ use tokio::io::AsyncWriteExt;
 use tokio::process::Command;
 use uuid::Uuid;
 
-use crate::database::{add_log_internal, clear_plugin_logs_from_db};
+use crate::database::{
+    add_history_internal, add_log_internal, clear_plugin_logs_from_db, update_history_download,
+};
 use crate::types::{
-    PluginConfigField, PluginExecutionResult, PluginExecutionStatusEvent,
+    DownloadProgress, PluginChainState, PluginConfigField, PluginExecutionResult,
+    PluginExecutionStatusEvent,
     PluginFilesystemPermission, PluginManifest, PluginPackageInspection, PluginPackageSource,
     PluginPackageSourceKind, PluginPermissionApproval, PluginPermissionRequest, PluginProvider,
     PluginRuntimeLanguage, PluginSummary, PluginToolPermission, PluginTriggerWorkflow,
@@ -172,6 +175,171 @@ fn validate_plugin_result_outputs(result: &PluginExecutionResult) -> Option<Plug
     }
 
     None
+}
+
+fn title_from_recovered_filepath(filepath: &str) -> Option<String> {
+    Path::new(filepath)
+        .file_stem()
+        .and_then(|name| name.to_str())
+        .map(str::trim)
+        .filter(|value| !value.is_empty())
+        .map(|value| value.to_string())
+}
+
+fn format_from_recovered_filepath(filepath: &str) -> Option<String> {
+    Path::new(filepath)
+        .extension()
+        .and_then(|extension| extension.to_str())
+        .map(str::trim)
+        .filter(|value| !value.is_empty())
+        .map(|value| value.to_string())
+}
+
+fn should_mark_failed_download_recovered(
+    trigger: &str,
+    chain_state: &PluginChainState,
+    final_status: &PluginWorkflowRunStatus,
+) -> bool {
+    trigger == "download.failed"
+        && chain_state.recovered
+        && matches!(
+            final_status,
+            PluginWorkflowRunStatus::Completed | PluginWorkflowRunStatus::PartialFailed
+        )
+}
+
+fn mark_failed_download_recovered(
+    app: &AppHandle,
+    workflow_run: &PluginWorkflowRun,
+    chain_state: &PluginChainState,
+    final_status: &PluginWorkflowRunStatus,
+) {
+    if !should_mark_failed_download_recovered(&workflow_run.trigger, chain_state, final_status) {
+        return;
+    }
+
+    let filepath = chain_state.active_filepath.trim();
+    if filepath.is_empty() {
+        add_log_internal(
+            "warn",
+            "Plugin recovery ignored",
+            Some("Recovered download mutation did not include an active file path."),
+            Some(&chain_state.url),
+        )
+        .ok();
+        return;
+    }
+
+    let output_path = Path::new(filepath);
+    if let Err(reason) = validate_plugin_output_path(output_path) {
+        add_log_internal(
+            "warn",
+            "Plugin recovery blocked by safety policy",
+            Some(&format!("Path: {filepath}\nReason: {reason}")),
+            Some(&chain_state.url),
+        )
+        .ok();
+        return;
+    }
+
+    let Ok(metadata) = std::fs::metadata(output_path) else {
+        add_log_internal(
+            "warn",
+            "Plugin recovery ignored",
+            Some(&format!("Recovered file does not exist: {filepath}")),
+            Some(&chain_state.url),
+        )
+        .ok();
+        return;
+    };
+
+    if !metadata.is_file() {
+        add_log_internal(
+            "warn",
+            "Plugin recovery ignored",
+            Some(&format!("Recovered path is not a file: {filepath}")),
+            Some(&chain_state.url),
+        )
+        .ok();
+        return;
+    }
+
+    let filesize = Some(metadata.len());
+    let title = chain_state
+        .title
+        .clone()
+        .filter(|value| !value.trim().is_empty())
+        .or_else(|| title_from_recovered_filepath(filepath))
+        .unwrap_or_else(|| "Recovered download".to_string());
+    let format = chain_state
+        .format
+        .clone()
+        .filter(|value| !value.trim().is_empty())
+        .or_else(|| format_from_recovered_filepath(filepath));
+    let history_id = match chain_state
+        .history_id
+        .as_ref()
+        .filter(|value| !value.trim().is_empty())
+    {
+        Some(existing_id) => {
+            update_history_download(
+                existing_id.clone(),
+                filepath.to_string(),
+                filesize,
+                chain_state.quality.clone(),
+                format.clone(),
+                chain_state.time_range.clone(),
+            )
+            .ok();
+            Some(existing_id.clone())
+        }
+        None => add_history_internal(
+            chain_state.url.clone(),
+            title.clone(),
+            chain_state.thumbnail.clone(),
+            filepath.to_string(),
+            filesize,
+            None,
+            chain_state.quality.clone(),
+            format.clone(),
+            chain_state.source.clone(),
+            chain_state.time_range.clone(),
+        )
+        .ok(),
+    };
+
+    add_log_internal(
+        "success",
+        "Download recovered by plugin workflow",
+        Some(&format!(
+            "Workflow Run ID: {}\nFile: {}",
+            workflow_run.run_id, filepath
+        )),
+        Some(&chain_state.url),
+    )
+    .ok();
+
+    let progress = DownloadProgress {
+        id: chain_state.job_id.clone(),
+        percent: 100.0,
+        speed: String::new(),
+        eta: String::new(),
+        status: "finished".to_string(),
+        title: Some(title),
+        playlist_index: None,
+        playlist_count: None,
+        filesize,
+        resolution: chain_state.quality.clone(),
+        format_ext: format,
+        error_message: None,
+        error_code: None,
+        error_params: None,
+        history_id,
+        filepath: Some(filepath.to_string()),
+        downloaded_size: None,
+        elapsed_time: None,
+    };
+    app.emit("download-progress", progress).ok();
 }
 
 const PLUGINS_DIR_NAME: &str = "plugins";
@@ -1628,6 +1796,8 @@ async fn execute_plugin_workflow_run(
         Some(&workflow_run.initial_payload.url),
     )
     .ok();
+
+    mark_failed_download_recovered(&app, &workflow_run, &chain_state, &final_status);
 
     results
 }

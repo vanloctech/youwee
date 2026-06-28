@@ -6,6 +6,7 @@ import {
 import type {
   DownloadSettings,
   ItemDownloadSettings,
+  ItemUniversalSettings,
   PluginWorkflowSnapshotMap,
   PluginWorkflowStepSnapshot,
 } from '@/lib/types';
@@ -138,5 +139,15 @@ export function buildItemDownloadSettingsSnapshot(
     autoRetryMaxAttempts: settings.autoRetryMaxAttempts,
     autoRetryDelaySeconds: settings.autoRetryDelaySeconds,
     ...extras.overrides,
+  };
+}
+
+export function refreshItemPluginWorkflowSnapshots<
+  T extends ItemDownloadSettings | ItemUniversalSettings,
+>(settings: T, pluginWorkflowSnapshots: PluginWorkflowSnapshotMap): T {
+  return {
+    ...settings,
+    pluginWorkflowSnapshots,
+    postDownloadWorkflowSteps: pluginWorkflowSnapshots['download.completed'] ?? [],
   };
 }

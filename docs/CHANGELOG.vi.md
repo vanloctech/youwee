@@ -18,6 +18,8 @@ và dự án tuân theo [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - **Giao diện extension** - Làm mới popup và menu nút nổi của browser extension theo phong cách gọn, hiện đại và đồng bộ hơn với trình phát nhạc
 
 ### Sửa lỗi
+- **Tải được khôi phục bởi plugin** - Sửa lỗi plugin `download.failed` khôi phục file thành công nhưng item gốc vẫn bị hiển thị là thất bại
+- **Workflow plugin khi thử lại** - Sửa lỗi tải xuống thất bại khi thử lại không dùng workflow plugin mới được gán
 - **Nút nổi trong extension** - Sửa lỗi nút nổi của browser extension không hiện hoặc bị crash trên các tab đã mở sẵn trước khi extension được cài hoặc reload
 - **Tải từ extension khi app chưa mở** - Sửa lỗi bấm `Download now` trong browser extension chỉ mở Youwee nhưng không thêm video khi app desktop chưa chạy sẵn
 - **Thông tin video cho AI Summary** - Sửa lỗi AI Summary bị kẹt khi lấy thông tin video trong trường hợp phụ đề có sẵn nhưng yt-dlp không chọn được định dạng video

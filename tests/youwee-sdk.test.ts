@@ -169,6 +169,51 @@ describe('youwee-sdk createContext', () => {
     expect(ctx.youwee.sdk.checkAppVersion('>=0.13.0 <0.14.0').compatible).toBe(true);
   });
 
+  test('allows download.failed plugins to request recovered queue status', () => {
+    const ctx = createContext({
+      ...samplePayload,
+      trigger: 'download.failed',
+      filepath: '/tmp',
+      filename: 'Downloads',
+    });
+
+    const result = ctx.ok('Recovered download', null, null, {
+      recovered: true,
+      activeFilepath: '/tmp/recovered.mp4',
+    });
+
+    expect(result.mutations).toEqual({
+      recovered: true,
+      activeFilepath: '/tmp/recovered.mp4',
+    });
+  });
+
+  test('normalizes legacy chain state recovered flag', () => {
+    const ctx = createContext({
+      ...samplePayload,
+      chainState: {
+        jobId: 'job-1',
+        source: 'youtube',
+        downloadKind: 'download',
+        url: 'https://example.com/video',
+        title: 'Example video',
+        thumbnail: null,
+        historyId: null,
+        timeRange: null,
+        activeFilepath: '/tmp/video.mp4',
+        activeFilename: 'video.mp4',
+        directory: '/tmp',
+        filesize: 1234,
+        format: 'mp4',
+        quality: '1080p',
+        extraFiles: [],
+        metadata: null,
+      } as never,
+    });
+
+    expect(ctx.chain.recovered).toBe(false);
+  });
+
   test('routes filesystem helpers through the app bridge', async () => {
     delete process.env.YOUWEE_PLUGIN_BRIDGE_URL;
     const ctx = createContext(samplePayload);
