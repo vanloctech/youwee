@@ -90,6 +90,7 @@
     "AI_NO_TRANSCRIPT": "لا يوجد نص تفريغ متاح.",
     "WHISPER_API_ERROR": "خطأ في واجهة Whisper.",
     "WHISPER_NO_API_KEY": "لم يتم إعداد مفتاح API الخاص بـ Whisper.",
-    "WHISPER_UNSUPPORTED_FORMAT": "تنسيق الصوت غير مدعوم في Whisper."
+    "WHISPER_UNSUPPORTED_FORMAT": "تنسيق الصوت غير مدعوم في Whisper.",
+    "YT_SKIPPED_FILTER": "Skipped by yt-dlp match filter."
   }
 }

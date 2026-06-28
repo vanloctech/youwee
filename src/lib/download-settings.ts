@@ -11,6 +11,7 @@ import type {
   PluginWorkflowStepSnapshot,
 } from '@/lib/types';
 import { DEFAULT_SPONSORBLOCK_CATEGORIES } from '@/lib/types';
+import { sanitizeYtdlpAdvancedOptions } from '@/lib/ytdlp-advanced-options';
 
 interface SnapshotExtras {
   pluginWorkflowSnapshots?: PluginWorkflowSnapshotMap;
@@ -47,6 +48,8 @@ export function createDefaultDownloadSettings(saved: Partial<DownloadSettings>):
     speedLimitUnit: saved.speedLimitUnit || 'M',
     useAria2: saved.useAria2 === true,
     aria2Args: saved.aria2Args || '',
+    ytdlpAdvancedOptionsEnabled: saved.ytdlpAdvancedOptionsEnabled === true,
+    ytdlpAdvancedOptions: sanitizeYtdlpAdvancedOptions(saved.ytdlpAdvancedOptions),
     autoRetryEnabled: saved.autoRetryEnabled === true,
     autoRetryMaxAttempts: clampAutoRetryMaxAttempts(
       saved.autoRetryMaxAttempts || AUTO_RETRY_LIMITS.maxAttempts.default,
@@ -96,6 +99,8 @@ export function serializeDownloadSettings(settings: DownloadSettings): Partial<D
     speedLimitUnit: settings.speedLimitUnit,
     useAria2: settings.useAria2,
     aria2Args: settings.aria2Args,
+    ytdlpAdvancedOptionsEnabled: settings.ytdlpAdvancedOptionsEnabled,
+    ytdlpAdvancedOptions: sanitizeYtdlpAdvancedOptions(settings.ytdlpAdvancedOptions),
     autoRetryEnabled: settings.autoRetryEnabled,
     autoRetryMaxAttempts: settings.autoRetryMaxAttempts,
     autoRetryDelaySeconds: settings.autoRetryDelaySeconds,
@@ -124,6 +129,8 @@ export function buildItemDownloadSettingsSnapshot(
     audioBitrate: settings.audioBitrate,
     useAria2: settings.useAria2,
     aria2Args: settings.aria2Args,
+    ytdlpAdvancedOptionsEnabled: settings.ytdlpAdvancedOptionsEnabled,
+    ytdlpAdvancedOptions: sanitizeYtdlpAdvancedOptions(settings.ytdlpAdvancedOptions),
     subtitleMode: settings.subtitleMode,
     subtitleLangs: [...settings.subtitleLangs],
     subtitleEmbed: settings.subtitleEmbed,

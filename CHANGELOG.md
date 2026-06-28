@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **yt-dlp advanced options** - Added vetted advanced options for users who need more control over yt-dlp downloads
 - **Playlist file numbering** - Added a Download setting to prefix playlist downloads with their playlist order
 - **Embedded chapter splitting** - Added Download settings to split embedded video chapters into separate files and optionally number chapter files
 - **Extension AI Summary** - Added a Summary button in the browser extension to open YouTube videos directly in AI Summary

@@ -5,7 +5,11 @@ import {
   refreshItemPluginWorkflowSnapshots,
   serializeDownloadSettings,
 } from '../src/lib/download-settings';
-import type { ItemDownloadSettings, PluginWorkflowSnapshotMap } from '../src/lib/types';
+import type {
+  ItemDownloadSettings,
+  PluginWorkflowSnapshotMap,
+  YtdlpAdvancedOption,
+} from '../src/lib/types';
 
 describe('download settings playlist numbering and chapter split options', () => {
   test('defaults playlist numbering and embedded chapter splitting off', () => {
@@ -80,5 +84,45 @@ describe('download settings playlist numbering and chapter split options', () =>
       currentSnapshots['download.failed'],
     );
     expect(refreshed.postDownloadWorkflowSteps).toEqual(currentSnapshots['download.completed']);
+  });
+});
+
+describe('download settings yt-dlp advanced options', () => {
+  const options: YtdlpAdvancedOption[] = [
+    { id: 'impersonate', value: 'chrome' },
+    { id: 'forceIpv4' },
+    { id: 'concurrentFragments', value: '4' },
+  ];
+
+  test('defaults yt-dlp advanced options off', () => {
+    const settings = createDefaultDownloadSettings({});
+
+    expect(settings.ytdlpAdvancedOptionsEnabled).toBe(false);
+    expect(settings.ytdlpAdvancedOptions).toEqual([]);
+  });
+
+  test('persists yt-dlp advanced options', () => {
+    const saved = serializeDownloadSettings(
+      createDefaultDownloadSettings({
+        ytdlpAdvancedOptionsEnabled: true,
+        ytdlpAdvancedOptions: options,
+      }),
+    );
+
+    expect(saved.ytdlpAdvancedOptionsEnabled).toBe(true);
+    expect(saved.ytdlpAdvancedOptions).toEqual(options);
+  });
+
+  test('snapshots yt-dlp advanced options into queued items', () => {
+    const settings = createDefaultDownloadSettings({
+      ytdlpAdvancedOptionsEnabled: true,
+      ytdlpAdvancedOptions: options,
+    });
+
+    const snapshot = buildItemDownloadSettingsSnapshot(settings);
+
+    expect(snapshot.ytdlpAdvancedOptionsEnabled).toBe(true);
+    expect(snapshot.ytdlpAdvancedOptions).toEqual(options);
+    expect(snapshot.ytdlpAdvancedOptions).not.toBe(settings.ytdlpAdvancedOptions);
   });
 });

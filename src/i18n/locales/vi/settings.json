@@ -450,7 +450,50 @@
     "autoRetryConfigDesc": "Đặt số lần thử lại và thời gian chờ giữa mỗi lần",
     "retryAttempts": "Số lần",
     "retryDelay": "Độ trễ",
-    "secondsShort": "giây"
+    "secondsShort": "giây",
+    "ytdlpAdvanced": {
+      "title": "Tùy chọn yt-dlp nâng cao",
+      "description": "Dùng các tùy chọn yt-dlp đã kiểm soát cho site khó tải và tinh chỉnh mạng",
+      "toggle": "Bật tùy chọn yt-dlp nâng cao",
+      "toggleDesc": "Chỉ truyền các tùy chọn yt-dlp được hỗ trợ vào lệnh tải. Aria2, cookie, proxy, output và retry vẫn do Youwee quản lý.",
+      "helper": "Chỉ chấp nhận tùy chọn yt-dlp trong allowlist. Bilibili sẽ dùng header do app quản lý khi cần.",
+      "addOption": "Thêm tùy chọn yt-dlp",
+      "advancedBadge": "Nâng cao",
+      "option": {
+        "impersonateDesc": "Yêu cầu yt-dlp giả lập client trình duyệt được hỗ trợ, ví dụ chrome.",
+        "forceIpv4Desc": "Cho yt-dlp kết nối qua IPv4.",
+        "forceIpv6Desc": "Cho yt-dlp kết nối qua IPv6.",
+        "socketTimeoutDesc": "Số giây chờ trước khi yt-dlp bỏ cuộc với kết nối mạng.",
+        "userAgentDesc": "Ghi đè User-Agent cho các lượt tải không phải Bilibili.",
+        "refererDesc": "Gửi URL referer HTTP tùy chỉnh cho các lượt tải không phải Bilibili.",
+        "addHeadersDesc": "Gửi header HTTP không nhạy cảm. Header nhạy cảm sẽ bị chặn.",
+        "sleepRequestsDesc": "Số giây chờ giữa các request metadata/mạng.",
+        "sleepIntervalDesc": "Số giây chờ trước mỗi lượt tải trong danh sách.",
+        "maxSleepIntervalDesc": "Giới hạn trên cho khoảng nghỉ ngẫu nhiên.",
+        "concurrentFragmentsDesc": "Số fragment HLS/DASH tải song song.",
+        "throttledRateDesc": "Tốc độ tối thiểu trước khi yt-dlp xem kết nối là bị bóp.",
+        "httpChunkSizeDesc": "Kích thước chunk cho tải HTTP dạng chunk.",
+        "geoBypassDesc": "Yêu cầu yt-dlp dùng cơ chế geo bypass mặc định.",
+        "geoBypassCountryDesc": "Dùng mã quốc gia 2 ký tự cho geo bypass.",
+        "matchFiltersDesc": "Bỏ qua video không khớp biểu thức filter của yt-dlp.",
+        "formatSortDesc": "Điều chỉnh cách yt-dlp sắp xếp format mà không thay thế setting chất lượng của Youwee.",
+        "youtubePlayerClientDesc": "Dùng preset player client YouTube đã được kiểm soát."
+      },
+      "placeholder": {
+        "impersonate": "chrome",
+        "seconds": "30",
+        "userAgent": "Mozilla/5.0 ...",
+        "url": "https://example.com/",
+        "headerName": "X-Example",
+        "headerValue": "value",
+        "fragments": "4",
+        "rate": "100K",
+        "size": "10M",
+        "country": "US",
+        "matchFilters": "!is_live",
+        "formatSort": "res:1080,fps"
+      }
+    }
   },
   "remoteDownload": {
     "telegramRemote": "Điều khiển qua Telegram",

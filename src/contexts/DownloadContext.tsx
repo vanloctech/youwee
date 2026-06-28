@@ -1088,6 +1088,11 @@ export function DownloadProvider({ children }: { children: ReactNode }) {
             // External downloader settings
             useAria2: itemSettings?.useAria2 ?? settings.useAria2,
             aria2Args: itemSettings?.aria2Args ?? settings.aria2Args,
+            // yt-dlp advanced options
+            ytdlpAdvancedOptionsEnabled:
+              itemSettings?.ytdlpAdvancedOptionsEnabled ?? settings.ytdlpAdvancedOptionsEnabled,
+            ytdlpAdvancedOptions:
+              itemSettings?.ytdlpAdvancedOptions ?? settings.ytdlpAdvancedOptions,
             // SponsorBlock settings
             sponsorblockRemove: sponsorBlockArgs.remove,
             sponsorblockMark: sponsorBlockArgs.mark,
@@ -1127,7 +1132,7 @@ export function DownloadProvider({ children }: { children: ReactNode }) {
 
           const parsedError = extractBackendError(error);
           const errorMessage = localizeBackendError(parsedError);
-          if (parsedError.code === 'YT_SKIPPED_LIVE') {
+          if (parsedError.code === 'YT_SKIPPED_LIVE' || parsedError.code === 'YT_SKIPPED_FILTER') {
             setItems((items) =>
               items.map((i) =>
                 i.id === item.id

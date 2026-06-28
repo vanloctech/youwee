@@ -23,6 +23,7 @@ const NON_RETRYABLE_CODES = new Set([
   'YT_PRIVATE_VIDEO',
   'YT_VIDEO_UNAVAILABLE',
   'YT_SKIPPED_LIVE',
+  'YT_SKIPPED_FILTER',
   'YT_UPCOMING_LIVE',
   'YT_AGE_RESTRICTED',
   'YT_MEMBERS_ONLY',
@@ -84,6 +85,9 @@ export function inferBackendErrorCode(message: string): string {
     return 'YT_UPCOMING_LIVE';
   }
   if (m.includes('skipped live video')) return 'YT_SKIPPED_LIVE';
+  if (m.includes('does not pass filter') || m.includes('skipped by filter')) {
+    return 'YT_SKIPPED_FILTER';
+  }
   if (m.includes('no subtitles')) return 'YT_NO_SUBTITLES';
   if (m.includes('no transcript available')) return 'TRANSCRIPT_NOT_AVAILABLE';
   if (m.includes('system yt-dlp not found')) return 'YTDLP_SYSTEM_NOT_FOUND';

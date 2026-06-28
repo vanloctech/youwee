@@ -445,7 +445,50 @@
     "aria2ToggleDesc": "Pass --downloader aria2c for faster multi-connection downloads",
     "aria2Args": "Custom Aria2 Args",
     "aria2ArgsDesc": "Supports raw args (e.g. -x 16 -s 16) or prefixed args (aria2c:...)",
-    "aria2ArgsPlaceholder": "-x 16 -s 16 -j 16"
+    "aria2ArgsPlaceholder": "-x 16 -s 16 -j 16",
+    "ytdlpAdvanced": {
+      "title": "yt-dlp Advanced Options",
+      "description": "Use vetted yt-dlp options for difficult sites and network tuning",
+      "toggle": "Enable yt-dlp advanced options",
+      "toggleDesc": "Pass supported yt-dlp options to download commands only. Aria2, cookies, proxy, output, and retry options stay managed by Youwee.",
+      "helper": "Only allowlisted yt-dlp options are accepted. Bilibili uses app-managed headers when needed.",
+      "addOption": "Add yt-dlp option",
+      "advancedBadge": "Advanced",
+      "option": {
+        "impersonateDesc": "Ask yt-dlp to impersonate a supported browser client, such as chrome.",
+        "forceIpv4Desc": "Make yt-dlp connect through IPv4.",
+        "forceIpv6Desc": "Make yt-dlp connect through IPv6.",
+        "socketTimeoutDesc": "Seconds to wait before yt-dlp gives up on a network socket.",
+        "userAgentDesc": "Override the request User-Agent for non-Bilibili downloads.",
+        "refererDesc": "Send a custom HTTP referer URL for non-Bilibili downloads.",
+        "addHeadersDesc": "Send a custom non-sensitive HTTP header. Sensitive headers are blocked.",
+        "sleepRequestsDesc": "Seconds to wait between metadata/network requests.",
+        "sleepIntervalDesc": "Seconds to wait before each download in a list.",
+        "maxSleepIntervalDesc": "Upper bound for randomized sleep interval.",
+        "concurrentFragmentsDesc": "Number of HLS/DASH fragments to download in parallel.",
+        "throttledRateDesc": "Minimum rate before yt-dlp treats the connection as throttled.",
+        "httpChunkSizeDesc": "Chunk size for chunk-based HTTP downloads.",
+        "geoBypassDesc": "Ask yt-dlp to use its default geo bypass behavior.",
+        "geoBypassCountryDesc": "Use a two-letter country code for geo bypass.",
+        "matchFiltersDesc": "Skip videos that do not match a yt-dlp filter expression.",
+        "formatSortDesc": "Adjust yt-dlp format sorting without replacing Youwee quality settings.",
+        "youtubePlayerClientDesc": "Use a vetted YouTube extractor player client preset."
+      },
+      "placeholder": {
+        "impersonate": "chrome",
+        "seconds": "30",
+        "userAgent": "Mozilla/5.0 ...",
+        "url": "https://example.com/",
+        "headerName": "X-Example",
+        "headerValue": "value",
+        "fragments": "4",
+        "rate": "100K",
+        "size": "10M",
+        "country": "US",
+        "matchFilters": "!is_live",
+        "formatSort": "res:1080,fps"
+      }
+    }
   },
   "dependencies": {
     "title": "Dépendances",

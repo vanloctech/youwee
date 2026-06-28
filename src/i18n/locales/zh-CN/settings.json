@@ -450,7 +450,50 @@
     "autoRetryConfigDesc": "设置重试次数和每次重试间隔",
     "retryAttempts": "次数",
     "retryDelay": "间隔",
-    "secondsShort": "秒"
+    "secondsShort": "秒",
+    "ytdlpAdvanced": {
+      "title": "yt-dlp 高级选项",
+      "description": "为疑难站点和网络调优使用经过验证的 yt-dlp 选项",
+      "toggle": "启用 yt-dlp 高级选项",
+      "toggleDesc": "仅向下载命令传递受支持的 yt-dlp 选项。Aria2、Cookie、代理、输出和重试仍由 Youwee 管理。",
+      "helper": "只接受白名单中的 yt-dlp 选项。Bilibili 会在需要时使用应用管理的请求头。",
+      "addOption": "添加 yt-dlp 选项",
+      "advancedBadge": "高级",
+      "option": {
+        "impersonateDesc": "让 yt-dlp 模拟受支持的浏览器客户端，例如 chrome。",
+        "forceIpv4Desc": "让 yt-dlp 通过 IPv4 连接。",
+        "forceIpv6Desc": "让 yt-dlp 通过 IPv6 连接。",
+        "socketTimeoutDesc": "yt-dlp 在放弃网络 socket 前等待的秒数。",
+        "userAgentDesc": "为非 Bilibili 下载覆盖请求 User-Agent。",
+        "refererDesc": "为非 Bilibili 下载发送自定义 HTTP referer URL。",
+        "addHeadersDesc": "发送自定义非敏感 HTTP 请求头。敏感请求头会被阻止。",
+        "sleepRequestsDesc": "metadata/网络请求之间等待的秒数。",
+        "sleepIntervalDesc": "列表中每个下载开始前等待的秒数。",
+        "maxSleepIntervalDesc": "随机等待间隔的上限。",
+        "concurrentFragmentsDesc": "并行下载的 HLS/DASH 分片数量。",
+        "throttledRateDesc": "低于该速率时 yt-dlp 会认为连接被限速。",
+        "httpChunkSizeDesc": "基于分块的 HTTP 下载所使用的分块大小。",
+        "geoBypassDesc": "让 yt-dlp 使用默认地理绕过行为。",
+        "geoBypassCountryDesc": "使用两位国家代码进行地理绕过。",
+        "matchFiltersDesc": "跳过不符合 yt-dlp 过滤表达式的视频。",
+        "formatSortDesc": "调整 yt-dlp 格式排序，不替代 Youwee 的质量设置。",
+        "youtubePlayerClientDesc": "使用经过验证的 YouTube extractor player client 预设。"
+      },
+      "placeholder": {
+        "impersonate": "chrome",
+        "seconds": "30",
+        "userAgent": "Mozilla/5.0 ...",
+        "url": "https://example.com/",
+        "headerName": "X-Example",
+        "headerValue": "value",
+        "fragments": "4",
+        "rate": "100K",
+        "size": "10M",
+        "country": "US",
+        "matchFilters": "!is_live",
+        "formatSort": "res:1080,fps"
+      }
+    }
   },
   "remoteDownload": {
     "telegramRemote": "Telegram 远程控制",

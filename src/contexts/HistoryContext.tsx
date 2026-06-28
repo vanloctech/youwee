@@ -25,7 +25,9 @@ import type {
   HistoryFilter,
   HistorySort,
   HistoryTag,
+  YtdlpAdvancedOption,
 } from '@/lib/types';
+import { sanitizeYtdlpAdvancedOptions } from '@/lib/ytdlp-advanced-options';
 
 // Re-download task state
 interface RedownloadTask {
@@ -543,6 +545,8 @@ export function HistoryProvider({ children }: { children: ReactNode }) {
       let useActualPlayerJs = false;
       let useAria2 = false;
       let aria2Args = '';
+      let ytdlpAdvancedOptionsEnabled = false;
+      let ytdlpAdvancedOptions: YtdlpAdvancedOption[] = [];
       let savedOutputPath = '';
       try {
         const savedSettings = localStorage.getItem('youwee-settings');
@@ -552,6 +556,8 @@ export function HistoryProvider({ children }: { children: ReactNode }) {
           useActualPlayerJs = parsed.useActualPlayerJs || false;
           useAria2 = parsed.useAria2 === true;
           aria2Args = parsed.aria2Args || '';
+          ytdlpAdvancedOptionsEnabled = parsed.ytdlpAdvancedOptionsEnabled === true;
+          ytdlpAdvancedOptions = sanitizeYtdlpAdvancedOptions(parsed.ytdlpAdvancedOptions);
           savedOutputPath = parsed.outputPath || '';
         }
       } catch (e) {
@@ -625,6 +631,8 @@ export function HistoryProvider({ children }: { children: ReactNode }) {
           // External downloader settings
           useAria2,
           aria2Args,
+          ytdlpAdvancedOptionsEnabled,
+          ytdlpAdvancedOptions,
           pluginWorkflowSnapshots: loadPluginWorkflowSnapshots(),
           postDownloadWorkflowSteps: loadPostDownloadWorkflowSteps(),
           downloadKind: 'history-redownload',
