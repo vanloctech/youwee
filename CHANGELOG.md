@@ -12,6 +12,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Embedded chapter splitting** - Added Download settings to split embedded video chapters into separate files and optionally number chapter files
 - **Extension AI Summary** - Added a Summary button in the browser extension to open YouTube videos directly in AI Summary
 - **AI summary token limit** - Added an optional Settings field to set maximum output tokens for generated summaries
+- **Cookie skip rules** - Added tag-based rules to skip browser or cookie file authentication for matching sites, with Facebook Reels included by default
 
 ### Changed
 - **Extension interface** - Refined the browser extension popup and floating menu with a cleaner style that matches the music player
@@ -21,6 +22,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Extension cold-start downloads** - Fixed browser extension `Download now` links opening Youwee without adding the video when the desktop app was not already running
 - **AI summary video info** - Fixed AI Summary getting stuck while fetching video info for videos whose subtitles are available but video formats cannot be selected
 - **AI summary length** - Removed the default hard-coded summary output token limit so providers can use their model defaults unless users set a custom value
+- **Long video titles** - Fixed downloads failing when very long titles are used as filenames
 
 ## [0.17.2] - 2026-06-17
 

@@ -553,6 +553,8 @@ export function UniversalProvider({ children }: { children: ReactNode }) {
         aria2Args: aria2Settings.aria2Args,
         liveFromStart: currentSettings.liveFromStart,
         skipLive: currentSettings.skipLive,
+        splitEmbeddedChapters: downloadSettings.splitEmbeddedChapters,
+        numberChapterFiles: downloadSettings.numberChapterFiles,
         pluginWorkflowSnapshots: workflowSnapshots,
         postDownloadWorkflowSteps: loadPostDownloadWorkflowSteps(),
         autoRetryEnabled: currentSettings.autoRetryEnabled,
@@ -583,7 +585,12 @@ export function UniversalProvider({ children }: { children: ReactNode }) {
 
       return newItems.length;
     },
-    [enqueueQueuedWorkflowForItems, fetchMetadataForItems],
+    [
+      downloadSettings.numberChapterFiles,
+      downloadSettings.splitEmbeddedChapters,
+      enqueueQueuedWorkflowForItems,
+      fetchMetadataForItems,
+    ],
   );
 
   const focusItem = useCallback((itemId: string) => {
@@ -641,6 +648,8 @@ export function UniversalProvider({ children }: { children: ReactNode }) {
         timeRangeEnd: options?.timeRangeEnd,
         liveFromStart: options?.liveFromStart ?? currentSettings.liveFromStart,
         skipLive: options?.skipLive ?? currentSettings.skipLive,
+        splitEmbeddedChapters: downloadSettings.splitEmbeddedChapters,
+        numberChapterFiles: downloadSettings.numberChapterFiles,
         pluginWorkflowSnapshots: workflowSnapshots,
         postDownloadWorkflowSteps: loadPostDownloadWorkflowSteps(),
         autoRetryEnabled: currentSettings.autoRetryEnabled,
@@ -667,7 +676,13 @@ export function UniversalProvider({ children }: { children: ReactNode }) {
       enqueueQueuedWorkflowForItems([newItem]);
       return { added: true, itemId: newItem.id };
     },
-    [enqueueQueuedWorkflowForItems, fetchMetadataForItems, focusItem],
+    [
+      downloadSettings.numberChapterFiles,
+      downloadSettings.splitEmbeddedChapters,
+      enqueueQueuedWorkflowForItems,
+      fetchMetadataForItems,
+      focusItem,
+    ],
   );
 
   const importFromFile = useCallback(async (): Promise<number> => {
@@ -886,6 +901,10 @@ export function UniversalProvider({ children }: { children: ReactNode }) {
             // Post-processing settings (from main download settings)
             embedMetadata: embedSettings.embedMetadata,
             embedThumbnail: embedSettings.embedThumbnail,
+            splitEmbeddedChapters:
+              itemSettings?.splitEmbeddedChapters ?? downloadSettings.splitEmbeddedChapters,
+            numberChapterFiles:
+              itemSettings?.numberChapterFiles ?? downloadSettings.numberChapterFiles,
             // Live stream settings
             liveFromStart: itemSettings?.liveFromStart ?? settings.liveFromStart,
             skipLive: itemSettings?.skipLive ?? false,
@@ -1079,7 +1098,12 @@ export function UniversalProvider({ children }: { children: ReactNode }) {
       setIsDownloading(false);
       isDownloadingRef.current = false;
     }
-  }, [enqueueFailedWorkflowForItem, settings]);
+  }, [
+    downloadSettings.numberChapterFiles,
+    downloadSettings.splitEmbeddedChapters,
+    enqueueFailedWorkflowForItem,
+    settings,
+  ]);
 
   const stopDownload = useCallback(async () => {
     try {

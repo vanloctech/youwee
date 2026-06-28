@@ -12,6 +12,7 @@ và dự án tuân theo [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - **Tách chapter có sẵn** - Thêm cài đặt Tải xuống để tách chapter có sẵn trong video thành file riêng và tùy chọn đánh số file chapter
 - **AI Summary trong extension** - Thêm nút Tóm tắt trong browser extension để mở video YouTube trực tiếp ở màn AI Summary
 - **Giới hạn token cho AI Summary** - Thêm ô tùy chọn trong Cài đặt để chỉnh số token đầu ra tối đa khi tạo bản tóm tắt
+- **Rule bỏ qua cookie** - Thêm cài đặt dạng tag để bỏ qua cookie trình duyệt hoặc tệp cookie cho các site khớp rule, mặc định có Facebook Reels
 
 ### Thay đổi
 - **Giao diện extension** - Làm mới popup và menu nút nổi của browser extension theo phong cách gọn, hiện đại và đồng bộ hơn với trình phát nhạc
@@ -21,6 +22,7 @@ và dự án tuân theo [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - **Tải từ extension khi app chưa mở** - Sửa lỗi bấm `Download now` trong browser extension chỉ mở Youwee nhưng không thêm video khi app desktop chưa chạy sẵn
 - **Thông tin video cho AI Summary** - Sửa lỗi AI Summary bị kẹt khi lấy thông tin video trong trường hợp phụ đề có sẵn nhưng yt-dlp không chọn được định dạng video
 - **Độ dài AI Summary** - Bỏ giới hạn token đầu ra mặc định bị hard-code để provider dùng mặc định của model, trừ khi người dùng tự đặt giá trị
+- **Tiêu đề video quá dài** - Sửa lỗi tải xuống thất bại khi tiêu đề quá dài được dùng làm tên file
 
 ## [0.17.2] - 2026-06-17
 

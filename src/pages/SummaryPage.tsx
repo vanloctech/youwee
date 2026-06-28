@@ -149,6 +149,7 @@ export function SummaryPage({
           cookieBrowser: cookieSettings.browser || null,
           cookieBrowserProfile: cookieSettings.browserProfile || null,
           cookieFilePath: cookieSettings.filePath || null,
+          cookieSkipPatterns: cookieSettings.cookieSkipPatterns || [],
           proxyUrl: getProxyUrl() || null,
         });
 
@@ -171,6 +172,7 @@ export function SummaryPage({
           cookieBrowser: cookieSettings.browser || null,
           cookieBrowserProfile: cookieSettings.browserProfile || null,
           cookieFilePath: cookieSettings.filePath || null,
+          cookieSkipPatterns: cookieSettings.cookieSkipPatterns || [],
           proxyUrl: getProxyUrl() || null,
         });
 

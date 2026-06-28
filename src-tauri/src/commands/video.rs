@@ -75,6 +75,7 @@ pub async fn get_video_transcript(
     cookie_browser: Option<String>,
     cookie_browser_profile: Option<String>,
     cookie_file_path: Option<String>,
+    cookie_skip_patterns: Option<Vec<String>>,
     proxy_url: Option<String>,
 ) -> Result<String, String> {
     // Log the URL being processed
@@ -189,6 +190,7 @@ pub async fn get_video_transcript(
                 cookie_browser.as_deref(),
                 cookie_browser_profile.as_deref(),
                 cookie_file_path.as_deref(),
+                cookie_skip_patterns.as_deref(),
                 proxy_url.as_deref(),
             ),
         )
@@ -374,6 +376,7 @@ pub async fn get_video_transcript(
             cookie_browser.as_deref(),
             cookie_browser_profile.as_deref(),
             cookie_file_path.as_deref(),
+            cookie_skip_patterns.as_deref(),
             proxy_url.as_deref(),
         ),
     )
@@ -490,6 +493,7 @@ pub async fn get_video_transcript(
                 cookie_browser.as_deref(),
                 cookie_browser_profile.as_deref(),
                 cookie_file_path.as_deref(),
+                cookie_skip_patterns.as_deref(),
                 proxy_url.as_deref(),
             ),
         )
@@ -797,6 +801,7 @@ pub async fn get_video_basic_info(
     cookie_browser: Option<String>,
     cookie_browser_profile: Option<String>,
     cookie_file_path: Option<String>,
+    cookie_skip_patterns: Option<Vec<String>>,
     proxy_url: Option<String>,
 ) -> Result<VideoInfoResponse, String> {
     validate_url(&url).map_err(|e| BackendError::from_message(e).to_wire_string())?;
@@ -837,6 +842,7 @@ pub async fn get_video_basic_info(
             cookie_browser.as_deref(),
             cookie_browser_profile.as_deref(),
             cookie_file_path.as_deref(),
+            cookie_skip_patterns.as_deref(),
             proxy_url.as_deref(),
         ),
     )
@@ -913,6 +919,7 @@ pub async fn get_video_info(
     cookie_browser: Option<String>,
     cookie_browser_profile: Option<String>,
     cookie_file_path: Option<String>,
+    cookie_skip_patterns: Option<Vec<String>>,
     proxy_url: Option<String>,
 ) -> Result<VideoInfoResponse, String> {
     validate_url(&url).map_err(|e| BackendError::from_message(e).to_wire_string())?;
@@ -941,10 +948,12 @@ pub async fn get_video_info(
 
     let mut extra_args = build_site_header_args(&url);
     extra_args.extend(build_cookie_args(
+        &url,
         cookie_mode.as_deref(),
         cookie_browser.as_deref(),
         cookie_browser_profile.as_deref(),
         cookie_file_path.as_deref(),
+        cookie_skip_patterns.as_deref(),
     ));
     extra_args.extend(build_proxy_args(proxy_url.as_deref()));
 
@@ -1120,6 +1129,7 @@ pub async fn get_playlist_entries(
     cookie_browser: Option<String>,
     cookie_browser_profile: Option<String>,
     cookie_file_path: Option<String>,
+    cookie_skip_patterns: Option<Vec<String>>,
     proxy_url: Option<String>,
 ) -> Result<Vec<PlaylistVideoEntry>, String> {
     validate_url(&url).map_err(|e| BackendError::from_message(e).to_wire_string())?;
@@ -1152,10 +1162,12 @@ pub async fn get_playlist_entries(
 
     // Add cookie args
     let cookie_args = build_cookie_args(
+        &url,
         cookie_mode.as_deref(),
         cookie_browser.as_deref(),
         cookie_browser_profile.as_deref(),
         cookie_file_path.as_deref(),
+        cookie_skip_patterns.as_deref(),
     );
     args.extend(cookie_args);
 
@@ -1262,6 +1274,7 @@ pub async fn get_available_subtitles(
     cookie_browser: Option<String>,
     cookie_browser_profile: Option<String>,
     cookie_file_path: Option<String>,
+    cookie_skip_patterns: Option<Vec<String>>,
     proxy_url: Option<String>,
 ) -> Result<Vec<SubtitleInfo>, String> {
     validate_url(&url).map_err(|e| BackendError::from_message(e).to_wire_string())?;
@@ -1293,6 +1306,7 @@ pub async fn get_available_subtitles(
         cookie_browser.as_deref(),
         cookie_browser_profile.as_deref(),
         cookie_file_path.as_deref(),
+        cookie_skip_patterns.as_deref(),
         proxy_url.as_deref(),
     )
     .await;

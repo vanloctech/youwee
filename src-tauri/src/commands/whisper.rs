@@ -142,6 +142,7 @@ pub async fn transcribe_url_with_whisper(
     cookie_browser: Option<String>,
     cookie_browser_profile: Option<String>,
     cookie_file_path: Option<String>,
+    cookie_skip_patterns: Option<Vec<String>>,
     // Proxy
     proxy_url: Option<String>,
     // Whisper backend settings
@@ -206,6 +207,7 @@ pub async fn transcribe_url_with_whisper(
         cookie_browser.as_deref(),
         cookie_browser_profile.as_deref(),
         cookie_file_path.as_deref(),
+        cookie_skip_patterns.as_deref(),
         proxy_url.as_deref(),
     )
     .await

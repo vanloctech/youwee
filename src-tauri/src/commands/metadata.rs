@@ -12,9 +12,9 @@ use tokio::process::Command;
 
 use crate::database::{add_history_internal, add_log_internal};
 use crate::services::{
-    build_site_header_args, get_deno_path, get_ffmpeg_path, get_ytdlp_path, get_ytdlp_source,
-    run_ytdlp_with_stderr_and_cookies, search_youtube_videos_internal,
-    system_ytdlp_not_found_message,
+    add_safe_filename_args, build_cookie_args, build_site_header_args, get_deno_path,
+    get_ffmpeg_path, get_ytdlp_path, get_ytdlp_source, run_ytdlp_with_stderr_and_cookies,
+    search_youtube_videos_internal, system_ytdlp_not_found_message,
 };
 use crate::types::{BackendError, DependencySource, YoutubeSearchVideo};
 use crate::utils::{normalize_url, sanitize_output_path, validate_url, CommandExt};
@@ -64,6 +64,7 @@ pub struct ExtractDataRowsInput {
     pub cookie_browser: Option<String>,
     pub cookie_browser_profile: Option<String>,
     pub cookie_file_path: Option<String>,
+    pub cookie_skip_patterns: Option<Vec<String>>,
     pub proxy_url: Option<String>,
 }
 
@@ -427,6 +428,7 @@ async fn run_export_ytdlp(
         input.cookie_browser.as_deref(),
         input.cookie_browser_profile.as_deref(),
         input.cookie_file_path.as_deref(),
+        input.cookie_skip_patterns.as_deref(),
         input.proxy_url.as_deref(),
     )
     .await?;
@@ -724,6 +726,7 @@ pub async fn fetch_metadata(
     cookie_browser: Option<String>,
     cookie_browser_profile: Option<String>,
     cookie_file_path: Option<String>,
+    cookie_skip_patterns: Option<Vec<String>>,
     // Proxy settings (optional)
     proxy_url: Option<String>,
 ) -> Result<(), String> {
@@ -744,6 +747,7 @@ pub async fn fetch_metadata(
         "-o".to_string(),
         output_template.clone(),
     ];
+    add_safe_filename_args(&mut args);
 
     // Description output template - yt-dlp adds .description automatically
     if write_description {
@@ -809,32 +813,14 @@ pub async fn fetch_metadata(
 
     args.extend(build_site_header_args(&url));
 
-    // Cookie/Authentication settings
-    let mode = cookie_mode.as_deref().unwrap_or("off");
-    match mode {
-        "browser" => {
-            if let Some(browser) = cookie_browser.as_ref() {
-                let mut cookie_arg = browser.clone();
-                // Add profile if specified
-                if let Some(profile) = cookie_browser_profile.as_ref() {
-                    if !profile.is_empty() {
-                        cookie_arg = format!("{}:{}", browser, profile);
-                    }
-                }
-                args.push("--cookies-from-browser".to_string());
-                args.push(cookie_arg);
-            }
-        }
-        "file" => {
-            if let Some(file_path) = cookie_file_path.as_ref() {
-                if !file_path.is_empty() {
-                    args.push("--cookies".to_string());
-                    args.push(file_path.clone());
-                }
-            }
-        }
-        _ => {}
-    }
+    args.extend(build_cookie_args(
+        &url,
+        cookie_mode.as_deref(),
+        cookie_browser.as_deref(),
+        cookie_browser_profile.as_deref(),
+        cookie_file_path.as_deref(),
+        cookie_skip_patterns.as_deref(),
+    ));
 
     // Proxy settings
     if let Some(proxy) = proxy_url.as_ref() {

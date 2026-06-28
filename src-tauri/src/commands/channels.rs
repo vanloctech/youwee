@@ -145,6 +145,7 @@ pub async fn get_channel_videos(
     cookie_browser: Option<String>,
     cookie_browser_profile: Option<String>,
     cookie_file_path: Option<String>,
+    cookie_skip_patterns: Option<Vec<String>>,
     proxy_url: Option<String>,
     youtube_content_type: Option<String>,
 ) -> Result<Vec<PlaylistVideoEntry>, String> {
@@ -184,6 +185,7 @@ pub async fn get_channel_videos(
                 cookie_browser.as_deref(),
                 cookie_browser_profile.as_deref(),
                 cookie_file_path.as_deref(),
+                cookie_skip_patterns.as_deref(),
                 proxy_url.as_deref(),
             )
             .await
@@ -230,6 +232,7 @@ async fn fetch_channel_videos_once(
     cookie_browser: Option<&str>,
     cookie_browser_profile: Option<&str>,
     cookie_file_path: Option<&str>,
+    cookie_skip_patterns: Option<&[String]>,
     proxy_url: Option<&str>,
 ) -> Result<Vec<PlaylistVideoEntry>, String> {
     let mut args = vec![
@@ -271,10 +274,12 @@ async fn fetch_channel_videos_once(
 
     // Add cookie args
     let cookie_args = build_cookie_args(
+        url,
         cookie_mode,
         cookie_browser,
         cookie_browser_profile,
         cookie_file_path,
+        cookie_skip_patterns,
     );
     args.extend(cookie_args);
 
@@ -446,6 +451,7 @@ pub async fn get_channel_info(
     cookie_browser: Option<String>,
     cookie_browser_profile: Option<String>,
     cookie_file_path: Option<String>,
+    cookie_skip_patterns: Option<Vec<String>>,
     proxy_url: Option<String>,
     youtube_content_type: Option<String>,
 ) -> Result<ChannelInfo, String> {
@@ -497,10 +503,12 @@ pub async fn get_channel_info(
 
     // Add cookie args
     let cookie_args = build_cookie_args(
+        &url,
         cookie_mode.as_deref(),
         cookie_browser.as_deref(),
         cookie_browser_profile.as_deref(),
         cookie_file_path.as_deref(),
+        cookie_skip_patterns.as_deref(),
     );
     args.extend(cookie_args);
 
@@ -805,6 +813,7 @@ pub async fn set_polling_network_config(
     cookie_browser: Option<String>,
     cookie_browser_profile: Option<String>,
     cookie_file_path: Option<String>,
+    cookie_skip_patterns: Option<Vec<String>>,
     proxy_url: Option<String>,
 ) -> Result<(), String> {
     use crate::services::polling::{PollingNetworkConfig, set_network_config};
@@ -814,6 +823,7 @@ pub async fn set_polling_network_config(
         cookie_browser,
         cookie_browser_profile,
         cookie_file_path,
+        cookie_skip_patterns,
         proxy_url,
     });
     Ok(())

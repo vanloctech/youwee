@@ -8,7 +8,7 @@ use tokio::process::Command;
 
 use crate::database::add_history_internal;
 use crate::database::add_log_internal;
-use crate::services::{get_gallerydl_path, system_gallerydl_not_found_message};
+use crate::services::{build_cookie_args, get_gallerydl_path, system_gallerydl_not_found_message};
 use crate::types::BackendError;
 use crate::utils::{normalize_url, sanitize_output_path, validate_url, CommandExt};
 
@@ -29,38 +29,6 @@ fn push_recent_output(buffer: &mut VecDeque<String>, line: &str) {
         buffer.pop_front();
     }
     buffer.push_back(trimmed.to_string());
-}
-
-fn build_cookie_args(
-    cookie_mode: Option<&str>,
-    cookie_browser: Option<&str>,
-    cookie_browser_profile: Option<&str>,
-    cookie_file_path: Option<&str>,
-) -> Vec<String> {
-    match cookie_mode.unwrap_or("off") {
-        "browser" => {
-            if let Some(browser) = cookie_browser {
-                let mut cookie_arg = browser.to_string();
-                if let Some(profile) = cookie_browser_profile {
-                    if !profile.is_empty() {
-                        cookie_arg = format!("{}:{}", browser, profile);
-                    }
-                }
-                vec!["--cookies-from-browser".to_string(), cookie_arg]
-            } else {
-                Vec::new()
-            }
-        }
-        "file" => {
-            if let Some(path) = cookie_file_path {
-                if !path.is_empty() {
-                    return vec!["--cookies".to_string(), path.to_string()];
-                }
-            }
-            Vec::new()
-        }
-        _ => Vec::new(),
-    }
 }
 
 fn kill_gallery_processes() {
@@ -106,6 +74,7 @@ pub async fn download_gallery(
     cookie_browser: Option<String>,
     cookie_browser_profile: Option<String>,
     cookie_file_path: Option<String>,
+    cookie_skip_patterns: Option<Vec<String>>,
     proxy_url: Option<String>,
     source: Option<String>,
 ) -> Result<GalleryDownloadResult, String> {
@@ -138,10 +107,12 @@ pub async fn download_gallery(
     ];
 
     args.extend(build_cookie_args(
+        &url,
         cookie_mode.as_deref(),
         cookie_browser.as_deref(),
         cookie_browser_profile.as_deref(),
         cookie_file_path.as_deref(),
+        cookie_skip_patterns.as_deref(),
     ));
 
     if let Some(proxy) = proxy_url.as_ref() {

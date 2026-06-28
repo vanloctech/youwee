@@ -239,6 +239,7 @@ export function MetadataProvider({ children }: { children: ReactNode }) {
           cookieBrowser: cookieSettings.browser || null,
           cookieBrowserProfile: cookieSettings.browserProfile || null,
           cookieFilePath: cookieSettings.filePath || null,
+          cookieSkipPatterns: cookieSettings.cookieSkipPatterns || [],
           // Proxy settings
           proxyUrl: getProxyUrl() || null,
         });

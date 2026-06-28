@@ -16,6 +16,7 @@ pub struct PollingNetworkConfig {
     pub cookie_browser: Option<String>,
     pub cookie_browser_profile: Option<String>,
     pub cookie_file_path: Option<String>,
+    pub cookie_skip_patterns: Option<Vec<String>>,
     pub proxy_url: Option<String>,
 }
 
@@ -24,6 +25,7 @@ static POLLING_NETWORK_CONFIG: Mutex<PollingNetworkConfig> = Mutex::new(PollingN
     cookie_browser: None,
     cookie_browser_profile: None,
     cookie_file_path: None,
+    cookie_skip_patterns: None,
     proxy_url: None,
 });
 
@@ -261,10 +263,12 @@ async fn check_channel_for_new_videos(
 
         // Load cookie/proxy settings synced from the frontend
         let cookie_args = build_cookie_args(
+            &channel_url,
             net.cookie_mode.as_deref(),
             net.cookie_browser.as_deref(),
             net.cookie_browser_profile.as_deref(),
             net.cookie_file_path.as_deref(),
+            net.cookie_skip_patterns.as_deref(),
         );
         args.extend(cookie_args);
 
