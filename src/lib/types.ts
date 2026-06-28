@@ -94,6 +94,8 @@ export interface ItemUniversalSettings {
   timeRangeEnd?: string;
   liveFromStart?: boolean;
   skipLive?: boolean;
+  splitEmbeddedChapters?: boolean;
+  numberChapterFiles?: boolean;
   pluginWorkflowSnapshots?: PluginWorkflowSnapshotMap;
   postDownloadWorkflowSteps?: PluginWorkflowStepSnapshot[];
   autoRetryEnabled: boolean;
@@ -883,6 +885,7 @@ export interface CookieSettings {
   browser?: BrowserType;
   browserProfile?: string;
   filePath?: string;
+  cookieSkipPatterns?: string[];
 }
 
 export interface BrowserProfile {

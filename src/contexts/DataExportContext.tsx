@@ -95,6 +95,7 @@ export function DataExportProvider({ children }: { children: ReactNode }) {
           cookieBrowser: cookieSettings.browser || null,
           cookieBrowserProfile: cookieSettings.browserProfile || null,
           cookieFilePath: cookieSettings.filePath || null,
+          cookieSkipPatterns: cookieSettings.cookieSkipPatterns || [],
           proxyUrl: getProxyUrl() || null,
         },
       });

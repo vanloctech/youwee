@@ -22,9 +22,10 @@ use crate::database::add_history_internal;
 use crate::database::add_log_internal;
 use crate::database::update_history_download;
 use crate::services::{
-    build_cookie_args, build_proxy_args, build_site_header_args, enqueue_post_download_workflow,
-    get_deno_path, get_ffmpeg_path, get_ytdlp_path, get_ytdlp_source, is_upcoming_live_error,
-    resolve_download_workflow_snapshot, run_ytdlp_with_stderr, system_ytdlp_not_found_message,
+    add_safe_filename_args, build_cookie_args, build_proxy_args, build_site_header_args,
+    enqueue_post_download_workflow, get_deno_path, get_ffmpeg_path, get_ytdlp_path,
+    get_ytdlp_source, is_upcoming_live_error, resolve_download_workflow_snapshot,
+    run_ytdlp_with_stderr, system_ytdlp_not_found_message,
 };
 use crate::types::{
     BackendError, DependencySource, DownloadProgress, PluginWorkflowStepSnapshot,
@@ -185,6 +186,7 @@ async fn skipped_live_status(
     cookie_browser: Option<&str>,
     cookie_browser_profile: Option<&str>,
     cookie_file_path: Option<&str>,
+    cookie_skip_patterns: Option<&[String]>,
     proxy_url: Option<&str>,
 ) -> Result<Option<String>, String> {
     let mut args = vec![
@@ -210,10 +212,12 @@ async fn skipped_live_status(
 
     let mut extra_args = build_site_header_args(url);
     extra_args.extend(build_cookie_args(
+        url,
         cookie_mode,
         cookie_browser,
         cookie_browser_profile,
         cookie_file_path,
+        cookie_skip_patterns,
     ));
     extra_args.extend(build_proxy_args(proxy_url));
     if let Some(separator_index) = args.iter().position(|arg| arg == "--") {
@@ -654,6 +658,7 @@ pub async fn download_video(
     cookie_browser: Option<String>,
     cookie_browser_profile: Option<String>,
     cookie_file_path: Option<String>,
+    cookie_skip_patterns: Option<Vec<String>>,
     // Embed settings
     embed_metadata: Option<bool>,
     embed_thumbnail: Option<bool>,
@@ -714,6 +719,7 @@ pub async fn download_video(
             cookie_browser.as_deref(),
             cookie_browser_profile.as_deref(),
             cookie_file_path.as_deref(),
+            cookie_skip_patterns.as_deref(),
             proxy_url.as_deref(),
         )
         .await?
@@ -781,6 +787,7 @@ pub async fn download_video(
         "--file-access-retries".to_string(),
         "2".to_string(),
     ];
+    add_safe_filename_args(&mut args);
 
     if split_embedded_chapters {
         args.push("--split-chapters".to_string());
@@ -843,32 +850,14 @@ pub async fn download_video(
 
     args.extend(build_site_header_args(&url));
 
-    // Cookie/Authentication settings
-    let mode = cookie_mode.as_deref().unwrap_or("off");
-    match mode {
-        "browser" => {
-            if let Some(browser) = cookie_browser.as_ref() {
-                let mut cookie_arg = browser.clone();
-                // Add profile if specified
-                if let Some(profile) = cookie_browser_profile.as_ref() {
-                    if !profile.is_empty() {
-                        cookie_arg = format!("{}:{}", browser, profile);
-                    }
-                }
-                args.push("--cookies-from-browser".to_string());
-                args.push(cookie_arg);
-            }
-        }
-        "file" => {
-            if let Some(file_path) = cookie_file_path.as_ref() {
-                if !file_path.is_empty() {
-                    args.push("--cookies".to_string());
-                    args.push(file_path.clone());
-                }
-            }
-        }
-        _ => {}
-    }
+    args.extend(build_cookie_args(
+        &url,
+        cookie_mode.as_deref(),
+        cookie_browser.as_deref(),
+        cookie_browser_profile.as_deref(),
+        cookie_file_path.as_deref(),
+        cookie_skip_patterns.as_deref(),
+    ));
 
     // Proxy settings
     if let Some(proxy) = proxy_url.as_ref() {
