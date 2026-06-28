@@ -1,6 +1,6 @@
 import { invoke } from '@tauri-apps/api/core';
 import { open } from '@tauri-apps/plugin-dialog';
-import { AlertCircle, ExternalLink, FolderOpen, Globe, KeyRound, X } from 'lucide-react';
+import { AlertCircle, ExternalLink, FolderOpen, Globe, KeyRound, ShieldOff, X } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Button } from '@/components/ui/button';
@@ -12,7 +12,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { TagInput } from '@/components/ui/tag-input';
 import { useDownload } from '@/contexts/DownloadContext';
+import { isValidCookieSkipPattern, normalizeCookieSkipPattern } from '@/lib/network-config';
 import type { BrowserProfile, BrowserType, CookieMode, ProxyMode } from '@/lib/types';
 import { BROWSER_OPTIONS } from '@/lib/types';
 import { SettingsCard, SettingsSection } from '../SettingsSection';
@@ -335,6 +337,32 @@ export function NetworkSection({ highlightId }: NetworkSectionProps) {
                 >
                   Get cookies.txt LOCALLY
                 </a>
+              </p>
+            </div>
+          )}
+
+          {cookieSettings.mode !== 'off' && (
+            <div className="mt-3 pt-3 border-t border-border/50 space-y-2">
+              <div className="flex items-center gap-2">
+                <ShieldOff className="w-3.5 h-3.5 text-muted-foreground" />
+                <label className="text-sm font-medium" htmlFor="cookie-skip-patterns-input">
+                  {t('network.cookieSkipPatterns')}
+                </label>
+              </div>
+              <p className="text-xs text-muted-foreground">{t('network.cookieSkipPatternsDesc')}</p>
+              <TagInput
+                id="cookie-skip-patterns-input"
+                value={cookieSettings.cookieSkipPatterns || []}
+                onChange={(cookieSkipPatterns) => updateCookieSettings({ cookieSkipPatterns })}
+                placeholder={t('network.cookieSkipPatternsPlaceholder')}
+                normalizeTag={normalizeCookieSkipPattern}
+                validateTag={isValidCookieSkipPattern}
+                removeLabel={(pattern) => t('network.cookieSkipPatternsRemove', { pattern })}
+                className="min-h-[72px] content-start items-start"
+                inputClassName="font-mono text-xs"
+              />
+              <p className="text-[11px] text-muted-foreground/70">
+                {t('network.cookieSkipPatternsHelp')}
               </p>
             </div>
           )}

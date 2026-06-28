@@ -4,6 +4,31 @@ export type VideoCodec = 'h264' | 'vp9' | 'av1' | 'auto';
 export type AudioBitrate = 'auto' | '128';
 export type SubtitleMode = 'off' | 'auto' | 'manual';
 export type SubtitleFormat = 'srt' | 'vtt' | 'ass';
+export type YtdlpAdvancedOptionId =
+  | 'impersonate'
+  | 'forceIpv4'
+  | 'forceIpv6'
+  | 'socketTimeout'
+  | 'userAgent'
+  | 'referer'
+  | 'addHeaders'
+  | 'sleepRequests'
+  | 'sleepInterval'
+  | 'maxSleepInterval'
+  | 'concurrentFragments'
+  | 'throttledRate'
+  | 'httpChunkSize'
+  | 'geoBypass'
+  | 'geoBypassCountry'
+  | 'matchFilters'
+  | 'formatSort'
+  | 'youtubePlayerClient';
+
+export interface YtdlpAdvancedOption {
+  id: YtdlpAdvancedOptionId;
+  value?: string;
+  secondaryValue?: string;
+}
 export type PluginTrigger =
   | 'download.queued'
   | 'download.beforeStart'
@@ -64,6 +89,8 @@ export interface ItemDownloadSettings {
   audioBitrate: AudioBitrate;
   useAria2: boolean;
   aria2Args: string;
+  ytdlpAdvancedOptionsEnabled: boolean;
+  ytdlpAdvancedOptions: YtdlpAdvancedOption[];
   subtitleMode: SubtitleMode;
   subtitleLangs: string[];
   subtitleEmbed: boolean;
@@ -90,10 +117,14 @@ export interface ItemUniversalSettings {
   audioBitrate: AudioBitrate;
   useAria2: boolean;
   aria2Args: string;
+  ytdlpAdvancedOptionsEnabled: boolean;
+  ytdlpAdvancedOptions: YtdlpAdvancedOption[];
   timeRangeStart?: string;
   timeRangeEnd?: string;
   liveFromStart?: boolean;
   skipLive?: boolean;
+  splitEmbeddedChapters?: boolean;
+  numberChapterFiles?: boolean;
   pluginWorkflowSnapshots?: PluginWorkflowSnapshotMap;
   postDownloadWorkflowSteps?: PluginWorkflowStepSnapshot[];
   autoRetryEnabled: boolean;
@@ -243,6 +274,9 @@ export interface DownloadSettings {
   // External downloader settings
   useAria2: boolean; // Use aria2c as yt-dlp external downloader
   aria2Args: string; // Custom aria2 arguments (raw or aria2c: prefixed)
+  // yt-dlp advanced options
+  ytdlpAdvancedOptionsEnabled: boolean; // Enable vetted yt-dlp options for download commands
+  ytdlpAdvancedOptions: YtdlpAdvancedOption[]; // Structured allowlisted yt-dlp options
   // Auto retry settings
   autoRetryEnabled: boolean; // Retry transient failures automatically
   autoRetryMaxAttempts: number; // Number of retries after initial failure (1-10)
@@ -554,6 +588,7 @@ export type PluginWorkflowRunStatus =
   | 'failed';
 
 export interface PluginChainMutation {
+  recovered?: boolean | null;
   activeFilepath?: string | null;
   activeFilename?: string | null;
   extraFiles: string[];
@@ -577,6 +612,7 @@ export interface PluginChainState {
   quality?: string | null;
   extraFiles: string[];
   metadata?: Record<string, unknown> | null;
+  recovered: boolean;
 }
 
 export interface PluginWorkflowRun {
@@ -883,6 +919,7 @@ export interface CookieSettings {
   browser?: BrowserType;
   browserProfile?: string;
   filePath?: string;
+  cookieSkipPatterns?: string[];
 }
 
 export interface BrowserProfile {

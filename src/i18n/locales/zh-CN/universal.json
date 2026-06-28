@@ -109,6 +109,8 @@
     },
     "summarize": "摘要",
     "openFolder": "打开所在文件夹",
+    "changeOutputFolder": "更改文件夹",
+    "outputFolder": "下载文件夹：{{path}}",
     "rename": "重命名",
     "renamePlaceholder": "输入新文件名",
     "renameSave": "保存",

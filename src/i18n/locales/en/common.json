@@ -90,6 +90,7 @@
     "AI_NO_TRANSCRIPT": "No transcript available.",
     "WHISPER_API_ERROR": "Whisper API error.",
     "WHISPER_NO_API_KEY": "Whisper API key not configured.",
-    "WHISPER_UNSUPPORTED_FORMAT": "Unsupported audio format for Whisper."
+    "WHISPER_UNSUPPORTED_FORMAT": "Unsupported audio format for Whisper.",
+    "YT_SKIPPED_FILTER": "Skipped by yt-dlp match filter."
   }
 }

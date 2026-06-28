@@ -51,6 +51,7 @@ interface UniversalQueueListProps {
   isDownloading: boolean;
   onRemove: (id: string) => void;
   onUpdateTimeRange: (id: string, start?: string, end?: string) => void;
+  onSelectOutputFolder: (id: string) => Promise<void>;
   onRename: (id: string, newName: string) => Promise<void>;
   onClearCompleted: () => void;
   onScheduleUpcomingLive?: (config: ScheduleConfig) => void;
@@ -62,6 +63,7 @@ export function UniversalQueueList({
   isDownloading,
   onRemove,
   onUpdateTimeRange,
+  onSelectOutputFolder,
   onRename,
   onClearCompleted,
   onScheduleUpcomingLive,
@@ -188,6 +190,7 @@ export function UniversalQueueList({
                 disabled={isDownloading}
                 onRemove={onRemove}
                 onUpdateTimeRange={onUpdateTimeRange}
+                onSelectOutputFolder={onSelectOutputFolder}
                 onRename={onRename}
                 onScheduleUpcomingLive={onScheduleUpcomingLive}
               />

@@ -112,6 +112,8 @@
     "showLess": "Показать меньше",
     "regenerateSummary": "Пересоздать сводку",
     "openFolder": "Показать в папке",
+    "changeOutputFolder": "Изменить папку",
+    "outputFolder": "Папка загрузки: {{path}}",
     "rename": "Переименовать",
     "renamePlaceholder": "Введите новое имя файла",
     "renameSave": "Сохранить",

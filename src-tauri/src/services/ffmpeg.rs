@@ -1,5 +1,5 @@
 use crate::types::{DependencySource, FfmpegStatus};
-use crate::utils::{CommandExt, find_system_binary, unix_system_binary_dirs};
+use crate::utils::{find_system_binary, unix_system_binary_dirs, CommandExt};
 use std::path::PathBuf;
 use std::process::Stdio;
 use tauri::{AppHandle, Manager};

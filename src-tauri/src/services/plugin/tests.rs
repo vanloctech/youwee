@@ -6,12 +6,13 @@ use super::security_policy::{validate_plugin_output_path, validate_plugin_write_
 use super::{
     build_plugin_completion_details, build_scaffold_ci_workflow, build_scaffold_package_json,
     build_scaffold_readme, build_scaffold_release_workflow, collect_compatibility_issues,
-    current_sdk_version, parse_plugin_result, sanitize_slug, satisfies_version_range,
-    validate_manifest, write_sdk_package_files,
+    current_sdk_version, merge_chain_mutation, parse_plugin_result, sanitize_slug,
+    satisfies_version_range, should_mark_failed_download_recovered, validate_manifest,
+    write_sdk_package_files,
 };
 use crate::types::{
-    PluginExecutionResult, PluginPermissionRequest, PluginProvider, PluginRuntimeLanguage,
-    PluginRuntimeSpec,
+    PluginChainMutation, PluginChainState, PluginExecutionResult, PluginPermissionRequest,
+    PluginProvider, PluginRuntimeLanguage, PluginRuntimeSpec,
 };
 
 #[test]
@@ -329,6 +330,7 @@ fn plugin_completion_details_highlight_output_paths_for_follow_up_steps() {
             active_filename: Some("output.mov".to_string()),
             extra_files: vec!["/tmp/output.mov".to_string(), "/tmp/output.wav".to_string()],
             metadata_patch: None,
+            recovered: None,
         }),
         stdout: Some(
             r#"{"success":true,"message":"Created PCM audio file output.mov."}"#.to_string(),
@@ -342,6 +344,88 @@ fn plugin_completion_details_highlight_output_paths_for_follow_up_steps() {
     assert!(details.contains("Active file for next step: /tmp/output.mov"));
     assert!(details.contains("Extra output files:\n- /tmp/output.wav"));
     assert!(!details.contains("stdout:"));
+}
+
+#[test]
+fn chain_mutation_can_mark_failed_download_recovered() {
+    let mut chain_state = PluginChainState {
+        job_id: "job-1".to_string(),
+        source: Some("facebook".to_string()),
+        download_kind: "download".to_string(),
+        url: "https://example.com/video".to_string(),
+        title: Some("Example".to_string()),
+        thumbnail: None,
+        history_id: None,
+        time_range: None,
+        active_filepath: "/tmp".to_string(),
+        active_filename: "tmp".to_string(),
+        directory: "/".to_string(),
+        filesize: None,
+        format: Some("mp4".to_string()),
+        quality: Some("best".to_string()),
+        extra_files: Vec::new(),
+        metadata: None,
+        recovered: false,
+    };
+
+    merge_chain_mutation(
+        &mut chain_state,
+        &PluginChainMutation {
+            active_filepath: Some("/tmp/recovered.mp4".to_string()),
+            active_filename: None,
+            extra_files: Vec::new(),
+            metadata_patch: None,
+            recovered: Some(true),
+        },
+    );
+
+    assert!(chain_state.recovered);
+    assert_eq!(chain_state.active_filepath, "/tmp/recovered.mp4");
+    assert_eq!(chain_state.active_filename, "recovered.mp4");
+}
+
+#[test]
+fn recovered_failed_download_can_complete_partial_failed_workflow() {
+    let chain_state = PluginChainState {
+        job_id: "job-1".to_string(),
+        source: Some("facebook".to_string()),
+        download_kind: "download".to_string(),
+        url: "https://example.com/video".to_string(),
+        title: Some("Example".to_string()),
+        thumbnail: None,
+        history_id: None,
+        time_range: None,
+        active_filepath: "/tmp/recovered.mp4".to_string(),
+        active_filename: "recovered.mp4".to_string(),
+        directory: "/tmp".to_string(),
+        filesize: None,
+        format: Some("mp4".to_string()),
+        quality: Some("best".to_string()),
+        extra_files: Vec::new(),
+        metadata: None,
+        recovered: true,
+    };
+
+    assert!(should_mark_failed_download_recovered(
+        "download.failed",
+        &chain_state,
+        &crate::types::PluginWorkflowRunStatus::Completed,
+    ));
+    assert!(should_mark_failed_download_recovered(
+        "download.failed",
+        &chain_state,
+        &crate::types::PluginWorkflowRunStatus::PartialFailed,
+    ));
+    assert!(!should_mark_failed_download_recovered(
+        "download.failed",
+        &chain_state,
+        &crate::types::PluginWorkflowRunStatus::Failed,
+    ));
+    assert!(!should_mark_failed_download_recovered(
+        "download.completed",
+        &chain_state,
+        &crate::types::PluginWorkflowRunStatus::Completed,
+    ));
 }
 
 #[test]

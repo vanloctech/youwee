@@ -109,6 +109,8 @@
     },
     "summarize": "Tóm tắt",
     "openFolder": "Mở vị trí file",
+    "changeOutputFolder": "Đổi folder",
+    "outputFolder": "Folder tải xuống: {{path}}",
     "rename": "Đổi tên",
     "renamePlaceholder": "Nhập tên file mới",
     "renameSave": "Lưu",

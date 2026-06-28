@@ -199,6 +199,8 @@
     },
     "summarize": "สรุป",
     "openFolder": "แสดงในโฟลเดอร์",
+    "changeOutputFolder": "เปลี่ยนโฟลเดอร์",
+    "outputFolder": "โฟลเดอร์ดาวน์โหลด: {{path}}",
     "rename": "เปลี่ยนชื่อ",
     "renamePlaceholder": "ป้อนชื่อไฟล์ใหม่",
     "renameSave": "บันทึก",

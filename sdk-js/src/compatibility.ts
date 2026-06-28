@@ -1,6 +1,6 @@
 import type { CompatibilityCheckResult, ParsedSemver } from './types';
 
-export const SDK_VERSION = '2.2.0';
+export const SDK_VERSION = '2.3.0';
 
 export function parseSemver(version: string): ParsedSemver | null {
   const match = version.trim().match(/^v?(\d+)\.(\d+)\.(\d+)$/);

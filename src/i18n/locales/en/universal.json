@@ -109,6 +109,8 @@
     },
     "summarize": "Summarize",
     "openFolder": "Show in folder",
+    "changeOutputFolder": "Change folder",
+    "outputFolder": "Download folder: {{path}}",
     "rename": "Rename",
     "renamePlaceholder": "Enter new file name",
     "renameSave": "Save",

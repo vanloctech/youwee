@@ -29,6 +29,7 @@ import {
 import {
   buildItemDownloadSettingsSnapshot,
   createDefaultDownloadSettings,
+  refreshItemPluginWorkflowSnapshots,
   serializeDownloadSettings,
 } from '@/lib/download-settings';
 import {
@@ -43,6 +44,7 @@ import {
   enqueuePluginWorkflowTrigger,
   loadPluginWorkflowSnapshots,
   loadPostDownloadWorkflowSteps,
+  refreshPluginWorkflowSnapshots,
   refreshPostDownloadWorkflowSteps,
 } from '@/lib/post-download-plugins';
 import { normalizeShellEscapedUrl } from '@/lib/sources';
@@ -246,6 +248,7 @@ interface DownloadContextType {
   retryFailedDownload: (itemId: string) => void;
   // Per-item time range
   updateItemTimeRange: (id: string, start?: string, end?: string) => void;
+  selectItemOutputFolder: (id: string) => Promise<void>;
   // Rename completed file
   renameCompletedItem: (id: string, newName: string) => Promise<void>;
 }
@@ -396,8 +399,30 @@ export function DownloadProvider({ children }: { children: ReactNode }) {
         setCookieError({ show: true, itemId: progress.id, kind: 'db_locked' });
       }
 
-      setItems((currentItems) =>
-        currentItems.map((item) =>
+      setItems((currentItems) => {
+        if (progress.status === 'error' && progress.error_code === 'DOWNLOAD_CANCELLED') {
+          return currentItems.map((item) =>
+            item.id === progress.id
+              ? {
+                  ...item,
+                  status: 'pending',
+                  speed: '',
+                  eta: '',
+                  error: undefined,
+                  errorCode: undefined,
+                  retryState: undefined,
+                }
+              : item,
+          );
+        }
+
+        const status: DownloadItem['status'] =
+          progress.status === 'finished'
+            ? 'completed'
+            : progress.status === 'error'
+              ? 'error'
+              : 'downloading';
+        const nextItems = currentItems.map((item) =>
           item.id === progress.id
             ? {
                 ...item,
@@ -405,12 +430,7 @@ export function DownloadProvider({ children }: { children: ReactNode }) {
                 speed: progress.speed,
                 eta: progress.eta,
                 title: progress.title || item.title,
-                status:
-                  progress.status === 'finished'
-                    ? 'completed'
-                    : progress.status === 'error'
-                      ? 'error'
-                      : 'downloading',
+                status,
                 error: localizeProgressError(
                   progress.error_code,
                   progress.error_message,
@@ -436,8 +456,10 @@ export function DownloadProvider({ children }: { children: ReactNode }) {
                   : {}),
               }
             : item,
-        ),
-      );
+        );
+        itemsRef.current = nextItems;
+        return nextItems;
+      });
     });
 
     return () => {
@@ -904,17 +926,64 @@ export function DownloadProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const updateItemTimeRange = useCallback((id: string, start?: string, end?: string) => {
-    setItems((items) =>
-      items.map((item) => {
+    setItems((items) => {
+      const nextItems = items.map((item) => {
         if (item.id !== id || !item.settings) return item;
         const settings = item.settings as ItemDownloadSettings;
         return {
           ...item,
           settings: { ...settings, timeRangeStart: start, timeRangeEnd: end },
         };
-      }),
-    );
+      });
+      itemsRef.current = nextItems;
+      return nextItems;
+    });
   }, []);
+
+  const updateItemOutputPath = useCallback((id: string, outputPath: string) => {
+    setItems((items) => {
+      const nextItems = items.map((item) => {
+        if (item.id !== id || !item.settings) return item;
+        const settings = item.settings as ItemDownloadSettings;
+        return {
+          ...item,
+          settings: { ...settings, outputPath },
+        };
+      });
+      itemsRef.current = nextItems;
+      return nextItems;
+    });
+  }, []);
+
+  const selectItemOutputFolder = useCallback(
+    async (id: string) => {
+      if (isDownloadingRef.current) return;
+
+      const item = itemsRef.current.find((i) => i.id === id);
+      if (!item || (item.status !== 'pending' && item.status !== 'error')) {
+        return;
+      }
+
+      const itemSettings = item.settings as ItemDownloadSettings | undefined;
+      const defaultPath = itemSettings?.outputPath || settingsRef.current.outputPath || undefined;
+
+      try {
+        const folder = await open({
+          directory: true,
+          multiple: false,
+          title: 'Select Download Folder',
+          defaultPath,
+        });
+
+        if (typeof folder === 'string' && folder) {
+          updateItemOutputPath(id, folder);
+        }
+      } catch (error) {
+        console.error('Failed to select item folder:', error);
+      }
+    },
+    [updateItemOutputPath],
+  );
 
   const renameCompletedItem = useCallback(async (id: string, newName: string) => {
     const item = itemsRef.current.find((i) => i.id === id);
@@ -1083,6 +1152,11 @@ export function DownloadProvider({ children }: { children: ReactNode }) {
             // External downloader settings
             useAria2: itemSettings?.useAria2 ?? settings.useAria2,
             aria2Args: itemSettings?.aria2Args ?? settings.aria2Args,
+            // yt-dlp advanced options
+            ytdlpAdvancedOptionsEnabled:
+              itemSettings?.ytdlpAdvancedOptionsEnabled ?? settings.ytdlpAdvancedOptionsEnabled,
+            ytdlpAdvancedOptions:
+              itemSettings?.ytdlpAdvancedOptions ?? settings.ytdlpAdvancedOptions,
             // SponsorBlock settings
             sponsorblockRemove: sponsorBlockArgs.remove,
             sponsorblockMark: sponsorBlockArgs.mark,
@@ -1116,9 +1190,32 @@ export function DownloadProvider({ children }: { children: ReactNode }) {
           );
           return;
         } catch (error) {
+          if (itemsRef.current.some((i) => i.id === item.id && i.status === 'completed')) {
+            return;
+          }
+
           const parsedError = extractBackendError(error);
           const errorMessage = localizeBackendError(parsedError);
-          if (parsedError.code === 'YT_SKIPPED_LIVE') {
+          if (parsedError.code === 'DOWNLOAD_CANCELLED') {
+            setItems((items) =>
+              items.map((i) =>
+                i.id === item.id
+                  ? {
+                      ...i,
+                      status: 'pending',
+                      speed: '',
+                      eta: '',
+                      error: undefined,
+                      errorCode: undefined,
+                      retryState: undefined,
+                    }
+                  : i,
+              ),
+            );
+            return;
+          }
+
+          if (parsedError.code === 'YT_SKIPPED_LIVE' || parsedError.code === 'YT_SKIPPED_FILTER') {
             setItems((items) =>
               items.map((i) =>
                 i.id === item.id
@@ -1566,27 +1663,34 @@ export function DownloadProvider({ children }: { children: ReactNode }) {
   // Retry a failed download (reset item and restart)
   const retryFailedDownload = useCallback(
     (itemId: string) => {
-      // Reset item status to pending
-      setItems((currentItems) =>
-        currentItems.map((item) =>
-          item.id === itemId
-            ? {
-                ...item,
-                status: 'pending',
-                progress: 0,
-                error: undefined,
-                errorCode: undefined,
-                retryState: undefined,
-              }
-            : item,
-        ),
-      );
-      // Clear cookie error
-      setCookieError(null);
-      // Use a short delay to ensure state update before starting download
-      setTimeout(() => {
-        startDownload();
-      }, 100);
+      void (async () => {
+        const pluginWorkflowSnapshots = await refreshPluginWorkflowSnapshots();
+
+        // Reset item status to pending and treat retry as a fresh workflow run.
+        setItems((currentItems) =>
+          currentItems.map((item) =>
+            item.id === itemId
+              ? {
+                  ...item,
+                  status: 'pending',
+                  progress: 0,
+                  error: undefined,
+                  errorCode: undefined,
+                  retryState: undefined,
+                  settings: item.settings
+                    ? refreshItemPluginWorkflowSnapshots(item.settings, pluginWorkflowSnapshots)
+                    : item.settings,
+                }
+              : item,
+          ),
+        );
+        // Clear cookie error
+        setCookieError(null);
+        // Use a short delay to ensure state update before starting download
+        setTimeout(() => {
+          startDownload();
+        }, 100);
+      })();
     },
     [startDownload],
   );
@@ -1651,6 +1755,7 @@ export function DownloadProvider({ children }: { children: ReactNode }) {
       retryFailedDownload,
       // Per-item time range
       updateItemTimeRange,
+      selectItemOutputFolder,
       renameCompletedItem,
     }),
     [
@@ -1709,6 +1814,7 @@ export function DownloadProvider({ children }: { children: ReactNode }) {
       clearCookieError,
       retryFailedDownload,
       updateItemTimeRange,
+      selectItemOutputFolder,
       renameCompletedItem,
     ],
   );

@@ -107,7 +107,8 @@ mod tests {
     fn summary_deep_link_extraction_uses_same_pending_queue() {
         let argv = vec![
             "youwee".to_string(),
-            "youwee://summary?v=1&url=https%3A%2F%2Fwww.youtube.com%2Fwatch%3Fv%3Dabc123".to_string(),
+            "youwee://summary?v=1&url=https%3A%2F%2Fwww.youtube.com%2Fwatch%3Fv%3Dabc123"
+                .to_string(),
         ];
 
         let links = extract_external_links_from_argv(&argv);

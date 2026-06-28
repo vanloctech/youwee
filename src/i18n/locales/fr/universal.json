@@ -112,6 +112,8 @@
     "showLess": "Afficher moins",
     "regenerateSummary": "Régénérer le résumé",
     "openFolder": "Afficher dans le dossier",
+    "changeOutputFolder": "Changer de dossier",
+    "outputFolder": "Dossier de téléchargement : {{path}}",
     "rename": "Renommer",
     "renamePlaceholder": "Entrez le nouveau nom du fichier",
     "renameSave": "Enregistrer",

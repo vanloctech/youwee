@@ -14,8 +14,10 @@ import type {
   PlaylistVideoEntry,
   PostDownloadPluginPayload,
   YoutubeChannelContentType,
+  YtdlpAdvancedOption,
 } from '@/lib/types';
 import { DEFAULT_SPONSORBLOCK_CATEGORIES } from '@/lib/types';
+import { sanitizeYtdlpAdvancedOptions } from '@/lib/ytdlp-advanced-options';
 import { persistManualChannelDownloadCompletion } from './channel-downloads';
 import {
   type ChannelAutoDownloadEvent,
@@ -762,6 +764,8 @@ export function useChannelsController(): ChannelsContextType {
       let useActualPlayerJs = false;
       let useAria2 = false;
       let aria2Args = '';
+      let ytdlpAdvancedOptionsEnabled = false;
+      let ytdlpAdvancedOptions: YtdlpAdvancedOption[] = [];
       let embedMetadata = false;
       let embedThumbnail = false;
       let liveFromStart = false;
@@ -785,6 +789,8 @@ export function useChannelsController(): ChannelsContextType {
           useActualPlayerJs = parsed.useActualPlayerJs || false;
           useAria2 = parsed.useAria2 === true;
           aria2Args = parsed.aria2Args || '';
+          ytdlpAdvancedOptionsEnabled = parsed.ytdlpAdvancedOptionsEnabled === true;
+          ytdlpAdvancedOptions = sanitizeYtdlpAdvancedOptions(parsed.ytdlpAdvancedOptions);
           embedMetadata = parsed.embedMetadata || false;
           embedThumbnail = parsed.embedThumbnail || false;
           liveFromStart = parsed.liveFromStart || false;
@@ -908,6 +914,8 @@ export function useChannelsController(): ChannelsContextType {
                 speedLimit,
                 useAria2,
                 aria2Args,
+                ytdlpAdvancedOptionsEnabled,
+                ytdlpAdvancedOptions,
                 sponsorblockRemove: sponsorBlockArgs.remove,
                 sponsorblockMark: sponsorBlockArgs.mark,
                 historyId: null,
@@ -1201,6 +1209,8 @@ export function useChannelsController(): ChannelsContextType {
         let useActualPlayerJs = false;
         let useAria2 = false;
         let aria2Args = '';
+        let ytdlpAdvancedOptionsEnabled = false;
+        let ytdlpAdvancedOptions: YtdlpAdvancedOption[] = [];
 
         try {
           const saved = localStorage.getItem('youwee-settings');
@@ -1211,6 +1221,8 @@ export function useChannelsController(): ChannelsContextType {
             useActualPlayerJs = parsed.useActualPlayerJs || false;
             useAria2 = parsed.useAria2 === true;
             aria2Args = parsed.aria2Args || '';
+            ytdlpAdvancedOptionsEnabled = parsed.ytdlpAdvancedOptionsEnabled === true;
+            ytdlpAdvancedOptions = sanitizeYtdlpAdvancedOptions(parsed.ytdlpAdvancedOptions);
           }
           logStderr = localStorage.getItem('youwee_log_stderr') !== 'false';
         } catch (_e) {
@@ -1291,6 +1303,8 @@ export function useChannelsController(): ChannelsContextType {
               ...networkOptions,
               useAria2,
               aria2Args,
+              ytdlpAdvancedOptionsEnabled,
+              ytdlpAdvancedOptions,
               pluginWorkflowSnapshots: workflowSnapshots,
               postDownloadWorkflowSteps: loadPostDownloadWorkflowSteps(),
               downloadKind: 'channel-auto',

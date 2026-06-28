@@ -23,11 +23,13 @@ const NON_RETRYABLE_CODES = new Set([
   'YT_PRIVATE_VIDEO',
   'YT_VIDEO_UNAVAILABLE',
   'YT_SKIPPED_LIVE',
+  'YT_SKIPPED_FILTER',
   'YT_UPCOMING_LIVE',
   'YT_AGE_RESTRICTED',
   'YT_MEMBERS_ONLY',
   'YT_SIGNIN_REQUIRED',
   'YT_GEO_RESTRICTED',
+  'DOWNLOAD_CANCELLED',
   'VALIDATION_INVALID_URL',
   'VALIDATION_INVALID_INPUT',
   'ARIA2_NOT_FOUND',
@@ -84,6 +86,9 @@ export function inferBackendErrorCode(message: string): string {
     return 'YT_UPCOMING_LIVE';
   }
   if (m.includes('skipped live video')) return 'YT_SKIPPED_LIVE';
+  if (m.includes('does not pass filter') || m.includes('skipped by filter')) {
+    return 'YT_SKIPPED_FILTER';
+  }
   if (m.includes('no subtitles')) return 'YT_NO_SUBTITLES';
   if (m.includes('no transcript available')) return 'TRANSCRIPT_NOT_AVAILABLE';
   if (m.includes('system yt-dlp not found')) return 'YTDLP_SYSTEM_NOT_FOUND';
@@ -164,6 +169,10 @@ export function extractBackendError(error: unknown): BackendErrorPayload {
 }
 
 export function localizeBackendError(payload: BackendErrorPayload): string {
+  if (payload.code === 'PROCESS_EXIT_NON_ZERO' && payload.params?.exitCode == null) {
+    return payload.message;
+  }
+
   if (
     payload.source === 'ai' &&
     ['AI_API_ERROR', 'NETWORK_REQUEST_FAILED', 'PARSE_FAILED', 'AI_NO_API_KEY'].includes(

@@ -884,12 +884,21 @@ pub fn verify_sha256(data: &[u8], expected_hash: &str) -> bool {
 
 /// Build cookie args for yt-dlp based on cookie settings
 pub fn build_cookie_args(
+    url: &str,
     cookie_mode: Option<&str>,
     cookie_browser: Option<&str>,
     cookie_browser_profile: Option<&str>,
     cookie_file_path: Option<&str>,
+    cookie_skip_patterns: Option<&[String]>,
 ) -> Vec<String> {
     let mut args = Vec::new();
+
+    if cookie_skip_patterns
+        .map(|patterns| should_skip_cookies_for_url(url, patterns))
+        .unwrap_or(false)
+    {
+        return args;
+    }
 
     let mode = cookie_mode.unwrap_or("off");
     match mode {
@@ -917,6 +926,88 @@ pub fn build_cookie_args(
     }
 
     args
+}
+
+/// Keep yt-dlp output filenames below common filesystem limits.
+///
+/// Some extractors, especially Facebook Reels, expose long captions as titles.
+/// macOS returns ENAMETOOLONG before yt-dlp can create the .part file unless
+/// yt-dlp trims the generated filename first.
+pub fn add_safe_filename_args(args: &mut Vec<String>) {
+    args.push("--trim-filenames".to_string());
+    args.push("180".to_string());
+}
+
+fn parse_cookie_skip_rule(rule: &str) -> Option<(String, String)> {
+    let trimmed = rule.trim();
+    if trimmed.is_empty() {
+        return None;
+    }
+
+    let normalized = if trimmed.contains("://") {
+        trimmed.to_string()
+    } else {
+        format!("https://{}", trimmed.trim_start_matches('/'))
+    };
+
+    let parsed = reqwest::Url::parse(&normalized).ok()?;
+    let host = parsed.host_str()?.trim().to_ascii_lowercase();
+    if host.is_empty() {
+        return None;
+    }
+
+    let path = parsed.path().trim_end_matches('/').to_string();
+    let path = if path.is_empty() {
+        "/".to_string()
+    } else {
+        path
+    };
+
+    Some((host, path))
+}
+
+fn host_matches_cookie_skip_rule(url_host: &str, rule_host: &str) -> bool {
+    url_host == rule_host
+        || url_host
+            .strip_suffix(rule_host)
+            .map(|prefix| prefix.ends_with('.'))
+            .unwrap_or(false)
+}
+
+fn path_matches_cookie_skip_rule(url_path: &str, rule_path: &str) -> bool {
+    if rule_path == "/" {
+        return true;
+    }
+
+    url_path == rule_path
+        || url_path
+            .strip_prefix(rule_path)
+            .map(|suffix| suffix.starts_with('/'))
+            .unwrap_or(false)
+}
+
+pub fn should_skip_cookies_for_url(url: &str, patterns: &[String]) -> bool {
+    if patterns.is_empty() {
+        return false;
+    }
+
+    let Ok(parsed_url) = reqwest::Url::parse(url) else {
+        return false;
+    };
+    let Some(url_host) = parsed_url.host_str().map(|host| host.to_ascii_lowercase()) else {
+        return false;
+    };
+    let url_path = parsed_url.path().trim_end_matches('/');
+    let url_path = if url_path.is_empty() { "/" } else { url_path };
+
+    patterns.iter().any(|rule| {
+        let Some((rule_host, rule_path)) = parse_cookie_skip_rule(rule) else {
+            return false;
+        };
+
+        host_matches_cookie_skip_rule(&url_host, &rule_host)
+            && path_matches_cookie_skip_rule(url_path, &rule_path)
+    })
 }
 
 /// Build proxy args for yt-dlp based on proxy URL
@@ -996,17 +1087,22 @@ pub async fn run_ytdlp_json_with_cookies(
     cookie_browser: Option<&str>,
     cookie_browser_profile: Option<&str>,
     cookie_file_path: Option<&str>,
+    cookie_skip_patterns: Option<&[String]>,
     proxy_url: Option<&str>,
 ) -> Result<String, String> {
     // Build full args with site headers, cookies and proxy
-    let site_header_args = ytdlp_url_arg(base_args)
-        .map(|url| build_site_header_args(&url))
+    let url = ytdlp_url_arg(base_args);
+    let site_header_args = url
+        .as_deref()
+        .map(build_site_header_args)
         .unwrap_or_default();
     let cookie_args = build_cookie_args(
+        url.as_deref().unwrap_or_default(),
         cookie_mode,
         cookie_browser,
         cookie_browser_profile,
         cookie_file_path,
+        cookie_skip_patterns,
     );
     let proxy_args = build_proxy_args(proxy_url);
     let mut extra_args = Vec::new();
@@ -1028,17 +1124,22 @@ pub async fn run_ytdlp_with_stderr_and_cookies(
     cookie_browser: Option<&str>,
     cookie_browser_profile: Option<&str>,
     cookie_file_path: Option<&str>,
+    cookie_skip_patterns: Option<&[String]>,
     proxy_url: Option<&str>,
 ) -> Result<YtdlpOutput, String> {
     // Build full args with site headers, cookies and proxy
-    let site_header_args = ytdlp_url_arg(base_args)
-        .map(|url| build_site_header_args(&url))
+    let url = ytdlp_url_arg(base_args);
+    let site_header_args = url
+        .as_deref()
+        .map(build_site_header_args)
         .unwrap_or_default();
     let cookie_args = build_cookie_args(
+        url.as_deref().unwrap_or_default(),
         cookie_mode,
         cookie_browser,
         cookie_browser_profile,
         cookie_file_path,
+        cookie_skip_patterns,
     );
     let proxy_args = build_proxy_args(proxy_url);
     let mut extra_args = Vec::new();
@@ -1088,6 +1189,62 @@ mod tests {
     #[test]
     fn build_site_header_args_ignores_bilibili_text_outside_host() {
         assert!(build_site_header_args("https://example.com/watch?url=bilibili.com").is_empty());
+    }
+
+    #[test]
+    fn cookie_skip_rule_matches_host_and_path_prefix() {
+        let rules = vec!["facebook.com/reel".to_string()];
+
+        assert!(should_skip_cookies_for_url(
+            "https://www.facebook.com/reel/1889836315019111?x=1",
+            &rules,
+        ));
+        assert!(should_skip_cookies_for_url(
+            "https://m.facebook.com/reel/1889836315019111",
+            &rules,
+        ));
+        assert!(!should_skip_cookies_for_url(
+            "https://www.facebook.com/watch/?v=1889836315019111",
+            &rules,
+        ));
+        assert!(!should_skip_cookies_for_url(
+            "https://notfacebook.com/reel/1889836315019111",
+            &rules,
+        ));
+    }
+
+    #[test]
+    fn cookie_skip_rule_can_match_whole_domain() {
+        let rules = vec!["facebook.com".to_string()];
+
+        assert!(should_skip_cookies_for_url(
+            "https://www.facebook.com/watch/?v=1889836315019111",
+            &rules,
+        ));
+        assert!(should_skip_cookies_for_url(
+            "https://m.facebook.com/reel/1889836315019111",
+            &rules,
+        ));
+        assert!(!should_skip_cookies_for_url(
+            "https://facebook.com.evil.test/reel/1889836315019111",
+            &rules,
+        ));
+    }
+
+    #[test]
+    fn safe_filename_args_trim_long_titles_before_writing_files() {
+        let mut args = vec!["--newline".to_string()];
+
+        add_safe_filename_args(&mut args);
+
+        assert_eq!(
+            args,
+            vec![
+                "--newline".to_string(),
+                "--trim-filenames".to_string(),
+                "180".to_string(),
+            ]
+        );
     }
 
     #[test]

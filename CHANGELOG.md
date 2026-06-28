@@ -8,19 +8,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Queue output folder** - Added a queue item action to choose a download folder for individual downloads
+- **yt-dlp advanced options** - Added vetted advanced options for users who need more control over yt-dlp downloads
 - **Playlist file numbering** - Added a Download setting to prefix playlist downloads with their playlist order
 - **Embedded chapter splitting** - Added Download settings to split embedded video chapters into separate files and optionally number chapter files
 - **Extension AI Summary** - Added a Summary button in the browser extension to open YouTube videos directly in AI Summary
 - **AI summary token limit** - Added an optional Settings field to set maximum output tokens for generated summaries
+- **Cookie skip rules** - Added tag-based rules to skip browser or cookie file authentication for matching sites, with Facebook Reels included by default
 
 ### Changed
 - **Extension interface** - Refined the browser extension popup and floating menu with a cleaner style that matches the music player
 
 ### Fixed
+- **Recovered plugin downloads** - Fixed successful `download.failed` plugin recoveries still leaving the original queue item marked as failed
+- **Plugin retry workflows** - Fixed retried failed downloads not picking up newly assigned plugin workflows
 - **Extension floating button** - Fixed the browser extension floating button not appearing or crashing on tabs that were already open when the extension was installed or reloaded
 - **Extension cold-start downloads** - Fixed browser extension `Download now` links opening Youwee without adding the video when the desktop app was not already running
 - **AI summary video info** - Fixed AI Summary getting stuck while fetching video info for videos whose subtitles are available but video formats cannot be selected
 - **AI summary length** - Removed the default hard-coded summary output token limit so providers can use their model defaults unless users set a custom value
+- **Long video titles** - Fixed downloads failing when very long titles are used as filenames
 
 ## [0.17.2] - 2026-06-17
 

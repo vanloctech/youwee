@@ -90,6 +90,7 @@
     "AI_NO_TRANSCRIPT": "没有可用转录文本。",
     "WHISPER_API_ERROR": "Whisper API 错误。",
     "WHISPER_NO_API_KEY": "未配置 Whisper API Key。",
-    "WHISPER_UNSUPPORTED_FORMAT": "Whisper 不支持该音频格式。"
+    "WHISPER_UNSUPPORTED_FORMAT": "Whisper 不支持该音频格式。",
+    "YT_SKIPPED_FILTER": "已被 yt-dlp 匹配过滤器跳过。"
   }
 }

@@ -65,6 +65,7 @@ export function DownloadPage({ onNavigateToSettings }: DownloadPageProps) {
     clearCookieError,
     retryFailedDownload,
     updateItemTimeRange,
+    selectItemOutputFolder,
     renameCompletedItem,
   } = useDownload();
 
@@ -203,6 +204,7 @@ export function DownloadPage({ onNavigateToSettings }: DownloadPageProps) {
               currentPlaylistInfo={currentPlaylistInfo}
               onRemove={removeItem}
               onUpdateTimeRange={updateItemTimeRange}
+              onSelectOutputFolder={selectItemOutputFolder}
               onRename={renameCompletedItem}
               onClearCompleted={clearCompleted}
               onScheduleUpcomingLive={schedule.setSchedule}

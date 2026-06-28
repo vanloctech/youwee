@@ -53,6 +53,7 @@ export function UniversalPage({ onNavigateToSettings }: UniversalPageProps) {
     clearCookieError,
     retryFailedDownload,
     updateItemTimeRange,
+    selectItemOutputFolder,
     renameCompletedItem,
   } = useUniversal();
 
@@ -143,6 +144,7 @@ export function UniversalPage({ onNavigateToSettings }: UniversalPageProps) {
             isDownloading={isDownloading}
             onRemove={removeItem}
             onUpdateTimeRange={updateItemTimeRange}
+            onSelectOutputFolder={selectItemOutputFolder}
             onRename={renameCompletedItem}
             onClearCompleted={clearCompleted}
             onScheduleUpcomingLive={schedule.setSchedule}

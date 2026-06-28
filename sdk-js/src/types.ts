@@ -68,6 +68,7 @@ export interface BasePluginPayload {
 }
 
 export interface PluginChainMutation {
+  recovered?: boolean | null;
   activeFilepath?: string | null;
   activeFilename?: string | null;
   extraFiles?: string[];
@@ -91,6 +92,7 @@ export interface PluginChainState {
   quality?: string | null;
   extraFiles: string[];
   metadata?: unknown;
+  recovered: boolean;
 }
 
 export interface DownloadQueuedPayload extends BasePluginPayload {

@@ -8,19 +8,25 @@ và dự án tuân theo [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ## [Unreleased]
 
 ### Thêm mới
+- **Folder tải trong hàng đợi** - Thêm nút đổi folder tải xuống riêng cho từng item trong hàng đợi
+- **Tùy chọn yt-dlp nâng cao** - Thêm tùy chọn nâng cao đã kiểm soát cho người dùng cần tinh chỉnh lệnh tải yt-dlp
 - **Đánh số file playlist** - Thêm cài đặt Tải xuống để thêm số thứ tự playlist vào đầu tên file khi tải playlist
 - **Tách chapter có sẵn** - Thêm cài đặt Tải xuống để tách chapter có sẵn trong video thành file riêng và tùy chọn đánh số file chapter
 - **AI Summary trong extension** - Thêm nút Tóm tắt trong browser extension để mở video YouTube trực tiếp ở màn AI Summary
 - **Giới hạn token cho AI Summary** - Thêm ô tùy chọn trong Cài đặt để chỉnh số token đầu ra tối đa khi tạo bản tóm tắt
+- **Rule bỏ qua cookie** - Thêm cài đặt dạng tag để bỏ qua cookie trình duyệt hoặc tệp cookie cho các site khớp rule, mặc định có Facebook Reels
 
 ### Thay đổi
 - **Giao diện extension** - Làm mới popup và menu nút nổi của browser extension theo phong cách gọn, hiện đại và đồng bộ hơn với trình phát nhạc
 
 ### Sửa lỗi
+- **Tải được khôi phục bởi plugin** - Sửa lỗi plugin `download.failed` khôi phục file thành công nhưng item gốc vẫn bị hiển thị là thất bại
+- **Workflow plugin khi thử lại** - Sửa lỗi tải xuống thất bại khi thử lại không dùng workflow plugin mới được gán
 - **Nút nổi trong extension** - Sửa lỗi nút nổi của browser extension không hiện hoặc bị crash trên các tab đã mở sẵn trước khi extension được cài hoặc reload
 - **Tải từ extension khi app chưa mở** - Sửa lỗi bấm `Download now` trong browser extension chỉ mở Youwee nhưng không thêm video khi app desktop chưa chạy sẵn
 - **Thông tin video cho AI Summary** - Sửa lỗi AI Summary bị kẹt khi lấy thông tin video trong trường hợp phụ đề có sẵn nhưng yt-dlp không chọn được định dạng video
 - **Độ dài AI Summary** - Bỏ giới hạn token đầu ra mặc định bị hard-code để provider dùng mặc định của model, trừ khi người dùng tự đặt giá trị
+- **Tiêu đề video quá dài** - Sửa lỗi tải xuống thất bại khi tiêu đề quá dài được dùng làm tên file
 
 ## [0.17.2] - 2026-06-17
 

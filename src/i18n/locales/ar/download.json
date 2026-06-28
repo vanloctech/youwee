@@ -199,6 +199,8 @@
     },
     "summarize": "تلخيص",
     "openFolder": "إظهار في المجلد",
+    "changeOutputFolder": "تغيير المجلد",
+    "outputFolder": "مجلد التنزيل: {{path}}",
     "rename": "إعادة تسمية",
     "renamePlaceholder": "أدخل اسم الملف الجديد",
     "renameSave": "حفظ",

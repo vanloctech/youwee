@@ -645,11 +645,9 @@ mod tests {
         let filepath = make_temp_download_file();
         insert_history_row("https://www.youtube.com/watch?v=abc123", &filepath);
 
-        let videos = get_channel_videos_by_video_ids_db(
-            "channel-1".to_string(),
-            vec!["abc123".to_string()],
-        )
-        .expect("get videos by ids");
+        let videos =
+            get_channel_videos_by_video_ids_db("channel-1".to_string(), vec!["abc123".to_string()])
+                .expect("get videos by ids");
 
         assert_eq!(
             videos.first().map(|video| video.status.as_str()),

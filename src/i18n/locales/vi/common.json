@@ -90,6 +90,7 @@
     "AI_NO_TRANSCRIPT": "Không có transcript.",
     "WHISPER_API_ERROR": "Lỗi API Whisper.",
     "WHISPER_NO_API_KEY": "Chưa cấu hình API key cho Whisper.",
-    "WHISPER_UNSUPPORTED_FORMAT": "Định dạng âm thanh không được Whisper hỗ trợ."
+    "WHISPER_UNSUPPORTED_FORMAT": "Định dạng âm thanh không được Whisper hỗ trợ.",
+    "YT_SKIPPED_FILTER": "Đã bỏ qua theo bộ lọc match của yt-dlp."
   }
 }

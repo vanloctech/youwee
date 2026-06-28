@@ -1,5 +1,18 @@
-import { Database, Film, Gauge, Radio, Rocket, RotateCcw, ShieldCheck } from 'lucide-react';
+import {
+  Database,
+  Film,
+  Gauge,
+  Plus,
+  Radio,
+  Rocket,
+  RotateCcw,
+  ShieldCheck,
+  SlidersHorizontal,
+  X,
+} from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
   Select,
@@ -16,8 +29,15 @@ import {
   type SponsorBlockAction,
   type SponsorBlockCategory,
   type SponsorBlockMode,
+  type YtdlpAdvancedOption,
+  type YtdlpAdvancedOptionId,
 } from '@/lib/types';
 import { cn } from '@/lib/utils';
+import {
+  getYtdlpAdvancedOptionDefinition,
+  YTDLP_ADVANCED_OPTION_DEFINITIONS,
+  type YtdlpAdvancedOptionDefinition,
+} from '@/lib/ytdlp-advanced-options';
 import { SettingsCard, SettingsDivider, SettingsRow, SettingsSection } from '../SettingsSection';
 
 interface DownloadSectionProps {
@@ -40,6 +60,109 @@ export function DownloadSection({ highlightId }: DownloadSectionProps) {
     updateSponsorBlockMode,
     updateSponsorBlockCategory,
   } = useDownload();
+
+  const updateYtdlpAdvancedOptions = (options: YtdlpAdvancedOption[]) => {
+    updateSettings({ ytdlpAdvancedOptions: options });
+  };
+
+  const addYtdlpAdvancedOption = (id: YtdlpAdvancedOptionId) => {
+    const definition = getYtdlpAdvancedOptionDefinition(id);
+    if (!definition) return;
+    const nextOption: YtdlpAdvancedOption = { id };
+    if (definition.valueType === 'select') {
+      nextOption.value = definition.options?.[0] || '';
+    }
+    updateYtdlpAdvancedOptions([...settings.ytdlpAdvancedOptions, nextOption]);
+  };
+
+  const updateYtdlpAdvancedOption = (index: number, updates: Partial<YtdlpAdvancedOption>) => {
+    updateYtdlpAdvancedOptions(
+      settings.ytdlpAdvancedOptions.map((option, optionIndex) =>
+        optionIndex === index ? { ...option, ...updates } : option,
+      ),
+    );
+  };
+
+  const removeYtdlpAdvancedOption = (index: number) => {
+    updateYtdlpAdvancedOptions(
+      settings.ytdlpAdvancedOptions.filter((_, optionIndex) => optionIndex !== index),
+    );
+  };
+
+  const selectedYtdlpOptionIds = new Set(settings.ytdlpAdvancedOptions.map((option) => option.id));
+  const availableYtdlpOptionDefinitions = YTDLP_ADVANCED_OPTION_DEFINITIONS.filter(
+    (definition) => definition.repeatable || !selectedYtdlpOptionIds.has(definition.id),
+  );
+
+  const formatYtdlpOptionName = (definition: YtdlpAdvancedOptionDefinition) => {
+    if (definition.id === 'youtubePlayerClient') {
+      return '--extractor-args youtube:player-client';
+    }
+    return definition.ytDlpFlag;
+  };
+
+  const renderYtdlpOptionValue = (
+    option: YtdlpAdvancedOption,
+    definition: YtdlpAdvancedOptionDefinition,
+    index: number,
+  ) => {
+    if (definition.valueType === 'boolean') {
+      return null;
+    }
+
+    if (definition.valueType === 'select') {
+      return (
+        <Select
+          value={option.value || definition.options?.[0] || ''}
+          onValueChange={(value) => updateYtdlpAdvancedOption(index, { value })}
+        >
+          <SelectTrigger className="h-8 w-full bg-background md:w-[180px]">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {definition.options?.map((value) => (
+              <SelectItem key={value} value={value}>
+                {value}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      );
+    }
+
+    if (definition.valueType === 'header') {
+      return (
+        <div className="grid w-full gap-2 md:grid-cols-[150px_minmax(180px,1fr)]">
+          <Input
+            value={option.value || ''}
+            onChange={(event) =>
+              updateYtdlpAdvancedOption(index, { value: event.currentTarget.value })
+            }
+            placeholder={t('download.ytdlpAdvanced.placeholder.headerName')}
+            className="h-8 bg-background"
+          />
+          <Input
+            value={option.secondaryValue || ''}
+            onChange={(event) =>
+              updateYtdlpAdvancedOption(index, { secondaryValue: event.currentTarget.value })
+            }
+            placeholder={t('download.ytdlpAdvanced.placeholder.headerValue')}
+            className="h-8 bg-background"
+          />
+        </div>
+      );
+    }
+
+    return (
+      <Input
+        value={option.value || ''}
+        type={definition.valueType === 'number' ? 'number' : 'text'}
+        onChange={(event) => updateYtdlpAdvancedOption(index, { value: event.currentTarget.value })}
+        placeholder={definition.placeholderKey ? t(definition.placeholderKey) : undefined}
+        className="h-8 w-full bg-background md:w-[260px]"
+      />
+    );
+  };
 
   return (
     <div className="space-y-8">
@@ -404,6 +527,105 @@ export function DownloadSection({ highlightId }: DownloadSectionProps) {
               </div>
             </div>
           </SettingsRow>
+        </SettingsCard>
+      </SettingsSection>
+
+      <SettingsDivider />
+
+      <SettingsSection
+        title={t('download.ytdlpAdvanced.title')}
+        description={t('download.ytdlpAdvanced.description')}
+        icon={<SlidersHorizontal className="w-5 h-5 text-white" />}
+        iconClassName="bg-gradient-to-br from-violet-500 to-fuchsia-600 shadow-violet-500/20"
+      >
+        <SettingsCard>
+          <SettingsRow
+            id="ytdlp-advanced-options"
+            label={t('download.ytdlpAdvanced.toggle')}
+            description={t('download.ytdlpAdvanced.toggleDesc')}
+            highlight={highlightId === 'ytdlp-advanced-options'}
+          >
+            <Switch
+              checked={settings.ytdlpAdvancedOptionsEnabled}
+              onCheckedChange={(ytdlpAdvancedOptionsEnabled) =>
+                updateSettings({ ytdlpAdvancedOptionsEnabled })
+              }
+            />
+          </SettingsRow>
+
+          {settings.ytdlpAdvancedOptionsEnabled && (
+            <div className="mt-3 space-y-3 border-t border-border/50 pt-3">
+              <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+                <p className="text-xs text-muted-foreground">
+                  {t('download.ytdlpAdvanced.helper')}
+                </p>
+                <Select
+                  key={settings.ytdlpAdvancedOptions.length}
+                  onValueChange={(value) => addYtdlpAdvancedOption(value as YtdlpAdvancedOptionId)}
+                >
+                  <SelectTrigger className="h-8 w-full bg-background md:w-[260px]">
+                    <div className="flex items-center gap-2">
+                      <Plus className="h-3.5 w-3.5" />
+                      <SelectValue placeholder={t('download.ytdlpAdvanced.addOption')} />
+                    </div>
+                  </SelectTrigger>
+                  <SelectContent>
+                    {availableYtdlpOptionDefinitions.map((definition) => (
+                      <SelectItem key={definition.id} value={definition.id}>
+                        {formatYtdlpOptionName(definition)}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {settings.ytdlpAdvancedOptions.length > 0 && (
+                <div className="space-y-2">
+                  {settings.ytdlpAdvancedOptions.map((option, index) => {
+                    const definition = getYtdlpAdvancedOptionDefinition(option.id);
+                    if (!definition) return null;
+
+                    return (
+                      <div
+                        key={`${option.id}-${index}`}
+                        className="rounded-md border border-dashed border-border/70 bg-muted/20 p-3"
+                      >
+                        <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                          <div className="min-w-0 flex-1 space-y-1">
+                            <div className="flex flex-wrap items-center gap-2">
+                              <p className="text-xs font-semibold text-foreground">
+                                {formatYtdlpOptionName(definition)}
+                              </p>
+                              {definition.securityLevel === 'advanced' && (
+                                <Badge className="rounded bg-amber-500/10 px-1.5 py-0 text-[10px] font-medium text-amber-600 shadow-none hover:bg-amber-500/10 dark:text-amber-400">
+                                  {t('download.ytdlpAdvanced.advancedBadge')}
+                                </Badge>
+                              )}
+                            </div>
+                            <p className="text-[10px] leading-tight text-muted-foreground/75">
+                              {t(definition.descriptionKey)}
+                            </p>
+                          </div>
+                          <div className="flex w-full items-center gap-2 md:w-auto">
+                            {renderYtdlpOptionValue(option, definition, index)}
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => removeYtdlpAdvancedOption(index)}
+                              className="h-8 w-8 shrink-0 text-muted-foreground hover:text-destructive"
+                            >
+                              <X className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          )}
         </SettingsCard>
       </SettingsSection>
 

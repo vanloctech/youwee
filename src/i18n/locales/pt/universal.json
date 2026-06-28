@@ -112,6 +112,8 @@
     "showLess": "Mostrar menos",
     "regenerateSummary": "Gerar resumo novamente",
     "openFolder": "Mostrar na pasta",
+    "changeOutputFolder": "Alterar pasta",
+    "outputFolder": "Pasta de download: {{path}}",
     "rename": "Renomear",
     "renamePlaceholder": "Digite o novo nome do arquivo",
     "renameSave": "Salvar",

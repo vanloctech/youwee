@@ -27,6 +27,7 @@ import {
   isRetryableError,
   waitWithCancellation,
 } from '@/lib/download-retry';
+import { refreshItemPluginWorkflowSnapshots } from '@/lib/download-settings';
 import {
   buildCookieProxyInvokeOptions,
   loadCookieSettings,
@@ -36,6 +37,7 @@ import {
   enqueuePluginWorkflowTrigger,
   loadPluginWorkflowSnapshots,
   loadPostDownloadWorkflowSteps,
+  refreshPluginWorkflowSnapshots,
   refreshPostDownloadWorkflowSteps,
 } from '@/lib/post-download-plugins';
 import { parseUniversalUrls } from '@/lib/sources';
@@ -50,7 +52,9 @@ import type {
   PostDownloadPluginPayload,
   Quality,
   VideoInfoResponse,
+  YtdlpAdvancedOption,
 } from '@/lib/types';
+import { sanitizeYtdlpAdvancedOptions } from '@/lib/ytdlp-advanced-options';
 import { useDownload } from './DownloadContext';
 
 const STORAGE_KEY = 'youwee-universal-settings';
@@ -181,7 +185,12 @@ function loadSponsorBlockArgs(): { remove: string | null; mark: string | null } 
   return { remove: null, mark: null };
 }
 
-function loadAria2Settings(): { useAria2: boolean; aria2Args: string } {
+function loadDownloadAdvancedSettings(): {
+  useAria2: boolean;
+  aria2Args: string;
+  ytdlpAdvancedOptionsEnabled: boolean;
+  ytdlpAdvancedOptions: YtdlpAdvancedOption[];
+} {
   try {
     const saved = localStorage.getItem(DOWNLOAD_STORAGE_KEY);
     if (saved) {
@@ -189,12 +198,19 @@ function loadAria2Settings(): { useAria2: boolean; aria2Args: string } {
       return {
         useAria2: parsed.useAria2 === true,
         aria2Args: typeof parsed.aria2Args === 'string' ? parsed.aria2Args : '',
+        ytdlpAdvancedOptionsEnabled: parsed.ytdlpAdvancedOptionsEnabled === true,
+        ytdlpAdvancedOptions: sanitizeYtdlpAdvancedOptions(parsed.ytdlpAdvancedOptions),
       };
     }
   } catch (e) {
-    console.error('Failed to load aria2 settings:', e);
+    console.error('Failed to load download advanced settings:', e);
   }
-  return { useAria2: false, aria2Args: '' };
+  return {
+    useAria2: false,
+    aria2Args: '',
+    ytdlpAdvancedOptionsEnabled: false,
+    ytdlpAdvancedOptions: [],
+  };
 }
 
 // Save settings to localStorage
@@ -255,6 +271,7 @@ interface UniversalContextType {
   retryFailedDownload: (itemId: string) => void;
   // Per-item time range
   updateItemTimeRange: (id: string, start?: string, end?: string) => void;
+  selectItemOutputFolder: (id: string) => Promise<void>;
   // Rename completed file
   renameCompletedItem: (id: string, newName: string) => Promise<void>;
 }
@@ -374,8 +391,30 @@ export function UniversalProvider({ children }: { children: ReactNode }) {
         setCookieError({ show: true, itemId: progress.id, kind: 'db_locked' });
       }
 
-      setItems((currentItems) =>
-        currentItems.map((item) =>
+      setItems((currentItems) => {
+        if (progress.status === 'error' && progress.error_code === 'DOWNLOAD_CANCELLED') {
+          return currentItems.map((item) =>
+            item.id === progress.id
+              ? {
+                  ...item,
+                  status: 'pending',
+                  speed: '',
+                  eta: '',
+                  error: undefined,
+                  errorCode: undefined,
+                  retryState: undefined,
+                }
+              : item,
+          );
+        }
+
+        const status: DownloadItem['status'] =
+          progress.status === 'finished'
+            ? 'completed'
+            : progress.status === 'error'
+              ? 'error'
+              : 'downloading';
+        const nextItems = currentItems.map((item) =>
           item.id === progress.id
             ? {
                 ...item,
@@ -383,12 +422,7 @@ export function UniversalProvider({ children }: { children: ReactNode }) {
                 speed: progress.speed,
                 eta: progress.eta,
                 title: progress.title || item.title,
-                status:
-                  progress.status === 'finished'
-                    ? 'completed'
-                    : progress.status === 'error'
-                      ? 'error'
-                      : 'downloading',
+                status,
                 error: localizeProgressError(
                   progress.error_code,
                   progress.error_message,
@@ -412,8 +446,10 @@ export function UniversalProvider({ children }: { children: ReactNode }) {
                   : {}),
               }
             : item,
-        ),
-      );
+        );
+        itemsRef.current = nextItems;
+        return nextItems;
+      });
     });
 
     return () => {
@@ -540,7 +576,7 @@ export function UniversalProvider({ children }: { children: ReactNode }) {
 
       const currentItems = itemsRef.current;
       const currentSettings = settingsRef.current;
-      const aria2Settings = loadAria2Settings();
+      const advancedSettings = loadDownloadAdvancedSettings();
       const workflowSnapshots = loadPluginWorkflowSnapshots();
 
       // Snapshot current settings for these items
@@ -549,10 +585,14 @@ export function UniversalProvider({ children }: { children: ReactNode }) {
         format: currentSettings.format,
         outputPath: currentSettings.outputPath,
         audioBitrate: currentSettings.audioBitrate,
-        useAria2: aria2Settings.useAria2,
-        aria2Args: aria2Settings.aria2Args,
+        useAria2: advancedSettings.useAria2,
+        aria2Args: advancedSettings.aria2Args,
+        ytdlpAdvancedOptionsEnabled: advancedSettings.ytdlpAdvancedOptionsEnabled,
+        ytdlpAdvancedOptions: advancedSettings.ytdlpAdvancedOptions,
         liveFromStart: currentSettings.liveFromStart,
         skipLive: currentSettings.skipLive,
+        splitEmbeddedChapters: downloadSettings.splitEmbeddedChapters,
+        numberChapterFiles: downloadSettings.numberChapterFiles,
         pluginWorkflowSnapshots: workflowSnapshots,
         postDownloadWorkflowSteps: loadPostDownloadWorkflowSteps(),
         autoRetryEnabled: currentSettings.autoRetryEnabled,
@@ -583,7 +623,12 @@ export function UniversalProvider({ children }: { children: ReactNode }) {
 
       return newItems.length;
     },
-    [enqueueQueuedWorkflowForItems, fetchMetadataForItems],
+    [
+      downloadSettings.numberChapterFiles,
+      downloadSettings.splitEmbeddedChapters,
+      enqueueQueuedWorkflowForItems,
+      fetchMetadataForItems,
+    ],
   );
 
   const focusItem = useCallback((itemId: string) => {
@@ -627,7 +672,7 @@ export function UniversalProvider({ children }: { children: ReactNode }) {
       const videoQuality =
         options?.quality && options.quality !== 'audio' ? options.quality : 'best';
       const audioBitrate = options?.audioBitrate === '128' ? '128' : 'auto';
-      const aria2Settings = loadAria2Settings();
+      const advancedSettings = loadDownloadAdvancedSettings();
       const workflowSnapshots = loadPluginWorkflowSnapshots();
 
       const settingsSnapshot: ItemUniversalSettings = {
@@ -635,12 +680,16 @@ export function UniversalProvider({ children }: { children: ReactNode }) {
         format: mediaType === 'audio' ? 'mp3' : 'mp4',
         outputPath,
         audioBitrate: mediaType === 'audio' ? audioBitrate : currentSettings.audioBitrate,
-        useAria2: aria2Settings.useAria2,
-        aria2Args: aria2Settings.aria2Args,
+        useAria2: advancedSettings.useAria2,
+        aria2Args: advancedSettings.aria2Args,
+        ytdlpAdvancedOptionsEnabled: advancedSettings.ytdlpAdvancedOptionsEnabled,
+        ytdlpAdvancedOptions: advancedSettings.ytdlpAdvancedOptions,
         timeRangeStart: options?.timeRangeStart,
         timeRangeEnd: options?.timeRangeEnd,
         liveFromStart: options?.liveFromStart ?? currentSettings.liveFromStart,
         skipLive: options?.skipLive ?? currentSettings.skipLive,
+        splitEmbeddedChapters: downloadSettings.splitEmbeddedChapters,
+        numberChapterFiles: downloadSettings.numberChapterFiles,
         pluginWorkflowSnapshots: workflowSnapshots,
         postDownloadWorkflowSteps: loadPostDownloadWorkflowSteps(),
         autoRetryEnabled: currentSettings.autoRetryEnabled,
@@ -667,7 +716,13 @@ export function UniversalProvider({ children }: { children: ReactNode }) {
       enqueueQueuedWorkflowForItems([newItem]);
       return { added: true, itemId: newItem.id };
     },
-    [enqueueQueuedWorkflowForItems, fetchMetadataForItems, focusItem],
+    [
+      downloadSettings.numberChapterFiles,
+      downloadSettings.splitEmbeddedChapters,
+      enqueueQueuedWorkflowForItems,
+      fetchMetadataForItems,
+      focusItem,
+    ],
   );
 
   const importFromFile = useCallback(async (): Promise<number> => {
@@ -728,17 +783,64 @@ export function UniversalProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const updateItemTimeRange = useCallback((id: string, start?: string, end?: string) => {
-    setItems((items) =>
-      items.map((item) => {
+    setItems((items) => {
+      const nextItems = items.map((item) => {
         if (item.id !== id || !item.settings) return item;
         const settings = item.settings as ItemUniversalSettings;
         return {
           ...item,
           settings: { ...settings, timeRangeStart: start, timeRangeEnd: end },
         };
-      }),
-    );
+      });
+      itemsRef.current = nextItems;
+      return nextItems;
+    });
   }, []);
+
+  const updateItemOutputPath = useCallback((id: string, outputPath: string) => {
+    setItems((items) => {
+      const nextItems = items.map((item) => {
+        if (item.id !== id || !item.settings) return item;
+        const settings = item.settings as ItemUniversalSettings;
+        return {
+          ...item,
+          settings: { ...settings, outputPath },
+        };
+      });
+      itemsRef.current = nextItems;
+      return nextItems;
+    });
+  }, []);
+
+  const selectItemOutputFolder = useCallback(
+    async (id: string) => {
+      if (isDownloadingRef.current) return;
+
+      const item = itemsRef.current.find((i) => i.id === id);
+      if (!item || (item.status !== 'pending' && item.status !== 'error')) {
+        return;
+      }
+
+      const itemSettings = item.settings as ItemUniversalSettings | undefined;
+      const defaultPath = itemSettings?.outputPath || settingsRef.current.outputPath || undefined;
+
+      try {
+        const folder = await open({
+          directory: true,
+          multiple: false,
+          title: 'Select Download Folder',
+          defaultPath,
+        });
+
+        if (typeof folder === 'string' && folder) {
+          updateItemOutputPath(id, folder);
+        }
+      } catch (error) {
+        console.error('Failed to select item folder:', error);
+      }
+    },
+    [updateItemOutputPath],
+  );
 
   const renameCompletedItem = useCallback(async (id: string, newName: string) => {
     const item = itemsRef.current.find((i) => i.id === id);
@@ -837,7 +939,7 @@ export function UniversalProvider({ children }: { children: ReactNode }) {
       const networkOptions = buildCookieProxyInvokeOptions(cookieSettings, proxySettings);
       const embedSettings = loadEmbedSettings();
       const sponsorBlockArgs = loadSponsorBlockArgs();
-      const aria2Settings = loadAria2Settings();
+      const advancedSettings = loadDownloadAdvancedSettings();
 
       const autoRetryEnabled = itemSettings?.autoRetryEnabled ?? settings.autoRetryEnabled;
       const maxRetries = clampAutoRetryMaxAttempts(
@@ -886,6 +988,10 @@ export function UniversalProvider({ children }: { children: ReactNode }) {
             // Post-processing settings (from main download settings)
             embedMetadata: embedSettings.embedMetadata,
             embedThumbnail: embedSettings.embedThumbnail,
+            splitEmbeddedChapters:
+              itemSettings?.splitEmbeddedChapters ?? downloadSettings.splitEmbeddedChapters,
+            numberChapterFiles:
+              itemSettings?.numberChapterFiles ?? downloadSettings.numberChapterFiles,
             // Live stream settings
             liveFromStart: itemSettings?.liveFromStart ?? settings.liveFromStart,
             skipLive: itemSettings?.skipLive ?? false,
@@ -894,8 +1000,13 @@ export function UniversalProvider({ children }: { children: ReactNode }) {
               ? `${settings.speedLimitValue}${settings.speedLimitUnit}`
               : null,
             // External downloader settings (from item snapshot, fallback to global settings)
-            useAria2: itemSettings?.useAria2 ?? aria2Settings.useAria2,
-            aria2Args: itemSettings?.aria2Args ?? aria2Settings.aria2Args,
+            useAria2: itemSettings?.useAria2 ?? advancedSettings.useAria2,
+            aria2Args: itemSettings?.aria2Args ?? advancedSettings.aria2Args,
+            ytdlpAdvancedOptionsEnabled:
+              itemSettings?.ytdlpAdvancedOptionsEnabled ??
+              advancedSettings.ytdlpAdvancedOptionsEnabled,
+            ytdlpAdvancedOptions:
+              itemSettings?.ytdlpAdvancedOptions ?? advancedSettings.ytdlpAdvancedOptions,
             // SponsorBlock settings
             sponsorblockRemove: sponsorBlockArgs.remove,
             sponsorblockMark: sponsorBlockArgs.mark,
@@ -927,9 +1038,32 @@ export function UniversalProvider({ children }: { children: ReactNode }) {
           );
           return;
         } catch (error) {
+          if (itemsRef.current.some((i) => i.id === item.id && i.status === 'completed')) {
+            return;
+          }
+
           const parsedError = extractBackendError(error);
           const errorMessage = localizeBackendError(parsedError);
-          if (parsedError.code === 'YT_SKIPPED_LIVE') {
+          if (parsedError.code === 'DOWNLOAD_CANCELLED') {
+            setItems((items) =>
+              items.map((i) =>
+                i.id === item.id
+                  ? {
+                      ...i,
+                      status: 'pending',
+                      speed: '',
+                      eta: '',
+                      error: undefined,
+                      errorCode: undefined,
+                      retryState: undefined,
+                    }
+                  : i,
+              ),
+            );
+            return;
+          }
+
+          if (parsedError.code === 'YT_SKIPPED_LIVE' || parsedError.code === 'YT_SKIPPED_FILTER') {
             setItems((items) =>
               items.map((i) =>
                 i.id === item.id
@@ -1079,7 +1213,12 @@ export function UniversalProvider({ children }: { children: ReactNode }) {
       setIsDownloading(false);
       isDownloadingRef.current = false;
     }
-  }, [enqueueFailedWorkflowForItem, settings]);
+  }, [
+    downloadSettings.numberChapterFiles,
+    downloadSettings.splitEmbeddedChapters,
+    enqueueFailedWorkflowForItem,
+    settings,
+  ]);
 
   const stopDownload = useCallback(async () => {
     try {
@@ -1165,27 +1304,34 @@ export function UniversalProvider({ children }: { children: ReactNode }) {
   // Retry a failed download (reset item and restart)
   const retryFailedDownload = useCallback(
     (itemId: string) => {
-      // Reset item status to pending
-      setItems((currentItems) =>
-        currentItems.map((item) =>
-          item.id === itemId
-            ? {
-                ...item,
-                status: 'pending',
-                progress: 0,
-                error: undefined,
-                errorCode: undefined,
-                retryState: undefined,
-              }
-            : item,
-        ),
-      );
-      // Clear cookie error
-      setCookieError(null);
-      // Use a short delay to ensure state update before starting download
-      setTimeout(() => {
-        startDownload();
-      }, 100);
+      void (async () => {
+        const pluginWorkflowSnapshots = await refreshPluginWorkflowSnapshots();
+
+        // Reset item status to pending and treat retry as a fresh workflow run.
+        setItems((currentItems) =>
+          currentItems.map((item) =>
+            item.id === itemId
+              ? {
+                  ...item,
+                  status: 'pending',
+                  progress: 0,
+                  error: undefined,
+                  errorCode: undefined,
+                  retryState: undefined,
+                  settings: item.settings
+                    ? refreshItemPluginWorkflowSnapshots(item.settings, pluginWorkflowSnapshots)
+                    : item.settings,
+                }
+              : item,
+          ),
+        );
+        // Clear cookie error
+        setCookieError(null);
+        // Use a short delay to ensure state update before starting download
+        setTimeout(() => {
+          startDownload();
+        }, 100);
+      })();
     },
     [startDownload],
   );
@@ -1220,6 +1366,7 @@ export function UniversalProvider({ children }: { children: ReactNode }) {
       retryFailedDownload,
       // Per-item time range
       updateItemTimeRange,
+      selectItemOutputFolder,
       renameCompletedItem,
     }),
     [
@@ -1249,6 +1396,7 @@ export function UniversalProvider({ children }: { children: ReactNode }) {
       clearCookieError,
       retryFailedDownload,
       updateItemTimeRange,
+      selectItemOutputFolder,
       renameCompletedItem,
     ],
   );

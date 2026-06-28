@@ -90,6 +90,7 @@
     "WHISPER_API_ERROR": "Erreur API Whisper.",
     "WHISPER_NO_API_KEY": "Clé API Whisper non configurée.",
     "WHISPER_UNSUPPORTED_FORMAT": "Format audio non pris en charge par Whisper.",
-    "ARIA2_NOT_FOUND": "aria2c est introuvable. Installez aria2 et assurez-vous que aria2c est disponible dans PATH."
+    "ARIA2_NOT_FOUND": "aria2c est introuvable. Installez aria2 et assurez-vous que aria2c est disponible dans PATH.",
+    "YT_SKIPPED_FILTER": "Skipped by yt-dlp match filter."
   }
 }

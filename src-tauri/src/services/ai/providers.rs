@@ -989,8 +989,8 @@ mod tests {
             }]
         }"#;
 
-        let error =
-            parse_openai_compatible_response("Proxy", reqwest::StatusCode::OK, response).unwrap_err();
+        let error = parse_openai_compatible_response("Proxy", reqwest::StatusCode::OK, response)
+            .unwrap_err();
 
         assert!(matches!(error, AIError::ApiError(message) if message.contains("cut off")));
     }
