@@ -29,6 +29,7 @@ import {
 import {
   buildItemDownloadSettingsSnapshot,
   createDefaultDownloadSettings,
+  refreshItemPluginWorkflowSnapshots,
   serializeDownloadSettings,
 } from '@/lib/download-settings';
 import {
@@ -43,6 +44,7 @@ import {
   enqueuePluginWorkflowTrigger,
   loadPluginWorkflowSnapshots,
   loadPostDownloadWorkflowSteps,
+  refreshPluginWorkflowSnapshots,
   refreshPostDownloadWorkflowSteps,
 } from '@/lib/post-download-plugins';
 import { normalizeShellEscapedUrl } from '@/lib/sources';
@@ -1566,27 +1568,34 @@ export function DownloadProvider({ children }: { children: ReactNode }) {
   // Retry a failed download (reset item and restart)
   const retryFailedDownload = useCallback(
     (itemId: string) => {
-      // Reset item status to pending
-      setItems((currentItems) =>
-        currentItems.map((item) =>
-          item.id === itemId
-            ? {
-                ...item,
-                status: 'pending',
-                progress: 0,
-                error: undefined,
-                errorCode: undefined,
-                retryState: undefined,
-              }
-            : item,
-        ),
-      );
-      // Clear cookie error
-      setCookieError(null);
-      // Use a short delay to ensure state update before starting download
-      setTimeout(() => {
-        startDownload();
-      }, 100);
+      void (async () => {
+        const pluginWorkflowSnapshots = await refreshPluginWorkflowSnapshots();
+
+        // Reset item status to pending and treat retry as a fresh workflow run.
+        setItems((currentItems) =>
+          currentItems.map((item) =>
+            item.id === itemId
+              ? {
+                  ...item,
+                  status: 'pending',
+                  progress: 0,
+                  error: undefined,
+                  errorCode: undefined,
+                  retryState: undefined,
+                  settings: item.settings
+                    ? refreshItemPluginWorkflowSnapshots(item.settings, pluginWorkflowSnapshots)
+                    : item.settings,
+                }
+              : item,
+          ),
+        );
+        // Clear cookie error
+        setCookieError(null);
+        // Use a short delay to ensure state update before starting download
+        setTimeout(() => {
+          startDownload();
+        }, 100);
+      })();
     },
     [startDownload],
   );
