@@ -7,6 +7,8 @@ và dự án tuân theo [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+## [0.18.0] - 2026-06-29
+
 ### Thêm mới
 - **Đánh số file trong hàng đợi** - Thêm tùy chọn thêm số thứ tự hàng đợi vào đầu tên file khi tải nhiều video thường
 - **Folder tải trong hàng đợi** - Thêm nút đổi folder tải xuống riêng cho từng item trong hàng đợi

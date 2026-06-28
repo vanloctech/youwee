@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.18.0] - 2026-06-29
+
 ### Added
 - **Queue file numbering** - Added an option to prefix regular queued downloads with their queue order
 - **Queue output folder** - Added a queue item action to choose a download folder for individual downloads
