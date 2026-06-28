@@ -591,6 +591,7 @@ export function UniversalProvider({ children }: { children: ReactNode }) {
         ytdlpAdvancedOptions: advancedSettings.ytdlpAdvancedOptions,
         liveFromStart: currentSettings.liveFromStart,
         skipLive: currentSettings.skipLive,
+        numberQueueItems: downloadSettings.numberQueueItems,
         splitEmbeddedChapters: downloadSettings.splitEmbeddedChapters,
         numberChapterFiles: downloadSettings.numberChapterFiles,
         pluginWorkflowSnapshots: workflowSnapshots,
@@ -600,19 +601,21 @@ export function UniversalProvider({ children }: { children: ReactNode }) {
         autoRetryDelaySeconds: currentSettings.autoRetryDelaySeconds,
       };
 
-      const newItems: DownloadItem[] = urls
-        .filter((url) => !currentItems.some((item) => item.url === url))
-        .map((url) => ({
-          id: crypto.randomUUID(),
-          url,
-          title: url,
-          status: 'pending' as const,
-          progress: 0,
-          speed: '',
-          eta: '',
-          // Store settings snapshot
-          settings: settingsSnapshot,
-        }));
+      const nextUrls = urls.filter((url) => !currentItems.some((item) => item.url === url));
+      const queueTotal = currentItems.length + nextUrls.length;
+      const newItems: DownloadItem[] = nextUrls.map((url, index) => ({
+        id: crypto.randomUUID(),
+        url,
+        title: url,
+        status: 'pending' as const,
+        progress: 0,
+        speed: '',
+        eta: '',
+        queueIndex: currentItems.length + index + 1,
+        queueTotal,
+        // Store settings snapshot
+        settings: settingsSnapshot,
+      }));
 
       if (newItems.length > 0) {
         setItems((prev) => [...prev, ...newItems]);
@@ -625,6 +628,7 @@ export function UniversalProvider({ children }: { children: ReactNode }) {
     },
     [
       downloadSettings.numberChapterFiles,
+      downloadSettings.numberQueueItems,
       downloadSettings.splitEmbeddedChapters,
       enqueueQueuedWorkflowForItems,
       fetchMetadataForItems,
@@ -688,6 +692,7 @@ export function UniversalProvider({ children }: { children: ReactNode }) {
         timeRangeEnd: options?.timeRangeEnd,
         liveFromStart: options?.liveFromStart ?? currentSettings.liveFromStart,
         skipLive: options?.skipLive ?? currentSettings.skipLive,
+        numberQueueItems: downloadSettings.numberQueueItems,
         splitEmbeddedChapters: downloadSettings.splitEmbeddedChapters,
         numberChapterFiles: downloadSettings.numberChapterFiles,
         pluginWorkflowSnapshots: workflowSnapshots,
@@ -705,6 +710,8 @@ export function UniversalProvider({ children }: { children: ReactNode }) {
         progress: 0,
         speed: '',
         eta: '',
+        queueIndex: itemsRef.current.length + 1,
+        queueTotal: itemsRef.current.length + 1,
         settings: settingsSnapshot,
       };
 
@@ -718,6 +725,7 @@ export function UniversalProvider({ children }: { children: ReactNode }) {
     },
     [
       downloadSettings.numberChapterFiles,
+      downloadSettings.numberQueueItems,
       downloadSettings.splitEmbeddedChapters,
       enqueueQueuedWorkflowForItems,
       fetchMetadataForItems,
@@ -974,6 +982,9 @@ export function UniversalProvider({ children }: { children: ReactNode }) {
             quality: itemSettings?.quality ?? settings.quality,
             format: itemSettings?.format ?? settings.format,
             downloadPlaylist: false,
+            queueIndex: item.queueIndex ?? null,
+            queueTotal: item.queueTotal ?? null,
+            numberQueueItems: itemSettings?.numberQueueItems ?? false,
             videoCodec: 'auto', // Use auto for universal downloads
             audioBitrate: itemSettings?.audioBitrate ?? settings.audioBitrate,
             playlistLimit: null,

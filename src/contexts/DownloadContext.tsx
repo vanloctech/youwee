@@ -588,23 +588,25 @@ export function DownloadProvider({ children }: { children: ReactNode }) {
         },
       });
 
-      const newItems: DownloadItem[] = urls
-        .filter((url) => !currentItems.some((item) => item.url === url))
-        .map((url, index) => ({
-          id: crypto.randomUUID(),
-          url,
-          title: url,
-          status: 'pending' as const,
-          progress: 0,
-          speed: '',
-          eta: '',
-          isPlaylist: false,
-          // Store playlist context for display
-          playlistIndex: playlistId ? index + 1 : undefined,
-          playlistTotal: playlistId ? urls.length : undefined,
-          // Store settings snapshot
-          settings: settingsSnapshot,
-        }));
+      const nextUrls = urls.filter((url) => !currentItems.some((item) => item.url === url));
+      const queueTotal = currentItems.length + nextUrls.length;
+      const newItems: DownloadItem[] = nextUrls.map((url, index) => ({
+        id: crypto.randomUUID(),
+        url,
+        title: url,
+        status: 'pending' as const,
+        progress: 0,
+        speed: '',
+        eta: '',
+        isPlaylist: false,
+        // Store playlist context for display
+        playlistIndex: playlistId ? index + 1 : undefined,
+        playlistTotal: playlistId ? urls.length : undefined,
+        queueIndex: playlistId ? undefined : currentItems.length + index + 1,
+        queueTotal: playlistId ? undefined : queueTotal,
+        // Store settings snapshot
+        settings: settingsSnapshot,
+      }));
 
       if (newItems.length > 0) {
         setItems((prev) => [...prev, ...newItems]);
@@ -689,6 +691,8 @@ export function DownloadProvider({ children }: { children: ReactNode }) {
         speed: '',
         eta: '',
         isPlaylist: false,
+        queueIndex: itemsRef.current.length + 1,
+        queueTotal: itemsRef.current.length + 1,
         settings: settingsSnapshot,
       };
 
@@ -718,6 +722,7 @@ export function DownloadProvider({ children }: { children: ReactNode }) {
       });
 
       const currentItems = itemsRef.current;
+      let nextQueueIndex = currentItems.length + 1;
       const seenUrls = new Set(currentItems.map((item) => item.url));
       const seenYoutubeIds = new Set(
         currentItems
@@ -754,11 +759,17 @@ export function DownloadProvider({ children }: { children: ReactNode }) {
           duration: result.duration || undefined,
           channel: result.channel || undefined,
           extractor: 'youtube',
+          queueIndex: nextQueueIndex,
           settings: settingsSnapshot,
         });
+        nextQueueIndex += 1;
       }
 
       if (newItems.length === 0) return { added: 0, queuedIds };
+      const queueTotal = currentItems.length + newItems.length;
+      for (const item of newItems) {
+        item.queueTotal = queueTotal;
+      }
 
       const nextItems = [...itemsRef.current, ...newItems];
       itemsRef.current = nextItems;
@@ -1119,6 +1130,9 @@ export function DownloadProvider({ children }: { children: ReactNode }) {
             playlistIndex: item.playlistIndex ?? null,
             playlistTotal: item.playlistTotal ?? null,
             numberPlaylistItems: itemSettings?.numberPlaylistItems ?? false,
+            queueIndex: item.queueIndex ?? null,
+            queueTotal: item.queueTotal ?? null,
+            numberQueueItems: itemSettings?.numberQueueItems ?? false,
             splitEmbeddedChapters: itemSettings?.splitEmbeddedChapters ?? false,
             numberChapterFiles: itemSettings?.numberChapterFiles ?? true,
             videoCodec: itemSettings?.videoCodec ?? settings.videoCodec,

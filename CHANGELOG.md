@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Queue file numbering** - Added an option to prefix regular queued downloads with their queue order
 - **Queue output folder** - Added a queue item action to choose a download folder for individual downloads
 - **yt-dlp advanced options** - Added vetted advanced options for users who need more control over yt-dlp downloads
 - **Playlist file numbering** - Added a Download setting to prefix playlist downloads with their playlist order

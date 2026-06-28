@@ -228,6 +228,18 @@ export function DownloadSection({ highlightId }: DownloadSectionProps) {
           </SettingsRow>
 
           <SettingsRow
+            id="number-queue-items"
+            label={t('download.numberQueueItems')}
+            description={t('download.numberQueueItemsDesc')}
+            highlight={highlightId === 'number-queue-items'}
+          >
+            <Switch
+              checked={settings.numberQueueItems}
+              onCheckedChange={(numberQueueItems) => updateSettings({ numberQueueItems })}
+            />
+          </SettingsRow>
+
+          <SettingsRow
             id="split-embedded-chapters"
             label={t('download.splitEmbeddedChapters')}
             description={t('download.splitEmbeddedChaptersDesc')}

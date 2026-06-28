@@ -46,6 +46,8 @@
     "embedThumbnailDesc": "Adicionar arte da capa/miniatura (requer FFmpeg)",
     "numberPlaylistItems": "Numerar itens da playlist",
     "numberPlaylistItemsDesc": "Adicionar o número da playlist aos downloads de playlists expandidas",
+    "numberQueueItems": "Numerar itens da fila",
+    "numberQueueItemsDesc": "Adicionar a ordem da fila aos downloads comuns",
     "splitEmbeddedChapters": "Dividir capítulos embutidos",
     "splitEmbeddedChaptersDesc": "Criar arquivos separados a partir dos capítulos incluídos no vídeo",
     "numberChapterFiles": "Numerar arquivos de capítulo",

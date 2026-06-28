@@ -46,6 +46,8 @@
     "embedThumbnailDesc": "เพิ่มภาพปก/thumbnail (ต้องใช้ FFmpeg)",
     "numberPlaylistItems": "ใส่เลขรายการในเพลย์ลิสต์",
     "numberPlaylistItemsDesc": "เติมเลขลำดับเพลย์ลิสต์นำหน้าชื่อไฟล์เมื่อดาวน์โหลดเพลย์ลิสต์แบบแยกรายการ",
+    "numberQueueItems": "ใส่เลขรายการในคิว",
+    "numberQueueItemsDesc": "เติมเลขลำดับคิวนำหน้าชื่อไฟล์สำหรับวิดีโอทั่วไปหลายรายการ",
     "splitEmbeddedChapters": "แยก chapter ที่ฝังอยู่",
     "splitEmbeddedChaptersDesc": "สร้างไฟล์แยกจาก chapter ที่มีอยู่ในวิดีโอ",
     "numberChapterFiles": "ใส่เลขไฟล์ chapter",

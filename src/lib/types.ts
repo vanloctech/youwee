@@ -100,6 +100,7 @@ export interface ItemDownloadSettings {
   liveFromStart?: boolean;
   skipLive?: boolean;
   numberPlaylistItems?: boolean;
+  numberQueueItems?: boolean;
   splitEmbeddedChapters?: boolean;
   numberChapterFiles?: boolean;
   pluginWorkflowSnapshots?: PluginWorkflowSnapshotMap;
@@ -123,6 +124,7 @@ export interface ItemUniversalSettings {
   timeRangeEnd?: string;
   liveFromStart?: boolean;
   skipLive?: boolean;
+  numberQueueItems?: boolean;
   splitEmbeddedChapters?: boolean;
   numberChapterFiles?: boolean;
   pluginWorkflowSnapshots?: PluginWorkflowSnapshotMap;
@@ -155,6 +157,8 @@ export interface DownloadItem {
   elapsedTime?: string; // For live streams: "00:00:07"
   playlistIndex?: number;
   playlistTotal?: number;
+  queueIndex?: number;
+  queueTotal?: number;
   thumbnail?: string;
   duration?: string;
   channel?: string;
@@ -262,6 +266,7 @@ export interface DownloadSettings {
   embedMetadata: boolean; // Embed metadata (title, artist, description) into downloaded files
   embedThumbnail: boolean; // Embed thumbnail as cover art (requires FFmpeg)
   numberPlaylistItems: boolean; // Prefix expanded playlist items with their playlist number
+  numberQueueItems: boolean; // Prefix regular queued items with their queue order
   splitEmbeddedChapters: boolean; // Split downloaded media into embedded chapter files
   numberChapterFiles: boolean; // Prefix chapter files with chapter numbers when splitting
   // Live stream settings

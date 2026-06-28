@@ -46,6 +46,8 @@
     "embedThumbnailDesc": "Ajouter la pochette/minature (FFmpeg requis)",
     "numberPlaylistItems": "Numéroter les éléments de playlist",
     "numberPlaylistItemsDesc": "Préfixer les téléchargements de playlist développée avec leur ordre",
+    "numberQueueItems": "Numéroter les éléments de file",
+    "numberQueueItemsDesc": "Préfixer les téléchargements ordinaires avec leur ordre dans la file",
     "splitEmbeddedChapters": "Découper les chapitres intégrés",
     "splitEmbeddedChaptersDesc": "Créer des fichiers séparés à partir des chapitres inclus dans la vidéo",
     "numberChapterFiles": "Numéroter les fichiers de chapitre",

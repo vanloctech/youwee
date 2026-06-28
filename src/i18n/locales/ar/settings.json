@@ -46,6 +46,8 @@
     "embedThumbnailDesc": "إضافة غلاف/صورة مصغرة (يتطلب FFmpeg)",
     "numberPlaylistItems": "ترقيم عناصر قائمة التشغيل",
     "numberPlaylistItemsDesc": "إضافة ترتيب قائمة التشغيل كبادئة لملفات قوائم التشغيل الموسعة",
+    "numberQueueItems": "ترقيم عناصر قائمة الانتظار",
+    "numberQueueItemsDesc": "إضافة ترتيب قائمة الانتظار كبادئة للتنزيلات العادية",
     "splitEmbeddedChapters": "تقسيم الفصول المضمنة",
     "splitEmbeddedChaptersDesc": "إنشاء ملفات منفصلة من الفصول الموجودة داخل الفيديو",
     "numberChapterFiles": "ترقيم ملفات الفصول",

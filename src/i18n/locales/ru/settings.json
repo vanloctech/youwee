@@ -46,6 +46,8 @@
     "embedThumbnailDesc": "Добавить обложку/превью (требуется FFmpeg)",
     "numberPlaylistItems": "Нумеровать элементы плейлиста",
     "numberPlaylistItemsDesc": "Добавлять номер из плейлиста к файлам раскрытой загрузки плейлиста",
+    "numberQueueItems": "Нумеровать элементы очереди",
+    "numberQueueItemsDesc": "Добавлять порядок в очереди к обычным загрузкам",
     "splitEmbeddedChapters": "Разделять встроенные главы",
     "splitEmbeddedChaptersDesc": "Создавать отдельные файлы из глав, включенных в видео",
     "numberChapterFiles": "Нумеровать файлы глав",

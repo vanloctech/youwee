@@ -73,13 +73,31 @@ fn build_playlist_prefix(
         .or_else(|| Some(format!("%(playlist_index)0{width}d - ")))
 }
 
+fn build_queue_prefix(
+    enabled: bool,
+    queue_index: Option<u32>,
+    queue_total: Option<u32>,
+) -> Option<String> {
+    if !enabled {
+        return None;
+    }
+
+    let index = queue_index?;
+    let width = number_width(queue_total);
+    Some(format!("{index:0width$} - "))
+}
+
 fn build_output_template(
     output_path: &str,
     number_playlist_items: bool,
     playlist_index: Option<u32>,
     playlist_total: Option<u32>,
+    number_queue_items: bool,
+    queue_index: Option<u32>,
+    queue_total: Option<u32>,
 ) -> String {
     let prefix = build_playlist_prefix(number_playlist_items, playlist_index, playlist_total)
+        .or_else(|| build_queue_prefix(number_queue_items, queue_index, queue_total))
         .unwrap_or_default();
     format!("{output_path}/{prefix}%(title)s.%(ext)s")
 }
@@ -89,17 +107,20 @@ fn build_chapter_output_template(
     number_playlist_items: bool,
     playlist_index: Option<u32>,
     playlist_total: Option<u32>,
+    number_queue_items: bool,
+    queue_index: Option<u32>,
+    queue_total: Option<u32>,
     number_chapter_files: bool,
 ) -> String {
-    let playlist_prefix =
-        build_playlist_prefix(number_playlist_items, playlist_index, playlist_total)
-            .unwrap_or_default();
+    let item_prefix = build_playlist_prefix(number_playlist_items, playlist_index, playlist_total)
+        .or_else(|| build_queue_prefix(number_queue_items, queue_index, queue_total))
+        .unwrap_or_default();
     let chapter_prefix = if number_chapter_files {
         "%(section_number)02d - "
     } else {
         ""
     };
-    format!("{output_path}/{playlist_prefix}{chapter_prefix}%(section_title)s.%(ext)s")
+    format!("{output_path}/{item_prefix}{chapter_prefix}%(section_title)s.%(ext)s")
 }
 
 fn parse_printed_filepaths(contents: &str) -> Vec<String> {
@@ -135,7 +156,7 @@ mod playlist_chapter_tests {
     #[test]
     fn output_template_is_unchanged_when_numbering_is_off() {
         assert_eq!(
-            build_output_template("/tmp/out", false, None, None),
+            build_output_template("/tmp/out", false, None, None, false, None, None),
             "/tmp/out/%(title)s.%(ext)s"
         );
     }
@@ -143,7 +164,31 @@ mod playlist_chapter_tests {
     #[test]
     fn output_template_uses_frontend_playlist_index_for_expanded_playlist_items() {
         assert_eq!(
-            build_output_template("/tmp/out", true, Some(3), Some(120)),
+            build_output_template("/tmp/out", true, Some(3), Some(120), false, None, None),
+            "/tmp/out/003 - %(title)s.%(ext)s"
+        );
+    }
+
+    #[test]
+    fn output_template_uses_frontend_queue_index_for_regular_queue_items() {
+        assert_eq!(
+            build_output_template("/tmp/out", false, None, None, true, Some(7), Some(42)),
+            "/tmp/out/07 - %(title)s.%(ext)s"
+        );
+    }
+
+    #[test]
+    fn output_template_prefers_playlist_index_over_queue_index() {
+        assert_eq!(
+            build_output_template(
+                "/tmp/out",
+                true,
+                Some(3),
+                Some(120),
+                true,
+                Some(7),
+                Some(42)
+            ),
             "/tmp/out/003 - %(title)s.%(ext)s"
         );
     }
@@ -151,7 +196,7 @@ mod playlist_chapter_tests {
     #[test]
     fn chapter_template_numbers_chapters_without_playlist_prefix() {
         assert_eq!(
-            build_chapter_output_template("/tmp/out", false, None, None, true),
+            build_chapter_output_template("/tmp/out", false, None, None, false, None, None, true),
             "/tmp/out/%(section_number)02d - %(section_title)s.%(ext)s"
         );
     }
@@ -159,7 +204,16 @@ mod playlist_chapter_tests {
     #[test]
     fn chapter_template_uses_playlist_and_chapter_numbers_when_both_are_enabled() {
         assert_eq!(
-            build_chapter_output_template("/tmp/out", true, Some(3), Some(120), true),
+            build_chapter_output_template(
+                "/tmp/out",
+                true,
+                Some(3),
+                Some(120),
+                false,
+                None,
+                None,
+                true
+            ),
             "/tmp/out/003 - %(section_number)02d - %(section_title)s.%(ext)s"
         );
     }
@@ -679,6 +733,9 @@ pub async fn download_video(
     playlist_index: Option<u32>,
     playlist_total: Option<u32>,
     number_playlist_items: Option<bool>,
+    queue_index: Option<u32>,
+    queue_total: Option<u32>,
+    number_queue_items: Option<bool>,
     split_embedded_chapters: Option<bool>,
     number_chapter_files: Option<bool>,
     video_codec: String,
@@ -791,6 +848,7 @@ pub async fn download_video(
         .map_err(|e| BackendError::from_message(e).to_wire_string())?;
     let format_string = build_format_string(&quality, &format, &video_codec);
     let number_playlist_items = number_playlist_items.unwrap_or(false);
+    let number_queue_items = number_queue_items.unwrap_or(false);
     let split_embedded_chapters = split_embedded_chapters.unwrap_or(false);
     let number_chapter_files = number_chapter_files.unwrap_or(true);
     let output_template = build_output_template(
@@ -798,6 +856,9 @@ pub async fn download_video(
         number_playlist_items,
         playlist_index,
         playlist_total,
+        number_queue_items,
+        queue_index,
+        queue_total,
     );
 
     // Use a temp file to capture the final filepath from yt-dlp.
@@ -841,6 +902,9 @@ pub async fn download_video(
                 number_playlist_items,
                 playlist_index,
                 playlist_total,
+                number_queue_items,
+                queue_index,
+                queue_total,
                 number_chapter_files,
             )
         ));

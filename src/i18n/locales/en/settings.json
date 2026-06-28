@@ -47,6 +47,8 @@
     "embedThumbnailDesc": "Add cover art/thumbnail (requires FFmpeg)",
     "numberPlaylistItems": "Number playlist items",
     "numberPlaylistItemsDesc": "Prefix expanded playlist downloads with their playlist order",
+    "numberQueueItems": "Number queued items",
+    "numberQueueItemsDesc": "Prefix regular queued downloads with their queue order",
     "splitEmbeddedChapters": "Split embedded chapters",
     "splitEmbeddedChaptersDesc": "Create separate files from chapters included in the video",
     "numberChapterFiles": "Number chapter files",
