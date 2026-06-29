@@ -10,6 +10,7 @@ import {
   localizeBackendError,
   localizeProgressError,
 } from '@/lib/backend-error';
+import { buildDownloadDuplicateIdentity } from '@/lib/download-duplicates';
 import {
   AUTO_RETRY_LIMITS,
   clampAutoRetryDelaySeconds,
@@ -319,7 +320,7 @@ export function UniversalProvider({ children }: { children: ReactNode }) {
   const itemsRef = useRef<DownloadItem[]>([]);
   const settingsRef = useRef<UniversalSettings>(settings);
   const focusClearTimerRef = useRef<number | null>(null);
-  const { settings: downloadSettings } = useDownload();
+  const { settings: downloadSettings, filterDownloadedDuplicateCandidates } = useDownload();
 
   usePersistedDownloadQueue({
     queueKind: 'universal',
@@ -598,24 +599,39 @@ export function UniversalProvider({ children }: { children: ReactNode }) {
         autoRetryDelaySeconds: currentSettings.autoRetryDelaySeconds,
       };
 
-      const nextUrls = urls.filter((url) => !currentItems.some((item) => item.url === url));
-      const queueTotal = currentItems.length + nextUrls.length;
-      const newItems: DownloadItem[] = nextUrls.map((url, index) => ({
+      const candidates = urls
+        .filter((url) => !currentItems.some((item) => item.url === url))
+        .map((url) => ({
+          url,
+          title: url,
+          duplicateIdentity: buildDownloadDuplicateIdentity(url),
+        }));
+      const filteredCandidates = await filterDownloadedDuplicateCandidates(candidates);
+      const currentItemsAfterReview = itemsRef.current;
+      const enqueueCandidates = filteredCandidates.filter(
+        (candidate) => !currentItemsAfterReview.some((item) => item.url === candidate.url),
+      );
+      const queueTotal = currentItemsAfterReview.length + enqueueCandidates.length;
+      const newItems: DownloadItem[] = enqueueCandidates.map((candidate, index) => ({
         id: crypto.randomUUID(),
-        url,
-        title: url,
+        url: candidate.url,
+        title: candidate.title,
         status: 'pending' as const,
         progress: 0,
         speed: '',
         eta: '',
-        queueIndex: currentItems.length + index + 1,
+        queueIndex: currentItemsAfterReview.length + index + 1,
         queueTotal,
         // Store settings snapshot
         settings: settingsSnapshot,
       }));
 
       if (newItems.length > 0) {
-        setItems((prev) => [...prev, ...newItems]);
+        setItems((prev) => {
+          const nextItems = [...prev, ...newItems];
+          itemsRef.current = nextItems;
+          return nextItems;
+        });
         // Fetch metadata (thumbnail, title, duration) in background
         fetchMetadataForItems(newItems);
         enqueueQueuedWorkflowForItems(newItems);
@@ -629,6 +645,7 @@ export function UniversalProvider({ children }: { children: ReactNode }) {
       downloadSettings.numberQueueItems,
       downloadSettings.splitEmbeddedChapters,
       enqueueQueuedWorkflowForItems,
+      filterDownloadedDuplicateCandidates,
       fetchMetadataForItems,
     ],
   );

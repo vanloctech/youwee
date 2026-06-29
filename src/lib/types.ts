@@ -248,6 +248,18 @@ export interface DownloadDuplicateMatch {
   fileExists: boolean;
 }
 
+export interface DownloadDuplicateCandidate {
+  url: string;
+  title: string;
+  thumbnail?: string;
+  duplicateIdentity: DownloadDuplicateIdentity;
+}
+
+export interface DownloadDuplicateFilterOptions {
+  ask?: boolean;
+  notify?: boolean;
+}
+
 export interface DownloadDuplicateReviewItem {
   url: string;
   title: string;

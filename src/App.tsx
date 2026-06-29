@@ -2,6 +2,7 @@ import { invoke } from '@tauri-apps/api/core';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { DenoDialog } from '@/components/DenoDialog';
+import { DuplicateDownloadReviewHost } from '@/components/download';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { MeteorTransition } from '@/components/effects/MeteorTransition';
 import { FFmpegDialog } from '@/components/FFmpegDialog';
@@ -210,6 +211,7 @@ function AppContent() {
       {showFfmpegDialog && <FFmpegDialog onDismiss={() => setShowFfmpegDialog(false)} />}
 
       {showDenoDialog && <DenoDialog onDismiss={() => setShowDenoDialog(false)} />}
+      <DuplicateDownloadReviewHost />
       <MeteorTransition
         isActive={isTransitioning}
         oldMode={oldMode}

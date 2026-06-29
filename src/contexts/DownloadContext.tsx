@@ -46,7 +46,8 @@ import { normalizeShellEscapedUrl } from '@/lib/sources';
 import type {
   AudioBitrate,
   CookieSettings,
-  DownloadDuplicateIdentity,
+  DownloadDuplicateCandidate,
+  DownloadDuplicateFilterOptions,
   DownloadDuplicateMatch,
   DownloadDuplicateReview,
   DownloadDuplicateReviewAction,
@@ -173,7 +174,7 @@ interface RenameDownloadedFileResult {
   newTitle: string;
 }
 
-interface DownloadQueueCandidate {
+interface DownloadQueueCandidate extends DownloadDuplicateCandidate {
   url: string;
   title: string;
   thumbnail?: string;
@@ -182,7 +183,6 @@ interface DownloadQueueCandidate {
   extractor?: string;
   playlistIndex?: number;
   playlistTotal?: number;
-  duplicateIdentity: DownloadDuplicateIdentity;
 }
 
 export interface DownloadContextType {
@@ -264,6 +264,10 @@ export interface DownloadContextType {
   retryFailedDownload: (itemId: string) => void;
   resolveDuplicateReview: (action: DownloadDuplicateReviewAction, applyToAll: boolean) => void;
   dismissDuplicateSkipNotice: () => void;
+  filterDownloadedDuplicateCandidates: <T extends DownloadDuplicateCandidate>(
+    candidates: T[],
+    options?: DownloadDuplicateFilterOptions,
+  ) => Promise<T[]>;
   // Per-item time range
   updateItemTimeRange: (id: string, start?: string, end?: string) => void;
   selectItemOutputFolder: (id: string) => Promise<void>;
@@ -544,8 +548,11 @@ export function DownloadProvider({ children }: { children: ReactNode }) {
     setDuplicateSkipNotice(null);
   }, []);
 
-  const filterDownloadedDuplicates = useCallback(
-    async (candidates: DownloadQueueCandidate[]): Promise<DownloadQueueCandidate[]> => {
+  const filterDownloadedDuplicateCandidates = useCallback(
+    async <T extends DownloadDuplicateCandidate>(
+      candidates: T[],
+      options: DownloadDuplicateFilterOptions = {},
+    ): Promise<T[]> => {
       const currentSettings = settingsRef.current;
       if (
         !currentSettings.rememberDownloadedVideos ||
@@ -575,17 +582,15 @@ export function DownloadProvider({ children }: { children: ReactNode }) {
         }
         if (matchByKey.size === 0) return candidates;
 
-        const duplicateItems = candidates
-          .map((candidate) => ({
-            candidate,
-            duplicate: matchByKey.get(getDownloadDuplicateIdentityKey(candidate.duplicateIdentity)),
-          }))
-          .filter(
-            (
-              item,
-            ): item is { candidate: DownloadQueueCandidate; duplicate: DownloadDuplicateMatch } =>
-              Boolean(item.duplicate),
+        const duplicateItems: { candidate: T; duplicate: DownloadDuplicateMatch }[] = [];
+        for (const candidate of candidates) {
+          const duplicate = matchByKey.get(
+            getDownloadDuplicateIdentityKey(candidate.duplicateIdentity),
           );
+          if (duplicate) {
+            duplicateItems.push({ candidate, duplicate });
+          }
+        }
 
         if (duplicateItems.length === 0) return candidates;
 
@@ -595,14 +600,16 @@ export function DownloadProvider({ children }: { children: ReactNode }) {
               getDownloadDuplicateIdentityKey(item.candidate.duplicateIdentity),
             ),
           );
-          setDuplicateSkipNotice({ count: duplicateItems.length });
+          if (options.notify !== false) {
+            setDuplicateSkipNotice({ count: duplicateItems.length });
+          }
           return candidates.filter(
             (candidate) =>
               !duplicateKeys.has(getDownloadDuplicateIdentityKey(candidate.duplicateIdentity)),
           );
         };
 
-        if (currentSettings.duplicateDownloadHandling === 'skip') {
+        if (currentSettings.duplicateDownloadHandling === 'skip' || options.ask === false) {
           return skipDuplicates();
         }
 
@@ -726,7 +733,7 @@ export function DownloadProvider({ children }: { children: ReactNode }) {
         title: url,
         duplicateIdentity: buildDownloadDuplicateIdentity(url),
       }));
-      const filteredCandidates = await filterDownloadedDuplicates(candidates);
+      const filteredCandidates = await filterDownloadedDuplicateCandidates(candidates);
       const currentItemsAfterReview = itemsRef.current;
       const enqueueCandidates = filteredCandidates.filter(
         (candidate) => !currentItemsAfterReview.some((item) => item.url === candidate.url),
@@ -761,7 +768,7 @@ export function DownloadProvider({ children }: { children: ReactNode }) {
 
       return newItems.length;
     },
-    [enqueueQueuedWorkflowForItems, filterDownloadedDuplicates],
+    [enqueueQueuedWorkflowForItems, filterDownloadedDuplicateCandidates],
   );
 
   const focusItem = useCallback((itemId: string) => {
@@ -904,7 +911,7 @@ export function DownloadProvider({ children }: { children: ReactNode }) {
         });
       }
 
-      const filteredCandidates = await filterDownloadedDuplicates(candidates);
+      const filteredCandidates = await filterDownloadedDuplicateCandidates(candidates);
       const currentItemsAfterReview = itemsRef.current;
       const currentYoutubeIdsAfterReview = new Set(
         currentItemsAfterReview
@@ -955,7 +962,7 @@ export function DownloadProvider({ children }: { children: ReactNode }) {
       enqueueQueuedWorkflowForItems(newItems);
       return { added: newItems.length, queuedIds };
     },
-    [enqueueQueuedWorkflowForItems, filterDownloadedDuplicates, focusItem],
+    [enqueueQueuedWorkflowForItems, filterDownloadedDuplicateCandidates, focusItem],
   );
 
   // Expand playlist URL to individual videos
@@ -996,7 +1003,7 @@ export function DownloadProvider({ children }: { children: ReactNode }) {
             duplicateIdentity: buildDownloadDuplicateIdentity(entry.url, entry.id),
           }))
           .filter((candidate) => !currentItems.some((item) => item.url === candidate.url));
-        const filteredCandidates = await filterDownloadedDuplicates(candidates);
+        const filteredCandidates = await filterDownloadedDuplicateCandidates(candidates);
         const currentItemsAfterReview = itemsRef.current;
         const enqueueCandidates = filteredCandidates.filter(
           (candidate) => !currentItemsAfterReview.some((item) => item.url === candidate.url),
@@ -1040,7 +1047,7 @@ export function DownloadProvider({ children }: { children: ReactNode }) {
       proxySettings,
       formatDuration,
       enqueueQueuedWorkflowForItems,
-      filterDownloadedDuplicates,
+      filterDownloadedDuplicateCandidates,
     ],
   );
 
@@ -1987,6 +1994,7 @@ export function DownloadProvider({ children }: { children: ReactNode }) {
       retryFailedDownload,
       resolveDuplicateReview,
       dismissDuplicateSkipNotice,
+      filterDownloadedDuplicateCandidates,
       // Per-item time range
       updateItemTimeRange,
       selectItemOutputFolder,
@@ -2052,6 +2060,7 @@ export function DownloadProvider({ children }: { children: ReactNode }) {
       retryFailedDownload,
       resolveDuplicateReview,
       dismissDuplicateSkipNotice,
+      filterDownloadedDuplicateCandidates,
       updateItemTimeRange,
       selectItemOutputFolder,
       renameCompletedItem,

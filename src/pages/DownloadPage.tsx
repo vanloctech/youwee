@@ -1,9 +1,8 @@
 import { ArrowLeft, Play, Square, Trash2 } from 'lucide-react';
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { BrowserCookieErrorDialog } from '@/components/BrowserCookieErrorDialog';
 import {
-  DuplicateDownloadDialog,
   QueueList,
   ScheduleActiveControls,
   SchedulePopover,
@@ -15,7 +14,6 @@ import { FFmpegRequiredDialog } from '@/components/FFmpegRequiredDialog';
 import { FreshCookieRequiredDialog } from '@/components/FreshCookieRequiredDialog';
 import { ThemePicker } from '@/components/settings/ThemePicker';
 import { Button } from '@/components/ui/button';
-import { useToast } from '@/components/ui/toast';
 import { useDependencies } from '@/contexts/DependenciesContext';
 import { useDownload } from '@/contexts/download-context';
 import { useSchedule } from '@/hooks/useSchedule';
@@ -40,8 +38,6 @@ export function DownloadPage({ onNavigateToSettings }: DownloadPageProps) {
     settings,
     cookieSettings,
     currentPlaylistInfo,
-    duplicateReview,
-    duplicateSkipNotice,
     addFromText,
     addSearchResultsToQueue,
     importFromFile,
@@ -69,15 +65,12 @@ export function DownloadPage({ onNavigateToSettings }: DownloadPageProps) {
     cookieError,
     clearCookieError,
     retryFailedDownload,
-    resolveDuplicateReview,
-    dismissDuplicateSkipNotice,
     updateItemTimeRange,
     selectItemOutputFolder,
     renameCompletedItem,
   } = useDownload();
 
   const { ffmpegStatus } = useDependencies();
-  const toast = useToast();
 
   const [showFfmpegDialog, setShowFfmpegDialog] = useState(false);
   const [activeView, setActiveView] = useState<'download' | 'keywordSearch'>('download');
@@ -101,15 +94,6 @@ export function DownloadPage({ onNavigateToSettings }: DownloadPageProps) {
 
   const pendingCount = items.filter((i) => i.status !== 'completed').length;
   const hasItems = items.length > 0;
-
-  useEffect(() => {
-    if (!duplicateSkipNotice) return;
-    toast.info({
-      title: t('duplicates.skippedToastTitle'),
-      message: t('duplicates.skippedToastMessage', { count: duplicateSkipNotice.count }),
-    });
-    dismissDuplicateSkipNotice();
-  }, [dismissDuplicateSkipNotice, duplicateSkipNotice, t, toast]);
 
   // Check if FFmpeg is required for current quality setting
   const ffmpegRequired =
@@ -334,8 +318,6 @@ export function DownloadPage({ onNavigateToSettings }: DownloadPageProps) {
           onGoToSettings={onNavigateToSettings}
         />
       )}
-
-      <DuplicateDownloadDialog review={duplicateReview} onResolve={resolveDuplicateReview} />
 
       {/* Browser Cookie Error Dialog - shown when cookie extraction fails on Windows */}
       {(() => {

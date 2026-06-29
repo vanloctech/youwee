@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { localizeProgressError, localizeUnknownError } from '@/lib/backend-error';
+import { buildDownloadDuplicateIdentity } from '@/lib/download-duplicates';
 import { buildCookieProxyInvokeOptions, loadNetworkSettings } from '@/lib/network-config';
 import {
   enqueuePluginWorkflowTrigger,
@@ -18,6 +19,7 @@ import type {
 } from '@/lib/types';
 import { DEFAULT_SPONSORBLOCK_CATEGORIES } from '@/lib/types';
 import { sanitizeYtdlpAdvancedOptions } from '@/lib/ytdlp-advanced-options';
+import { useDownload } from '../download-context';
 import {
   buildChannelCollectionOptions,
   persistManualChannelDownloadCompletion,
@@ -284,6 +286,8 @@ export interface ChannelsContextType {
 }
 
 export function useChannelsController(): ChannelsContextType {
+  const { filterDownloadedDuplicateCandidates } = useDownload();
+
   // Followed channels state
   const [followedChannels, setFollowedChannels] = useState<FollowedChannel[]>([]);
   const [loadingChannels, setLoadingChannels] = useState(false);
@@ -782,7 +786,20 @@ export function useChannelsController(): ChannelsContextType {
       overrideVideoCodec?: string,
       overridePreferredFps?: string,
     ) => {
-      const videosToDownload = browseVideos.filter((v) => selectedVideoIds.has(v.id));
+      const selectedVideosToDownload = browseVideos.filter((v) => selectedVideoIds.has(v.id));
+      const duplicateCandidates = selectedVideosToDownload.map((video) => ({
+        video,
+        url: video.url,
+        title: video.title || video.url,
+        thumbnail: video.thumbnail,
+        duplicateIdentity: buildDownloadDuplicateIdentity(
+          video.url,
+          detectPlatform(video.url) === 'youtube' ? video.id : null,
+        ),
+      }));
+      const filteredDuplicateCandidates =
+        await filterDownloadedDuplicateCandidates(duplicateCandidates);
+      const videosToDownload = filteredDuplicateCandidates.map((candidate) => candidate.video);
       if (videosToDownload.length === 0) return;
 
       let currentOutputPath = outputPath;
@@ -1021,7 +1038,15 @@ export function useChannelsController(): ChannelsContextType {
         setDownloadingIds(new Set());
       }
     },
-    [browseUrl, browseVideos, browseChannelName, selectedVideoIds, outputPath, getNetworkOptions],
+    [
+      browseUrl,
+      browseVideos,
+      browseChannelName,
+      selectedVideoIds,
+      outputPath,
+      getNetworkOptions,
+      filterDownloadedDuplicateCandidates,
+    ],
   );
 
   // Stop all downloads
@@ -1293,9 +1318,45 @@ export function useChannelsController(): ChannelsContextType {
 
         const networkOptions = getNetworkOptions();
 
+        const duplicateCandidates = newVideos.map((video) => ({
+          video,
+          url: video.url,
+          title: video.title || video.url,
+          thumbnail: video.thumbnail || undefined,
+          duplicateIdentity: buildDownloadDuplicateIdentity(
+            video.url,
+            detectPlatform(video.url) === 'youtube' ? video.video_id : null,
+          ),
+        }));
+        const filteredDuplicateCandidates = await filterDownloadedDuplicateCandidates(
+          duplicateCandidates,
+          { ask: false, notify: false },
+        );
+        const videosToAutoDownload = filteredDuplicateCandidates.map(
+          (candidate) => candidate.video,
+        );
+        const autoDownloadVideoIds = new Set(videosToAutoDownload.map((video) => video.id));
+        const skippedDuplicateVideos = newVideos.filter(
+          (video) => !autoDownloadVideoIds.has(video.id),
+        );
+        if (skippedDuplicateVideos.length > 0) {
+          await Promise.all(
+            skippedDuplicateVideos.map((video) =>
+              updateChannelVideoStatus({ id: video.id, status: 'downloaded' }).catch((error) => {
+                console.error('Failed to mark duplicate channel video as downloaded:', error);
+              }),
+            ),
+          );
+        }
+        if (videosToAutoDownload.length === 0) {
+          refreshChannelNewCounts();
+          rebuildTrayMenu().catch(() => {});
+          return;
+        }
+
         const maxConcurrent = Math.max(1, download_threads || 1);
         const workflowSnapshots = loadPluginWorkflowSnapshots();
-        const queuedAutoDownloads = newVideos.map((video) => ({
+        const queuedAutoDownloads = videosToAutoDownload.map((video) => ({
           video,
           downloadId: `auto-${video.video_id}-${Date.now()}-${crypto.randomUUID()}`,
         }));
@@ -1404,7 +1465,7 @@ export function useChannelsController(): ChannelsContextType {
     return () => {
       unlisten.then((fn) => fn());
     };
-  }, [getNetworkOptions, refreshChannelNewCounts]);
+  }, [filterDownloadedDuplicateCandidates, getNetworkOptions, refreshChannelNewCounts]);
 
   // Refresh active channel videos when activeChannel changes
   useEffect(() => {

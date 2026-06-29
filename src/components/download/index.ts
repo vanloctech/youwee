@@ -1,4 +1,5 @@
 export { DuplicateDownloadDialog } from './DuplicateDownloadDialog';
+export { DuplicateDownloadReviewHost } from './DuplicateDownloadReviewHost';
 export { GalleryQueueItem } from './GalleryQueueItem';
 export { GalleryQueueList } from './GalleryQueueList';
 export { GallerySettingsPanel } from './GallerySettingsPanel';
