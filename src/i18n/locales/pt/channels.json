@@ -7,6 +7,7 @@
   "supportedSites": "Suportados",
   "fetchVideos": "Buscar Vídeos",
   "fetching": "Buscando vídeos...",
+  "stopFetch": "Parar",
   "loadMore": "Carregar mais",
   "follow": "Seguir",
   "unfollow": "Deixar de Seguir",

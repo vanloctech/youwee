@@ -40,6 +40,7 @@ import {
   pickChannelsOutputFolder,
   rebuildTrayMenu,
   saveChannelVideos,
+  stopChannelFetchCommand,
   stopDownloadCommand,
   unfollowChannelCommand,
   updateChannelInfoCommand,
@@ -245,6 +246,7 @@ export interface ChannelsContextType {
     youtubeContentType?: YoutubeChannelContentType,
   ) => Promise<void>;
   loadMoreChannelVideos: () => Promise<void>;
+  stopChannelFetch: () => Promise<void>;
   clearBrowse: () => void;
 
   // Video selection & download
@@ -563,6 +565,8 @@ export function useChannelsController(): ChannelsContextType {
         youtubeContentType?: YoutubeChannelContentType;
       },
     ) => {
+      await stopChannelFetchCommand().catch(() => {});
+
       const requestId = ++fetchRequestIdRef.current;
       const effectiveLimit = options?.limit ?? CHANNEL_BROWSE_BATCH_SIZE;
       const isLoadMore = options?.append ?? false;
@@ -719,9 +723,20 @@ export function useChannelsController(): ChannelsContextType {
     });
   }, [browseHasMore, browseLoading, browseLoadingMore, browseUrl, fetchChannelVideosBatch]);
 
+  const stopChannelFetch = useCallback(async () => {
+    fetchRequestIdRef.current += 1;
+    await stopChannelFetchCommand().catch((error) => {
+      console.error('Failed to stop channel fetch:', error);
+    });
+    setBrowseLoading(false);
+    setBrowseLoadingMore(false);
+    setBrowseFetchProgress(null);
+  }, []);
+
   // Clear browse state
   const clearBrowse = useCallback(() => {
     fetchRequestIdRef.current += 1;
+    stopChannelFetchCommand().catch(() => {});
     browseVideosRef.current = [];
     browseYoutubeContentTypeRef.current = DEFAULT_YOUTUBE_CONTENT_TYPE;
     setBrowseUrl('');
@@ -730,6 +745,7 @@ export function useChannelsController(): ChannelsContextType {
     setBrowseChannelName(null);
     setBrowseChannelAvatar(null);
     setBrowseHasMore(false);
+    setBrowseLoading(false);
     setBrowseLoadingMore(false);
     setBrowseYoutubeContentType(DEFAULT_YOUTUBE_CONTENT_TYPE);
     setBrowseFetchProgress(null);
@@ -1418,6 +1434,7 @@ export function useChannelsController(): ChannelsContextType {
     browseYoutubeContentType,
     fetchChannelVideos,
     loadMoreChannelVideos,
+    stopChannelFetch,
     clearBrowse,
     selectedVideoIds,
     toggleVideoSelection,

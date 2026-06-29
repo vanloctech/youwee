@@ -7,6 +7,7 @@
   "supportedSites": "مدعوم",
   "fetchVideos": "جلب الفيديوهات",
   "fetching": "جارٍ جلب الفيديوهات...",
+  "stopFetch": "إيقاف",
   "loadMore": "تحميل المزيد",
   "follow": "متابعة",
   "unfollow": "إلغاء المتابعة",

@@ -128,6 +128,10 @@ export async function getChannelInfo(input: {
   return invoke<ChannelInfo>('get_channel_info', input);
 }
 
+export async function stopChannelFetchCommand(): Promise<void> {
+  await invoke('stop_channel_fetch');
+}
+
 export async function getSavedChannelVideos(input: {
   channelId: string;
   status: ChannelVideo['status'] | null;

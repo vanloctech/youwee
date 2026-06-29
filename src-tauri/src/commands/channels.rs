@@ -1,4 +1,5 @@
 use std::process::Stdio;
+use std::sync::atomic::{AtomicU32, Ordering};
 use tauri::{AppHandle, Emitter};
 use tokio::io::{AsyncBufReadExt, BufReader};
 use tokio::process::Command;
@@ -10,6 +11,21 @@ use crate::services::{
 use crate::types::{ChannelInfo, ChannelVideo, FollowedChannel, PlaylistVideoEntry};
 use crate::utils::CommandExt;
 use crate::utils::{normalize_channel_content_urls, normalize_url, validate_url};
+
+static CHANNEL_FETCH_CANCEL_GENERATION: AtomicU32 = AtomicU32::new(0);
+
+fn current_channel_fetch_generation() -> u32 {
+    CHANNEL_FETCH_CANCEL_GENERATION.load(Ordering::SeqCst)
+}
+
+fn is_channel_fetch_cancelled(generation: u32) -> bool {
+    CHANNEL_FETCH_CANCEL_GENERATION.load(Ordering::SeqCst) != generation
+}
+
+#[tauri::command]
+pub fn stop_channel_fetch() {
+    CHANNEL_FETCH_CANCEL_GENERATION.fetch_add(1, Ordering::SeqCst);
+}
 
 fn sanitize_youtube_content_type(value: Option<&str>) -> String {
     match value {
@@ -45,7 +61,12 @@ async fn run_channel_ytdlp_with_progress(
     args: &[&str],
     request_id: Option<u32>,
     limit: Option<u32>,
+    cancel_generation: u32,
 ) -> Result<String, String> {
+    if is_channel_fetch_cancelled(cancel_generation) {
+        return Err("Channel fetch cancelled".to_string());
+    }
+
     if let Some((binary_path, _)) = get_ytdlp_path(app).await {
         let mut cmd = Command::new(binary_path);
         cmd.args(args).stdout(Stdio::piped()).stderr(Stdio::piped());
@@ -101,10 +122,22 @@ async fn run_channel_ytdlp_with_progress(
             Ok::<String, std::io::Error>(output)
         });
 
-        let status = child
-            .wait()
-            .await
-            .map_err(|e| format!("Failed to wait for yt-dlp: {}", e))?;
+        let status = loop {
+            tokio::select! {
+                status = child.wait() => {
+                    break status.map_err(|e| format!("Failed to wait for yt-dlp: {}", e))?;
+                }
+                _ = tokio::time::sleep(std::time::Duration::from_millis(150)) => {
+                    if is_channel_fetch_cancelled(cancel_generation) {
+                        child.kill().await.ok();
+                        let _ = child.wait().await;
+                        let _ = stdout_task.await;
+                        let _ = stderr_task.await;
+                        return Err("Channel fetch cancelled".to_string());
+                    }
+                }
+            }
+        };
         let stdout = stdout_task
             .await
             .map_err(|e| format!("Failed to read yt-dlp stdout: {}", e))?
@@ -126,7 +159,15 @@ async fn run_channel_ytdlp_with_progress(
         return Ok(stdout);
     }
 
+    if is_channel_fetch_cancelled(cancel_generation) {
+        return Err("Channel fetch cancelled".to_string());
+    }
+
     let output_result = run_ytdlp_with_stderr(app, args).await?;
+    if is_channel_fetch_cancelled(cancel_generation) {
+        return Err("Channel fetch cancelled".to_string());
+    }
+
     if !output_result.success && output_result.stdout.is_empty() {
         let detail = output_result
             .stderr
@@ -157,6 +198,7 @@ pub async fn get_channel_videos(
     youtube_content_type: Option<String>,
 ) -> Result<Vec<PlaylistVideoEntry>, String> {
     validate_url(&url)?;
+    let cancel_generation = current_channel_fetch_generation();
     let youtube_content_type = sanitize_youtube_content_type(youtube_content_type.as_deref());
     let urls = normalize_channel_content_urls(&url, Some(&youtube_content_type));
 
@@ -178,6 +220,10 @@ pub async fn get_channel_videos(
         let mut errors = Vec::new();
 
         for source_url in &urls {
+            if is_channel_fetch_cancelled(cancel_generation) {
+                return Err("Channel fetch cancelled".to_string());
+            }
+
             let source_is_youtube =
                 source_url.contains("youtube.com") || source_url.contains("youtu.be");
 
@@ -187,6 +233,7 @@ pub async fn get_channel_videos(
                 limit,
                 start,
                 request_id,
+                cancel_generation,
                 source_is_youtube,
                 cookie_mode.as_deref(),
                 cookie_browser.as_deref(),
@@ -234,6 +281,7 @@ async fn fetch_channel_videos_once(
     limit: Option<u32>,
     start: Option<u32>,
     request_id: Option<u32>,
+    cancel_generation: u32,
     is_youtube: bool,
     cookie_mode: Option<&str>,
     cookie_browser: Option<&str>,
@@ -302,7 +350,9 @@ async fn fetch_channel_videos_once(
     args.push(url.to_string());
 
     let args_ref: Vec<&str> = args.iter().map(|s| s.as_str()).collect();
-    let output = run_channel_ytdlp_with_progress(app, &args_ref, request_id, limit).await?;
+    let output =
+        run_channel_ytdlp_with_progress(app, &args_ref, request_id, limit, cancel_generation)
+            .await?;
 
     let fetched_count = output
         .lines()
@@ -464,6 +514,7 @@ pub async fn get_channel_info(
     youtube_content_type: Option<String>,
 ) -> Result<ChannelInfo, String> {
     validate_url(&url)?;
+    let cancel_generation = current_channel_fetch_generation();
     let youtube_content_type = sanitize_youtube_content_type(youtube_content_type.as_deref());
     let url = normalize_channel_content_urls(&url, Some(&youtube_content_type))
         .into_iter()
@@ -532,11 +583,9 @@ pub async fn get_channel_info(
     args.push(url.clone());
 
     let args_ref: Vec<&str> = args.iter().map(|s| s.as_str()).collect();
-    let output_result = run_ytdlp_with_stderr(&app, &args_ref).await?;
-    if !output_result.success && output_result.stdout.is_empty() {
-        return Err("Failed to fetch channel info".to_string());
-    }
-    let output = output_result.stdout;
+    let output = run_channel_ytdlp_with_progress(&app, &args_ref, None, None, cancel_generation)
+        .await
+        .map_err(|_| "Failed to fetch channel info".to_string())?;
 
     // Parse top-level JSON (channel/playlist metadata)
     let json: serde_json::Value = serde_json::from_str(&output)

@@ -457,6 +457,7 @@ pub fn run() {
             // Channel commands
             commands::get_channel_videos,
             commands::get_channel_info,
+            commands::stop_channel_fetch,
             commands::follow_channel,
             commands::unfollow_channel,
             commands::get_followed_channels,

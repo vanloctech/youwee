@@ -17,6 +17,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 - **Extension cold-start links** - Fixed browser extension download links opening Youwee without adding the video on cold app launch
 - **AI Summary numbering** - Fixed ordered lists restarting at 1 when rendered with blank lines between topics
+- **Channel fetch controls** - Added a stop action for channel video fetching and avoided re-fetching when opening a just-browsed followed channel
 
 ## [0.18.0] - 2026-06-29
 

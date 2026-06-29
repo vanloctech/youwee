@@ -80,6 +80,7 @@ export function ChannelsPage() {
     browseLoadingMore,
     browseYoutubeContentType,
     loadMoreChannelVideos,
+    stopChannelFetch,
   } = useChannels();
 
   const { ffmpegStatus } = useDependencies();
@@ -144,6 +145,11 @@ export function ChannelsPage() {
   }, []);
 
   const handleFetch = useCallback(() => {
+    if (browseLoading || browseLoadingMore) {
+      stopChannelFetch();
+      return;
+    }
+
     const url = urlInput.trim();
     if (!url) return;
     if (!isSupportedPlatform(url)) {
@@ -152,7 +158,15 @@ export function ChannelsPage() {
     const contentType = isYoutubeChannelContentUrl(url) ? youtubeContentType : 'videos';
     setBrowseUrl(url);
     fetchChannelVideos(url, undefined, contentType);
-  }, [urlInput, youtubeContentType, setBrowseUrl, fetchChannelVideos]);
+  }, [
+    browseLoading,
+    browseLoadingMore,
+    fetchChannelVideos,
+    setBrowseUrl,
+    stopChannelFetch,
+    urlInput,
+    youtubeContentType,
+  ]);
 
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent) => {
@@ -303,26 +317,22 @@ export function ChannelsPage() {
             type="button"
             className={cn(
               'h-11 px-4 rounded-md font-medium text-sm',
-              'btn-gradient flex items-center gap-2',
+              browseLoading || browseLoadingMore
+                ? 'bg-destructive text-destructive-foreground hover:bg-destructive/90 flex items-center gap-2'
+                : 'btn-gradient flex items-center gap-2',
               'disabled:opacity-50 disabled:cursor-not-allowed',
             )}
             onClick={handleFetch}
-            disabled={browseLoading || !urlInput.trim()}
-            title={t('fetchVideos')}
+            disabled={!browseLoading && !browseLoadingMore && !urlInput.trim()}
+            title={browseLoading || browseLoadingMore ? t('stopFetch') : t('fetchVideos')}
           >
-            {browseLoading ? (
-              <Loader2 className="w-4 h-4 animate-spin" />
+            {browseLoading || browseLoadingMore ? (
+              <Square className="w-4 h-4" />
             ) : (
               <Search className="w-4 h-4" />
             )}
             <span className="hidden sm:inline">
-              {browseLoading
-                ? browseFetchProgress
-                  ? browseFetchProgress.limit
-                    ? `${browseFetchProgress.fetched}/${browseFetchProgress.limit}`
-                    : `${browseFetchProgress.fetched}`
-                  : t('fetching')
-                : t('fetchVideos')}
+              {browseLoading || browseLoadingMore ? t('stopFetch') : t('fetchVideos')}
             </span>
           </button>
         </div>

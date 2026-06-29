@@ -10,7 +10,7 @@ import {
   Tv,
   X,
 } from 'lucide-react';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { FFmpegRequiredDialog } from '@/components/FFmpegRequiredDialog';
 import { ThemePicker } from '@/components/settings/ThemePicker';
@@ -49,12 +49,14 @@ export function ChannelDetailView({ channel, onBack }: ChannelDetailViewProps) {
     updateChannelSettings,
     fetchChannelVideos,
     clearBrowse,
+    browseUrl,
     browseVideos,
     browseLoading,
     browseFetchProgress,
     browseHasMore,
     browseLoadingMore,
     loadMoreChannelVideos,
+    stopChannelFetch,
     selectedVideoIds,
     toggleVideoSelection,
     selectAllVideos,
@@ -285,9 +287,13 @@ export function ChannelDetailView({ channel, onBack }: ChannelDetailViewProps) {
   }, [downloadSelectedVideos, quality, format, videoCodec, preferredFps, ffmpegRequired]);
 
   const pendingCount = selectedVideoIds.size;
+  const canReuseInitialBrowseRef = useRef(browseUrl === channel.url && browseVideos.length > 0);
 
   useEffect(() => {
-    fetchChannelVideos(channel.url, undefined, channel.youtube_content_type || 'videos');
+    if (!canReuseInitialBrowseRef.current) {
+      fetchChannelVideos(channel.url, undefined, channel.youtube_content_type || 'videos');
+    }
+
     return () => {
       clearBrowse();
     };
@@ -321,19 +327,25 @@ export function ChannelDetailView({ channel, onBack }: ChannelDetailViewProps) {
         </div>
         <div className="flex items-center gap-2">
           <Button
-            variant="ghost"
+            variant={browseLoading || browseLoadingMore ? 'destructive' : 'ghost'}
             size="sm"
             onClick={() =>
-              fetchChannelVideos(channel.url, undefined, channel.youtube_content_type || 'videos')
+              browseLoading || browseLoadingMore
+                ? stopChannelFetch()
+                : fetchChannelVideos(
+                    channel.url,
+                    undefined,
+                    channel.youtube_content_type || 'videos',
+                  )
             }
-            disabled={browseLoading}
+            disabled={false}
           >
-            {browseLoading ? (
-              <Loader2 className="w-3.5 h-3.5 animate-spin" />
+            {browseLoading || browseLoadingMore ? (
+              <Square className="w-3.5 h-3.5" />
             ) : (
               <RefreshCw className="w-3.5 h-3.5" />
             )}
-            {t('checkNow')}
+            {browseLoading || browseLoadingMore ? t('stopFetch') : t('checkNow')}
           </Button>
           <Button
             variant={showSettings ? 'secondary' : 'ghost'}

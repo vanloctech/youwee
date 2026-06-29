@@ -7,6 +7,7 @@
   "supportedSites": "รองรับ",
   "fetchVideos": "ดึงวิดีโอ",
   "fetching": "กำลังดึงวิดีโอ...",
+  "stopFetch": "หยุด",
   "loadMore": "โหลดเพิ่ม",
   "follow": "ติดตาม",
   "unfollow": "เลิกติดตาม",
