@@ -24,6 +24,7 @@ import { MetadataProvider } from '@/contexts/MetadataContext';
 import { PlayerProvider } from '@/contexts/PlayerContext';
 import { ProcessingProvider } from '@/contexts/ProcessingContext';
 import { SubtitleProvider } from '@/contexts/SubtitleContext';
+import { SummarySessionProvider } from '@/contexts/SummarySessionProvider';
 import { ThemeProvider, useTheme } from '@/contexts/ThemeContext';
 import { UniversalProvider } from '@/contexts/UniversalContext';
 import { UpdaterProvider, useUpdater } from '@/contexts/UpdaterContext';
@@ -238,19 +239,21 @@ export function App() {
                   <HistoryProvider>
                     <PlayerProvider>
                       <AIProvider>
-                        <ProcessingProvider>
-                          <SubtitleProvider>
-                            <MetadataProvider>
-                              <DataExportProvider>
-                                <ToastProvider>
-                                  <UpdaterWrapper>
-                                    <AppContent />
-                                  </UpdaterWrapper>
-                                </ToastProvider>
-                              </DataExportProvider>
-                            </MetadataProvider>
-                          </SubtitleProvider>
-                        </ProcessingProvider>
+                        <SummarySessionProvider>
+                          <ProcessingProvider>
+                            <SubtitleProvider>
+                              <MetadataProvider>
+                                <DataExportProvider>
+                                  <ToastProvider>
+                                    <UpdaterWrapper>
+                                      <AppContent />
+                                    </UpdaterWrapper>
+                                  </ToastProvider>
+                                </DataExportProvider>
+                              </MetadataProvider>
+                            </SubtitleProvider>
+                          </ProcessingProvider>
+                        </SummarySessionProvider>
                       </AIProvider>
                     </PlayerProvider>
                   </HistoryProvider>

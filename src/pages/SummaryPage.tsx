@@ -30,7 +30,7 @@ import {
 } from '@/components/ui/select';
 import { SimpleMarkdown } from '@/components/ui/simple-markdown';
 import { useAI } from '@/contexts/AIContext';
-import { useDownload } from '@/contexts/download-context';
+import { useSummarySession } from '@/contexts/summary-session-context';
 import { localizeUnknownError } from '@/lib/backend-error';
 import { LANGUAGE_OPTIONS, type SummaryStyle } from '@/lib/types';
 import { cn } from '@/lib/utils';
@@ -40,18 +40,6 @@ interface SummaryPageProps {
   externalUrl?: string;
   externalRequestId?: number;
   onExternalRequestConsumed?: () => void;
-}
-
-interface VideoInfo {
-  url: string;
-  title: string;
-  thumbnail?: string;
-  duration?: number;
-}
-
-interface SummaryResult {
-  summary: string;
-  videoInfo: VideoInfo;
 }
 
 function isYouTubeUrl(url: string) {
@@ -70,159 +58,71 @@ export function SummaryPage({
 }: SummaryPageProps) {
   const { t } = useTranslation('pages');
   const ai = useAI();
-  const { cookieSettings, getProxyUrl } = useDownload();
+  const {
+    state,
+    setUrl,
+    updateOptions,
+    setShowSettings,
+    setShowFullSummary,
+    runSummary: runSummarySession,
+    stopSummary,
+    setError: setSessionError,
+    markSaved,
+  } = useSummarySession();
   const requiresApiKey = providerRequiresApiKey(ai.config.provider);
   const missingSummaryConfig = !ai.config.enabled || (requiresApiKey && !ai.config.api_key);
-
-  // URL input
-  const [url, setUrl] = useState('');
-
-  // Local settings (initialized from global settings)
-  const [summaryStyle, setSummaryStyle] = useState<SummaryStyle>(ai.config.summary_style);
-  const [summaryLanguage, setSummaryLanguage] = useState(ai.config.summary_language);
-  const [transcriptLanguages, setTranscriptLanguages] = useState<string[]>(
-    ai.config.transcript_languages || ['en'],
-  );
-
-  // State
-  const [isLoading, setIsLoading] = useState(false);
-  const [loadingStatus, setLoadingStatus] = useState('');
-  const [error, setError] = useState<string | null>(null);
-  const [result, setResult] = useState<SummaryResult | null>(null);
   const [copied, setCopied] = useState(false);
-  const [saved, setSaved] = useState(false);
-  const [showFullSummary, setShowFullSummary] = useState(true);
-  const [showSettings, setShowSettings] = useState(false);
-
-  // Cancellation ref
-  const isCancelledRef = useRef(false);
   const lastExternalRequestIdRef = useRef<number | null>(null);
+  const {
+    url,
+    options,
+    isLoading,
+    loadingStatus,
+    error,
+    result,
+    saved,
+    showFullSummary,
+    showSettings,
+  } = state;
+  const summaryStyle = options.style;
+  const summaryLanguage = options.language;
+  const transcriptLanguages = options.transcriptLanguages;
+
+  const getLoadingText = useCallback(
+    (status: string) => {
+      if (!status) return '';
+      return t(`summary.loading.${status}`);
+    },
+    [t],
+  );
 
   const runSummary = useCallback(
     async (inputUrl: string) => {
       const normalizedUrl = inputUrl.trim();
 
       if (!normalizedUrl) {
-        setError(t('summary.errors.enterUrl'));
+        setSessionError(t('summary.errors.enterUrl'));
         return;
       }
 
       if (!isYouTubeUrl(normalizedUrl)) {
-        setError(t('summary.errors.invalidUrl'));
+        setSessionError(t('summary.errors.invalidUrl'));
         return;
       }
 
       if (!ai.config.enabled) {
-        setError(t('summary.errors.aiNotEnabled'));
+        setSessionError(t('summary.errors.aiNotEnabled'));
         return;
       }
 
       if (requiresApiKey && !ai.config.api_key) {
-        setError(t('summary.errors.noApiKey'));
+        setSessionError(t('summary.errors.noApiKey'));
         return;
       }
 
-      setIsLoading(true);
-      setError(null);
-      setResult(null);
-      setSaved(false);
-      isCancelledRef.current = false;
-
-      let activeStep = '';
-      const updateLoadingStatus = (status: string) => {
-        activeStep = status;
-        setLoadingStatus(status);
-      };
-
-      try {
-        // Step 1: Fetch video info
-        updateLoadingStatus(t('summary.loading.fetchingInfo'));
-        const videoInfoResponse = await invoke<{
-          info: {
-            title: string;
-            thumbnail?: string;
-            duration?: number;
-          };
-        }>('get_video_basic_info', {
-          url: normalizedUrl,
-          cookieMode: cookieSettings.mode,
-          cookieBrowser: cookieSettings.browser || null,
-          cookieBrowserProfile: cookieSettings.browserProfile || null,
-          cookieFilePath: cookieSettings.filePath || null,
-          cookieSkipPatterns: cookieSettings.cookieSkipPatterns || [],
-          proxyUrl: getProxyUrl() || null,
-        });
-
-        if (isCancelledRef.current) return;
-
-        console.log('Video info response:', videoInfoResponse);
-        const videoInfo = videoInfoResponse.info;
-        console.log('Video info:', videoInfo);
-
-        if (!videoInfo || !videoInfo.title) {
-          throw new Error('Failed to fetch video information');
-        }
-
-        // Step 2: Fetch transcript
-        updateLoadingStatus(t('summary.loading.fetchingTranscript'));
-        const transcript = await invoke<string>('get_video_transcript', {
-          url: normalizedUrl,
-          languages: transcriptLanguages,
-          cookieMode: cookieSettings.mode,
-          cookieBrowser: cookieSettings.browser || null,
-          cookieBrowserProfile: cookieSettings.browserProfile || null,
-          cookieFilePath: cookieSettings.filePath || null,
-          cookieSkipPatterns: cookieSettings.cookieSkipPatterns || [],
-          proxyUrl: getProxyUrl() || null,
-        });
-
-        if (isCancelledRef.current) return;
-
-        if (!transcript || transcript.trim() === '') {
-          throw new Error('No transcript available for this video');
-        }
-
-        // Step 3: Generate summary with local settings
-        updateLoadingStatus(t('summary.loading.generating'));
-        const summaryResult = await invoke<{ summary: string }>('generate_summary_with_options', {
-          transcript,
-          style: summaryStyle,
-          language: summaryLanguage,
-          title: videoInfo.title,
-        });
-
-        if (isCancelledRef.current) return;
-
-        setResult({
-          summary: summaryResult.summary,
-          videoInfo: {
-            url: normalizedUrl,
-            title: videoInfo.title,
-            thumbnail: videoInfo.thumbnail,
-            duration: videoInfo.duration,
-          },
-        });
-      } catch (err) {
-        if (isCancelledRef.current) return;
-        const message = localizeUnknownError(err);
-        setError(activeStep ? `${activeStep}: ${message}` : message);
-      } finally {
-        if (!isCancelledRef.current) {
-          setIsLoading(false);
-          setLoadingStatus('');
-        }
-      }
+      await runSummarySession(normalizedUrl);
     },
-    [
-      ai.config,
-      requiresApiKey,
-      summaryStyle,
-      summaryLanguage,
-      transcriptLanguages,
-      cookieSettings,
-      getProxyUrl,
-      t,
-    ],
+    [ai.config, requiresApiKey, runSummarySession, setSessionError, t],
   );
 
   const handleSummarize = useCallback(() => {
@@ -237,14 +137,11 @@ export function SummaryPage({
     setUrl(externalUrl);
     onExternalRequestConsumed?.();
     void runSummary(externalUrl);
-  }, [externalRequestId, externalUrl, onExternalRequestConsumed, runSummary]);
+  }, [externalRequestId, externalUrl, onExternalRequestConsumed, runSummary, setUrl]);
 
   const handleStop = useCallback(() => {
-    isCancelledRef.current = true;
-    setIsLoading(false);
-    setLoadingStatus('');
-    setError(null);
-  }, []);
+    stopSummary();
+  }, [stopSummary]);
 
   const handleCopy = useCallback(() => {
     if (result?.summary) {
@@ -263,7 +160,7 @@ export function SummaryPage({
     console.log('Saving to library:', { videoInfo, summary: summary.substring(0, 50) });
 
     if (!videoInfo.title) {
-      setError(t('summary.errors.noTitle'));
+      setSessionError(t('summary.errors.noTitle'));
       return;
     }
 
@@ -276,30 +173,34 @@ export function SummaryPage({
         source: 'youtube',
         summary: summary,
       });
-      setSaved(true);
+      markSaved();
     } catch (err) {
       const message = localizeUnknownError(err);
       console.error('Failed to save to library:', message);
-      setError(t('summary.errors.saveToLibrary', { message }));
+      setSessionError(t('summary.errors.saveToLibrary', { message }));
     }
-  }, [result, t]);
+  }, [markSaved, result, setSessionError, t]);
 
   const handleAddLanguage = useCallback(
     (code: string) => {
       if (!transcriptLanguages.includes(code)) {
-        setTranscriptLanguages([...transcriptLanguages, code]);
+        updateOptions({
+          transcriptLanguages: [...transcriptLanguages, code],
+        });
       }
     },
-    [transcriptLanguages],
+    [transcriptLanguages, updateOptions],
   );
 
   const handleRemoveLanguage = useCallback(
     (code: string) => {
       if (transcriptLanguages.length > 1) {
-        setTranscriptLanguages(transcriptLanguages.filter((l) => l !== code));
+        updateOptions({
+          transcriptLanguages: transcriptLanguages.filter((l) => l !== code),
+        });
       }
     },
-    [transcriptLanguages],
+    [transcriptLanguages, updateOptions],
   );
 
   const handleMoveLanguage = useCallback(
@@ -309,9 +210,9 @@ export function SummaryPage({
 
       const newLangs = [...transcriptLanguages];
       [newLangs[index], newLangs[newIndex]] = [newLangs[newIndex], newLangs[index]];
-      setTranscriptLanguages(newLangs);
+      updateOptions({ transcriptLanguages: newLangs });
     },
-    [transcriptLanguages],
+    [transcriptLanguages, updateOptions],
   );
 
   const availableLanguages = LANGUAGE_OPTIONS.filter((l) => !transcriptLanguages.includes(l.code));
@@ -405,7 +306,7 @@ export function SummaryPage({
         {isLoading && (
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
             <Loader2 className="w-4 h-4 animate-spin" />
-            <span>{loadingStatus || t('summary.processing')}</span>
+            <span>{getLoadingText(loadingStatus) || t('summary.processing')}</span>
           </div>
         )}
 
@@ -447,7 +348,7 @@ export function SummaryPage({
                 </span>
                 <Select
                   value={summaryStyle}
-                  onValueChange={(v) => setSummaryStyle(v as SummaryStyle)}
+                  onValueChange={(v) => updateOptions({ style: v as SummaryStyle })}
                 >
                   <SelectTrigger className="h-9 bg-background/50">
                     <SelectValue />
@@ -465,7 +366,10 @@ export function SummaryPage({
                 <span className="text-xs font-medium text-muted-foreground">
                   {t('summary.outputLanguage')}
                 </span>
-                <Select value={summaryLanguage} onValueChange={setSummaryLanguage}>
+                <Select
+                  value={summaryLanguage}
+                  onValueChange={(language) => updateOptions({ language })}
+                >
                   <SelectTrigger className="h-9 bg-background/50">
                     <SelectValue />
                   </SelectTrigger>
