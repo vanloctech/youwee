@@ -34,6 +34,12 @@
     summary:
       '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M12 3l1.5 4.5L18 9l-4.5 1.5L12 15l-1.5-4.5L6 9l4.5-1.5L12 3Z"></path><path d="M19 15l.8 2.2L22 18l-2.2.8L19 21l-.8-2.2L16 18l2.2-.8L19 15Z"></path></svg>',
   };
+  const CONTROL_ICONS = {
+    collapse:
+      '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M6 12h12"></path></svg>',
+    close:
+      '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M18 6 6 18"></path><path d="m6 6 12 12"></path></svg>',
+  };
 
   function isTrustedUserEvent(event) {
     return !!event?.isTrusted;
@@ -386,14 +392,14 @@
             data-action="collapse"
             title="${ext.t('floatingCollapse', 'Collapse')}"
             aria-label="${ext.t('floatingCollapse', 'Collapse')}"
-          >—</button>
+          >${CONTROL_ICONS.collapse}</button>
           <button
             type="button"
             class="youwee-floating__tiny-btn"
             data-action="disable"
             title="${ext.t('floatingDisable', 'Turn off floating button')}"
             aria-label="${ext.t('floatingDisable', 'Turn off floating button')}"
-          >×</button>
+          >${CONTROL_ICONS.close}</button>
         </div>
       </div>
       <label class="youwee-floating__label">${ext.t('floatingMedia', 'Media')}</label>

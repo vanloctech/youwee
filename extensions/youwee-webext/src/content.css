@@ -146,23 +146,30 @@
 }
 
 .youwee-floating__tiny-btn {
-  width: 27px;
-  height: 27px;
+  width: 28px;
+  height: 28px;
   border-radius: 999px;
   border: 1px solid rgba(255, 255, 255, 0.1);
   background: rgba(248, 250, 252, 0.06);
   color: #cbd5e1;
-  font-size: 13px;
   line-height: 1;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
+  padding: 0;
 }
 
 .youwee-floating__tiny-btn:hover {
   background: rgba(248, 250, 252, 0.11);
   color: #f8fafc;
+}
+
+.youwee-floating__tiny-btn svg {
+  width: 14px;
+  height: 14px;
+  display: block;
+  flex: 0 0 auto;
 }
 
 .youwee-floating__label {
@@ -178,11 +185,16 @@
   height: 36px;
   border-radius: 999px;
   border: 1px solid rgba(255, 255, 255, 0.08);
-  background: rgba(2, 6, 23, 0.52);
+  background:
+    url("data:image/svg+xml,%3Csvg viewBox='0 0 24 24' fill='none' stroke='%23cbd5e1' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E")
+    right 15px center / 15px 15px no-repeat,
+    rgba(2, 6, 23, 0.52);
   color: #f8fafc;
   font-size: 12px;
   font-weight: 600;
-  padding: 0 10px;
+  padding: 0 42px 0 12px;
+  appearance: none;
+  -webkit-appearance: none;
   outline: none;
 }
 
