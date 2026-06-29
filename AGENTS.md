@@ -11,7 +11,7 @@ This file is read automatically at the start of every session. Follow these rule
 - **Linting**: `bun run biome check --write .`
 - **Rust check**: `cargo check` (run in `src-tauri/`)
 - **TypeScript check**: `bun run tsc -b`
-- **Default branch**: `develop`
+- **Default branch**: `main`
 - **Language**: User communicates in Vietnamese
 
 ## Mandatory Checklists
@@ -46,6 +46,13 @@ When bumping the version, you MUST do ALL of the following:
 - Always run all 3 checks before committing: Biome → `tsc -b` → cargo check
 - Commit message style: `type: short description` (e.g. `feat:`, `fix:`, `chore:`, `docs:`)
 
+### Branch and PR Rules
+
+- When creating a work branch, start from the latest `main` unless the user explicitly requests another base branch.
+- Pull Requests should target `main` by default.
+- Do not merge directly into `main`; use a Pull Request workflow.
+- If editing contributing docs, keep `CONTRIBUTING.md`, `docs/CONTRIBUTING.vi.md`, and `docs/CONTRIBUTING.zh-CN.md` aligned.
+
 ### Pre-commit Hook
 
 The repo has a `.git/hooks/pre-commit` that runs 3 checks automatically:
@@ -79,6 +86,13 @@ All must pass before a commit succeeds.
 - Do not bump `sdk-js/package.json` version unless the user explicitly asks for an SDK release/version bump
 - Keep SDK TypeScript strict and avoid `any` in public API types unless there is a clear compatibility reason
 
+## Browser Extension Rules
+
+- Extension source lives in `extensions/youwee-webext/`
+- When changing extension behavior, run `bun run ext:build`
+- Keep extension user-facing text and icons consistent with the app's current UI language and visual style
+- Browser extension deep links must preserve the URL payload when opening the desktop app from a closed state
+
 ## UI Design Patterns
 
 - **Info badges** (read-only): `rounded`, no border, solid background (e.g. `bg-blue-500/10 text-blue-600`)
@@ -94,3 +108,7 @@ All must pass before a commit succeeds.
 - DB migrations use `ALTER TABLE ... ADD COLUMN` with `.ok()` to ignore "already exists" errors
 - FFmpeg is bundled (not system) on macOS — rebuilt with `--enable-securetransport` for TLS support
 - `download_sections` format: `"*MM:SS-MM:SS"` (with `*` prefix for yt-dlp). Strip `*` before storing in history.
+- Library/history is the source for downloaded-video duplicate detection; do not add a separate duplicate-history table unless explicitly requested.
+- History should remain persistent until the user deletes/clears Library entries; do not reintroduce a fixed max-history limit.
+- yt-dlp advanced options must remain structured and allowlisted; do not add raw command-line argument text boxes without explicit approval.
+- Validate yt-dlp advanced options on both frontend and backend, and keep app-managed options such as cookies, output paths, retries, and site-specific headers authoritative.
