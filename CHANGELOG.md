@@ -10,6 +10,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - **Library collections** - Added automatic Library collections for expanded playlists, channel downloads, and split chapter files
 
+### Changed
+- **Library summaries** - Refined Library item actions and moved full AI summaries into a dedicated reader dialog with text size controls
+
 ### Fixed
 - **Extension cold-start links** - Fixed browser extension download links opening Youwee without adding the video on cold app launch
 - **AI Summary numbering** - Fixed ordered lists restarting at 1 when rendered with blank lines between topics
