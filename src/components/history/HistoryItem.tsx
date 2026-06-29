@@ -5,6 +5,7 @@ import {
   Copy,
   Download,
   ExternalLink,
+  FileAudio,
   FileVideo,
   Folder,
   FolderOpen,
@@ -133,6 +134,7 @@ export function HistoryItem({ entry }: HistoryItemProps) {
   const sourceConfig = detectSource(isDataExport ? 'data_export' : entry.source);
   const sourceLabel = isDataExport ? t('library.toolbar.filterDataExport') : sourceConfig.label;
   const canPlayAudio = isPlayableAudioEntry(entry);
+  const isAudioMedia = canPlayAudio;
   const isCurrentAudio = currentEntry?.id === entry.id;
   const isActivePlayback = isCurrentAudio && isPlaying;
   const thumbnailUrl = entry.thumbnail ? entry.thumbnail.replace(/^http:\/\//, 'https://') : null;
@@ -335,8 +337,19 @@ export function HistoryItem({ entry }: HistoryItemProps) {
             />
           </>
         ) : (
-          <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-muted to-muted/50">
-            <FileVideo className="w-10 h-10 text-muted-foreground/30" />
+          <div className="absolute inset-0 flex items-center justify-center overflow-hidden rounded-[inherit] bg-[linear-gradient(135deg,hsl(var(--muted)/0.98),hsl(var(--background)/0.86))]">
+            <div className="relative flex flex-col items-center gap-2">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-white/10 bg-background/45 text-muted-foreground shadow-sm backdrop-blur-sm">
+                {isAudioMedia ? (
+                  <FileAudio className="h-5 w-5" />
+                ) : (
+                  <FileVideo className="h-5 w-5" />
+                )}
+              </div>
+              <span className="rounded bg-background/35 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground/80">
+                Youwee
+              </span>
+            </div>
           </div>
         )}
 
