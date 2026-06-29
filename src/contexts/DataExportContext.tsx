@@ -1,8 +1,9 @@
 import { invoke } from '@tauri-apps/api/core';
-import { createContext, type ReactNode, useCallback, useContext, useMemo, useState } from 'react';
+import { type ReactNode, useCallback, useMemo, useState } from 'react';
 import { localizeUnknownError } from '@/lib/backend-error';
 import type { ExportRow, ExportSource, ExtractDataRowsOutput } from '@/lib/types';
-import { useDownload } from './DownloadContext';
+import { DataExportContext } from './data-export-context';
+import { useDownload } from './download-context';
 
 const STORAGE_KEY = 'youwee_data_export_settings';
 
@@ -12,7 +13,7 @@ interface DataExportSettings {
   detailMode: boolean;
 }
 
-interface DataExportContextType {
+export interface DataExportContextType {
   source: ExportSource;
   inputText: string;
   limit: number;
@@ -56,8 +57,6 @@ function saveSettings(settings: DataExportSettings) {
     console.error('Failed to save data export settings:', error);
   }
 }
-
-const DataExportContext = createContext<DataExportContextType | null>(null);
 
 export function DataExportProvider({ children }: { children: ReactNode }) {
   const { cookieSettings, getProxyUrl } = useDownload();
@@ -162,12 +161,4 @@ export function DataExportProvider({ children }: { children: ReactNode }) {
   );
 
   return <DataExportContext.Provider value={value}>{children}</DataExportContext.Provider>;
-}
-
-export function useDataExport() {
-  const context = useContext(DataExportContext);
-  if (!context) {
-    throw new Error('useDataExport must be used within a DataExportProvider');
-  }
-  return context;
 }

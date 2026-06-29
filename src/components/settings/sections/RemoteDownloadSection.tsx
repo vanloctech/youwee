@@ -27,7 +27,7 @@ import {
 import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
 import { TagInput } from '@/components/ui/tag-input';
-import { useDownload } from '@/contexts/DownloadContext';
+import { useDownload } from '@/contexts/download-context';
 import type { TelegramStatus } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import { SettingsCard, SettingsDivider, SettingsSection } from '../SettingsSection';

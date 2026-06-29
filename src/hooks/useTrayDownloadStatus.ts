@@ -1,8 +1,8 @@
 import { invoke } from '@tauri-apps/api/core';
 import { useEffect, useMemo } from 'react';
-import { useDownload } from '@/contexts/DownloadContext';
-import { useGalleryDl } from '@/contexts/GalleryDlContext';
-import { useUniversal } from '@/contexts/UniversalContext';
+import { useDownload } from '@/contexts/download-context';
+import { useGalleryDl } from '@/contexts/gallerydl-context';
+import { useUniversal } from '@/contexts/universal-context';
 import type { DownloadItem } from '@/lib/types';
 
 interface TrayDownloadStatus {

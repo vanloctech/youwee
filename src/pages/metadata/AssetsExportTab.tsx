@@ -28,7 +28,7 @@ import { Input } from '@/components/ui/input';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Textarea } from '@/components/ui/textarea';
-import { useMetadata } from '@/contexts/MetadataContext';
+import { useMetadata } from '@/contexts/metadata-context';
 import { cn } from '@/lib/utils';
 
 export function AssetsExportTab() {

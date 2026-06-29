@@ -30,7 +30,7 @@ import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { useDependencies } from '@/contexts/DependenciesContext';
-import { useDownload } from '@/contexts/DownloadContext';
+import { useDownload } from '@/contexts/download-context';
 import type { DependencySource, YtdlpChannel } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import { SettingsCard, SettingsSection } from '../SettingsSection';

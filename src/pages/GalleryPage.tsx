@@ -6,7 +6,7 @@ import { GalleryUrlInput } from '@/components/download/GalleryUrlInput';
 import { ThemePicker } from '@/components/settings/ThemePicker';
 import { Button } from '@/components/ui/button';
 import { useDependencies } from '@/contexts/DependenciesContext';
-import { useGalleryDl } from '@/contexts/GalleryDlContext';
+import { useGalleryDl } from '@/contexts/gallerydl-context';
 import { cn } from '@/lib/utils';
 
 interface GalleryPageProps {

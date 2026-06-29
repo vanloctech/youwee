@@ -2,16 +2,7 @@ import { invoke } from '@tauri-apps/api/core';
 import { downloadDir, homeDir } from '@tauri-apps/api/path';
 import { open } from '@tauri-apps/plugin-dialog';
 import { readTextFile } from '@tauri-apps/plugin-fs';
-import {
-  createContext,
-  type ReactNode,
-  useCallback,
-  useContext,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-} from 'react';
+import { type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { usePersistedDownloadQueue } from '@/hooks/usePersistedDownloadQueue';
 import { extractBackendError, localizeBackendError } from '@/lib/backend-error';
 import {
@@ -25,7 +16,8 @@ import {
 import { buildCookieProxyInvokeOptions, loadNetworkSettings } from '@/lib/network-config';
 import { parseUniversalUrls } from '@/lib/sources';
 import type { DownloadItem } from '@/lib/types';
-import { useDownload } from './DownloadContext';
+import { useDownload } from './download-context';
+import { GalleryDlContext } from './gallerydl-context';
 
 const STORAGE_KEY = 'youwee-gallerydl-settings';
 const DOWNLOAD_QUEUE_IDLE_GRACE_MS = 1000;
@@ -43,7 +35,7 @@ interface GalleryDownloadResult {
   history_id?: string | null;
 }
 
-interface GalleryDlContextType {
+export interface GalleryDlContextType {
   items: DownloadItem[];
   focusedItemId: string | null;
   isDownloading: boolean;
@@ -60,8 +52,6 @@ interface GalleryDlContextType {
   stopDownload: () => Promise<void>;
   updateConcurrentDownloads: (concurrent: number) => void;
 }
-
-const GalleryDlContext = createContext<GalleryDlContextType | null>(null);
 
 function isAbsolutePath(path: string): boolean {
   if (!path) return false;
@@ -546,12 +536,4 @@ export function GalleryDlProvider({ children }: { children: ReactNode }) {
   );
 
   return <GalleryDlContext.Provider value={value}>{children}</GalleryDlContext.Provider>;
-}
-
-export function useGalleryDl() {
-  const context = useContext(GalleryDlContext);
-  if (!context) {
-    throw new Error('useGalleryDl must be used within a GalleryDlProvider');
-  }
-  return context;
 }

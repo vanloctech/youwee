@@ -3,16 +3,7 @@ import { listen } from '@tauri-apps/api/event';
 import { downloadDir, homeDir } from '@tauri-apps/api/path';
 import { open } from '@tauri-apps/plugin-dialog';
 import { readTextFile } from '@tauri-apps/plugin-fs';
-import {
-  createContext,
-  type ReactNode,
-  useCallback,
-  useContext,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-} from 'react';
+import { type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { usePersistedDownloadQueue } from '@/hooks/usePersistedDownloadQueue';
 import {
   extractBackendError,
@@ -73,6 +64,7 @@ import type {
   YoutubeSearchVideo,
 } from '@/lib/types';
 import { extractYouTubeVideoId } from '@/lib/youtube-url';
+import { DownloadContext } from './download-context';
 
 const STORAGE_KEY = 'youwee-settings';
 const DOWNLOAD_QUEUE_IDLE_GRACE_MS = 1000;
@@ -172,7 +164,7 @@ interface RenameDownloadedFileResult {
   newTitle: string;
 }
 
-interface DownloadContextType {
+export interface DownloadContextType {
   items: DownloadItem[];
   focusedItemId: string | null;
   isDownloading: boolean;
@@ -252,8 +244,6 @@ interface DownloadContextType {
   // Rename completed file
   renameCompletedItem: (id: string, newName: string) => Promise<void>;
 }
-
-const DownloadContext = createContext<DownloadContextType | null>(null);
 
 export function DownloadProvider({ children }: { children: ReactNode }) {
   const [items, setItems] = useState<DownloadItem[]>([]);
@@ -1838,12 +1828,4 @@ export function DownloadProvider({ children }: { children: ReactNode }) {
   );
 
   return <DownloadContext.Provider value={value}>{children}</DownloadContext.Provider>;
-}
-
-export function useDownload() {
-  const context = useContext(DownloadContext);
-  if (!context) {
-    throw new Error('useDownload must be used within a DownloadProvider');
-  }
-  return context;
 }

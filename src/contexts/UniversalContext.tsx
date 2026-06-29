@@ -3,16 +3,7 @@ import { listen } from '@tauri-apps/api/event';
 import { downloadDir, homeDir } from '@tauri-apps/api/path';
 import { open } from '@tauri-apps/plugin-dialog';
 import { readTextFile } from '@tauri-apps/plugin-fs';
-import {
-  createContext,
-  type ReactNode,
-  useCallback,
-  useContext,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-} from 'react';
+import { type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { usePersistedDownloadQueue } from '@/hooks/usePersistedDownloadQueue';
 import {
   extractBackendError,
@@ -55,7 +46,8 @@ import type {
   YtdlpAdvancedOption,
 } from '@/lib/types';
 import { sanitizeYtdlpAdvancedOptions } from '@/lib/ytdlp-advanced-options';
-import { useDownload } from './DownloadContext';
+import { useDownload } from './download-context';
+import { UniversalContext } from './universal-context';
 
 const STORAGE_KEY = 'youwee-universal-settings';
 const DOWNLOAD_STORAGE_KEY = 'youwee-settings';
@@ -239,7 +231,7 @@ function saveSettings(settings: UniversalSettings) {
   }
 }
 
-interface UniversalContextType {
+export interface UniversalContextType {
   items: DownloadItem[];
   focusedItemId: string | null;
   isDownloading: boolean;
@@ -275,8 +267,6 @@ interface UniversalContextType {
   // Rename completed file
   renameCompletedItem: (id: string, newName: string) => Promise<void>;
 }
-
-const UniversalContext = createContext<UniversalContextType | null>(null);
 
 interface RenameDownloadedFileResult {
   newFilepath: string;
@@ -1421,12 +1411,4 @@ export function UniversalProvider({ children }: { children: ReactNode }) {
   );
 
   return <UniversalContext.Provider value={value}>{children}</UniversalContext.Provider>;
-}
-
-export function useUniversal() {
-  const context = useContext(UniversalContext);
-  if (!context) {
-    throw new Error('useUniversal must be used within a UniversalProvider');
-  }
-  return context;
 }

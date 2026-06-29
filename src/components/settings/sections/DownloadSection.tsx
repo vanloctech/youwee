@@ -22,7 +22,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
-import { useDownload } from '@/contexts/DownloadContext';
+import { useDownload } from '@/contexts/download-context';
 import { clampAutoRetryDelaySeconds, clampAutoRetryMaxAttempts } from '@/lib/download-retry';
 import {
   SPONSORBLOCK_CATEGORIES,

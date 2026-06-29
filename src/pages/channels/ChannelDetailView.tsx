@@ -18,7 +18,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
-import { useChannels } from '@/contexts/ChannelsContext';
+import { useChannels } from '@/contexts/channels-context';
 import { useDependencies } from '@/contexts/DependenciesContext';
 import type { FollowedChannel, Quality, YoutubeChannelContentType } from '@/lib/types';
 import { cn } from '@/lib/utils';

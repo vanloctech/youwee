@@ -15,7 +15,7 @@ import { FreshCookieRequiredDialog } from '@/components/FreshCookieRequiredDialo
 import { ThemePicker } from '@/components/settings/ThemePicker';
 import { Button } from '@/components/ui/button';
 import { useDependencies } from '@/contexts/DependenciesContext';
-import { useDownload } from '@/contexts/DownloadContext';
+import { useDownload } from '@/contexts/download-context';
 import { useSchedule } from '@/hooks/useSchedule';
 import type { Quality } from '@/lib/types';
 import { cn } from '@/lib/utils';

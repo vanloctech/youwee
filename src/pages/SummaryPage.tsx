@@ -30,7 +30,7 @@ import {
 } from '@/components/ui/select';
 import { SimpleMarkdown } from '@/components/ui/simple-markdown';
 import { useAI } from '@/contexts/AIContext';
-import { useDownload } from '@/contexts/DownloadContext';
+import { useDownload } from '@/contexts/download-context';
 import { localizeUnknownError } from '@/lib/backend-error';
 import { LANGUAGE_OPTIONS, type SummaryStyle } from '@/lib/types';
 import { cn } from '@/lib/utils';

@@ -13,7 +13,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { TagInput } from '@/components/ui/tag-input';
-import { useDownload } from '@/contexts/DownloadContext';
+import { useDownload } from '@/contexts/download-context';
 import { isValidCookieSkipPattern, normalizeCookieSkipPattern } from '@/lib/network-config';
 import type { BrowserProfile, BrowserType, CookieMode, ProxyMode } from '@/lib/types';
 import { BROWSER_OPTIONS } from '@/lib/types';

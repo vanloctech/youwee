@@ -3,8 +3,8 @@ import { listen } from '@tauri-apps/api/event';
 import { getCurrent, onOpenUrl } from '@tauri-apps/plugin-deep-link';
 import { type MutableRefObject, useCallback, useEffect, useRef } from 'react';
 import type { Page } from '@/components/layout';
-import { useDownload } from '@/contexts/DownloadContext';
-import { useUniversal } from '@/contexts/UniversalContext';
+import { useDownload } from '@/contexts/download-context';
+import { useUniversal } from '@/contexts/universal-context';
 import {
   type ExternalLinkAction,
   type ExternalLinkTarget,

@@ -3,7 +3,7 @@ import {
   ThumbnailCompletedBadge,
   ThumbnailFailedBadge,
 } from '@/components/download/ThumbnailStatusBadge';
-import type { VideoDownloadState } from '@/contexts/ChannelsContext';
+import type { VideoDownloadState } from '@/contexts/channels/useChannelsController';
 import type { PlaylistVideoEntry } from '@/lib/types';
 import { cn } from '@/lib/utils';
 

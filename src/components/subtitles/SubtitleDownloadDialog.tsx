@@ -2,7 +2,7 @@ import { invoke } from '@tauri-apps/api/core';
 import { Globe, Loader2, X } from 'lucide-react';
 import { useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useDownload } from '@/contexts/DownloadContext';
+import { useDownload } from '@/contexts/download-context';
 import { useSubtitle } from '@/contexts/SubtitleContext';
 import { localizeUnknownError } from '@/lib/backend-error';
 import { cn } from '@/lib/utils';

@@ -49,7 +49,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Switch } from '@/components/ui/switch';
-import { useDownload } from '@/contexts/DownloadContext';
+import { useDownload } from '@/contexts/download-context';
 import { useTheme } from '@/contexts/ThemeContext';
 import { useUpdater } from '@/contexts/UpdaterContext';
 import { cn } from '@/lib/utils';

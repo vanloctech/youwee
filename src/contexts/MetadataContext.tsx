@@ -2,18 +2,10 @@ import { invoke } from '@tauri-apps/api/core';
 import { listen } from '@tauri-apps/api/event';
 import { downloadDir, homeDir } from '@tauri-apps/api/path';
 import { open } from '@tauri-apps/plugin-dialog';
-import {
-  createContext,
-  type ReactNode,
-  useCallback,
-  useContext,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-} from 'react';
+import { type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { localizeProgressError, localizeUnknownError } from '@/lib/backend-error';
-import { useDownload } from './DownloadContext';
+import { useDownload } from './download-context';
+import { MetadataContext } from './metadata-context';
 
 const STORAGE_KEY = 'youwee_metadata_settings';
 
@@ -53,7 +45,7 @@ interface MetadataProgress {
   error_params?: Record<string, string | number | boolean>;
 }
 
-interface MetadataContextType {
+export interface MetadataContextType {
   items: MetadataItem[];
   isFetching: boolean;
   settings: MetadataSettings;
@@ -86,8 +78,6 @@ function saveSettings(settings: MetadataSettings) {
     console.error('Failed to save metadata settings:', e);
   }
 }
-
-const MetadataContext = createContext<MetadataContextType | null>(null);
 
 export function MetadataProvider({ children }: { children: ReactNode }) {
   const { cookieSettings, getProxyUrl } = useDownload();
@@ -322,12 +312,4 @@ export function MetadataProvider({ children }: { children: ReactNode }) {
   );
 
   return <MetadataContext.Provider value={value}>{children}</MetadataContext.Provider>;
-}
-
-export function useMetadata() {
-  const context = useContext(MetadataContext);
-  if (!context) {
-    throw new Error('useMetadata must be used within a MetadataProvider');
-  }
-  return context;
 }
