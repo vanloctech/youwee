@@ -1,6 +1,6 @@
 import { invoke } from '@tauri-apps/api/core';
 import { listen } from '@tauri-apps/api/event';
-import { onOpenUrl } from '@tauri-apps/plugin-deep-link';
+import { getCurrent, onOpenUrl } from '@tauri-apps/plugin-deep-link';
 import { type MutableRefObject, useCallback, useEffect, useRef } from 'react';
 import type { Page } from '@/components/layout';
 import { useDownload } from '@/contexts/DownloadContext';
@@ -357,19 +357,56 @@ export function useExternalDownloadLinks(
   useEffect(() => {
     let cancelled = false;
 
-    const consumePendingExternalLinks = async () => {
-      try {
-        const urls = await invoke<string[]>('consume_pending_external_links');
+    const consumeStartupExternalLinks = async () => {
+      const processedStartupLinks = new Set<string>();
+
+      const collectStartupLinks = async (): Promise<string[]> => {
+        const links = new Set<string>();
+
+        try {
+          const urls = await invoke<string[]>('consume_pending_external_links');
+          for (const url of urls) {
+            links.add(url);
+          }
+        } catch {
+          // Ignore; app still works without extension integration.
+        }
+
+        try {
+          const urls = await getCurrent();
+          for (const url of urls ?? []) {
+            links.add(url);
+          }
+        } catch {
+          // Ignore; app still works without extension integration.
+        }
+
+        return [...links].filter((url) => !processedStartupLinks.has(url));
+      };
+
+      const drainStartupLinks = async () => {
+        const urls = await collectStartupLinks();
         for (const url of urls) {
           if (cancelled) break;
+          processedStartupLinks.add(url);
           await handleExternalLink(url);
         }
-      } catch {
-        // Ignore; app still works without extension integration.
-      }
+      };
+
+      await drainStartupLinks();
+      if (cancelled) return;
+
+      await new Promise((resolve) => window.setTimeout(resolve, 250));
+      if (cancelled) return;
+      await drainStartupLinks();
+      if (cancelled) return;
+
+      await new Promise((resolve) => window.setTimeout(resolve, 750));
+      if (cancelled) return;
+      await drainStartupLinks();
     };
 
-    void consumePendingExternalLinks();
+    void consumeStartupExternalLinks();
 
     return () => {
       cancelled = true;
