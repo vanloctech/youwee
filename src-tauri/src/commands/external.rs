@@ -122,9 +122,8 @@ mod tests {
     #[test]
     fn pending_external_links_are_deduped_and_drained() {
         let _ = take_pending_external_links();
-        let link =
-            "youwee://download?v=1&url=https%3A%2F%2Fwww.youtube.com%2Fwatch%3Fv%3Dabc123"
-                .to_string();
+        let link = "youwee://download?v=1&url=https%3A%2F%2Fwww.youtube.com%2Fwatch%3Fv%3Dabc123"
+            .to_string();
 
         enqueue_external_links(vec![link.clone(), link.clone()]);
 

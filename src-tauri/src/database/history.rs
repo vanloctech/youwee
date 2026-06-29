@@ -463,6 +463,68 @@ fn ensure_tag_id(conn: &Connection, raw_name: &str) -> Result<Option<String>, St
     Ok(Some(id))
 }
 
+fn find_collection_by_normalized_name(
+    conn: &Connection,
+    normalized_name: &str,
+) -> Result<Option<HistoryCollection>, String> {
+    let mut stmt = conn
+        .prepare("SELECT id, name, color FROM collections WHERE normalized_name = ?1 LIMIT 1")
+        .map_err(|e| format!("Failed to prepare collection lookup: {}", e))?;
+    let mut rows = stmt
+        .query(params![normalized_name])
+        .map_err(|e| format!("Failed to lookup collection: {}", e))?;
+    if let Some(row) = rows
+        .next()
+        .map_err(|e| format!("Failed to read collection row: {}", e))?
+    {
+        Ok(Some(HistoryCollection {
+            id: row
+                .get(0)
+                .map_err(|e| format!("Failed to parse collection id: {}", e))?,
+            name: row
+                .get(1)
+                .map_err(|e| format!("Failed to parse collection name: {}", e))?,
+            color: row
+                .get(2)
+                .map_err(|e| format!("Failed to parse collection color: {}", e))?,
+            item_count: None,
+        }))
+    } else {
+        Ok(None)
+    }
+}
+
+pub fn ensure_collection_for_download_in_db(
+    name: &str,
+    color: Option<String>,
+) -> Result<HistoryCollection, String> {
+    let conn = get_db()?;
+    let display_name = sanitize_display_name(name);
+    let normalized_name = normalize_collection_name(name);
+    if display_name.is_empty() || normalized_name.is_empty() {
+        return Err("Collection name cannot be empty".to_string());
+    }
+
+    if let Some(collection) = find_collection_by_normalized_name(&conn, &normalized_name)? {
+        return Ok(collection);
+    }
+
+    let id = uuid::Uuid::new_v4().to_string();
+    let now = Utc::now().timestamp();
+    conn.execute(
+        "INSERT INTO collections (id, name, normalized_name, color, created_at) VALUES (?1, ?2, ?3, ?4, ?5)",
+        params![id, display_name, normalized_name, color, now],
+    )
+    .map_err(|e| format!("Failed to create collection: {}", e))?;
+
+    Ok(HistoryCollection {
+        id,
+        name: sanitize_display_name(name),
+        color,
+        item_count: Some(0),
+    })
+}
+
 /// Add a history entry (internal use)
 pub fn add_history_internal(
     url: String,
@@ -987,6 +1049,31 @@ pub fn assign_history_collections_in_db(
     Ok(())
 }
 
+pub fn add_history_collection_in_db(
+    history_id: String,
+    collection_id: String,
+) -> Result<(), String> {
+    let conn = get_db()?;
+    ensure_history_exists(&conn, &history_id)?;
+    let exists: i64 = conn
+        .query_row(
+            "SELECT COUNT(*) FROM collections WHERE id = ?1",
+            params![collection_id.clone()],
+            |row| row.get(0),
+        )
+        .map_err(|e| format!("Failed to validate collection: {}", e))?;
+    if exists == 0 {
+        return Err("Collection not found".to_string());
+    }
+
+    conn.execute(
+        "INSERT OR IGNORE INTO history_collections (history_id, collection_id) VALUES (?1, ?2)",
+        params![history_id, collection_id],
+    )
+    .map_err(|e| format!("Failed to assign collection: {}", e))?;
+    Ok(())
+}
+
 pub fn remove_history_tag_from_db(history_id: String, tag_id: String) -> Result<(), String> {
     let conn = get_db()?;
     conn.execute(
@@ -1203,6 +1290,44 @@ mod tests {
             .find(|item| item.id == collection.id)
             .expect("favorites collection");
         assert_eq!(favorites.item_count, Some(1));
+    }
+
+    #[test]
+    fn ensure_collection_reuses_existing_collection_by_normalized_name() {
+        let _guard = db_test_guard();
+        ensure_test_history_tables();
+        let first =
+            ensure_collection_for_download_in_db("My Playlist", None).expect("create collection");
+        let second = ensure_collection_for_download_in_db("  my playlist  ", None)
+            .expect("reuse collection");
+
+        assert_eq!(first.id, second.id);
+        assert_eq!(first.name, "My Playlist");
+    }
+
+    #[test]
+    fn add_history_collection_preserves_existing_assignments() {
+        let _guard = db_test_guard();
+        ensure_test_history_tables();
+        let history_id = uuid::Uuid::new_v4().to_string();
+        insert_history_row(&history_id, "");
+        let manual =
+            create_collection_in_db("Manual".to_string(), None).expect("create manual collection");
+        let auto =
+            create_collection_in_db("Auto".to_string(), None).expect("create auto collection");
+
+        assign_history_collections_in_db(history_id.clone(), vec![manual.id.clone()])
+            .expect("assign manual");
+        add_history_collection_in_db(history_id.clone(), auto.id.clone()).expect("append auto");
+
+        let entries = get_history_entries_by_ids_from_db(vec![history_id]).expect("get entry");
+        let collection_names: Vec<_> = entries[0]
+            .collections
+            .iter()
+            .map(|collection| collection.name.as_str())
+            .collect();
+        assert!(collection_names.contains(&"Manual"));
+        assert!(collection_names.contains(&"Auto"));
     }
 
     #[test]

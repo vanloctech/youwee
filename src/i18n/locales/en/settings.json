@@ -53,6 +53,8 @@
     "splitEmbeddedChaptersDesc": "Create separate files from chapters included in the video",
     "numberChapterFiles": "Number chapter files",
     "numberChapterFilesDesc": "Prefix split chapter files with chapter numbers",
+    "autoOrganizeCollections": "Auto-create collections",
+    "autoOrganizeCollectionsDesc": "Create Library collections for expanded playlists, channel downloads, and split chapter files",
     "queuePersistence": "Download Queue",
     "queuePersistenceDesc": "Keep queued downloads after closing Youwee",
     "persistDownloadQueue": "Save download queue",

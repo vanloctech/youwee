@@ -18,8 +18,10 @@ use tauri_plugin_shell::ShellExt;
 use tokio::io::{AsyncBufReadExt, BufReader};
 use tokio::process::Command;
 
+use crate::database::add_history_collection_in_db;
 use crate::database::add_history_internal;
 use crate::database::add_log_internal;
+use crate::database::ensure_collection_for_download_in_db;
 use crate::database::update_history_download;
 use crate::services::{
     add_safe_filename_args, build_cookie_args, build_proxy_args, build_site_header_args,
@@ -121,6 +123,58 @@ fn build_chapter_output_template(
         ""
     };
     format!("{output_path}/{item_prefix}{chapter_prefix}%(section_title)s.%(ext)s")
+}
+
+fn build_auto_collection_names(
+    enabled: bool,
+    playlist_collection_name: Option<&str>,
+    split_embedded_chapters: bool,
+    parent_title: Option<&str>,
+) -> Vec<String> {
+    if !enabled {
+        return Vec::new();
+    }
+
+    let mut names = Vec::new();
+    for raw_name in [
+        playlist_collection_name,
+        split_embedded_chapters.then_some(parent_title).flatten(),
+    ]
+    .into_iter()
+    .flatten()
+    {
+        let name = raw_name.trim();
+        if name.is_empty() {
+            continue;
+        }
+        let normalized = name.to_lowercase();
+        if names
+            .iter()
+            .any(|existing: &String| existing.trim().to_lowercase() == normalized)
+        {
+            continue;
+        }
+        names.push(name.to_string());
+    }
+    names
+}
+
+fn assign_history_auto_collections(history_id: &str, collection_names: &[String]) {
+    for collection_name in collection_names {
+        let result =
+            ensure_collection_for_download_in_db(collection_name, None).and_then(|collection| {
+                add_history_collection_in_db(history_id.to_string(), collection.id)
+            });
+        if let Err(error) = result {
+            add_log_internal(
+                "error",
+                "Failed to organize download into collection",
+                Some(&error),
+                None,
+            )
+            .ok();
+        }
+    }
 }
 
 fn parse_printed_filepaths(contents: &str) -> Vec<String> {
@@ -230,6 +284,29 @@ mod playlist_chapter_tests {
                 "/tmp/01 - Intro.mp4".to_string(),
                 "/tmp/02 - End.mp4".to_string(),
             ]
+        );
+    }
+
+    #[test]
+    fn auto_collection_names_are_default_off() {
+        assert!(
+            build_auto_collection_names(false, Some("Playlist"), true, Some("Video")).is_empty()
+        );
+    }
+
+    #[test]
+    fn auto_collection_names_include_playlist_and_split_parent() {
+        assert_eq!(
+            build_auto_collection_names(true, Some("Playlist"), true, Some("Video")),
+            vec!["Playlist".to_string(), "Video".to_string()]
+        );
+    }
+
+    #[test]
+    fn auto_collection_names_dedupe_playlist_and_parent() {
+        assert_eq!(
+            build_auto_collection_names(true, Some("Same Name"), true, Some(" same name ")),
+            vec!["Same Name".to_string()]
         );
     }
 
@@ -738,6 +815,8 @@ pub async fn download_video(
     number_queue_items: Option<bool>,
     split_embedded_chapters: Option<bool>,
     number_chapter_files: Option<bool>,
+    auto_organize_collections: Option<bool>,
+    playlist_collection_name: Option<String>,
     video_codec: String,
     audio_bitrate: String,
     playlist_limit: Option<u32>,
@@ -1216,6 +1295,9 @@ pub async fn download_video(
             failed_workflow_steps.clone(),
             emit_failed_workflow,
             download_kind.clone(),
+            auto_organize_collections.unwrap_or(false),
+            playlist_collection_name.clone(),
+            split_embedded_chapters,
         )
         .await;
     }
@@ -1556,6 +1638,12 @@ pub async fn download_video(
                             });
                             let output_paths =
                                 output_filepaths(&printed_filepaths, &final_filepath);
+                            let auto_collection_names = build_auto_collection_names(
+                                auto_organize_collections.unwrap_or(false),
+                                playlist_collection_name.as_deref(),
+                                split_embedded_chapters && output_paths.len() > 1,
+                                display_title.as_deref(),
+                            );
 
                             // Log success
                             let success_msg = format!(
@@ -1605,6 +1693,10 @@ pub async fn download_video(
                                             time_range,
                                         )
                                         .ok();
+                                        assign_history_auto_collections(
+                                            hist_id,
+                                            &auto_collection_names,
+                                        );
                                         progress_history_id = Some(hist_id.clone());
                                         continue;
                                     }
@@ -1623,6 +1715,12 @@ pub async fn download_video(
                                     time_range,
                                 )
                                 .ok();
+                                if let Some(ref hist_id) = history_row_id {
+                                    assign_history_auto_collections(
+                                        hist_id,
+                                        &auto_collection_names,
+                                    );
+                                }
                                 if index == 0 {
                                     progress_history_id = history_row_id;
                                 }
@@ -1844,6 +1942,9 @@ pub async fn download_video(
                 failed_workflow_steps,
                 emit_failed_workflow,
                 download_kind,
+                auto_organize_collections.unwrap_or(false),
+                playlist_collection_name,
+                split_embedded_chapters,
             )
             .await
         }
@@ -1869,6 +1970,9 @@ async fn handle_tokio_download(
     failed_workflow_steps: Vec<PluginWorkflowStepSnapshot>,
     emit_failed_workflow: bool,
     download_kind: String,
+    auto_organize_collections: bool,
+    playlist_collection_name: Option<String>,
+    split_embedded_chapters: bool,
 ) -> Result<(), String> {
     let stdout = process
         .stdout
@@ -2202,6 +2306,12 @@ async fn handle_tokio_download(
                 .and_then(|path| title_from_filepath(path))
         });
         let output_paths = output_filepaths(&printed_filepaths, &final_filepath);
+        let auto_collection_names = build_auto_collection_names(
+            auto_organize_collections,
+            playlist_collection_name.as_deref(),
+            split_embedded_chapters && output_paths.len() > 1,
+            display_title.as_deref(),
+        );
 
         let success_msg = format!(
             "Downloaded: {}",
@@ -2247,6 +2357,7 @@ async fn handle_tokio_download(
                         time_range,
                     )
                     .ok();
+                    assign_history_auto_collections(hist_id, &auto_collection_names);
                     progress_history_id = Some(hist_id.clone());
                     continue;
                 }
@@ -2265,6 +2376,9 @@ async fn handle_tokio_download(
                 time_range,
             )
             .ok();
+            if let Some(ref hist_id) = history_row_id {
+                assign_history_auto_collections(hist_id, &auto_collection_names);
+            }
             if index == 0 {
                 progress_history_id = history_row_id;
             }

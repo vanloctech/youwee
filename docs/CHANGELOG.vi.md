@@ -7,6 +7,9 @@ và dự án tuân theo [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+### Thêm mới
+- **Collection trong Thư viện** - Thêm tùy chọn tự tạo collection cho playlist đã tách, lượt tải từ channel và file chapter
+
 ### Sửa lỗi
 - **Link extension khi app chưa mở** - Sửa lỗi link tải từ browser extension chỉ mở Youwee nhưng không thêm video khi app đang đóng
 - **Đánh số trong AI Summary** - Sửa lỗi danh sách chủ đề trên giao diện luôn bắt đầu lại từ 1 khi có dòng trống giữa các mục

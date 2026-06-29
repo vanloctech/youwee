@@ -378,6 +378,7 @@ async fn fetch_channel_videos_once(
                 duration,
                 channel,
                 upload_date,
+                playlist_title: None,
             });
         }
     }

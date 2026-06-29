@@ -53,6 +53,8 @@
     "splitEmbeddedChaptersDesc": "Tạo file riêng từ các chapter đã có trong video",
     "numberChapterFiles": "Đánh số file chapter",
     "numberChapterFilesDesc": "Thêm số thứ tự chapter vào đầu tên file khi tách chapter",
+    "autoOrganizeCollections": "Tự tạo collection",
+    "autoOrganizeCollectionsDesc": "Tạo collection trong Thư viện cho playlist đã tách, lượt tải từ channel và các file chapter",
     "queuePersistence": "Hàng đợi tải xuống",
     "queuePersistenceDesc": "Giữ hàng đợi sau khi đóng Youwee",
     "persistDownloadQueue": "Lưu hàng đợi tải xuống",

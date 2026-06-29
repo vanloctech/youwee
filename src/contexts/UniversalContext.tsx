@@ -594,6 +594,7 @@ export function UniversalProvider({ children }: { children: ReactNode }) {
         numberQueueItems: downloadSettings.numberQueueItems,
         splitEmbeddedChapters: downloadSettings.splitEmbeddedChapters,
         numberChapterFiles: downloadSettings.numberChapterFiles,
+        autoOrganizeCollections: downloadSettings.autoOrganizeCollections,
         pluginWorkflowSnapshots: workflowSnapshots,
         postDownloadWorkflowSteps: loadPostDownloadWorkflowSteps(),
         autoRetryEnabled: currentSettings.autoRetryEnabled,
@@ -628,6 +629,7 @@ export function UniversalProvider({ children }: { children: ReactNode }) {
     },
     [
       downloadSettings.numberChapterFiles,
+      downloadSettings.autoOrganizeCollections,
       downloadSettings.numberQueueItems,
       downloadSettings.splitEmbeddedChapters,
       enqueueQueuedWorkflowForItems,
@@ -695,6 +697,7 @@ export function UniversalProvider({ children }: { children: ReactNode }) {
         numberQueueItems: downloadSettings.numberQueueItems,
         splitEmbeddedChapters: downloadSettings.splitEmbeddedChapters,
         numberChapterFiles: downloadSettings.numberChapterFiles,
+        autoOrganizeCollections: downloadSettings.autoOrganizeCollections,
         pluginWorkflowSnapshots: workflowSnapshots,
         postDownloadWorkflowSteps: loadPostDownloadWorkflowSteps(),
         autoRetryEnabled: currentSettings.autoRetryEnabled,
@@ -725,6 +728,7 @@ export function UniversalProvider({ children }: { children: ReactNode }) {
     },
     [
       downloadSettings.numberChapterFiles,
+      downloadSettings.autoOrganizeCollections,
       downloadSettings.numberQueueItems,
       downloadSettings.splitEmbeddedChapters,
       enqueueQueuedWorkflowForItems,
@@ -985,6 +989,9 @@ export function UniversalProvider({ children }: { children: ReactNode }) {
             queueIndex: item.queueIndex ?? null,
             queueTotal: item.queueTotal ?? null,
             numberQueueItems: itemSettings?.numberQueueItems ?? false,
+            autoOrganizeCollections:
+              itemSettings?.autoOrganizeCollections ?? downloadSettings.autoOrganizeCollections,
+            playlistCollectionName: null,
             videoCodec: 'auto', // Use auto for universal downloads
             audioBitrate: itemSettings?.audioBitrate ?? settings.audioBitrate,
             playlistLimit: null,
@@ -1226,6 +1233,7 @@ export function UniversalProvider({ children }: { children: ReactNode }) {
     }
   }, [
     downloadSettings.numberChapterFiles,
+    downloadSettings.autoOrganizeCollections,
     downloadSettings.splitEmbeddedChapters,
     enqueueFailedWorkflowForItem,
     settings,

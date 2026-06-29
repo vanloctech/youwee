@@ -103,6 +103,8 @@ export interface ItemDownloadSettings {
   numberQueueItems?: boolean;
   splitEmbeddedChapters?: boolean;
   numberChapterFiles?: boolean;
+  autoOrganizeCollections?: boolean;
+  playlistCollectionName?: string | null;
   pluginWorkflowSnapshots?: PluginWorkflowSnapshotMap;
   postDownloadWorkflowSteps?: PluginWorkflowStepSnapshot[];
   autoRetryEnabled: boolean;
@@ -127,6 +129,7 @@ export interface ItemUniversalSettings {
   numberQueueItems?: boolean;
   splitEmbeddedChapters?: boolean;
   numberChapterFiles?: boolean;
+  autoOrganizeCollections?: boolean;
   pluginWorkflowSnapshots?: PluginWorkflowSnapshotMap;
   postDownloadWorkflowSteps?: PluginWorkflowStepSnapshot[];
   autoRetryEnabled: boolean;
@@ -269,6 +272,7 @@ export interface DownloadSettings {
   numberQueueItems: boolean; // Prefix regular queued items with their queue order
   splitEmbeddedChapters: boolean; // Split downloaded media into embedded chapter files
   numberChapterFiles: boolean; // Prefix chapter files with chapter numbers when splitting
+  autoOrganizeCollections: boolean; // Create library collections for expanded playlists, channel downloads, and split chapters
   // Live stream settings
   liveFromStart: boolean; // Download live streams from the beginning
   skipLive: boolean; // Skip live streams instead of downloading them
@@ -748,6 +752,7 @@ export interface PlaylistVideoEntry {
   duration?: number;
   channel?: string;
   upload_date?: string;
+  playlist_title?: string;
 }
 
 export type YoutubeChannelContentType = 'videos' | 'shorts' | 'streams' | 'videos_shorts';

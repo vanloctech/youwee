@@ -18,7 +18,10 @@ import type {
 } from '@/lib/types';
 import { DEFAULT_SPONSORBLOCK_CATEGORIES } from '@/lib/types';
 import { sanitizeYtdlpAdvancedOptions } from '@/lib/ytdlp-advanced-options';
-import { persistManualChannelDownloadCompletion } from './channel-downloads';
+import {
+  buildChannelCollectionOptions,
+  persistManualChannelDownloadCompletion,
+} from './channel-downloads';
 import {
   type ChannelAutoDownloadEvent,
   downloadVideoCommand,
@@ -769,6 +772,7 @@ export function useChannelsController(): ChannelsContextType {
       let embedMetadata = false;
       let embedThumbnail = false;
       let liveFromStart = false;
+      let autoOrganizeCollections = false;
       let speedLimit: string | null = null;
       let sponsorBlockArgs = { remove: null as string | null, mark: null as string | null };
 
@@ -794,6 +798,7 @@ export function useChannelsController(): ChannelsContextType {
           embedMetadata = parsed.embedMetadata || false;
           embedThumbnail = parsed.embedThumbnail || false;
           liveFromStart = parsed.liveFromStart || false;
+          autoOrganizeCollections = parsed.autoOrganizeCollections === true;
           if (parsed.speedLimitEnabled && parsed.speedLimitValue) {
             speedLimit = `${parsed.speedLimitValue}${parsed.speedLimitUnit || 'M'}`;
           }
@@ -813,10 +818,16 @@ export function useChannelsController(): ChannelsContextType {
         browseChannelName ||
         followedChannelsRef.current.find((c) => c.url === browseUrl)?.name ||
         null;
+      const channelCollectionName =
+        channelName || videosToDownload.find((video) => video.channel)?.channel || null;
       if (channelName) {
         const folderName = sanitizeChannelFolderName(channelName);
         currentOutputPath = `${currentOutputPath}/${folderName}`;
       }
+      const collectionOptions = buildChannelCollectionOptions(
+        { autoOrganizeCollections },
+        channelCollectionName,
+      );
 
       const networkOptions = getNetworkOptions();
 
@@ -911,6 +922,7 @@ export function useChannelsController(): ChannelsContextType {
                 embedMetadata,
                 embedThumbnail,
                 liveFromStart,
+                ...collectionOptions,
                 speedLimit,
                 useAria2,
                 aria2Args,
@@ -1211,6 +1223,7 @@ export function useChannelsController(): ChannelsContextType {
         let aria2Args = '';
         let ytdlpAdvancedOptionsEnabled = false;
         let ytdlpAdvancedOptions: YtdlpAdvancedOption[] = [];
+        let autoOrganizeCollections = false;
 
         try {
           const saved = localStorage.getItem('youwee-settings');
@@ -1223,6 +1236,7 @@ export function useChannelsController(): ChannelsContextType {
             aria2Args = parsed.aria2Args || '';
             ytdlpAdvancedOptionsEnabled = parsed.ytdlpAdvancedOptionsEnabled === true;
             ytdlpAdvancedOptions = sanitizeYtdlpAdvancedOptions(parsed.ytdlpAdvancedOptions);
+            autoOrganizeCollections = parsed.autoOrganizeCollections === true;
           }
           logStderr = localStorage.getItem('youwee_log_stderr') !== 'false';
         } catch (_e) {
@@ -1234,6 +1248,10 @@ export function useChannelsController(): ChannelsContextType {
         // Per-channel subfolder
         const folderName = sanitizeChannelFolderName(channel_name);
         autoOutputPath = `${autoOutputPath}/${folderName}`;
+        const collectionOptions = buildChannelCollectionOptions(
+          { autoOrganizeCollections },
+          channel_name,
+        );
 
         const networkOptions = getNetworkOptions();
 
@@ -1301,6 +1319,7 @@ export function useChannelsController(): ChannelsContextType {
               useBunRuntime,
               useActualPlayerJs,
               ...networkOptions,
+              ...collectionOptions,
               useAria2,
               aria2Args,
               ytdlpAdvancedOptionsEnabled,

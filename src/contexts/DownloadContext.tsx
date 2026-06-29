@@ -800,6 +800,8 @@ export function DownloadProvider({ children }: { children: ReactNode }) {
           overrides: {
             downloadPlaylist: false,
             playlistLimit: null,
+            playlistCollectionName:
+              entries.find((entry) => entry.playlist_title)?.playlist_title ?? null,
           },
         });
 
@@ -1135,6 +1137,8 @@ export function DownloadProvider({ children }: { children: ReactNode }) {
             numberQueueItems: itemSettings?.numberQueueItems ?? false,
             splitEmbeddedChapters: itemSettings?.splitEmbeddedChapters ?? false,
             numberChapterFiles: itemSettings?.numberChapterFiles ?? true,
+            autoOrganizeCollections: itemSettings?.autoOrganizeCollections ?? false,
+            playlistCollectionName: itemSettings?.playlistCollectionName ?? null,
             videoCodec: itemSettings?.videoCodec ?? settings.videoCodec,
             audioBitrate: itemSettings?.audioBitrate ?? settings.audioBitrate,
             playlistLimit:

@@ -52,6 +52,8 @@
     "splitEmbeddedChaptersDesc": "Criar arquivos separados a partir dos capítulos incluídos no vídeo",
     "numberChapterFiles": "Numerar arquivos de capítulo",
     "numberChapterFilesDesc": "Adicionar o número do capítulo aos arquivos de capítulo divididos",
+    "autoOrganizeCollections": "Criar coleções automaticamente",
+    "autoOrganizeCollectionsDesc": "Criar coleções da Biblioteca para playlists expandidas, downloads de canais e arquivos de capítulo",
     "liveStream": "Transmissão ao Vivo",
     "liveStreamDesc": "Configurar comportamento de download de transmissões ao vivo",
     "liveFromStart": "Baixar desde o Início",

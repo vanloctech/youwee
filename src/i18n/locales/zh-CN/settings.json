@@ -53,6 +53,8 @@
     "splitEmbeddedChaptersDesc": "根据视频中已有的章节创建单独文件",
     "numberChapterFiles": "为章节文件编号",
     "numberChapterFilesDesc": "为拆分出的章节文件添加章节编号前缀",
+    "autoOrganizeCollections": "自动创建集合",
+    "autoOrganizeCollectionsDesc": "为展开的播放列表、频道下载和拆分出的章节文件创建资料库集合",
     "queuePersistence": "下载队列",
     "queuePersistenceDesc": "关闭 Youwee 后保留下载队列",
     "persistDownloadQueue": "保存下载队列",

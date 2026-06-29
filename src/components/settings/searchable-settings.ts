@@ -123,6 +123,13 @@ export const SEARCHABLE_SETTINGS: SearchableSetting[] = [
     section: 'download',
   },
   {
+    id: 'auto-organize-collections',
+    labelKey: 'download.autoOrganizeCollections',
+    descriptionKey: 'download.autoOrganizeCollectionsDesc',
+    keywords: ['collection', 'collections', 'playlist', 'chapter', 'library', 'organize'],
+    section: 'download',
+  },
+  {
     id: 'plugins-manager',
     labelKey: 'plugins.title',
     descriptionKey: 'plugins.description',

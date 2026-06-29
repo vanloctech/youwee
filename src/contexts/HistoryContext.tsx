@@ -702,13 +702,16 @@ export function HistoryProvider({ children }: { children: ReactNode }) {
     const unlisten = listen<DownloadProgress>('download-progress', (event) => {
       if (event.payload.status === 'finished') {
         // Delay slightly to ensure Rust has finished writing the DB record
-        setTimeout(() => refreshHistory(), 800);
+        setTimeout(() => {
+          refreshHistory();
+          refreshTaxonomy();
+        }, 800);
       }
     });
     return () => {
       unlisten.then((fn) => fn());
     };
-  }, [refreshHistory]);
+  }, [refreshHistory, refreshTaxonomy]);
 
   return (
     <HistoryContext.Provider

@@ -65,6 +65,118 @@ fn parse_basic_video_info_output(
     Ok((title.to_string(), thumbnail, duration))
 }
 
+fn json_string(value: &serde_json::Value, keys: &[&str]) -> Option<String> {
+    keys.iter()
+        .find_map(|key| value.get(*key).and_then(|v| v.as_str()))
+        .map(str::trim)
+        .filter(|value| !value.is_empty())
+        .map(ToString::to_string)
+}
+
+fn playlist_title_from_json(value: &serde_json::Value) -> Option<String> {
+    json_string(value, &["playlist_title", "playlist", "title"])
+}
+
+fn playlist_title_from_entry_json(value: &serde_json::Value) -> Option<String> {
+    json_string(value, &["playlist_title", "playlist"])
+}
+
+fn playlist_entry_from_json(
+    json: &serde_json::Value,
+    fallback_playlist_title: Option<&str>,
+) -> Option<PlaylistVideoEntry> {
+    if json.get("_type").and_then(|v| v.as_str()) == Some("playlist") {
+        return None;
+    }
+
+    let id = json_string(json, &["id"])?;
+    let title = json_string(json, &["title"]).unwrap_or_else(|| "Unknown".to_string());
+    let video_url = json_string(json, &["url", "webpage_url"])
+        .unwrap_or_else(|| format!("https://www.youtube.com/watch?v={}", id));
+
+    let thumbnail = json
+        .get("thumbnail")
+        .or_else(|| {
+            json.get("thumbnails")
+                .and_then(|t| t.as_array())
+                .and_then(|arr| arr.first())
+        })
+        .and_then(|v| {
+            if v.is_string() {
+                v.as_str().map(|s| s.to_string())
+            } else {
+                v.get("url").and_then(|u| u.as_str()).map(|s| s.to_string())
+            }
+        });
+
+    let duration = json.get("duration").and_then(|v| v.as_f64());
+    let channel = json_string(json, &["channel", "uploader"]);
+    let upload_date = json_string(json, &["upload_date"]);
+    let playlist_title = playlist_title_from_entry_json(json)
+        .or_else(|| fallback_playlist_title.map(ToString::to_string));
+
+    Some(PlaylistVideoEntry {
+        id,
+        title,
+        url: video_url,
+        thumbnail,
+        duration,
+        channel,
+        upload_date,
+        playlist_title,
+    })
+}
+
+fn parse_playlist_entries_output(
+    output: &str,
+    fallback_playlist_title: Option<&str>,
+) -> Vec<PlaylistVideoEntry> {
+    let trimmed = output.trim();
+    if trimmed.is_empty() {
+        return Vec::new();
+    }
+
+    if let Ok(json) = serde_json::from_str::<serde_json::Value>(trimmed) {
+        if let Some(entries) = json.get("entries").and_then(|value| value.as_array()) {
+            let playlist_title = playlist_title_from_json(&json).or(fallback_playlist_title
+                .filter(|title| !title.trim().is_empty())
+                .map(ToString::to_string));
+
+            return entries
+                .iter()
+                .filter_map(|entry| playlist_entry_from_json(entry, playlist_title.as_deref()))
+                .collect();
+        }
+    }
+
+    let mut entries = Vec::new();
+    let mut playlist_title = fallback_playlist_title
+        .filter(|title| !title.trim().is_empty())
+        .map(ToString::to_string);
+
+    for line in trimmed.lines() {
+        let line = line.trim();
+        if line.is_empty() {
+            continue;
+        }
+
+        if let Ok(json) = serde_json::from_str::<serde_json::Value>(line) {
+            if json.get("_type").and_then(|v| v.as_str()) == Some("playlist") {
+                if playlist_title.is_none() {
+                    playlist_title = playlist_title_from_json(&json);
+                }
+                continue;
+            }
+
+            if let Some(entry) = playlist_entry_from_json(&json, playlist_title.as_deref()) {
+                entries.push(entry);
+            }
+        }
+    }
+
+    entries
+}
+
 /// Get video transcript/subtitles for AI summarization
 #[tauri::command]
 pub async fn get_video_transcript(
@@ -1137,7 +1249,7 @@ pub async fn get_playlist_entries(
 
     let mut args = vec![
         "--flat-playlist".to_string(),
-        "--dump-json".to_string(),
+        "--dump-single-json".to_string(),
         "--no-warnings".to_string(),
         "--socket-timeout".to_string(),
         "30".to_string(),
@@ -1189,75 +1301,7 @@ pub async fn get_playlist_entries(
     }
     let output = output_result.stdout;
 
-    let mut entries: Vec<PlaylistVideoEntry> = Vec::new();
-
-    for line in output.lines() {
-        let line = line.trim();
-        if line.is_empty() {
-            continue;
-        }
-
-        if let Ok(json) = serde_json::from_str::<serde_json::Value>(line) {
-            let id = json
-                .get("id")
-                .and_then(|v| v.as_str())
-                .unwrap_or("")
-                .to_string();
-
-            if id.is_empty() {
-                continue;
-            }
-
-            let title = json
-                .get("title")
-                .and_then(|v| v.as_str())
-                .unwrap_or("Unknown")
-                .to_string();
-            let video_url = json
-                .get("url")
-                .or_else(|| json.get("webpage_url"))
-                .and_then(|v| v.as_str())
-                .map(|s| s.to_string())
-                .unwrap_or_else(|| format!("https://www.youtube.com/watch?v={}", id));
-
-            let thumbnail = json
-                .get("thumbnail")
-                .or_else(|| {
-                    json.get("thumbnails")
-                        .and_then(|t| t.as_array())
-                        .and_then(|arr| arr.first())
-                })
-                .and_then(|v| {
-                    if v.is_string() {
-                        v.as_str().map(|s| s.to_string())
-                    } else {
-                        v.get("url").and_then(|u| u.as_str()).map(|s| s.to_string())
-                    }
-                });
-
-            let duration = json.get("duration").and_then(|v| v.as_f64());
-            let channel = json
-                .get("channel")
-                .or_else(|| json.get("uploader"))
-                .and_then(|v| v.as_str())
-                .map(|s| s.to_string());
-
-            let upload_date = json
-                .get("upload_date")
-                .and_then(|v| v.as_str())
-                .map(|s| s.to_string());
-
-            entries.push(PlaylistVideoEntry {
-                id,
-                title,
-                url: video_url,
-                thumbnail,
-                duration,
-                channel,
-                upload_date,
-            });
-        }
-    }
+    let entries = parse_playlist_entries_output(&output, None);
 
     if entries.is_empty() {
         return Err(BackendError::from_message("No videos found in playlist").to_wire_string());
@@ -1454,5 +1498,53 @@ mod tests {
         assert_eq!(title, "Video title");
         assert_eq!(thumbnail, None);
         assert_eq!(duration, None);
+    }
+
+    #[test]
+    fn parse_playlist_entries_output_applies_parent_playlist_title() {
+        let output = r#"{
+            "_type": "playlist",
+            "id": "PL123",
+            "title": "My Playlist",
+            "entries": [
+                {
+                    "id": "abc123",
+                    "title": "First video",
+                    "url": "https://www.youtube.com/watch?v=abc123",
+                    "duration": 120
+                },
+                {
+                    "id": "def456",
+                    "title": "Second video",
+                    "url": "https://www.youtube.com/watch?v=def456"
+                }
+            ]
+        }"#;
+
+        let entries = parse_playlist_entries_output(output, None);
+
+        assert_eq!(entries.len(), 2);
+        assert_eq!(entries[0].title, "First video");
+        assert_eq!(entries[0].playlist_title.as_deref(), Some("My Playlist"));
+        assert_eq!(entries[1].playlist_title.as_deref(), Some("My Playlist"));
+    }
+
+    #[test]
+    fn parse_playlist_entries_output_keeps_line_json_entry_playlist_title() {
+        let output = concat!(
+            r#"{"id":"abc123","title":"First video","url":"https://youtu.be/abc123","playlist_title":"Line Playlist"}"#,
+            "\n",
+            r#"{"id":"def456","title":"Second video","url":"https://youtu.be/def456"}"#,
+            "\n"
+        );
+
+        let entries = parse_playlist_entries_output(output, Some("Fallback Playlist"));
+
+        assert_eq!(entries.len(), 2);
+        assert_eq!(entries[0].playlist_title.as_deref(), Some("Line Playlist"));
+        assert_eq!(
+            entries[1].playlist_title.as_deref(),
+            Some("Fallback Playlist")
+        );
     }
 }

@@ -1,5 +1,28 @@
 import { describe, expect, test } from 'bun:test';
-import { persistManualChannelDownloadCompletion } from '../src/contexts/channels/channel-downloads';
+import {
+  buildChannelCollectionOptions,
+  persistManualChannelDownloadCompletion,
+} from '../src/contexts/channels/channel-downloads';
+
+describe('buildChannelCollectionOptions', () => {
+  test('uses the channel name as collection name when auto organize is enabled', () => {
+    expect(buildChannelCollectionOptions({ autoOrganizeCollections: true }, '  NCS  ')).toEqual({
+      autoOrganizeCollections: true,
+      playlistCollectionName: 'NCS',
+    });
+  });
+
+  test('does not request a collection when disabled or missing a channel name', () => {
+    expect(buildChannelCollectionOptions({ autoOrganizeCollections: false }, 'NCS')).toEqual({
+      autoOrganizeCollections: false,
+      playlistCollectionName: null,
+    });
+    expect(buildChannelCollectionOptions({ autoOrganizeCollections: true }, '   ')).toEqual({
+      autoOrganizeCollections: false,
+      playlistCollectionName: null,
+    });
+  });
+});
 
 describe('persistManualChannelDownloadCompletion', () => {
   test('waits for the downloaded status to persist after a successful manual channel download', async () => {
