@@ -497,7 +497,7 @@ jobs:
           cat > RELEASE_BODY.md << 'HEADER'
           # Youwee ${{ github.ref_name }}
           
-          A modern, beautiful YouTube downloader built with Tauri.
+          Beautiful and Ultimate yt-dlp GUI & Video Downloader - Processing - Free & Open Source
           
           HEADER
           
@@ -525,11 +525,11 @@ jobs:
           ## 📋 Requirements
           - **Windows**: Windows 10 or later
           - **macOS**: 10.15 (Catalina) or later  
-          - **Linux**: Ubuntu 22.04 or equivalent
+          - **Linux**: Ubuntu 20.04 or equivalent
           
           ## Optional
           - **FFmpeg** - for best video/audio quality (auto-download available in Settings)
-          - **Bun Runtime** - if you can only download 360p from YouTube (auto-download available in Settings)
+          - **Gallery-dl** - for download images from supported sites (self-setup required)
 
           ## Browser Extension Install
           - Chromium: download `Youwee-Extension-Chromium.zip` -> extract -> open `chrome://extensions` -> enable Developer mode -> **Load unpacked**.
