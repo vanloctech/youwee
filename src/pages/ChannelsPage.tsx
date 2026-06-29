@@ -24,7 +24,13 @@ import { Input } from '@/components/ui/input';
 import { detectPlatform, isSupportedPlatform } from '@/contexts/channels/useChannelsController';
 import { useChannels } from '@/contexts/channels-context';
 import { useDependencies } from '@/contexts/DependenciesContext';
-import type { Format, Quality, VideoCodec, YoutubeChannelContentType } from '@/lib/types';
+import type {
+  Format,
+  PreferredFps,
+  Quality,
+  VideoCodec,
+  YoutubeChannelContentType,
+} from '@/lib/types';
 import { cn } from '@/lib/utils';
 import { ChannelDetailView } from '@/pages/channels/ChannelDetailView';
 import { ChannelFetchLoadingState } from '@/pages/channels/ChannelFetchLoadingState';
@@ -90,6 +96,7 @@ export function ChannelsPage() {
   const [quality, setQuality] = useState<Quality>(initSettings.quality);
   const [format, setFormat] = useState<Format>(initSettings.format);
   const [videoCodec, setVideoCodec] = useState<VideoCodec>(initSettings.videoCodec);
+  const [preferredFps, setPreferredFps] = useState<PreferredFps>(initSettings.preferredFps);
   const [isAudioMode, setIsAudioMode] = useState(initSettings.isAudioMode);
 
   // FFmpeg dialog state
@@ -166,11 +173,11 @@ export function ChannelsPage() {
       return;
     }
     try {
-      await downloadSelectedVideos(quality, format, videoCodec);
+      await downloadSelectedVideos(quality, format, videoCodec, preferredFps);
     } catch (error) {
       console.error('Download failed:', error);
     }
-  }, [downloadSelectedVideos, quality, format, videoCodec, ffmpegRequired]);
+  }, [downloadSelectedVideos, quality, format, videoCodec, preferredFps, ffmpegRequired]);
 
   const handleFollow = useCallback(async () => {
     if (!browseChannelName || !browseUrl) return;
@@ -186,6 +193,7 @@ export function ChannelsPage() {
           quality: isAudioMode ? 'audio' : quality,
           format,
           videoCodec,
+          preferredFps,
           audioBitrate: '192',
         },
         isYoutubeChannelContentUrl(browseUrl) ? youtubeContentType : 'videos',
@@ -204,6 +212,7 @@ export function ChannelsPage() {
     quality,
     format,
     videoCodec,
+    preferredFps,
     isAudioMode,
     youtubeContentType,
   ]);
@@ -331,10 +340,12 @@ export function ChannelsPage() {
           quality={quality}
           format={format}
           videoCodec={videoCodec}
+          preferredFps={preferredFps}
           isAudioMode={isAudioMode}
           onQualityChange={handleQualityChange}
           onFormatChange={setFormat}
           onVideoCodecChange={setVideoCodec}
+          onPreferredFpsChange={setPreferredFps}
           onAudioModeToggle={handleAudioModeToggle}
           outputPath={outputPath}
           onSelectFolder={selectOutputFolder}

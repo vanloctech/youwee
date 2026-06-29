@@ -20,7 +20,12 @@ import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { useChannels } from '@/contexts/channels-context';
 import { useDependencies } from '@/contexts/DependenciesContext';
-import type { FollowedChannel, Quality, YoutubeChannelContentType } from '@/lib/types';
+import type {
+  FollowedChannel,
+  PreferredFps,
+  Quality,
+  YoutubeChannelContentType,
+} from '@/lib/types';
 import { cn } from '@/lib/utils';
 import { ChannelFetchLoadingState } from '@/pages/channels/ChannelFetchLoadingState';
 import { ChannelSettingsBar, YoutubeContentTypeSelect } from '@/pages/channels/ChannelSettingsBar';
@@ -97,6 +102,9 @@ export function ChannelDetailView({ channel, onBack }: ChannelDetailViewProps) {
   const [settingsDownloadVideoCodec, setSettingsDownloadVideoCodec] = useState(
     channel.download_video_codec || 'h264',
   );
+  const [settingsDownloadPreferredFps, setSettingsDownloadPreferredFps] = useState<PreferredFps>(
+    channel.download_preferred_fps === '30' ? '30' : 'original',
+  );
   const [settingsDownloadAudioBitrate, setSettingsDownloadAudioBitrate] = useState(
     channel.download_audio_bitrate || '192',
   );
@@ -126,6 +134,7 @@ export function ChannelDetailView({ channel, onBack }: ChannelDetailViewProps) {
     setSettingsDownloadQuality(channel.download_quality || 'best');
     setSettingsDownloadFormat(channel.download_format || 'mp4');
     setSettingsDownloadVideoCodec(channel.download_video_codec || 'h264');
+    setSettingsDownloadPreferredFps(channel.download_preferred_fps === '30' ? '30' : 'original');
     setSettingsDownloadAudioBitrate(channel.download_audio_bitrate || '192');
     setSettingsYoutubeContentType(channel.youtube_content_type || 'videos');
     setSettingsIsAudioMode(
@@ -144,6 +153,7 @@ export function ChannelDetailView({ channel, onBack }: ChannelDetailViewProps) {
         downloadQuality: settingsIsAudioMode ? 'audio' : settingsDownloadQuality,
         downloadFormat: settingsDownloadFormat,
         downloadVideoCodec: settingsDownloadVideoCodec,
+        downloadPreferredFps: settingsDownloadPreferredFps,
         downloadAudioBitrate: settingsDownloadAudioBitrate,
         filterMinDuration: settingsFilterMinDuration ? Number(settingsFilterMinDuration) : null,
         filterMaxDuration: settingsFilterMaxDuration ? Number(settingsFilterMaxDuration) : null,
@@ -162,6 +172,7 @@ export function ChannelDetailView({ channel, onBack }: ChannelDetailViewProps) {
         download_quality: settingsIsAudioMode ? 'audio' : settingsDownloadQuality,
         download_format: settingsDownloadFormat,
         download_video_codec: settingsDownloadVideoCodec,
+        download_preferred_fps: settingsDownloadPreferredFps,
         download_audio_bitrate: settingsDownloadAudioBitrate,
         filter_min_duration: settingsFilterMinDuration
           ? Number(settingsFilterMinDuration)
@@ -190,6 +201,7 @@ export function ChannelDetailView({ channel, onBack }: ChannelDetailViewProps) {
     settingsDownloadQuality,
     settingsDownloadFormat,
     settingsDownloadVideoCodec,
+    settingsDownloadPreferredFps,
     settingsDownloadAudioBitrate,
     settingsYoutubeContentType,
     settingsIsAudioMode,
@@ -207,6 +219,7 @@ export function ChannelDetailView({ channel, onBack }: ChannelDetailViewProps) {
   const [quality, setQuality] = useState<Quality>(initSettings.quality);
   const [format, setFormat] = useState(initSettings.format);
   const [videoCodec, setVideoCodec] = useState(initSettings.videoCodec);
+  const [preferredFps, setPreferredFps] = useState<PreferredFps>(initSettings.preferredFps);
   const [isAudioMode, setIsAudioMode] = useState(initSettings.isAudioMode);
 
   const [showFfmpegDialog, setShowFfmpegDialog] = useState(false);
@@ -265,11 +278,11 @@ export function ChannelDetailView({ channel, onBack }: ChannelDetailViewProps) {
       return;
     }
     try {
-      await downloadSelectedVideos(quality, format, videoCodec);
+      await downloadSelectedVideos(quality, format, videoCodec, preferredFps);
     } catch (error) {
       console.error('Download failed:', error);
     }
-  }, [downloadSelectedVideos, quality, format, videoCodec, ffmpegRequired]);
+  }, [downloadSelectedVideos, quality, format, videoCodec, preferredFps, ffmpegRequired]);
 
   const pendingCount = selectedVideoIds.size;
 
@@ -497,6 +510,22 @@ export function ChannelDetailView({ channel, onBack }: ChannelDetailViewProps) {
                   </div>
                 )}
 
+                {!settingsIsAudioMode && (
+                  <div className="flex items-center gap-1.5">
+                    <Label className="text-xs text-muted-foreground">{t('frameRate')}</Label>
+                    <select
+                      value={settingsDownloadPreferredFps}
+                      onChange={(event) =>
+                        setSettingsDownloadPreferredFps(event.target.value as PreferredFps)
+                      }
+                      className="h-8 px-2 rounded-md text-xs bg-background/50 border border-border/50"
+                    >
+                      <option value="original">{t('frameRateOriginal')}</option>
+                      <option value="30">{t('frameRate30')}</option>
+                    </select>
+                  </div>
+                )}
+
                 {settingsIsAudioMode && (
                   <div className="flex items-center gap-1.5">
                     <Label className="text-xs text-muted-foreground">{t('audioBitrate')}</Label>
@@ -611,10 +640,12 @@ export function ChannelDetailView({ channel, onBack }: ChannelDetailViewProps) {
           quality={quality}
           format={format}
           videoCodec={videoCodec}
+          preferredFps={preferredFps}
           isAudioMode={isAudioMode}
           onQualityChange={handleQualityChange}
           onFormatChange={setFormat}
           onVideoCodecChange={setVideoCodec}
+          onPreferredFpsChange={setPreferredFps}
           onAudioModeToggle={handleAudioModeToggle}
           outputPath={outputPath}
           onSelectFolder={selectOutputFolder}

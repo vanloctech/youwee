@@ -1,4 +1,4 @@
-import { FileVideo, FolderOpen, Music } from 'lucide-react';
+import { FileVideo, FolderOpen, Info, Music } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import {
   Select,
@@ -7,7 +7,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import type { Format, Quality, VideoCodec, YoutubeChannelContentType } from '@/lib/types';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import type {
+  Format,
+  PreferredFps,
+  Quality,
+  VideoCodec,
+  YoutubeChannelContentType,
+} from '@/lib/types';
 import { cn } from '@/lib/utils';
 
 const videoQualityOptions: { value: Quality; label: string; short: string }[] = [
@@ -40,6 +47,11 @@ const videoCodecOptions: { value: VideoCodec; label: string }[] = [
   { value: 'av1', label: 'AV1' },
 ];
 
+const preferredFpsOptions: { value: PreferredFps; labelKey: string }[] = [
+  { value: 'original', labelKey: 'frameRateOriginal' },
+  { value: '30', labelKey: 'frameRate30' },
+];
+
 const youtubeContentTypeOptions: YoutubeChannelContentType[] = [
   'videos',
   'shorts',
@@ -51,10 +63,12 @@ type ChannelSettingsBarProps = {
   quality: Quality;
   format: Format;
   videoCodec: VideoCodec;
+  preferredFps: PreferredFps;
   isAudioMode: boolean;
   onQualityChange: (q: Quality) => void;
   onFormatChange: (f: Format) => void;
   onVideoCodecChange: (c: VideoCodec) => void;
+  onPreferredFpsChange: (fps: PreferredFps) => void;
   onAudioModeToggle: () => void;
   outputPath: string;
   onSelectFolder: () => void;
@@ -68,10 +82,12 @@ export function ChannelSettingsBar({
   quality,
   format,
   videoCodec,
+  preferredFps,
   isAudioMode,
   onQualityChange,
   onFormatChange,
   onVideoCodecChange,
+  onPreferredFpsChange,
   onAudioModeToggle,
   outputPath,
   onSelectFolder,
@@ -80,6 +96,7 @@ export function ChannelSettingsBar({
   showYoutubeContentType,
   disabled,
 }: ChannelSettingsBarProps) {
+  const { t } = useTranslation('channels');
   const formatOptions = isAudioMode ? audioFormatOptions : videoFormatOptions;
   const currentVideoQuality = isAudioMode ? '1080' : quality;
   const outputFolderName = outputPath ? outputPath.split('/').pop() || outputPath : '';
@@ -175,6 +192,49 @@ export function ChannelSettingsBar({
             ))}
           </SelectContent>
         </Select>
+      )}
+
+      {!isAudioMode && (
+        <div className="flex items-center gap-1.5">
+          <Select
+            value={preferredFps}
+            onValueChange={(value) => onPreferredFpsChange(value as PreferredFps)}
+            disabled={disabled}
+          >
+            <SelectTrigger className="w-[118px] h-9 text-xs bg-card/50 border-border/50">
+              <SelectValue>
+                {t(
+                  preferredFpsOptions.find((option) => option.value === preferredFps)?.labelKey ||
+                    'frameRateOriginal',
+                )}
+              </SelectValue>
+            </SelectTrigger>
+            <SelectContent>
+              {preferredFpsOptions.map((option) => (
+                <SelectItem key={option.value} value={option.value} className="text-xs">
+                  {t(option.labelKey)}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <TooltipProvider delayDuration={150}>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button
+                  type="button"
+                  aria-label={t('frameRateHint')}
+                  className="inline-flex text-muted-foreground hover:text-foreground"
+                  disabled={disabled}
+                >
+                  <Info className="h-3.5 w-3.5" aria-hidden="true" />
+                </button>
+              </TooltipTrigger>
+              <TooltipContent side="top" className="max-w-56">
+                {t('frameRateHint')}
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        </div>
       )}
 
       {showYoutubeContentType && youtubeContentType && onYoutubeContentTypeChange && (

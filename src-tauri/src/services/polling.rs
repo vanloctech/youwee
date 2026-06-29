@@ -79,6 +79,7 @@ pub struct AutoDownloadEvent {
     pub quality: String,
     pub format: String,
     pub video_codec: String,
+    pub preferred_fps: String,
     pub audio_bitrate: String,
     pub download_threads: i64,
 }
@@ -170,6 +171,7 @@ pub fn start_polling(app: AppHandle) {
                                         quality: channel.download_quality.clone(),
                                         format: channel.download_format.clone(),
                                         video_codec: channel.download_video_codec.clone(),
+                                        preferred_fps: channel.download_preferred_fps.clone(),
                                         audio_bitrate: channel.download_audio_bitrate.clone(),
                                         download_threads: channel.download_threads,
                                     },

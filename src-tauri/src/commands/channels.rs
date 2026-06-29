@@ -20,6 +20,13 @@ fn sanitize_youtube_content_type(value: Option<&str>) -> String {
     }
 }
 
+fn sanitize_preferred_fps(value: Option<&str>) -> String {
+    match value {
+        Some("30") => "30".to_string(),
+        _ => "original".to_string(),
+    }
+}
+
 /// Build a fallback video URL based on the channel's platform.
 /// Used when yt-dlp doesn't return a `url` or `webpage_url` field.
 fn build_fallback_video_url(channel_url: &str, video_id: &str) -> String {
@@ -661,6 +668,7 @@ pub async fn follow_channel(
     download_quality: Option<String>,
     download_format: Option<String>,
     download_video_codec: Option<String>,
+    download_preferred_fps: Option<String>,
     download_audio_bitrate: Option<String>,
     youtube_content_type: Option<String>,
 ) -> Result<String, String> {
@@ -668,6 +676,7 @@ pub async fn follow_channel(
     let download_quality = download_quality.unwrap_or_else(|| "best".to_string());
     let download_format = download_format.unwrap_or_else(|| "mp4".to_string());
     let download_video_codec = download_video_codec.unwrap_or_else(|| "h264".to_string());
+    let download_preferred_fps = sanitize_preferred_fps(download_preferred_fps.as_deref());
     let download_audio_bitrate = download_audio_bitrate.unwrap_or_else(|| "192".to_string());
     let youtube_content_type = if platform == "youtube" {
         sanitize_youtube_content_type(youtube_content_type.as_deref())
@@ -683,6 +692,7 @@ pub async fn follow_channel(
         download_format,
         download_video_codec,
         download_audio_bitrate,
+        download_preferred_fps,
         youtube_content_type,
     )
 }
@@ -708,6 +718,7 @@ pub async fn update_channel_settings(
     download_quality: String,
     download_format: String,
     download_video_codec: Option<String>,
+    download_preferred_fps: Option<String>,
     download_audio_bitrate: Option<String>,
     filter_min_duration: Option<i64>,
     filter_max_duration: Option<i64>,
@@ -725,6 +736,7 @@ pub async fn update_channel_settings(
         download_format,
         download_video_codec.unwrap_or_else(|| "h264".to_string()),
         download_audio_bitrate.unwrap_or_else(|| "192".to_string()),
+        sanitize_preferred_fps(download_preferred_fps.as_deref()),
         filter_min_duration,
         filter_max_duration,
         filter_include_keywords,

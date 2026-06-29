@@ -202,6 +202,7 @@ export interface ChannelsContextType {
       quality: string;
       format: string;
       videoCodec: string;
+      preferredFps: string;
       audioBitrate: string;
     },
     youtubeContentType?: YoutubeChannelContentType,
@@ -215,6 +216,7 @@ export interface ChannelsContextType {
     downloadQuality: string;
     downloadFormat: string;
     downloadVideoCodec?: string;
+    downloadPreferredFps?: string;
     downloadAudioBitrate?: string;
     filterMinDuration?: number | null;
     filterMaxDuration?: number | null;
@@ -250,7 +252,12 @@ export interface ChannelsContextType {
   toggleVideoSelection: (id: string) => void;
   selectAllVideos: () => void;
   deselectAllVideos: () => void;
-  downloadSelectedVideos: (quality?: string, format?: string, videoCodec?: string) => Promise<void>;
+  downloadSelectedVideos: (
+    quality?: string,
+    format?: string,
+    videoCodec?: string,
+    preferredFps?: string,
+  ) => Promise<void>;
   stopDownload: () => Promise<void>;
   isDownloading: boolean;
   downloadingIds: Set<string>;
@@ -450,6 +457,7 @@ export function useChannelsController(): ChannelsContextType {
         quality: string;
         format: string;
         videoCodec: string;
+        preferredFps: string;
         audioBitrate: string;
       },
       youtubeContentType?: YoutubeChannelContentType,
@@ -463,6 +471,7 @@ export function useChannelsController(): ChannelsContextType {
         downloadQuality: downloadSettings?.quality || 'best',
         downloadFormat: downloadSettings?.format || 'mp4',
         downloadVideoCodec: downloadSettings?.videoCodec || 'auto',
+        downloadPreferredFps: downloadSettings?.preferredFps === '30' ? '30' : 'original',
         downloadAudioBitrate: downloadSettings?.audioBitrate || '192',
         youtubeContentType:
           platform === 'youtube'
@@ -509,6 +518,7 @@ export function useChannelsController(): ChannelsContextType {
       downloadQuality: string;
       downloadFormat: string;
       downloadVideoCodec?: string;
+      downloadPreferredFps?: string;
       downloadAudioBitrate?: string;
       filterMinDuration?: number | null;
       filterMaxDuration?: number | null;
@@ -525,6 +535,7 @@ export function useChannelsController(): ChannelsContextType {
         downloadQuality: settings.downloadQuality,
         downloadFormat: settings.downloadFormat,
         downloadVideoCodec: settings.downloadVideoCodec ?? 'auto',
+        downloadPreferredFps: settings.downloadPreferredFps === '30' ? '30' : 'original',
         downloadAudioBitrate: settings.downloadAudioBitrate ?? '192',
         filterMinDuration: settings.filterMinDuration ?? null,
         filterMaxDuration: settings.filterMaxDuration ?? null,
@@ -749,7 +760,12 @@ export function useChannelsController(): ChannelsContextType {
 
   // Download selected videos (with concurrency pool + per-channel subfolder)
   const downloadSelectedVideos = useCallback(
-    async (overrideQuality?: string, overrideFormat?: string, overrideVideoCodec?: string) => {
+    async (
+      overrideQuality?: string,
+      overrideFormat?: string,
+      overrideVideoCodec?: string,
+      overridePreferredFps?: string,
+    ) => {
       const videosToDownload = browseVideos.filter((v) => selectedVideoIds.has(v.id));
       if (videosToDownload.length === 0) return;
 
@@ -757,6 +773,7 @@ export function useChannelsController(): ChannelsContextType {
       let quality = overrideQuality || 'best';
       let format = overrideFormat || 'mp4';
       let videoCodec: string = overrideVideoCodec || 'auto';
+      let preferredFps = overridePreferredFps === '30' ? '30' : 'original';
       let audioBitrate = 'auto';
       let subtitleMode = 'off';
       let subtitleLangs: string[] = [];
@@ -784,6 +801,9 @@ export function useChannelsController(): ChannelsContextType {
           if (!overrideQuality) quality = parsed.quality || 'best';
           if (!overrideFormat) format = parsed.format || 'mp4';
           if (!overrideVideoCodec) videoCodec = parsed.videoCodec || 'auto';
+          if (!overridePreferredFps) {
+            preferredFps = parsed.preferredFps === '30' ? '30' : 'original';
+          }
           audioBitrate = parsed.audioBitrate || 'auto';
           subtitleMode = parsed.subtitleMode || 'off';
           subtitleLangs = parsed.subtitleLangs || [];
@@ -909,6 +929,7 @@ export function useChannelsController(): ChannelsContextType {
                 format,
                 downloadPlaylist: false,
                 videoCodec,
+                preferredFps,
                 audioBitrate,
                 playlistLimit: null,
                 subtitleMode,
@@ -1202,6 +1223,7 @@ export function useChannelsController(): ChannelsContextType {
         quality,
         format,
         video_codec,
+        preferred_fps,
         audio_bitrate,
         download_threads,
       } = event.payload;
@@ -1309,6 +1331,7 @@ export function useChannelsController(): ChannelsContextType {
               format,
               downloadPlaylist: false,
               videoCodec: video_codec,
+              preferredFps: preferred_fps === '30' ? '30' : 'original',
               audioBitrate: audio_bitrate,
               playlistLimit: null,
               subtitleMode: 'off',

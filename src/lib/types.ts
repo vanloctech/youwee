@@ -1249,6 +1249,7 @@ export interface FollowedChannel {
   download_threads: number; // concurrent download threads (default 1)
   download_video_codec: string; // video codec (h264, vp9, av1, auto)
   download_audio_bitrate: string; // audio bitrate (128, 192, 256, 320, auto)
+  download_preferred_fps: PreferredFps; // original, 30
   youtube_content_type: YoutubeChannelContentType;
 }
 

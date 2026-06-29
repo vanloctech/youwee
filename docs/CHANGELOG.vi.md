@@ -9,7 +9,7 @@ và dự án tuân theo [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Thêm mới
 - **Collection trong Thư viện** - Thêm tùy chọn tự tạo collection cho playlist đã tách, lượt tải từ channel và file chapter
-- **Tốc độ khung hình** - Thêm tùy chọn ưu tiên tải video 30 FPS kèm cảnh báo rõ về chất lượng
+- **Tốc độ khung hình** - Thêm tùy chọn ưu tiên tải 30 FPS trong Tải xuống, Universal và Kênh, kèm cảnh báo rõ về chất lượng
 
 ### Thay đổi
 - **Tóm tắt trong Thư viện** - Tinh chỉnh action của item và chuyển bản tóm tắt AI đầy đủ sang dialog đọc riêng có chỉnh cỡ chữ

@@ -31,6 +31,7 @@ pub struct FollowedChannel {
     pub download_threads: i64,                   // concurrent download threads (default 1)
     pub download_video_codec: String,            // video codec (h264, vp9, av1, auto)
     pub download_audio_bitrate: String,          // audio bitrate (128, 192, 256, 320, auto)
+    pub download_preferred_fps: String,          // original, 30
     pub youtube_content_type: String,            // videos, shorts, streams, videos_shorts
 }
 

@@ -1,4 +1,10 @@
-import type { Format, Quality, VideoCodec, YoutubeChannelContentType } from '@/lib/types';
+import type {
+  Format,
+  PreferredFps,
+  Quality,
+  VideoCodec,
+  YoutubeChannelContentType,
+} from '@/lib/types';
 
 export const FFMPEG_REQUIRED_QUALITIES: Quality[] = ['best', '8k', '4k', '2k'];
 
@@ -6,6 +12,7 @@ export function loadInitialSettings(): {
   quality: Quality;
   format: Format;
   videoCodec: VideoCodec;
+  preferredFps: PreferredFps;
   isAudioMode: boolean;
 } {
   try {
@@ -15,6 +22,7 @@ export function loadInitialSettings(): {
       const quality: Quality = parsed.quality || 'best';
       const format: Format = parsed.format || 'mp4';
       const videoCodec: VideoCodec = parsed.videoCodec || 'auto';
+      const preferredFps: PreferredFps = parsed.preferredFps === '30' ? '30' : 'original';
       const isAudioMode = quality === 'audio' || ['mp3', 'm4a', 'opus'].includes(format);
 
       const normalizedFormat = isAudioMode
@@ -30,13 +38,20 @@ export function loadInitialSettings(): {
         quality: normalizedQuality,
         format: normalizedFormat,
         videoCodec,
+        preferredFps,
         isAudioMode,
       };
     }
   } catch {
     /* ignore */
   }
-  return { quality: 'best', format: 'mp4', videoCodec: 'auto', isAudioMode: false };
+  return {
+    quality: 'best',
+    format: 'mp4',
+    videoCodec: 'auto',
+    preferredFps: 'original',
+    isAudioMode: false,
+  };
 }
 
 export function getYoutubeContentTypeFromUrl(url: string): YoutubeChannelContentType {

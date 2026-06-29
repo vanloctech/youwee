@@ -13,6 +13,7 @@ pub fn follow_channel_db(
     download_format: String,
     download_video_codec: String,
     download_audio_bitrate: String,
+    download_preferred_fps: String,
     youtube_content_type: String,
 ) -> Result<String, String> {
     let conn = get_db()?;
@@ -20,9 +21,9 @@ pub fn follow_channel_db(
     let now = Utc::now().to_rfc3339();
 
     let rows = conn.execute(
-        "INSERT OR IGNORE INTO followed_channels (id, url, name, thumbnail, platform, download_quality, download_format, download_video_codec, download_audio_bitrate, youtube_content_type, created_at)
-         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11)",
-        params![id, url, name, thumbnail, platform, download_quality, download_format, download_video_codec, download_audio_bitrate, youtube_content_type, now],
+        "INSERT OR IGNORE INTO followed_channels (id, url, name, thumbnail, platform, download_quality, download_format, download_video_codec, download_audio_bitrate, download_preferred_fps, youtube_content_type, created_at)
+         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12)",
+        params![id, url, name, thumbnail, platform, download_quality, download_format, download_video_codec, download_audio_bitrate, download_preferred_fps, youtube_content_type, now],
     )
     .map_err(|e| format!("Failed to follow channel: {}", e))?;
 
@@ -61,7 +62,8 @@ pub fn get_followed_channels_db() -> Result<Vec<FollowedChannel>, String> {
                     check_interval, auto_download, download_quality, download_format, created_at,
                     filter_min_duration, filter_max_duration, filter_include_keywords,
                     filter_exclude_keywords, filter_max_videos, download_threads,
-                    download_video_codec, download_audio_bitrate, youtube_content_type
+                    download_video_codec, download_audio_bitrate, download_preferred_fps,
+                    youtube_content_type
              FROM followed_channels ORDER BY created_at DESC",
         )
         .map_err(|e| format!("Failed to prepare query: {}", e))?;
@@ -89,7 +91,8 @@ pub fn get_followed_channels_db() -> Result<Vec<FollowedChannel>, String> {
                 download_threads: row.get(17)?,
                 download_video_codec: row.get(18)?,
                 download_audio_bitrate: row.get(19)?,
-                youtube_content_type: row.get(20)?,
+                download_preferred_fps: row.get(20)?,
+                youtube_content_type: row.get(21)?,
             })
         })
         .map_err(|e| format!("Query failed: {}", e))?
@@ -107,7 +110,8 @@ pub fn get_followed_channel_db(id: String) -> Result<FollowedChannel, String> {
                 check_interval, auto_download, download_quality, download_format, created_at,
                 filter_min_duration, filter_max_duration, filter_include_keywords,
                 filter_exclude_keywords, filter_max_videos, download_threads,
-                download_video_codec, download_audio_bitrate, youtube_content_type
+                download_video_codec, download_audio_bitrate, download_preferred_fps,
+                youtube_content_type
          FROM followed_channels WHERE id = ?1",
         params![id],
         |row| {
@@ -132,7 +136,8 @@ pub fn get_followed_channel_db(id: String) -> Result<FollowedChannel, String> {
                 download_threads: row.get(17)?,
                 download_video_codec: row.get(18)?,
                 download_audio_bitrate: row.get(19)?,
-                youtube_content_type: row.get(20)?,
+                download_preferred_fps: row.get(20)?,
+                youtube_content_type: row.get(21)?,
             })
         },
     )
@@ -148,6 +153,7 @@ pub fn update_channel_settings_db(
     download_format: String,
     download_video_codec: String,
     download_audio_bitrate: String,
+    download_preferred_fps: String,
     filter_min_duration: Option<i64>,
     filter_max_duration: Option<i64>,
     filter_include_keywords: Option<String>,
@@ -161,10 +167,10 @@ pub fn update_channel_settings_db(
         "UPDATE followed_channels SET
             check_interval = ?1, auto_download = ?2, download_quality = ?3,
             download_format = ?4, download_video_codec = ?5, download_audio_bitrate = ?6,
-            filter_min_duration = ?7, filter_max_duration = ?8,
-            filter_include_keywords = ?9, filter_exclude_keywords = ?10, filter_max_videos = ?11,
-            download_threads = ?12, youtube_content_type = ?13
-         WHERE id = ?14",
+            download_preferred_fps = ?7, filter_min_duration = ?8, filter_max_duration = ?9,
+            filter_include_keywords = ?10, filter_exclude_keywords = ?11, filter_max_videos = ?12,
+            download_threads = ?13, youtube_content_type = ?14
+         WHERE id = ?15",
         params![
             check_interval,
             auto_download as i64,
@@ -172,6 +178,7 @@ pub fn update_channel_settings_db(
             download_format,
             download_video_codec,
             download_audio_bitrate,
+            download_preferred_fps,
             filter_min_duration,
             filter_max_duration,
             filter_include_keywords,
@@ -514,6 +521,7 @@ mod tests {
                 download_threads INTEGER NOT NULL DEFAULT 1,
                 download_video_codec TEXT NOT NULL DEFAULT 'h264',
                 download_audio_bitrate TEXT NOT NULL DEFAULT '192',
+                download_preferred_fps TEXT NOT NULL DEFAULT 'original',
                 youtube_content_type TEXT NOT NULL DEFAULT 'videos'
             );
             CREATE TABLE IF NOT EXISTS channel_videos (
@@ -669,6 +677,7 @@ mod tests {
             "mp4".to_string(),
             "h264".to_string(),
             "192".to_string(),
+            "original".to_string(),
             "videos".to_string(),
         )
         .expect("follow channel first time");
@@ -682,6 +691,7 @@ mod tests {
             "mp4".to_string(),
             "h264".to_string(),
             "192".to_string(),
+            "original".to_string(),
             "videos".to_string(),
         )
         .expect("follow channel second time");
