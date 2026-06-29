@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- **Extension cold-start links** - Fixed browser extension download links opening Youwee without adding the video on cold app launch
+
 ## [0.18.0] - 2026-06-29
 
 ### Added

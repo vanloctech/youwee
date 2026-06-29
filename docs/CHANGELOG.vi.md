@@ -7,6 +7,9 @@ và dự án tuân theo [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+### Sửa lỗi
+- **Link extension khi app chưa mở** - Sửa lỗi link tải từ browser extension chỉ mở Youwee nhưng không thêm video khi app đang đóng
+
 ## [0.18.0] - 2026-06-29
 
 ### Thêm mới
