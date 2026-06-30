@@ -31,6 +31,7 @@
 
 - **Video Downloads** — YouTube, TikTok, Facebook, Instagram, Bilibili, Youku, and 1800+ sites
 - **Browser Extension Bridge** — Chromium + Firefox extension with floating button, media/quality picker, and one-click `Download now` / `Add to queue` send to Youwee app
+- **Remote Download** — Control downloads remotely with Telegram commands when Youwee is running
 - **Plugins & Workflow Automation** — Install signed plugins, configure custom fields, assign them to download workflows, and extend Youwee with notifications, uploads, and post-download automations
 - **Channel Follow** — Follow YouTube, Bilibili & Youku channels, get notified of new videos, auto-download, and manage from system tray
 - **Metadata Fetcher** — Download video info, descriptions, comments, and thumbnails without the video
@@ -125,6 +126,10 @@ Extend Youwee with signed `.ywp` plugins for post-download workflows such as not
 
 - Recommended plugins and install guide: [PLUGINS.md](PLUGINS.md)
 - SDK: [sdk-js/README.md](sdk-js/README.md) · [youwee-sdk](https://www.npmjs.com/package/youwee-sdk)
+
+### Remote Download
+
+Control Youwee remotely with Telegram commands such as add, download, queue, status, and stop. Guide: [youwee.app/docs/remote-download](https://youwee.app/docs/remote-download)
 
 ### Build from Source
 

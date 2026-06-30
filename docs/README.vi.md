@@ -29,6 +29,7 @@
 
 - **Tải Video** — YouTube, TikTok, Facebook, Instagram, Bilibili, Youku, và hơn 1800 trang web khác
 - **Tiện ích mở rộng trình duyệt** — Extension cho Chromium + Firefox với nút nổi, chọn media/chất lượng, và gửi nhanh `Download now` / `Add to queue` sang Youwee
+- **Tải từ xa** — Điều khiển tải xuống từ xa bằng lệnh Telegram khi Youwee đang chạy
 - **Plugin & Tự động hóa workflow** — Cài plugin đã ký, cấu hình field riêng, gán vào workflow tải xuống, và mở rộng Youwee với thông báo, upload, hoặc automation sau khi tải xong
 - **Theo dõi Kênh** — Theo dõi kênh YouTube, Bilibili & Youku, nhận thông báo video mới, tự động tải xuống, và quản lý từ system tray
 - **Tóm tắt Video bằng AI** — Tóm tắt video với Gemini, OpenAI, hoặc Ollama
@@ -122,6 +123,10 @@ Mở rộng Youwee bằng plugin `.ywp` đã ký cho workflow sau khi tải xong
 - Trang plugin: [Youwee Plugins](https://youwee.app/vi/plugins)
 - Plugin khuyến nghị và hướng dẫn cài đặt: [PLUGINS.vi.md](PLUGINS.vi.md)
 - SDK: [sdk-js/README.md](../sdk-js/README.md) · [youwee-sdk](https://www.npmjs.com/package/youwee-sdk)
+
+### Tải từ xa
+
+Điều khiển Youwee từ xa bằng các lệnh Telegram như thêm link, tải, xem queue, trạng thái và dừng tải. Hướng dẫn: [youwee.app/docs/remote-download](https://youwee.app/docs/remote-download)
 
 ### Xây dựng từ mã nguồn
 
