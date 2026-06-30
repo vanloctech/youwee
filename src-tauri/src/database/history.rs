@@ -1403,6 +1403,14 @@ mod tests {
             END;",
         )
         .expect("create tables");
+        conn.execute("ALTER TABLE history ADD COLUMN summary TEXT", [])
+            .ok();
+        conn.execute("ALTER TABLE history ADD COLUMN time_range TEXT", [])
+            .ok();
+        conn.execute("ALTER TABLE history ADD COLUMN media_id TEXT", [])
+            .ok();
+        conn.execute("ALTER TABLE history ADD COLUMN canonical_url TEXT", [])
+            .ok();
         conn.execute("DELETE FROM history_search_fts", [])
             .expect("clear history search");
         conn.execute("DELETE FROM history_tags", [])
