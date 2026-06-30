@@ -7,6 +7,8 @@ và dự án tuân theo [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+## [0.19.0] - 2026-06-30
+
 ### Thêm mới
 - **Collection trong Thư viện** - Thêm tùy chọn tự tạo collection cho playlist đã tách, lượt tải từ channel và file chapter
 - **Cách xóa trong Thư viện** - Thêm cài đặt chọn việc xóa một mục trong Thư viện có xóa luôn file media hay không

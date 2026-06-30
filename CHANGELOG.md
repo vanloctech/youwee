@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.19.0] - 2026-06-30
+
 ### Added
 - **Library collections** - Added automatic Library collections for expanded playlists, channel downloads, and split chapter files
 - **Library delete behavior** - Added a setting to choose whether deleting a Library item also deletes the media file
