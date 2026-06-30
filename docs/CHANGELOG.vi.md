@@ -22,6 +22,7 @@ và dự án tuân theo [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - **Đánh số trong AI Summary** - Sửa lỗi danh sách chủ đề trên giao diện luôn bắt đầu lại từ 1 khi có dòng trống giữa các mục
 - **Điều khiển lấy video Kênh** - Thêm nút dừng khi đang lấy video kênh và tránh tải lại danh sách khi mở kênh vừa duyệt xong
 - **Thumbnail trong dialog trùng lặp** - Sửa lỗi dialog video đã tải hiển thị placeholder dù mục trong Thư viện đã có thumbnail
+- **Icon trong Cài đặt** - Sửa lỗi icon Font Awesome quá lớn làm vỡ bố cục Cài đặt khi CSS icon không khả dụng
 
 ## [0.18.0] - 2026-06-29
 

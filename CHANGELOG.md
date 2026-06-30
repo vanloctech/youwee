@@ -22,6 +22,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **AI Summary numbering** - Fixed ordered lists restarting at 1 when rendered with blank lines between topics
 - **Channel fetch controls** - Added a stop action for channel video fetching and avoided re-fetching when opening a just-browsed followed channel
 - **Duplicate dialog thumbnails** - Fixed already-downloaded video dialogs showing a placeholder when the Library entry already has a thumbnail
+- **Settings icons** - Fixed oversized Font Awesome icons breaking Settings layouts when icon CSS is unavailable
 
 ## [0.18.0] - 2026-06-29
 

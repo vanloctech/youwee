@@ -9,11 +9,12 @@ interface FaIconProps extends FontAwesomeIconProps {
   icon: IconDefinition;
 }
 
-export function FaIcon({ icon, className, ...props }: FaIconProps) {
+export function FaIcon({ icon, className, style, ...props }: FaIconProps) {
   return (
     <FontAwesomeIcon
       icon={icon}
-      className={cn('inline-block align-[-0.125em]', className)}
+      className={cn('inline-block h-[1em] w-[1em] shrink-0 align-[-0.125em]', className)}
+      style={{ width: '1em', height: '1em', ...style }}
       aria-hidden="true"
       {...props}
     />
