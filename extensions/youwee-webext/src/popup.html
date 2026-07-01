@@ -387,6 +387,14 @@
         background: rgba(168, 85, 247, 0.18);
       }
 
+      .actions[data-summary-available='false'] .secondary {
+        grid-column: 1 / -1;
+      }
+
+      .actions[data-summary-available='false'] .summary {
+        display: none;
+      }
+
       .status {
         margin-top: 10px;
         border-radius: 14px;
@@ -502,7 +510,7 @@
         </div>
       </div>
 
-      <div class="actions">
+      <div class="actions" data-summary-available="false">
         <button id="downloadBtn" type="button" class="primary"></button>
         <button id="queueBtn" type="button" class="secondary"></button>
         <button id="summaryBtn" type="button" class="summary"></button>

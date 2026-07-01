@@ -26,6 +26,7 @@
   const statusEl = document.getElementById('status');
   const madeWithPrefixEl = document.getElementById('madeWithPrefix');
   const madeWithByEl = document.getElementById('madeWithBy');
+  const actionsEl = document.querySelector('.actions');
   const downloadBtn = document.getElementById('downloadBtn');
   const queueBtn = document.getElementById('queueBtn');
   const summaryBtn = document.getElementById('summaryBtn');
@@ -322,6 +323,18 @@
     }
   }
 
+  function setSummaryAvailability(canSummarize) {
+    if (actionsEl) {
+      actionsEl.dataset.summaryAvailable = canSummarize ? 'true' : 'false';
+    }
+    summaryBtn.hidden = !canSummarize;
+    summaryBtn.disabled = !canSummarize;
+    summaryBtn.title = canSummarize
+      ? ''
+      : t('floatingSummaryUnavailable', 'Summary is available for YouTube videos');
+    summaryBtn.setAttribute('aria-hidden', canSummarize ? 'false' : 'true');
+  }
+
   function setMediaValue(nextMedia, skipQualitySync = false) {
     mediaMode = ext.normalizeMedia(nextMedia);
     updateMediaToggleUi();
@@ -400,8 +413,7 @@
       setStatus(t('popupStatusInvalid', 'This tab cannot be sent to Youwee.'), 'error');
       downloadBtn.disabled = true;
       queueBtn.disabled = true;
-      summaryBtn.disabled = true;
-      summaryBtn.title = '';
+      setSummaryAvailability(false);
       copyUrlIconBtn.disabled = true;
       if (mediaVideoBtn) mediaVideoBtn.disabled = true;
       if (mediaAudioBtn) mediaAudioBtn.disabled = true;
@@ -414,10 +426,7 @@
     urlValueEl.textContent = currentUrl;
     downloadBtn.disabled = false;
     queueBtn.disabled = false;
-    summaryBtn.disabled = !canSummarize;
-    summaryBtn.title = canSummarize
-      ? ''
-      : t('floatingSummaryUnavailable', 'Summary is available for YouTube videos');
+    setSummaryAvailability(canSummarize);
     copyUrlIconBtn.disabled = false;
     if (mediaVideoBtn) mediaVideoBtn.disabled = false;
     if (mediaAudioBtn) mediaAudioBtn.disabled = false;
