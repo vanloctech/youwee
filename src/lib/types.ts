@@ -351,6 +351,7 @@ export interface DownloadSettings {
   telegramEnabled: boolean;
   telegramBotToken: string;
   telegramAllowedChatIds: string;
+  telegramMessageThreadId: string;
   telegramPlainUrlAction: 'add' | 'download';
 }
 

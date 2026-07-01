@@ -265,7 +265,11 @@ export interface DownloadContextType {
   updateTelegramSettings: (
     updates: Pick<
       Partial<DownloadSettings>,
-      'telegramEnabled' | 'telegramBotToken' | 'telegramAllowedChatIds' | 'telegramPlainUrlAction'
+      | 'telegramEnabled'
+      | 'telegramBotToken'
+      | 'telegramAllowedChatIds'
+      | 'telegramMessageThreadId'
+      | 'telegramPlainUrlAction'
     >,
   ) => void;
   refreshTelegramStatus: () => Promise<TelegramStatus>;
@@ -356,6 +360,7 @@ export function DownloadProvider({ children }: { children: ReactNode }) {
       .split(/[\s,]+/)
       .map((id) => id.trim())
       .filter((id) => /^-?\d+$/.test(id));
+    const messageThreadId = settings.telegramMessageThreadId.trim();
 
     const timer = window.setTimeout(() => {
       invoke('set_telegram_config', {
@@ -363,6 +368,7 @@ export function DownloadProvider({ children }: { children: ReactNode }) {
           enabled: settings.telegramEnabled,
           botToken: settings.telegramBotToken,
           allowedChatIds,
+          messageThreadId: /^\d+$/.test(messageThreadId) ? Number(messageThreadId) : null,
           plainUrlAction: settings.telegramPlainUrlAction,
         },
       }).catch((e) => console.error('Failed to sync Telegram config:', e));
@@ -375,6 +381,7 @@ export function DownloadProvider({ children }: { children: ReactNode }) {
     settings.telegramEnabled,
     settings.telegramBotToken,
     settings.telegramAllowedChatIds,
+    settings.telegramMessageThreadId,
     settings.telegramPlainUrlAction,
   ]);
 
@@ -1934,7 +1941,11 @@ export function DownloadProvider({ children }: { children: ReactNode }) {
     (
       updates: Pick<
         Partial<DownloadSettings>,
-        'telegramEnabled' | 'telegramBotToken' | 'telegramAllowedChatIds' | 'telegramPlainUrlAction'
+        | 'telegramEnabled'
+        | 'telegramBotToken'
+        | 'telegramAllowedChatIds'
+        | 'telegramMessageThreadId'
+        | 'telegramPlainUrlAction'
       >,
     ) => {
       setSettings((s) => {

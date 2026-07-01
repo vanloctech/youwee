@@ -13,6 +13,7 @@ interface TelegramDownloadCommandEvent {
   url?: string | null;
   quality?: string | null;
   chatId: string;
+  messageThreadId?: number | null;
 }
 
 type StartLockRef = MutableRefObject<{
@@ -171,21 +172,29 @@ export function useTelegramRemoteCommands(
   const latestRef = useRef({ download, setCurrentPage, universal });
   latestRef.current = { download, setCurrentPage, universal };
 
-  const sendTelegramReply = useCallback(async (chatId: string, text: string) => {
-    try {
-      await invoke('send_telegram_reply', { chatId, text });
-    } catch (error) {
-      console.error('Failed to send Telegram reply:', error);
-    }
-  }, []);
+  const sendTelegramReply = useCallback(
+    async (chatId: string, messageThreadId: number | null | undefined, text: string) => {
+      try {
+        await invoke('send_telegram_reply', {
+          chatId,
+          messageThreadId: messageThreadId ?? null,
+          text,
+        });
+      } catch (error) {
+        console.error('Failed to send Telegram reply:', error);
+      }
+    },
+    [],
+  );
 
   const handleTelegramDownloadCommand = useCallback(
     async (payload: TelegramDownloadCommandEvent) => {
       const { download, setCurrentPage, universal } = latestRef.current;
+      const reply = (text: string) =>
+        sendTelegramReply(payload.chatId, payload.messageThreadId, text);
 
       if (payload.command === 'status') {
-        await sendTelegramReply(
-          payload.chatId,
+        await reply(
           buildStatusReply(
             download.items,
             universal.items,
@@ -196,7 +205,7 @@ export function useTelegramRemoteCommands(
       }
 
       if (payload.command === 'queue') {
-        await sendTelegramReply(payload.chatId, buildQueueReply(download.items, universal.items));
+        await reply(buildQueueReply(download.items, universal.items));
         return;
       }
 
@@ -208,7 +217,7 @@ export function useTelegramRemoteCommands(
           startLockRef.current.universal;
 
         if (isBusy) {
-          await sendTelegramReply(payload.chatId, 'Youwee is already downloading.');
+          await reply('Youwee is already downloading.');
           return;
         }
 
@@ -216,7 +225,7 @@ export function useTelegramRemoteCommands(
         const shouldStartUniversal = hasStartableItems(universal.items);
 
         if (!shouldStartYoutube && !shouldStartUniversal) {
-          await sendTelegramReply(payload.chatId, 'No pending downloads in the queue.');
+          await reply('No pending downloads in the queue.');
           return;
         }
 
@@ -238,7 +247,7 @@ export function useTelegramRemoteCommands(
           });
         }
 
-        await sendTelegramReply(payload.chatId, 'Started pending downloads.');
+        await reply('Started pending downloads.');
         return;
       }
 
@@ -252,28 +261,26 @@ export function useTelegramRemoteCommands(
         }
         startLockRef.current.youtube = false;
         startLockRef.current.universal = false;
-        await sendTelegramReply(
-          payload.chatId,
+        await reply(
           wasDownloading ? 'Stopped the current download.' : 'Youwee is not downloading.',
         );
         return;
       }
 
       if (!payload.url) {
-        await sendTelegramReply(payload.chatId, 'No valid URL found in that command.');
+        await reply('No valid URL found in that command.');
         return;
       }
 
       const normalizedUrl = normalizeExternalVideoUrl(payload.url.trim());
       if (!isSafeUrl(normalizedUrl)) {
-        await sendTelegramReply(payload.chatId, 'No valid URL found in that command.');
+        await reply('No valid URL found in that command.');
         return;
       }
 
       const enqueueOptions = parseTelegramQuality(payload.quality);
       if (!enqueueOptions) {
-        await sendTelegramReply(
-          payload.chatId,
+        await reply(
           'Unsupported quality. Use: best, 8k, 4k, 2k, 1080, 720, 480, 360, audio, or mp3.',
         );
         return;
@@ -286,16 +293,13 @@ export function useTelegramRemoteCommands(
           setCurrentPage('youtube');
           const result = await download.enqueueExternalUrl(normalizedUrl, enqueueOptions);
           if (!result.added) {
-            await sendTelegramReply(payload.chatId, 'This URL is already in the Youwee queue.');
+            await reply('This URL is already in the Youwee queue.');
             return;
           }
 
           if (payload.command === 'download') {
             if (download.isDownloading || startLockRef.current.youtube) {
-              await sendTelegramReply(
-                payload.chatId,
-                'Added to the queue. Youwee is already downloading.',
-              );
+              await reply('Added to the queue. Youwee is already downloading.');
               return;
             }
 
@@ -303,27 +307,24 @@ export function useTelegramRemoteCommands(
             void download.startDownload().finally(() => {
               startLockRef.current.youtube = false;
             });
-            await sendTelegramReply(payload.chatId, 'Added to the queue and started download.');
+            await reply('Added to the queue and started download.');
             return;
           }
 
-          await sendTelegramReply(payload.chatId, 'Added to the Youwee queue.');
+          await reply('Added to the Youwee queue.');
           return;
         }
 
         setCurrentPage('universal');
         const result = await universal.enqueueExternalUrl(normalizedUrl, enqueueOptions);
         if (!result.added) {
-          await sendTelegramReply(payload.chatId, 'This URL is already in the Youwee queue.');
+          await reply('This URL is already in the Youwee queue.');
           return;
         }
 
         if (payload.command === 'download') {
           if (universal.isDownloading || startLockRef.current.universal) {
-            await sendTelegramReply(
-              payload.chatId,
-              'Added to the queue. Youwee is already downloading.',
-            );
+            await reply('Added to the queue. Youwee is already downloading.');
             return;
           }
 
@@ -331,14 +332,14 @@ export function useTelegramRemoteCommands(
           void universal.startDownload().finally(() => {
             startLockRef.current.universal = false;
           });
-          await sendTelegramReply(payload.chatId, 'Added to the queue and started download.');
+          await reply('Added to the queue and started download.');
           return;
         }
 
-        await sendTelegramReply(payload.chatId, 'Added to the Youwee queue.');
+        await reply('Added to the Youwee queue.');
       } catch (error) {
         console.error('Failed to handle Telegram command:', error);
-        await sendTelegramReply(payload.chatId, 'Failed to add that URL to Youwee.');
+        await reply('Failed to add that URL to Youwee.');
       }
     },
     [sendTelegramReply, startLockRef],

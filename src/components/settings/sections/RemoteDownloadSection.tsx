@@ -7,6 +7,7 @@ import {
   ChevronUp,
   Copy,
   ExternalLink,
+  Hash,
   Info,
   Key,
   Settings2,
@@ -40,6 +41,7 @@ const CONFIG_HIGHLIGHT_IDS = new Set([
   'telegram-config',
   'telegram-bot-token',
   'telegram-allowed-chat-ids',
+  'telegram-message-thread-id',
 ]);
 
 const TELEGRAM_COMMANDS = [
@@ -431,6 +433,40 @@ export function RemoteDownloadSection({ highlightId }: RemoteDownloadSectionProp
                 />
                 <p className="text-[11px] text-muted-foreground/70">
                   {t('remoteDownload.telegramAllowedChatIdsDesc')}
+                </p>
+              </div>
+
+              <SettingsDivider />
+
+              <div
+                id="telegram-message-thread-id"
+                className={cn(
+                  'space-y-2 rounded-lg transition-all duration-500',
+                  highlightId === 'telegram-message-thread-id' &&
+                    'bg-primary/10 ring-1 ring-primary/30 p-3 -m-1',
+                )}
+              >
+                <div className="flex items-center gap-2">
+                  <Hash className="w-3.5 h-3.5 text-muted-foreground" />
+                  <label className="text-sm font-medium" htmlFor="telegram-message-thread-id-input">
+                    {t('remoteDownload.telegramMessageThreadId')}
+                  </label>
+                </div>
+                <Input
+                  id="telegram-message-thread-id-input"
+                  type="text"
+                  inputMode="numeric"
+                  value={settings.telegramMessageThreadId}
+                  onChange={(e) =>
+                    updateTelegramSettings({
+                      telegramMessageThreadId: e.target.value.replace(/\D/g, ''),
+                    })
+                  }
+                  placeholder={t('remoteDownload.telegramMessageThreadIdPlaceholder')}
+                  className="h-9 bg-background font-mono text-xs"
+                />
+                <p className="text-[11px] text-muted-foreground/70">
+                  {t('remoteDownload.telegramMessageThreadIdDesc')}
                 </p>
               </div>
             </div>

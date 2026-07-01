@@ -14,6 +14,7 @@ static TELEGRAM_CONFIG: Mutex<TelegramConfig> = Mutex::new(TelegramConfig {
     enabled: false,
     bot_token: String::new(),
     allowed_chat_ids: Vec::new(),
+    message_thread_id: None,
     plain_url_action: TelegramPlainUrlAction::Download,
 });
 static TELEGRAM_STATUS: Mutex<TelegramStatus> = Mutex::new(TelegramStatus {
@@ -31,6 +32,8 @@ pub struct TelegramConfig {
     pub enabled: bool,
     pub bot_token: String,
     pub allowed_chat_ids: Vec<String>,
+    #[serde(default)]
+    pub message_thread_id: Option<i64>,
     #[serde(default)]
     pub plain_url_action: TelegramPlainUrlAction,
 }
@@ -70,6 +73,8 @@ struct TelegramDownloadCommandEvent {
     url: Option<String>,
     quality: Option<String>,
     chat_id: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    message_thread_id: Option<i64>,
 }
 
 #[derive(Debug, PartialEq, Eq)]
@@ -106,6 +111,8 @@ struct TelegramUpdate {
 #[derive(Debug, Deserialize)]
 struct TelegramMessage {
     chat: TelegramChat,
+    #[serde(default)]
+    message_thread_id: Option<i64>,
     text: Option<String>,
 }
 
@@ -125,6 +132,8 @@ struct GetUpdatesRequest {
 #[derive(Debug, Serialize)]
 struct SendMessageRequest<'a> {
     chat_id: &'a str,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    message_thread_id: Option<i64>,
     text: &'a str,
     disable_web_page_preview: bool,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -234,7 +243,11 @@ pub fn get_status() -> TelegramStatus {
         })
 }
 
-pub async fn send_reply(chat_id: String, text: String) -> Result<(), String> {
+pub async fn send_reply(
+    chat_id: String,
+    message_thread_id: Option<i64>,
+    text: String,
+) -> Result<(), String> {
     let config = TELEGRAM_CONFIG
         .lock()
         .map(|guard| guard.clone())
@@ -244,7 +257,16 @@ pub async fn send_reply(chat_id: String, text: String) -> Result<(), String> {
         return Err("Telegram is not configured.".to_string());
     }
 
-    send_message_with_keyboard(&Client::new(), &config.bot_token, &chat_id, &text).await
+    let target_message_thread_id = message_thread_id.or(config.message_thread_id);
+
+    send_message_with_keyboard(
+        &Client::new(),
+        &config.bot_token,
+        &chat_id,
+        target_message_thread_id,
+        &text,
+    )
+    .await
 }
 
 fn sanitize_config(config: TelegramConfig) -> TelegramConfig {
@@ -261,6 +283,7 @@ fn sanitize_config(config: TelegramConfig) -> TelegramConfig {
         enabled: config.enabled,
         bot_token: config.bot_token.trim().to_string(),
         allowed_chat_ids,
+        message_thread_id: config.message_thread_id.filter(|id| *id > 0),
         plain_url_action: config.plain_url_action,
     }
 }
@@ -313,6 +336,7 @@ async fn run_polling_loop(app: AppHandle, config: TelegramConfig, generation: u6
                         &client,
                         &config.bot_token,
                         &allowed_chat_ids,
+                        config.message_thread_id,
                         &config.plain_url_action,
                         update,
                     )
@@ -368,6 +392,7 @@ async fn handle_update(
     client: &Client,
     bot_token: &str,
     allowed_chat_ids: &HashSet<String>,
+    configured_message_thread_id: Option<i64>,
     plain_url_action: &TelegramPlainUrlAction,
     update: TelegramUpdate,
 ) {
@@ -378,6 +403,10 @@ async fn handle_update(
     if !allowed_chat_ids.contains(&chat_id) {
         return;
     }
+    let message_thread_id = message.message_thread_id;
+    if configured_message_thread_id.is_some() && message_thread_id != configured_message_thread_id {
+        return;
+    }
 
     let Some(text) = message.text.as_deref() else {
         return;
@@ -385,31 +414,53 @@ async fn handle_update(
 
     match parse_command_with_plain_url_action(text, plain_url_action) {
         TelegramCommand::Add { url, quality } => {
-            emit_url_command(app, "add", &url, quality.as_deref(), &chat_id);
+            emit_url_command(
+                app,
+                "add",
+                &url,
+                quality.as_deref(),
+                &chat_id,
+                message_thread_id,
+            );
         }
         TelegramCommand::Download { url, quality } => {
-            emit_url_command(app, "download", &url, quality.as_deref(), &chat_id);
+            emit_url_command(
+                app,
+                "download",
+                &url,
+                quality.as_deref(),
+                &chat_id,
+                message_thread_id,
+            );
         }
         TelegramCommand::Status => {
-            emit_simple_command(app, "status", &chat_id);
+            emit_simple_command(app, "status", &chat_id, message_thread_id);
         }
         TelegramCommand::Queue => {
-            emit_simple_command(app, "queue", &chat_id);
+            emit_simple_command(app, "queue", &chat_id, message_thread_id);
         }
         TelegramCommand::Run => {
-            emit_simple_command(app, "run", &chat_id);
+            emit_simple_command(app, "run", &chat_id, message_thread_id);
         }
         TelegramCommand::Stop => {
-            emit_simple_command(app, "stop", &chat_id);
+            emit_simple_command(app, "stop", &chat_id, message_thread_id);
         }
         TelegramCommand::Help => {
-            let _ = send_message_with_keyboard(client, bot_token, &chat_id, help_text()).await;
+            let _ = send_message_with_keyboard(
+                client,
+                bot_token,
+                &chat_id,
+                message_thread_id,
+                help_text(),
+            )
+            .await;
         }
         TelegramCommand::Unsupported => {
             let _ = send_message_with_keyboard(
                 client,
                 bot_token,
                 &chat_id,
+                message_thread_id,
                 "Unsupported command. Use /help to see available commands.",
             )
             .await;
@@ -423,6 +474,7 @@ fn emit_url_command(
     url: &str,
     quality: Option<&str>,
     chat_id: &str,
+    message_thread_id: Option<i64>,
 ) {
     let _ = app.emit(
         "telegram-download-command",
@@ -431,11 +483,17 @@ fn emit_url_command(
             url: Some(url.to_string()),
             quality: quality.map(ToString::to_string),
             chat_id: chat_id.to_string(),
+            message_thread_id,
         },
     );
 }
 
-fn emit_simple_command(app: &AppHandle, command: &str, chat_id: &str) {
+fn emit_simple_command(
+    app: &AppHandle,
+    command: &str,
+    chat_id: &str,
+    message_thread_id: Option<i64>,
+) {
     let _ = app.emit(
         "telegram-download-command",
         TelegramDownloadCommandEvent {
@@ -443,6 +501,7 @@ fn emit_simple_command(app: &AppHandle, command: &str, chat_id: &str) {
             url: None,
             quality: None,
             chat_id: chat_id.to_string(),
+            message_thread_id,
         },
     );
 }
@@ -451,15 +510,25 @@ async fn send_message_with_keyboard(
     client: &Client,
     bot_token: &str,
     chat_id: &str,
+    message_thread_id: Option<i64>,
     text: &str,
 ) -> Result<(), String> {
-    send_message_with_reply_markup(client, bot_token, chat_id, text, Some(command_keyboard())).await
+    send_message_with_reply_markup(
+        client,
+        bot_token,
+        chat_id,
+        message_thread_id,
+        text,
+        Some(command_keyboard()),
+    )
+    .await
 }
 
 async fn send_message_with_reply_markup(
     client: &Client,
     bot_token: &str,
     chat_id: &str,
+    message_thread_id: Option<i64>,
     text: &str,
     reply_markup: Option<ReplyKeyboardMarkup>,
 ) -> Result<(), String> {
@@ -468,6 +537,7 @@ async fn send_message_with_reply_markup(
         .post(url)
         .json(&SendMessageRequest {
             chat_id,
+            message_thread_id,
             text,
             disable_web_page_preview: true,
             reply_markup,
@@ -746,11 +816,57 @@ mod tests {
                 "123".to_string(),
                 "-456".to_string(),
             ],
+            message_thread_id: Some(360),
             plain_url_action: TelegramPlainUrlAction::Download,
         });
 
         assert_eq!(config.bot_token, "token");
         assert_eq!(config.allowed_chat_ids, vec!["123", "-456"]);
+        assert_eq!(config.message_thread_id, Some(360));
+    }
+
+    #[test]
+    fn drops_invalid_message_thread_id() {
+        let config = sanitize_config(TelegramConfig {
+            enabled: true,
+            bot_token: "token".to_string(),
+            allowed_chat_ids: vec!["123".to_string()],
+            message_thread_id: Some(0),
+            plain_url_action: TelegramPlainUrlAction::Download,
+        });
+
+        assert_eq!(config.message_thread_id, None);
+    }
+
+    #[test]
+    fn includes_message_thread_id_for_topic_replies() {
+        let request = SendMessageRequest {
+            chat_id: "-1003775018720",
+            message_thread_id: Some(360),
+            text: "ok",
+            disable_web_page_preview: true,
+            reply_markup: None,
+        };
+
+        let value = serde_json::to_value(request).expect("send message request serializes");
+        assert_eq!(value["message_thread_id"], 360);
+    }
+
+    #[test]
+    fn omits_message_thread_id_for_regular_chat_replies() {
+        let request = SendMessageRequest {
+            chat_id: "-1003775018720",
+            message_thread_id: None,
+            text: "ok",
+            disable_web_page_preview: true,
+            reply_markup: None,
+        };
+
+        let value = serde_json::to_value(request).expect("send message request serializes");
+        assert!(!value
+            .as_object()
+            .expect("send message request is an object")
+            .contains_key("message_thread_id"));
     }
 
     #[test]

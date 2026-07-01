@@ -74,6 +74,7 @@ export function createDefaultDownloadSettings(saved: Partial<DownloadSettings>):
     telegramEnabled: saved.telegramEnabled === true,
     telegramBotToken: saved.telegramBotToken || '',
     telegramAllowedChatIds: saved.telegramAllowedChatIds || '',
+    telegramMessageThreadId: saved.telegramMessageThreadId || '',
     telegramPlainUrlAction: saved.telegramPlainUrlAction === 'add' ? 'add' : 'download',
   };
 }
@@ -124,6 +125,7 @@ export function serializeDownloadSettings(settings: DownloadSettings): Partial<D
     telegramEnabled: settings.telegramEnabled,
     telegramBotToken: settings.telegramBotToken,
     telegramAllowedChatIds: settings.telegramAllowedChatIds,
+    telegramMessageThreadId: settings.telegramMessageThreadId,
     telegramPlainUrlAction: settings.telegramPlainUrlAction,
   };
 }
