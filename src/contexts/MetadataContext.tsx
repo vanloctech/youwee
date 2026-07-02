@@ -2,10 +2,17 @@ import { invoke } from '@tauri-apps/api/core';
 import { listen } from '@tauri-apps/api/event';
 import { downloadDir, homeDir } from '@tauri-apps/api/path';
 import { open } from '@tauri-apps/plugin-dialog';
-import { type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import {
+  createContext,
+  type ReactNode,
+  useCallback,
+  useContext,
+  useEffect,
+  useRef,
+  useState,
+} from 'react';
 import { localizeProgressError, localizeUnknownError } from '@/lib/backend-error';
-import { useDownload } from './download-context';
-import { MetadataContext } from './metadata-context';
+import { useDownload } from './DownloadContext';
 
 const STORAGE_KEY = 'youwee_metadata_settings';
 
@@ -45,7 +52,7 @@ interface MetadataProgress {
   error_params?: Record<string, string | number | boolean>;
 }
 
-export interface MetadataContextType {
+interface MetadataContextType {
   items: MetadataItem[];
   isFetching: boolean;
   settings: MetadataSettings;
@@ -78,6 +85,8 @@ function saveSettings(settings: MetadataSettings) {
     console.error('Failed to save metadata settings:', e);
   }
 }
+
+const MetadataContext = createContext<MetadataContextType | null>(null);
 
 export function MetadataProvider({ children }: { children: ReactNode }) {
   const { cookieSettings, getProxyUrl } = useDownload();
@@ -160,18 +169,48 @@ export function MetadataProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const parseUrls = useCallback((text: string): string[] => {
-    return text
-      .split('\n')
-      .map((line) => line.trim())
-      .filter((line) => {
-        if (!line || line.startsWith('#')) return false;
-        return (
-          line.includes('youtube.com') ||
-          line.includes('youtu.be') ||
-          line.includes('http://') ||
-          line.includes('https://')
-        );
-      });
+    // Extract URLs from arbitrary text (supports URLs embedded in messages)
+    const urlRegex = /https?:\/\/[^\s<>\"'\)\]\}，。、！？]+/gi;
+    const seen = new Set<string>();
+    const results: string[] = [];
+
+    for (const line of text.split('\n')) {
+      const trimmed = line.trim();
+      if (!trimmed || trimmed.startsWith('#')) continue;
+
+      // If the whole line is a valid URL, use directly
+      try {
+        const u = new URL(trimmed);
+        if (u.protocol === 'http:' || u.protocol === 'https:') {
+          if (!seen.has(trimmed)) {
+            seen.add(trimmed);
+            results.push(trimmed);
+          }
+          continue;
+        }
+      } catch {
+        // Not a standalone URL
+      }
+
+      // Extract URLs from within the text
+      const matches = trimmed.match(urlRegex);
+      if (matches) {
+        for (let url of matches) {
+          url = url.replace(/[.,;:!?)>\]]+$/, '');
+          try {
+            const u = new URL(url);
+            if ((u.protocol === 'http:' || u.protocol === 'https:') && !seen.has(url)) {
+              seen.add(url);
+              results.push(url);
+            }
+          } catch {
+            // skip invalid
+          }
+        }
+      }
+    }
+
+    return results;
   }, []);
 
   const addUrls = useCallback(
@@ -229,7 +268,6 @@ export function MetadataProvider({ children }: { children: ReactNode }) {
           cookieBrowser: cookieSettings.browser || null,
           cookieBrowserProfile: cookieSettings.browserProfile || null,
           cookieFilePath: cookieSettings.filePath || null,
-          cookieSkipPatterns: cookieSettings.cookieSkipPatterns || [],
           // Proxy settings
           proxyUrl: getProxyUrl() || null,
         });
@@ -282,34 +320,27 @@ export function MetadataProvider({ children }: { children: ReactNode }) {
     });
   }, []);
 
-  const value: MetadataContextType = useMemo(
-    () => ({
-      items,
-      isFetching,
-      settings,
-      addUrls,
-      removeItem,
-      clearAll,
-      clearCompleted,
-      startFetch,
-      stopFetch,
-      selectOutputFolder,
-      updateSettings,
-    }),
-    [
-      items,
-      isFetching,
-      settings,
-      addUrls,
-      removeItem,
-      clearAll,
-      clearCompleted,
-      startFetch,
-      stopFetch,
-      selectOutputFolder,
-      updateSettings,
-    ],
-  );
+  const value: MetadataContextType = {
+    items,
+    isFetching,
+    settings,
+    addUrls,
+    removeItem,
+    clearAll,
+    clearCompleted,
+    startFetch,
+    stopFetch,
+    selectOutputFolder,
+    updateSettings,
+  };
 
   return <MetadataContext.Provider value={value}>{children}</MetadataContext.Provider>;
+}
+
+export function useMetadata() {
+  const context = useContext(MetadataContext);
+  if (!context) {
+    throw new Error('useMetadata must be used within a MetadataProvider');
+  }
+  return context;
 }
