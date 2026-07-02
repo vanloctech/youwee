@@ -3,15 +3,14 @@ use std::path::{Path, PathBuf};
 use crate::database::{
     add_history_internal, add_history_with_summary, assign_history_collections_in_db,
     assign_history_tags_in_db, clear_history_from_db, create_collection_in_db,
-    delete_collection_from_db, delete_history_from_db, find_duplicate_downloads_in_history_db,
-    get_collections_from_db, get_history_count_from_db, get_history_entries_by_ids_from_db,
-    get_history_from_db, get_tags_from_db, remove_history_from_collection_in_db,
-    remove_history_tag_from_db, rename_collection_in_db, update_history_filepath_and_title,
+    delete_collection_from_db, delete_history_from_db, get_collections_from_db,
+    get_history_count_from_db, get_history_entries_by_ids_from_db, get_history_from_db,
+    get_tags_from_db, remove_history_from_collection_in_db, remove_history_tag_from_db,
+    rename_collection_in_db, update_history_filepath_and_title,
     update_history_filepath_and_title_by_id, update_history_summary,
 };
 use crate::types::{
-    DownloadDuplicateIdentity, DownloadDuplicateMatch, HistoryAdvancedFilters, HistoryCollection,
-    HistoryEntry, HistorySort, HistoryTag,
+    HistoryAdvancedFilters, HistoryCollection, HistoryEntry, HistorySort, HistoryTag,
 };
 
 #[tauri::command]
@@ -67,43 +66,8 @@ pub fn get_history_entries_by_ids(ids: Vec<String>) -> Result<Vec<HistoryEntry>,
 }
 
 #[tauri::command]
-pub fn find_duplicate_downloads(
-    identities: Vec<DownloadDuplicateIdentity>,
-) -> Result<Vec<DownloadDuplicateMatch>, String> {
-    find_duplicate_downloads_in_history_db(identities)
-}
-
-#[tauri::command]
-pub fn delete_history(id: String, delete_file: Option<bool>) -> Result<(), String> {
-    if delete_file.unwrap_or(false) {
-        let entry = get_history_entries_by_ids_from_db(vec![id.clone()])?
-            .into_iter()
-            .next()
-            .ok_or_else(|| "History entry not found".to_string())?;
-        delete_history_media_file(&entry.filepath)?;
-    }
-
+pub fn delete_history(id: String) -> Result<(), String> {
     delete_history_from_db(id)
-}
-
-fn delete_history_media_file(filepath: &str) -> Result<(), String> {
-    let trimmed = filepath.trim();
-    if trimmed.is_empty() {
-        return Ok(());
-    }
-
-    let path = Path::new(trimmed);
-    if !path.exists() {
-        return Ok(());
-    }
-
-    let metadata = std::fs::symlink_metadata(path)
-        .map_err(|e| format!("Failed to inspect media file before deleting: {}", e))?;
-    if metadata.is_dir() {
-        return Err("Refusing to delete a directory from Library item deletion".to_string());
-    }
-
-    std::fs::remove_file(path).map_err(|e| format!("Failed to delete media file: {}", e))
 }
 
 #[tauri::command]
@@ -423,38 +387,6 @@ mod tests {
             std::env::temp_dir().join(format!("youwee-missing-{}.mp4", uuid::Uuid::new_v4()));
         let err = build_renamed_path(&missing, "new").expect_err("expected missing file error");
         assert!(err.contains("File not found"));
-    }
-
-    #[test]
-    fn delete_history_media_file_removes_regular_file() {
-        let file = make_temp_file("video.mp4");
-
-        delete_history_media_file(file.to_str().expect("utf8 path")).expect("delete media file");
-
-        assert!(!file.exists());
-        let _ = fs::remove_dir_all(file.parent().unwrap_or_else(|| Path::new("/")));
-    }
-
-    #[test]
-    fn delete_history_media_file_ignores_missing_file() {
-        let missing =
-            std::env::temp_dir().join(format!("youwee-missing-{}.mp4", uuid::Uuid::new_v4()));
-
-        delete_history_media_file(missing.to_str().expect("utf8 path"))
-            .expect("missing media file should not fail");
-    }
-
-    #[test]
-    fn delete_history_media_file_rejects_directory() {
-        let dir =
-            std::env::temp_dir().join(format!("youwee-history-test-{}", uuid::Uuid::new_v4()));
-        fs::create_dir_all(&dir).expect("create temp dir");
-
-        let error =
-            delete_history_media_file(dir.to_str().expect("utf8 path")).expect_err("reject dir");
-
-        assert!(error.contains("Refusing to delete a directory"));
-        let _ = fs::remove_dir_all(&dir);
     }
 
     fn ensure_test_history_table() {

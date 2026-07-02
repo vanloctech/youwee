@@ -1,9 +1,8 @@
-import { revealItemInDir } from '@tauri-apps/plugin-opener';
+import { invoke } from '@tauri-apps/api/core';
 import {
   CheckCircle2,
   ChevronDown,
   ChevronUp,
-  CircleSlash,
   Clock,
   FolderOpen,
   HardDrive,
@@ -12,6 +11,7 @@ import {
   Loader2,
   MonitorPlay,
   Pencil,
+  Play,
   RefreshCw,
   Scissors,
   Sparkles,
@@ -20,14 +20,10 @@ import {
 } from 'lucide-react';
 import { type ChangeEvent, useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { SchedulePopover } from '@/components/download/SchedulePopover';
 import { SimpleMarkdown } from '@/components/ui/simple-markdown';
 import { useAI } from '@/contexts/AIContext';
-import type { ScheduleConfig } from '@/hooks/useSchedule';
 import type { DownloadItem, ItemDownloadSettings } from '@/lib/types';
 import { cn } from '@/lib/utils';
-import { extractYouTubeVideoId, youtubeThumbnailUrl } from '@/lib/youtube-url';
-import { ThumbnailCompletedBadge, ThumbnailFailedBadge } from './ThumbnailStatusBadge';
 
 // Parse a duration string like "5:30" or "1:05:30" to total seconds
 function parseDurationString(dur: string): number {
@@ -97,11 +93,6 @@ function formatQuality(quality: string): string {
   return qualityMap[quality] || quality;
 }
 
-function getFolderName(path: string): string {
-  const segments = path.split(/[\\/]/).filter(Boolean);
-  return segments.at(-1) || path;
-}
-
 interface QueueItemProps {
   item: DownloadItem;
   isFocused?: boolean;
@@ -109,9 +100,7 @@ interface QueueItemProps {
   disabled?: boolean;
   onRemove: (id: string) => void;
   onUpdateTimeRange: (id: string, start?: string, end?: string) => void;
-  onSelectOutputFolder: (id: string) => Promise<void>;
   onRename: (id: string, newName: string) => Promise<void>;
-  onScheduleUpcomingLive?: (config: ScheduleConfig) => void;
 }
 
 export function QueueItem({
@@ -121,9 +110,7 @@ export function QueueItem({
   disabled,
   onRemove,
   onUpdateTimeRange,
-  onSelectOutputFolder,
   onRename,
-  onScheduleUpcomingLive,
 }: QueueItemProps) {
   const { t } = useTranslation('download');
   const ai = useAI();
@@ -150,6 +137,12 @@ export function QueueItem({
   const generatingStatus =
     task?.status === 'fetching' ? 'fetching' : task?.status === 'generating' ? 'generating' : null;
 
+  // Extract video ID for thumbnail
+  const getVideoId = (url: string) => {
+    const match = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([^&?]+)/);
+    return match ? match[1] : null;
+  };
+
   const handleGenerateSummary = () => {
     if (isGenerating) return;
 
@@ -168,23 +161,20 @@ export function QueueItem({
     });
   };
 
-  const videoId = extractYouTubeVideoId(item.url);
-  const thumbnailUrl = item.thumbnail || (videoId ? youtubeThumbnailUrl(videoId) : null);
+  const videoId = getVideoId(item.url);
+  const thumbnailUrl =
+    item.thumbnail || (videoId ? `https://img.youtube.com/vi/${videoId}/mqdefault.jpg` : null);
 
   const isActive = item.status === 'downloading' || item.status === 'fetching';
   const isCompleted = item.status === 'completed';
   const isError = item.status === 'error';
   const isPending = item.status === 'pending';
-  const isSkipped = item.status === 'skipped';
   const retryState = item.retryState;
-  const isUpcomingLiveError = item.errorCode === 'YT_UPCOMING_LIVE';
 
   // Get saved settings for pending items
   const itemSettings = item.settings as ItemDownloadSettings | undefined;
 
   const hasTimeRange = !!(itemSettings?.timeRangeStart && itemSettings?.timeRangeEnd);
-  const outputPath = itemSettings?.outputPath ?? '';
-  const outputFolderName = outputPath ? getFolderName(outputPath) : '';
 
   const handleApplyTimeRange = useCallback(() => {
     if (timeStart && timeEnd) {
@@ -211,10 +201,6 @@ export function QueueItem({
     });
   }, [itemSettings?.timeRangeStart, itemSettings?.timeRangeEnd]);
 
-  const handleSelectOutputFolder = useCallback(() => {
-    void onSelectOutputFolder(item.id);
-  }, [item.id, onSelectOutputFolder]);
-
   const handleTimeStartChange = useCallback((e: ChangeEvent<HTMLInputElement>) => {
     setTimeStart(autoFormatTimeInput(e.target.value));
   }, []);
@@ -233,7 +219,7 @@ export function QueueItem({
     if (!item.completedFilepath) return;
 
     try {
-      await revealItemInDir(item.completedFilepath);
+      await invoke('open_file_location', { filepath: item.completedFilepath });
     } catch (error) {
       console.error('Failed to open completed file location:', error);
     }
@@ -296,7 +282,7 @@ export function QueueItem({
             alt=""
             className={cn(
               'w-full h-full object-cover transition-all duration-300',
-              isCompleted && 'brightness-90 saturate-95',
+              isCompleted && 'opacity-60',
             )}
             loading="lazy"
             referrerPolicy="no-referrer"
@@ -371,10 +357,31 @@ export function QueueItem({
         )}
 
         {/* Completed Overlay */}
-        {isCompleted && <ThumbnailCompletedBadge />}
+        {isCompleted && (
+          <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
+            <div className="w-10 h-10 rounded-full bg-emerald-500 flex items-center justify-center shadow-lg">
+              <CheckCircle2 className="w-6 h-6 text-white" />
+            </div>
+          </div>
+        )}
 
         {/* Error Overlay */}
-        {isError && <ThumbnailFailedBadge />}
+        {isError && (
+          <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
+            <div className="w-10 h-10 rounded-full bg-red-500 flex items-center justify-center shadow-lg">
+              <XCircle className="w-6 h-6 text-white" />
+            </div>
+          </div>
+        )}
+
+        {/* Pending Overlay */}
+        {isPending && (
+          <div className="absolute inset-0 bg-black/30 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+            <div className="w-10 h-10 rounded-full bg-white/90 flex items-center justify-center shadow-lg">
+              <Play className="w-5 h-5 text-black ml-0.5" />
+            </div>
+          </div>
+        )}
 
         {/* Playlist Badge */}
         {item.isPlaylist && showPlaylistBadge && (
@@ -423,14 +430,12 @@ export function QueueItem({
               isActive && 'bg-primary/10 text-primary',
               isCompleted && 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400',
               isError && 'bg-red-500/10 text-red-600 dark:text-red-400',
-              isSkipped && 'bg-amber-500/10 text-amber-600 dark:text-amber-400',
             )}
           >
             {isPending && <Clock className="w-3 h-3" />}
             {isActive && <Loader2 className="w-3 h-3 animate-spin" />}
             {isCompleted && <CheckCircle2 className="w-3 h-3" />}
             {isError && <XCircle className="w-3 h-3" />}
-            {isSkipped && <CircleSlash className="w-3 h-3" />}
             <span>
               {isPending && t('queue.status.pending')}
               {isActive &&
@@ -439,7 +444,6 @@ export function QueueItem({
                   : t('queue.status.downloading'))}
               {isCompleted && t('queue.status.completed')}
               {isError && t('queue.status.failed')}
-              {isSkipped && t('queue.status.skipped')}
             </span>
           </span>
 
@@ -509,18 +513,8 @@ export function QueueItem({
           {isError && (
             <span className="inline-flex items-center gap-1 text-[10px] text-muted-foreground/70">
               <Lightbulb className="w-3 h-3" />
-              {isUpcomingLiveError ? t('queue.upcomingLive.hint') : t('queue.status.failedHint')}
+              {t('queue.status.failedHint')}
             </span>
-          )}
-
-          {isUpcomingLiveError && onScheduleUpcomingLive && (
-            <SchedulePopover
-              onSchedule={onScheduleUpcomingLive}
-              ns="download"
-              triggerVariant="inline"
-              triggerLabel={t('queue.upcomingLive.schedule')}
-              triggerClassName="border-muted-foreground/30 bg-transparent text-muted-foreground hover:border-muted-foreground/50 hover:bg-muted/50 hover:text-foreground"
-            />
           )}
 
           {/* Generating Status (inline with info badges) */}
@@ -535,27 +529,8 @@ export function QueueItem({
         </div>
 
         {/* Actions Row — interactive buttons, visually distinct */}
-        {!isActive && (
-          <div className="flex items-center gap-1.5 mt-1.5 flex-wrap">
-            {itemSettings && (isPending || isError) && (
-              <button
-                type="button"
-                onClick={handleSelectOutputFolder}
-                disabled={disabled}
-                title={
-                  outputPath
-                    ? t('queue.outputFolder', { path: outputPath })
-                    : t('queue.changeOutputFolder')
-                }
-                className="inline-flex max-w-[180px] items-center gap-1 text-[11px] px-2 py-0.5 rounded-md border border-dashed border-blue-500/30 text-blue-600 dark:text-blue-400 hover:border-blue-500/50 hover:bg-blue-500/10 transition-colors font-medium disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                <FolderOpen className="w-3 h-3 flex-shrink-0" />
-                <span className="truncate">
-                  {outputFolderName || t('queue.changeOutputFolder')}
-                </span>
-              </button>
-            )}
-
+        {!isActive && !isError && (
+          <div className="flex items-center gap-1.5 mt-1 flex-wrap">
             {/* Time Range button (only when pending) */}
             {isPending && itemSettings && (
               <button
@@ -576,14 +551,14 @@ export function QueueItem({
             )}
 
             {/* AI Summarize Button */}
-            {aiEnabled && !isError && !summary && !isGenerating && !summaryError && (
+            {aiEnabled && !summary && !isGenerating && !summaryError && (
               <button
                 type="button"
                 onClick={handleGenerateSummary}
-                className="inline-flex items-center gap-1 text-[11px] px-2 py-0.5 rounded-md border border-dashed border-[hsl(var(--gradient-via)/0.35)] bg-[linear-gradient(135deg,hsl(var(--gradient-from)/0.08),hsl(var(--gradient-via)/0.08),hsl(var(--gradient-to)/0.08))] hover:border-[hsl(var(--gradient-via)/0.55)] hover:bg-[linear-gradient(135deg,hsl(var(--gradient-from)/0.13),hsl(var(--gradient-via)/0.13),hsl(var(--gradient-to)/0.13))] transition-colors font-medium"
+                className="inline-flex items-center gap-1 text-[11px] px-2 py-0.5 rounded-md border border-dashed border-purple-500/30 text-purple-600 dark:text-purple-400 hover:border-purple-500/50 hover:bg-purple-500/10 transition-colors font-medium"
               >
-                <Sparkles className="w-3 h-3 text-[hsl(var(--gradient-via))]" />
-                <span className="gradient-text">{t('queue.summarize')}</span>
+                <Sparkles className="w-3 h-3" />
+                {t('queue.summarize')}
               </button>
             )}
 
