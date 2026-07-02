@@ -1,5 +1,5 @@
 import { open } from '@tauri-apps/plugin-dialog';
-import { revealItemInDir } from '@tauri-apps/plugin-opener';
+import { invoke } from '@tauri-apps/api/core';
 import {
   Check,
   FileText,
@@ -403,7 +403,7 @@ export function ChatPanel({
                     <button
                       type="button"
                       className="flex items-center gap-1 text-xs font-medium text-green-600 dark:text-green-400 hover:underline w-fit"
-                      onClick={() => msg.outputPath && revealItemInDir(msg.outputPath)}
+                      onClick={() => msg.outputPath && invoke('open_file_location', { filepath: msg.outputPath })}
                     >
                       <FolderOpen className="w-3 h-3" />
                       {t('processing.chat.openInFolder')}
@@ -756,7 +756,7 @@ export function ChatPanel({
                 'relative flex-shrink-0 h-10 w-10 rounded-xl flex items-center justify-center',
                 'transition-all duration-300 ease-out',
                 inputMessage.trim() && hasVideo && !isProcessing && !isGenerating
-                  ? 'btn-gradient shadow-lg shadow-primary/25 hover:shadow-xl hover:shadow-primary/30'
+                  ? 'btn-gradient shadow-lg shadow-primary/25 hover:shadow-xl hover:shadow-primary/30 hover:scale-105'
                   : 'bg-muted/50 text-muted-foreground/30 hover:bg-muted/70 hover:text-muted-foreground/50',
               )}
               onClick={handleSendMessage}
