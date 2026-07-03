@@ -18,7 +18,6 @@ pub trait CommandExt {
 impl CommandExt for Command {
     #[cfg(windows)]
     fn hide_window(&mut self) -> &mut Self {
-        use std::os::windows::process::CommandExt as WinCommandExt;
         self.creation_flags(CREATE_NO_WINDOW);
         self
     }
@@ -33,7 +32,7 @@ impl CommandExt for Command {
 impl CommandExt for std::process::Command {
     #[cfg(windows)]
     fn hide_window(&mut self) -> &mut Self {
-        use std::os::windows::process::CommandExt as WinCommandExt;
+        use std::os::windows::process::CommandExt as _;
         self.creation_flags(CREATE_NO_WINDOW);
         self
     }

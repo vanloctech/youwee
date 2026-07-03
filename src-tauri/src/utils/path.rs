@@ -96,11 +96,19 @@ pub fn unix_system_binary_dirs() -> Vec<PathBuf> {
     }
     #[cfg(not(windows))]
     {
-        vec![
+        let mut dirs = Vec::new();
+
+        if let Some(home) = std::env::var_os("HOME") {
+            dirs.push(PathBuf::from(home).join(".local").join("bin"));
+        }
+
+        dirs.extend([
             PathBuf::from("/opt/homebrew/bin"),
             PathBuf::from("/usr/local/bin"),
             PathBuf::from("/usr/bin"),
-        ]
+        ]);
+
+        dirs
     }
 }
 

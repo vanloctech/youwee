@@ -1,5 +1,7 @@
 use crate::types::DenoStatus;
-use crate::utils::{find_system_binary, unix_system_binary_dirs, CommandExt};
+#[cfg(not(windows))]
+use crate::utils::unix_system_binary_dirs;
+use crate::utils::{find_system_binary, CommandExt};
 use std::path::PathBuf;
 use std::process::Stdio;
 use tauri::{AppHandle, Manager};
@@ -11,14 +13,20 @@ fn get_system_deno_path() -> Option<PathBuf> {
     #[cfg(not(windows))]
     let binary_name = "deno";
 
-    let mut fallback_dirs = Vec::new();
-
-    #[cfg(not(windows))]
-    {
-        let home = std::env::var("HOME").unwrap_or_default();
-        fallback_dirs.push(PathBuf::from(home).join(".deno/bin"));
-        fallback_dirs.extend(unix_system_binary_dirs());
-    }
+    let fallback_dirs = {
+        #[cfg(windows)]
+        {
+            Vec::new()
+        }
+        #[cfg(not(windows))]
+        {
+            let mut dirs = Vec::new();
+            let home = std::env::var("HOME").unwrap_or_default();
+            dirs.push(PathBuf::from(home).join(".deno/bin"));
+            dirs.extend(unix_system_binary_dirs());
+            dirs
+        }
+    };
 
     find_system_binary(binary_name, &fallback_dirs)
 }
