@@ -1,4 +1,3 @@
-import { revealItemInDir } from '@tauri-apps/plugin-opener';
 import {
   CheckCircle2,
   ChevronDown,
@@ -24,6 +23,7 @@ import { SchedulePopover } from '@/components/download/SchedulePopover';
 import { SimpleMarkdown } from '@/components/ui/simple-markdown';
 import { useAI } from '@/contexts/AIContext';
 import type { ScheduleConfig } from '@/hooks/useSchedule';
+import { openFileLocation } from '@/lib/open-file-location';
 import type { DownloadItem, ItemDownloadSettings } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import { extractYouTubeVideoId, youtubeThumbnailUrl } from '@/lib/youtube-url';
@@ -233,7 +233,7 @@ export function QueueItem({
     if (!item.completedFilepath) return;
 
     try {
-      await revealItemInDir(item.completedFilepath);
+      await openFileLocation(item.completedFilepath);
     } catch (error) {
       console.error('Failed to open completed file location:', error);
     }

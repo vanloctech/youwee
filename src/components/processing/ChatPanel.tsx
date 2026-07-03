@@ -1,5 +1,4 @@
 import { open } from '@tauri-apps/plugin-dialog';
-import { revealItemInDir } from '@tauri-apps/plugin-opener';
 import {
   Check,
   FileText,
@@ -20,6 +19,7 @@ import { type DragEvent, useCallback, useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import { openFileLocation } from '@/lib/open-file-location';
 import type { ChatAttachment, ChatMessage, ProcessingProgress } from '@/lib/types';
 import { cn } from '@/lib/utils';
 
@@ -403,7 +403,7 @@ export function ChatPanel({
                     <button
                       type="button"
                       className="flex items-center gap-1 text-xs font-medium text-green-600 dark:text-green-400 hover:underline w-fit"
-                      onClick={() => msg.outputPath && revealItemInDir(msg.outputPath)}
+                      onClick={() => msg.outputPath && void openFileLocation(msg.outputPath)}
                     >
                       <FolderOpen className="w-3 h-3" />
                       {t('processing.chat.openInFolder')}

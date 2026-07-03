@@ -1,7 +1,7 @@
-import { revealItemInDir } from '@tauri-apps/plugin-opener';
 import { CheckCircle2, Clock, FolderOpen, Globe, Loader2, X, XCircle } from 'lucide-react';
 import { useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
+import { openFileLocation } from '@/lib/open-file-location';
 import type { DownloadItem } from '@/lib/types';
 import { cn } from '@/lib/utils';
 
@@ -27,7 +27,7 @@ export function GalleryQueueItem({
   const handleOpenFolder = useCallback(async () => {
     if (!item.completedFilepath) return;
     try {
-      await revealItemInDir(item.completedFilepath);
+      await openFileLocation(item.completedFilepath);
     } catch (error) {
       console.error('Failed to open gallery output folder:', error);
     }

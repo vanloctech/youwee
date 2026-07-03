@@ -1,4 +1,3 @@
-import { revealItemInDir } from '@tauri-apps/plugin-opener';
 import {
   AlertCircle,
   Calendar,
@@ -27,6 +26,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Input } from '@/components/ui/input';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { openFileLocation } from '@/lib/open-file-location';
 import type { ProcessingJob } from '@/lib/types';
 import { cn } from '@/lib/utils';
 
@@ -620,7 +620,8 @@ export function HistoryDialog({
                         <Button
                           size="sm"
                           onClick={() =>
-                            selectedJob.output_path && revealItemInDir(selectedJob.output_path)
+                            selectedJob.output_path &&
+                            void openFileLocation(selectedJob.output_path)
                           }
                           className="gap-1.5"
                         >

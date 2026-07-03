@@ -2,7 +2,7 @@ import { invoke } from '@tauri-apps/api/core';
 import { listen, type UnlistenFn } from '@tauri-apps/api/event';
 import { open } from '@tauri-apps/plugin-dialog';
 import { readFile } from '@tauri-apps/plugin-fs';
-import { revealItemInDir } from '@tauri-apps/plugin-opener';
+import { openFileLocation } from '@/lib/open-file-location';
 import type {
   FFmpegCommandResult,
   ProcessingJob,
@@ -150,7 +150,7 @@ export async function cancelFfmpeg(jobId: string): Promise<void> {
 }
 
 export async function revealOutputInFolder(path: string): Promise<void> {
-  await revealItemInDir(path);
+  await openFileLocation(path);
 }
 
 export async function deleteProcessingJob(id: string): Promise<void> {
