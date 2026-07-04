@@ -51,6 +51,16 @@
     "embedMetadataDesc": "Adicionar título, artista e descrição aos arquivos",
     "embedThumbnail": "Embutir Miniatura",
     "embedThumbnailDesc": "Adicionar arte da capa/miniatura (requer FFmpeg)",
+    "filenameSettings": "Nomes de arquivo",
+    "filenameSettingsDesc": "Controlar como os arquivos baixados são nomeados no disco",
+    "filenameTemplate": "Formato do nome de arquivo",
+    "filenameTemplateDesc": "Escolha o padrão de nome do yt-dlp. Os títulos da biblioteca não são afetados.",
+    "filenameTemplateTitle": "Título completo",
+    "filenameTemplateTitleId": "Título curto + ID (recomendado)",
+    "filenameTemplateUploaderTitle": "Canal - título curto",
+    "filenameTemplateIdOnly": "Somente ID do vídeo",
+    "filenameRestrictAscii": "Nomes de arquivo ASCII",
+    "filenameRestrictAsciiDesc": "Restringir nomes de arquivo a caracteres ASCII para melhor compatibilidade com Windows",
     "numberPlaylistItems": "Numerar itens da playlist",
     "numberPlaylistItemsDesc": "Adicionar o número da playlist aos downloads de playlists expandidas",
     "numberQueueItems": "Numerar itens da fila",
@@ -483,7 +493,9 @@
         "geoBypassCountryDesc": "Use a two-letter country code for geo bypass.",
         "matchFiltersDesc": "Skip videos that do not match a yt-dlp filter expression.",
         "formatSortDesc": "Adjust yt-dlp format sorting without replacing Youwee quality settings.",
-        "youtubePlayerClientDesc": "Use a vetted YouTube extractor player client preset."
+        "youtubePlayerClientDesc": "Use a vetted YouTube extractor player client preset.",
+        "restrictFilenamesDesc": "Force ASCII-only filenames regardless of the download setting.",
+        "trimFilenamesDesc": "Maximum filename length in bytes. Overrides the automatic path-based limit."
       },
       "placeholder": {
         "impersonate": "chrome",
@@ -497,7 +509,8 @@
         "size": "10M",
         "country": "US",
         "matchFilters": "!is_live",
-        "formatSort": "res:1080,fps"
+        "formatSort": "res:1080,fps",
+        "trimFilenames": "120"
       }
     },
     "duplicateDownloads": "Vídeos baixados",

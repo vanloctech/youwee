@@ -51,6 +51,16 @@
     "embedMetadataDesc": "إضافة العنوان والفنان والوصف إلى الملفات",
     "embedThumbnail": "تضمين الصورة المصغرة",
     "embedThumbnailDesc": "إضافة غلاف/صورة مصغرة (يتطلب FFmpeg)",
+    "filenameSettings": "أسماء الملفات",
+    "filenameSettingsDesc": "التحكم في كيفية تسمية الملفات المحمّلة على القرص",
+    "filenameTemplate": "تنسيق اسم الملف",
+    "filenameTemplateDesc": "اختر نمط اسم ملف yt-dlp. عناوين المكتبة لا تتأثر.",
+    "filenameTemplateTitle": "العنوان الكامل",
+    "filenameTemplateTitleId": "عنوان قصير + المعرّف (موصى به)",
+    "filenameTemplateUploaderTitle": "الناشر - عنوان قصير",
+    "filenameTemplateIdOnly": "معرّف الفيديو فقط",
+    "filenameRestrictAscii": "أسماء ملفات ASCII",
+    "filenameRestrictAsciiDesc": "تقييد أسماء الملفات بأحرف ASCII لتوافق أفضل مع Windows",
     "numberPlaylistItems": "ترقيم عناصر قائمة التشغيل",
     "numberPlaylistItemsDesc": "إضافة ترتيب قائمة التشغيل كبادئة لملفات قوائم التشغيل الموسعة",
     "numberQueueItems": "ترقيم عناصر قائمة الانتظار",
@@ -483,7 +493,9 @@
         "geoBypassCountryDesc": "Use a two-letter country code for geo bypass.",
         "matchFiltersDesc": "Skip videos that do not match a yt-dlp filter expression.",
         "formatSortDesc": "Adjust yt-dlp format sorting without replacing Youwee quality settings.",
-        "youtubePlayerClientDesc": "Use a vetted YouTube extractor player client preset."
+        "youtubePlayerClientDesc": "Use a vetted YouTube extractor player client preset.",
+        "restrictFilenamesDesc": "Force ASCII-only filenames regardless of the download setting.",
+        "trimFilenamesDesc": "Maximum filename length in bytes. Overrides the automatic path-based limit."
       },
       "placeholder": {
         "impersonate": "chrome",
@@ -497,7 +509,8 @@
         "size": "10M",
         "country": "US",
         "matchFilters": "!is_live",
-        "formatSort": "res:1080,fps"
+        "formatSort": "res:1080,fps",
+        "trimFilenames": "120"
       }
     },
     "duplicateDownloads": "الفيديوهات التي تم تنزيلها",

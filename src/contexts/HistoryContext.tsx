@@ -12,6 +12,7 @@ import {
 import { syncAssetScopePaths } from '@/lib/asset-access';
 import { collectAssetScopeCandidates } from '@/lib/asset-paths';
 import { localizeUnknownError } from '@/lib/backend-error';
+import { loadFilenameSettings } from '@/lib/download-settings';
 import { buildCookieProxyInvokeOptions, loadNetworkSettings } from '@/lib/network-config';
 import {
   loadPluginWorkflowSnapshots,
@@ -621,6 +622,7 @@ export function HistoryProvider({ children }: { children: ReactNode }) {
           aria2Args,
           ytdlpAdvancedOptionsEnabled,
           ytdlpAdvancedOptions,
+          ...loadFilenameSettings(),
           pluginWorkflowSnapshots: loadPluginWorkflowSnapshots(),
           postDownloadWorkflowSteps: loadPostDownloadWorkflowSteps(),
           downloadKind: 'history-redownload',

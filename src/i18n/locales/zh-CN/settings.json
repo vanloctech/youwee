@@ -52,6 +52,16 @@
     "embedMetadataDesc": "将标题、艺术家、描述添加到文件",
     "embedThumbnail": "嵌入缩略图",
     "embedThumbnailDesc": "添加封面/缩略图（需要 FFmpeg）",
+    "filenameSettings": "文件名",
+    "filenameSettingsDesc": "控制下载文件在磁盘上的命名方式",
+    "filenameTemplate": "文件名格式",
+    "filenameTemplateDesc": "选择 yt-dlp 输出文件名模式。媒体库标题不受影响。",
+    "filenameTemplateTitle": "完整标题",
+    "filenameTemplateTitleId": "短标题 + ID（推荐）",
+    "filenameTemplateUploaderTitle": "上传者 - 短标题",
+    "filenameTemplateIdOnly": "仅视频 ID",
+    "filenameRestrictAscii": "ASCII 安全文件名",
+    "filenameRestrictAsciiDesc": "将文件名限制为 ASCII 字符，以提高 Windows 兼容性",
     "numberPlaylistItems": "为播放列表项目编号",
     "numberPlaylistItemsDesc": "为展开的播放列表下载文件添加播放列表顺序前缀",
     "numberQueueItems": "为队列项目编号",
@@ -488,7 +498,9 @@
         "geoBypassCountryDesc": "使用两位国家代码进行地理绕过。",
         "matchFiltersDesc": "跳过不符合 yt-dlp 过滤表达式的视频。",
         "formatSortDesc": "调整 yt-dlp 格式排序，不替代 Youwee 的质量设置。",
-        "youtubePlayerClientDesc": "使用经过验证的 YouTube extractor player client 预设。"
+        "youtubePlayerClientDesc": "使用经过验证的 YouTube extractor player client 预设。",
+        "restrictFilenamesDesc": "无论下载设置如何，都强制使用仅 ASCII 的文件名。",
+        "trimFilenamesDesc": "文件名的最大字节长度。会覆盖基于路径的自动限制。"
       },
       "placeholder": {
         "impersonate": "chrome",
@@ -502,7 +514,8 @@
         "size": "10M",
         "country": "US",
         "matchFilters": "!is_live",
-        "formatSort": "res:1080,fps"
+        "formatSort": "res:1080,fps",
+        "trimFilenames": "120"
       }
     },
     "duplicateDownloads": "已下载视频",

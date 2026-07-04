@@ -52,6 +52,16 @@
     "embedMetadataDesc": "Add title, artist, description to files",
     "embedThumbnail": "Embed Thumbnail",
     "embedThumbnailDesc": "Add cover art/thumbnail (requires FFmpeg)",
+    "filenameSettings": "Filenames",
+    "filenameSettingsDesc": "Control how downloaded files are named on disk",
+    "filenameTemplate": "Filename format",
+    "filenameTemplateDesc": "Choose the yt-dlp output filename pattern. Library titles are unaffected.",
+    "filenameTemplateTitle": "Full title",
+    "filenameTemplateTitleId": "Short title + ID (recommended)",
+    "filenameTemplateUploaderTitle": "Uploader - short title",
+    "filenameTemplateIdOnly": "Video ID only",
+    "filenameRestrictAscii": "ASCII-safe filenames",
+    "filenameRestrictAsciiDesc": "Restrict filenames to ASCII characters for better Windows compatibility",
     "numberPlaylistItems": "Number playlist items",
     "numberPlaylistItemsDesc": "Prefix expanded playlist downloads with their playlist order",
     "numberQueueItems": "Number queued items",
@@ -488,7 +498,9 @@
         "geoBypassCountryDesc": "Use a two-letter country code for geo bypass.",
         "matchFiltersDesc": "Skip videos that do not match a yt-dlp filter expression.",
         "formatSortDesc": "Adjust yt-dlp format sorting without replacing Youwee quality settings.",
-        "youtubePlayerClientDesc": "Use a vetted YouTube extractor player client preset."
+        "youtubePlayerClientDesc": "Use a vetted YouTube extractor player client preset.",
+        "restrictFilenamesDesc": "Force ASCII-only filenames regardless of the download setting.",
+        "trimFilenamesDesc": "Maximum filename length in bytes. Overrides the automatic path-based limit."
       },
       "placeholder": {
         "impersonate": "chrome",
@@ -502,7 +514,8 @@
         "size": "10M",
         "country": "US",
         "matchFilters": "!is_live",
-        "formatSort": "res:1080,fps"
+        "formatSort": "res:1080,fps",
+        "trimFilenames": "120"
       }
     },
     "duplicateDownloads": "Downloaded videos",

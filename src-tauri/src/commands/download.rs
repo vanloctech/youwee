@@ -28,14 +28,15 @@ use crate::services::{
     build_youtube_extractor_args, build_ytdlp_advanced_args, enqueue_post_download_workflow,
     get_deno_path, get_ffmpeg_path, get_ytdlp_path, get_ytdlp_source, is_upcoming_live_error,
     redact_ytdlp_advanced_args, resolve_download_workflow_snapshot, run_ytdlp_with_stderr,
-    system_ytdlp_not_found_message, YtdlpAdvancedOption,
+    system_ytdlp_not_found_message, SafeFilenameOptions, YtdlpAdvancedOption,
 };
 use crate::types::{
     BackendError, DependencySource, DownloadProgress, PluginWorkflowStepSnapshot,
     PostDownloadPluginPayload,
 };
 use crate::utils::{
-    build_format_string, format_size, parse_progress, sanitize_output_path, CommandExt,
+    build_format_string, build_ytdlp_chapter_output_template, build_ytdlp_output_template,
+    format_size, parse_progress, sanitize_output_path, FilenameTemplatePreset, CommandExt,
 };
 
 pub static CANCEL_FLAG: AtomicBool = AtomicBool::new(false);
@@ -53,44 +54,11 @@ fn extract_time_range(download_sections: &Option<String>) -> Option<String> {
     })
 }
 
-fn number_width(total: Option<u32>) -> usize {
-    total
-        .filter(|value| *value >= 100)
-        .map(|value| value.to_string().len())
-        .unwrap_or(2)
-}
-
-fn build_playlist_prefix(
-    enabled: bool,
-    playlist_index: Option<u32>,
-    playlist_total: Option<u32>,
-) -> Option<String> {
-    if !enabled {
-        return None;
-    }
-
-    let width = number_width(playlist_total);
-    playlist_index
-        .map(|index| format!("{index:0width$} - "))
-        .or_else(|| Some(format!("%(playlist_index)0{width}d - ")))
-}
-
-fn build_queue_prefix(
-    enabled: bool,
-    queue_index: Option<u32>,
-    queue_total: Option<u32>,
-) -> Option<String> {
-    if !enabled {
-        return None;
-    }
-
-    let index = queue_index?;
-    let width = number_width(queue_total);
-    Some(format!("{index:0width$} - "))
-}
 
 fn build_output_template(
     output_path: &str,
+    url: &str,
+    filename_template: FilenameTemplatePreset,
     number_playlist_items: bool,
     playlist_index: Option<u32>,
     playlist_total: Option<u32>,
@@ -98,10 +66,17 @@ fn build_output_template(
     queue_index: Option<u32>,
     queue_total: Option<u32>,
 ) -> String {
-    let prefix = build_playlist_prefix(number_playlist_items, playlist_index, playlist_total)
-        .or_else(|| build_queue_prefix(number_queue_items, queue_index, queue_total))
-        .unwrap_or_default();
-    format!("{output_path}/{prefix}%(title)s.%(ext)s")
+    build_ytdlp_output_template(
+        output_path,
+        url,
+        filename_template,
+        number_playlist_items,
+        playlist_index,
+        playlist_total,
+        number_queue_items,
+        queue_index,
+        queue_total,
+    )
 }
 
 fn build_chapter_output_template(
@@ -114,15 +89,16 @@ fn build_chapter_output_template(
     queue_total: Option<u32>,
     number_chapter_files: bool,
 ) -> String {
-    let item_prefix = build_playlist_prefix(number_playlist_items, playlist_index, playlist_total)
-        .or_else(|| build_queue_prefix(number_queue_items, queue_index, queue_total))
-        .unwrap_or_default();
-    let chapter_prefix = if number_chapter_files {
-        "%(section_number)02d - "
-    } else {
-        ""
-    };
-    format!("{output_path}/{item_prefix}{chapter_prefix}%(section_title)s.%(ext)s")
+    build_ytdlp_chapter_output_template(
+        output_path,
+        number_playlist_items,
+        playlist_index,
+        playlist_total,
+        number_queue_items,
+        queue_index,
+        queue_total,
+        number_chapter_files,
+    )
 }
 
 fn build_auto_collection_names(
@@ -210,24 +186,54 @@ mod playlist_chapter_tests {
     #[test]
     fn output_template_is_unchanged_when_numbering_is_off() {
         assert_eq!(
-            build_output_template("/tmp/out", false, None, None, false, None, None),
-            "/tmp/out/%(title)s.%(ext)s"
+            build_output_template(
+                "/tmp/out",
+                "https://www.youtube.com/watch?v=abc",
+                FilenameTemplatePreset::TitleId,
+                false,
+                None,
+                None,
+                false,
+                None,
+                None,
+            ),
+            "/tmp/out/%(title).100B [%(id)s].%(ext)s"
         );
     }
 
     #[test]
     fn output_template_uses_frontend_playlist_index_for_expanded_playlist_items() {
         assert_eq!(
-            build_output_template("/tmp/out", true, Some(3), Some(120), false, None, None),
-            "/tmp/out/003 - %(title)s.%(ext)s"
+            build_output_template(
+                "/tmp/out",
+                "https://www.youtube.com/watch?v=abc",
+                FilenameTemplatePreset::TitleId,
+                true,
+                Some(3),
+                Some(120),
+                false,
+                None,
+                None,
+            ),
+            "/tmp/out/003 - %(title).100B [%(id)s].%(ext)s"
         );
     }
 
     #[test]
     fn output_template_uses_frontend_queue_index_for_regular_queue_items() {
         assert_eq!(
-            build_output_template("/tmp/out", false, None, None, true, Some(7), Some(42)),
-            "/tmp/out/07 - %(title)s.%(ext)s"
+            build_output_template(
+                "/tmp/out",
+                "https://www.youtube.com/watch?v=abc",
+                FilenameTemplatePreset::TitleId,
+                false,
+                None,
+                None,
+                true,
+                Some(7),
+                Some(42),
+            ),
+            "/tmp/out/07 - %(title).100B [%(id)s].%(ext)s"
         );
     }
 
@@ -236,6 +242,8 @@ mod playlist_chapter_tests {
         assert_eq!(
             build_output_template(
                 "/tmp/out",
+                "https://www.youtube.com/watch?v=abc",
+                FilenameTemplatePreset::TitleId,
                 true,
                 Some(3),
                 Some(120),
@@ -243,7 +251,7 @@ mod playlist_chapter_tests {
                 Some(7),
                 Some(42)
             ),
-            "/tmp/out/003 - %(title)s.%(ext)s"
+            "/tmp/out/003 - %(title).100B [%(id)s].%(ext)s"
         );
     }
 
@@ -856,6 +864,9 @@ pub async fn download_video(
     sponsorblock_mark: Option<String>,   // comma-separated categories to mark as chapters
     // Download sections (time range)
     download_sections: Option<String>, // e.g. "*10:30-14:30" for partial download
+    // Filename settings
+    filename_template: Option<String>,
+    filename_restrict_ascii: Option<bool>,
     // Title (optional, passed from frontend for display purposes)
     title: Option<String>,
     // Thumbnail URL (optional, passed from frontend for non-YouTube sites)
@@ -932,8 +943,13 @@ pub async fn download_video(
     let number_queue_items = number_queue_items.unwrap_or(false);
     let split_embedded_chapters = split_embedded_chapters.unwrap_or(false);
     let number_chapter_files = number_chapter_files.unwrap_or(true);
+    let filename_template =
+        FilenameTemplatePreset::from_str(filename_template.as_deref().unwrap_or("title_id"));
+    let filename_restrict_ascii = filename_restrict_ascii.unwrap_or(true);
     let output_template = build_output_template(
         &sanitized_path,
+        &url,
+        filename_template,
         number_playlist_items,
         playlist_index,
         playlist_total,
@@ -971,7 +987,6 @@ pub async fn download_video(
         "--file-access-retries".to_string(),
         "2".to_string(),
     ];
-    add_safe_filename_args(&mut args);
 
     if split_embedded_chapters {
         args.push("--split-chapters".to_string());
@@ -1065,6 +1080,15 @@ pub async fn download_video(
         .ok();
     }
     args.extend(advanced_args.args);
+    add_safe_filename_args(
+        &mut args,
+        SafeFilenameOptions {
+            output_path: Some(&sanitized_path),
+            restrict_ascii: filename_restrict_ascii
+                || advanced_args.filename_overrides.restrict_filenames,
+            trim_filenames: advanced_args.filename_overrides.trim_filenames,
+        },
+    );
 
     // Merge YouTube extractor settings into a single --extractor-args value.
     // See: https://github.com/yt-dlp/yt-dlp/issues/14680

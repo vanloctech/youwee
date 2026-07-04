@@ -928,15 +928,7 @@ pub fn build_cookie_args(
     args
 }
 
-/// Keep yt-dlp output filenames below common filesystem limits.
-///
-/// Some extractors, especially Facebook Reels, expose long captions as titles.
-/// macOS returns ENAMETOOLONG before yt-dlp can create the .part file unless
-/// yt-dlp trims the generated filename first.
-pub fn add_safe_filename_args(args: &mut Vec<String>) {
-    args.push("--trim-filenames".to_string());
-    args.push("180".to_string());
-}
+pub use crate::utils::{add_safe_filename_args, SafeFilenameOptions};
 
 fn parse_cookie_skip_rule(rule: &str) -> Option<(String, String)> {
     let trimmed = rule.trim();
@@ -1235,16 +1227,20 @@ mod tests {
     fn safe_filename_args_trim_long_titles_before_writing_files() {
         let mut args = vec!["--newline".to_string()];
 
-        add_safe_filename_args(&mut args);
-
-        assert_eq!(
-            args,
-            vec![
-                "--newline".to_string(),
-                "--trim-filenames".to_string(),
-                "180".to_string(),
-            ]
+        add_safe_filename_args(
+            &mut args,
+            SafeFilenameOptions {
+                output_path: Some("G:\\Youwee"),
+                restrict_ascii: true,
+                trim_filenames: Some(120),
+            },
         );
+
+        #[cfg(windows)]
+        assert!(args.contains(&"--windows-filenames".to_string()));
+        assert!(args.contains(&"--restrict-filenames".to_string()));
+        assert!(args.contains(&"--trim-filenames".to_string()));
+        assert!(args.contains(&"120".to_string()));
     }
 
     #[test]

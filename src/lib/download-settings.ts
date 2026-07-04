@@ -5,6 +5,7 @@ import {
 } from '@/lib/download-retry';
 import type {
   DownloadSettings,
+  FilenameTemplatePreset,
   ItemDownloadSettings,
   ItemUniversalSettings,
   PluginWorkflowSnapshotMap,
@@ -17,6 +18,59 @@ interface SnapshotExtras {
   pluginWorkflowSnapshots?: PluginWorkflowSnapshotMap;
   postDownloadWorkflowSteps?: PluginWorkflowStepSnapshot[];
   overrides?: Partial<ItemDownloadSettings>;
+}
+
+const DOWNLOAD_SETTINGS_STORAGE_KEY = 'youwee-settings';
+
+const FILENAME_TEMPLATE_PRESETS = new Set<FilenameTemplatePreset>([
+  'title',
+  'title_id',
+  'uploader_title',
+  'id_only',
+]);
+
+export function normalizeFilenameTemplatePreset(value: unknown): FilenameTemplatePreset {
+  if (typeof value === 'string' && FILENAME_TEMPLATE_PRESETS.has(value as FilenameTemplatePreset)) {
+    return value as FilenameTemplatePreset;
+  }
+  return 'title_id';
+}
+
+export function loadFilenameSettings(): {
+  filenameTemplate: FilenameTemplatePreset;
+  filenameRestrictAscii: boolean;
+} {
+  try {
+    const saved = localStorage.getItem(DOWNLOAD_SETTINGS_STORAGE_KEY);
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      return {
+        filenameTemplate: normalizeFilenameTemplatePreset(parsed.filenameTemplate),
+        filenameRestrictAscii: parsed.filenameRestrictAscii !== false,
+      };
+    }
+  } catch (error) {
+    console.error('Failed to load filename settings:', error);
+  }
+  return {
+    filenameTemplate: 'title_id',
+    filenameRestrictAscii: true,
+  };
+}
+
+export function buildFilenameInvokeOptions(
+  settings: Partial<Pick<DownloadSettings, 'filenameTemplate' | 'filenameRestrictAscii'>>,
+  itemSettings?: Partial<
+    Pick<ItemDownloadSettings | ItemUniversalSettings, 'filenameTemplate' | 'filenameRestrictAscii'>
+  >,
+) {
+  return {
+    filenameTemplate: normalizeFilenameTemplatePreset(
+      itemSettings?.filenameTemplate ?? settings.filenameTemplate,
+    ),
+    filenameRestrictAscii:
+      itemSettings?.filenameRestrictAscii ?? settings.filenameRestrictAscii ?? true,
+  };
 }
 
 export function createDefaultDownloadSettings(saved: Partial<DownloadSettings>): DownloadSettings {
@@ -44,6 +98,8 @@ export function createDefaultDownloadSettings(saved: Partial<DownloadSettings>):
     splitEmbeddedChapters: saved.splitEmbeddedChapters === true,
     numberChapterFiles: saved.numberChapterFiles !== false,
     autoOrganizeCollections: saved.autoOrganizeCollections === true,
+    filenameTemplate: normalizeFilenameTemplatePreset(saved.filenameTemplate),
+    filenameRestrictAscii: saved.filenameRestrictAscii !== false,
     rememberDownloadedVideos: saved.rememberDownloadedVideos === true,
     duplicateDownloadHandling:
       saved.duplicateDownloadHandling === 'skip' || saved.duplicateDownloadHandling === 'allow'
@@ -103,6 +159,8 @@ export function serializeDownloadSettings(settings: DownloadSettings): Partial<D
     splitEmbeddedChapters: settings.splitEmbeddedChapters,
     numberChapterFiles: settings.numberChapterFiles,
     autoOrganizeCollections: settings.autoOrganizeCollections,
+    filenameTemplate: settings.filenameTemplate,
+    filenameRestrictAscii: settings.filenameRestrictAscii,
     rememberDownloadedVideos: settings.rememberDownloadedVideos,
     duplicateDownloadHandling: settings.duplicateDownloadHandling,
     liveFromStart: settings.liveFromStart,
@@ -156,6 +214,8 @@ export function buildItemDownloadSettingsSnapshot(
     splitEmbeddedChapters: settings.splitEmbeddedChapters,
     numberChapterFiles: settings.numberChapterFiles,
     autoOrganizeCollections: settings.autoOrganizeCollections,
+    filenameTemplate: settings.filenameTemplate,
+    filenameRestrictAscii: settings.filenameRestrictAscii,
     pluginWorkflowSnapshots: extras.pluginWorkflowSnapshots,
     postDownloadWorkflowSteps: extras.postDownloadWorkflowSteps,
     autoRetryEnabled: settings.autoRetryEnabled,

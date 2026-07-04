@@ -33,6 +33,7 @@ import {
   waitWithCancellation,
 } from '@/lib/download-retry';
 import {
+  buildFilenameInvokeOptions,
   buildItemDownloadSettingsSnapshot,
   createDefaultDownloadSettings,
   refreshItemPluginWorkflowSnapshots,
@@ -1444,6 +1445,7 @@ export function DownloadProvider({ children }: { children: ReactNode }) {
               itemSettings?.ytdlpAdvancedOptionsEnabled ?? settings.ytdlpAdvancedOptionsEnabled,
             ytdlpAdvancedOptions:
               itemSettings?.ytdlpAdvancedOptions ?? settings.ytdlpAdvancedOptions,
+            ...buildFilenameInvokeOptions(settings, itemSettings),
             // SponsorBlock settings
             sponsorblockRemove: sponsorBlockArgs.remove,
             sponsorblockMark: sponsorBlockArgs.mark,

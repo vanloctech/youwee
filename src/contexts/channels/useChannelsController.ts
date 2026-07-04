@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { localizeProgressError, localizeUnknownError } from '@/lib/backend-error';
 import { buildDownloadDuplicateIdentity } from '@/lib/download-duplicates';
+import { loadFilenameSettings } from '@/lib/download-settings';
 import { buildCookieProxyInvokeOptions, loadNetworkSettings } from '@/lib/network-config';
 import {
   enqueuePluginWorkflowTrigger,
@@ -982,6 +983,7 @@ export function useChannelsController(): ChannelsContextType {
                 aria2Args,
                 ytdlpAdvancedOptionsEnabled,
                 ytdlpAdvancedOptions,
+                ...loadFilenameSettings(),
                 sponsorblockRemove: sponsorBlockArgs.remove,
                 sponsorblockMark: sponsorBlockArgs.mark,
                 historyId: null,
@@ -1424,6 +1426,7 @@ export function useChannelsController(): ChannelsContextType {
               aria2Args,
               ytdlpAdvancedOptionsEnabled,
               ytdlpAdvancedOptions,
+              ...loadFilenameSettings(),
               pluginWorkflowSnapshots: workflowSnapshots,
               postDownloadWorkflowSteps: loadPostDownloadWorkflowSteps(),
               downloadKind: 'channel-auto',

@@ -170,6 +170,21 @@ export const YTDLP_ADVANCED_OPTION_DEFINITIONS: readonly YtdlpAdvancedOptionDefi
     securityLevel: 'advanced',
     options: ['web', 'mweb', 'tv', 'ios', 'android', 'web_safari'],
   },
+  {
+    id: 'restrictFilenames',
+    ytDlpFlag: '--restrict-filenames',
+    valueType: 'boolean',
+    descriptionKey: 'download.ytdlpAdvanced.option.restrictFilenamesDesc',
+    securityLevel: 'standard',
+  },
+  {
+    id: 'trimFilenames',
+    ytDlpFlag: '--trim-filenames',
+    valueType: 'number',
+    descriptionKey: 'download.ytdlpAdvanced.option.trimFilenamesDesc',
+    placeholderKey: 'download.ytdlpAdvanced.placeholder.trimFilenames',
+    securityLevel: 'standard',
+  },
 ] as const;
 
 export const YTDLP_ADVANCED_OPTION_IDS = new Set<YtdlpAdvancedOptionId>(

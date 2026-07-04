@@ -5,6 +5,8 @@ export type AudioBitrate = 'auto' | '128';
 export type PreferredFps = 'original' | '30';
 export type SubtitleMode = 'off' | 'auto' | 'manual';
 export type SubtitleFormat = 'srt' | 'vtt' | 'ass';
+export type FilenameTemplatePreset = 'title' | 'title_id' | 'uploader_title' | 'id_only';
+
 export type YtdlpAdvancedOptionId =
   | 'impersonate'
   | 'forceIpv4'
@@ -23,7 +25,9 @@ export type YtdlpAdvancedOptionId =
   | 'geoBypassCountry'
   | 'matchFilters'
   | 'formatSort'
-  | 'youtubePlayerClient';
+  | 'youtubePlayerClient'
+  | 'restrictFilenames'
+  | 'trimFilenames';
 
 export interface YtdlpAdvancedOption {
   id: YtdlpAdvancedOptionId;
@@ -106,6 +110,8 @@ export interface ItemDownloadSettings {
   splitEmbeddedChapters?: boolean;
   numberChapterFiles?: boolean;
   autoOrganizeCollections?: boolean;
+  filenameTemplate?: FilenameTemplatePreset;
+  filenameRestrictAscii?: boolean;
   playlistCollectionName?: string | null;
   pluginWorkflowSnapshots?: PluginWorkflowSnapshotMap;
   postDownloadWorkflowSteps?: PluginWorkflowStepSnapshot[];
@@ -133,6 +139,8 @@ export interface ItemUniversalSettings {
   splitEmbeddedChapters?: boolean;
   numberChapterFiles?: boolean;
   autoOrganizeCollections?: boolean;
+  filenameTemplate?: FilenameTemplatePreset;
+  filenameRestrictAscii?: boolean;
   pluginWorkflowSnapshots?: PluginWorkflowSnapshotMap;
   postDownloadWorkflowSteps?: PluginWorkflowStepSnapshot[];
   autoRetryEnabled: boolean;
@@ -321,6 +329,8 @@ export interface DownloadSettings {
   splitEmbeddedChapters: boolean; // Split downloaded media into embedded chapter files
   numberChapterFiles: boolean; // Prefix chapter files with chapter numbers when splitting
   autoOrganizeCollections: boolean; // Create library collections for expanded playlists, channel downloads, and split chapters
+  filenameTemplate: FilenameTemplatePreset; // yt-dlp output filename body preset
+  filenameRestrictAscii: boolean; // Restrict output filenames to ASCII-safe characters
   // Download duplicate detection
   rememberDownloadedVideos: boolean; // Check Library/history before adding duplicate downloads
   duplicateDownloadHandling: DuplicateDownloadHandling; // Ask or skip when downloaded videos are detected

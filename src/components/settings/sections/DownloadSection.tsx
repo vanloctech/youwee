@@ -1,5 +1,6 @@
 import {
   Database,
+  FileText,
   Film,
   Gauge,
   History,
@@ -26,6 +27,7 @@ import { Switch } from '@/components/ui/switch';
 import { useDownload } from '@/contexts/download-context';
 import { clampAutoRetryDelaySeconds, clampAutoRetryMaxAttempts } from '@/lib/download-retry';
 import {
+  type FilenameTemplatePreset,
   SPONSORBLOCK_CATEGORIES,
   type SponsorBlockAction,
   type SponsorBlockCategory,
@@ -183,6 +185,55 @@ export function DownloadSection({ highlightId }: DownloadSectionProps) {
             <Switch
               checked={settings.persistDownloadQueue}
               onCheckedChange={(persistDownloadQueue) => updateSettings({ persistDownloadQueue })}
+            />
+          </SettingsRow>
+        </SettingsCard>
+      </SettingsSection>
+
+      <SettingsDivider />
+
+      <SettingsSection
+        title={t('download.filenameSettings')}
+        description={t('download.filenameSettingsDesc')}
+        icon={<FileText className="w-5 h-5 text-white" />}
+        iconClassName="bg-gradient-to-br from-sky-500 to-blue-600 shadow-sky-500/20"
+      >
+        <SettingsCard>
+          <SettingsRow
+            id="filename-template"
+            label={t('download.filenameTemplate')}
+            description={t('download.filenameTemplateDesc')}
+            highlight={highlightId === 'filename-template'}
+          >
+            <Select
+              value={settings.filenameTemplate}
+              onValueChange={(filenameTemplate) =>
+                updateSettings({ filenameTemplate: filenameTemplate as FilenameTemplatePreset })
+              }
+            >
+              <SelectTrigger className="w-[220px]">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="title_id">{t('download.filenameTemplateTitleId')}</SelectItem>
+                <SelectItem value="title">{t('download.filenameTemplateTitle')}</SelectItem>
+                <SelectItem value="uploader_title">
+                  {t('download.filenameTemplateUploaderTitle')}
+                </SelectItem>
+                <SelectItem value="id_only">{t('download.filenameTemplateIdOnly')}</SelectItem>
+              </SelectContent>
+            </Select>
+          </SettingsRow>
+
+          <SettingsRow
+            id="filename-restrict-ascii"
+            label={t('download.filenameRestrictAscii')}
+            description={t('download.filenameRestrictAsciiDesc')}
+            highlight={highlightId === 'filename-restrict-ascii'}
+          >
+            <Switch
+              checked={settings.filenameRestrictAscii}
+              onCheckedChange={(filenameRestrictAscii) => updateSettings({ filenameRestrictAscii })}
             />
           </SettingsRow>
         </SettingsCard>
