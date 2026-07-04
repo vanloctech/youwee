@@ -51,6 +51,16 @@
     "embedMetadataDesc": "Добавить название, исполнителя, описание в файлы",
     "embedThumbnail": "Встроить превью",
     "embedThumbnailDesc": "Добавить обложку/превью (требуется FFmpeg)",
+    "filenameSettings": "Имена файлов",
+    "filenameSettingsDesc": "Управление именами скачанных файлов на диске",
+    "filenameTemplate": "Формат имени файла",
+    "filenameTemplateDesc": "Выберите шаблон имени yt-dlp. Заголовки в библиотеке не меняются.",
+    "filenameTemplateTitle": "Полный заголовок",
+    "filenameTemplateTitleId": "Короткий заголовок + ID (рекомендуется)",
+    "filenameTemplateUploaderTitle": "Автор - короткий заголовок",
+    "filenameTemplateIdOnly": "Только ID видео",
+    "filenameRestrictAscii": "ASCII-имена файлов",
+    "filenameRestrictAsciiDesc": "Ограничить имена файлов ASCII-символами для лучшей совместимости с Windows",
     "numberPlaylistItems": "Нумеровать элементы плейлиста",
     "numberPlaylistItemsDesc": "Добавлять номер из плейлиста к файлам раскрытой загрузки плейлиста",
     "numberQueueItems": "Нумеровать элементы очереди",
@@ -483,7 +493,9 @@
         "geoBypassCountryDesc": "Use a two-letter country code for geo bypass.",
         "matchFiltersDesc": "Skip videos that do not match a yt-dlp filter expression.",
         "formatSortDesc": "Adjust yt-dlp format sorting without replacing Youwee quality settings.",
-        "youtubePlayerClientDesc": "Use a vetted YouTube extractor player client preset."
+        "youtubePlayerClientDesc": "Use a vetted YouTube extractor player client preset.",
+        "restrictFilenamesDesc": "Force ASCII-only filenames regardless of the download setting.",
+        "trimFilenamesDesc": "Maximum filename length in bytes. Overrides the automatic path-based limit."
       },
       "placeholder": {
         "impersonate": "chrome",
@@ -497,7 +509,8 @@
         "size": "10M",
         "country": "US",
         "matchFilters": "!is_live",
-        "formatSort": "res:1080,fps"
+        "formatSort": "res:1080,fps",
+        "trimFilenames": "120"
       }
     },
     "duplicateDownloads": "Загруженные видео",

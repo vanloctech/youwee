@@ -10,7 +10,7 @@ use crate::database::{
     ensure_collection_for_download_in_db,
 };
 use crate::services::get_ffmpeg_path;
-use crate::utils::CommandExt;
+use crate::utils::{sanitize_filename_part, CommandExt};
 
 #[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -51,26 +51,6 @@ pub struct MediaSplitSegmentResult {
 pub struct MediaSplitResult {
     pub output_dir: String,
     pub segments: Vec<MediaSplitSegmentResult>,
-}
-
-fn sanitize_filename_part(value: &str, fallback: &str) -> String {
-    let sanitized = value
-        .chars()
-        .map(|ch| match ch {
-            '<' | '>' | ':' | '"' | '/' | '\\' | '|' | '?' | '*' | '\0' => ' ',
-            ch if ch.is_control() => ' ',
-            ch => ch,
-        })
-        .collect::<String>()
-        .split_whitespace()
-        .collect::<Vec<_>>()
-        .join(" ");
-    let trimmed = sanitized.trim_matches(['.', ' ']).trim();
-    if trimmed.is_empty() {
-        fallback.to_string()
-    } else {
-        trimmed.chars().take(120).collect()
-    }
 }
 
 fn format_timestamp(total_seconds: f64) -> String {

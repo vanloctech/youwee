@@ -51,6 +51,16 @@
     "embedMetadataDesc": "เพิ่มชื่อเรื่อง ศิลปิน และคำอธิบายลงในไฟล์",
     "embedThumbnail": "ฝังภาพปก",
     "embedThumbnailDesc": "เพิ่มภาพปก/thumbnail (ต้องใช้ FFmpeg)",
+    "filenameSettings": "ชื่อไฟล์",
+    "filenameSettingsDesc": "ควบคุมวิธีตั้งชื่อไฟล์ที่ดาวน์โหลดบนดิสก์",
+    "filenameTemplate": "รูปแบบชื่อไฟล์",
+    "filenameTemplateDesc": "เลือกรูปแบบชื่อไฟล์ของ yt-dlp ชื่อในไลบรารีจะไม่เปลี่ยน",
+    "filenameTemplateTitle": "ชื่อเต็ม",
+    "filenameTemplateTitleId": "ชื่อสั้น + ID (แนะนำ)",
+    "filenameTemplateUploaderTitle": "ผู้อัปโหลด - ชื่อสั้น",
+    "filenameTemplateIdOnly": "เฉพาะ ID วิดีโอ",
+    "filenameRestrictAscii": "ชื่อไฟล์ ASCII",
+    "filenameRestrictAsciiDesc": "จำกัดชื่อไฟล์ให้เป็นตัวอักษร ASCII เพื่อความเข้ากันได้กับ Windows",
     "numberPlaylistItems": "ใส่เลขรายการในเพลย์ลิสต์",
     "numberPlaylistItemsDesc": "เติมเลขลำดับเพลย์ลิสต์นำหน้าชื่อไฟล์เมื่อดาวน์โหลดเพลย์ลิสต์แบบแยกรายการ",
     "numberQueueItems": "ใส่เลขรายการในคิว",
@@ -483,7 +493,9 @@
         "geoBypassCountryDesc": "Use a two-letter country code for geo bypass.",
         "matchFiltersDesc": "Skip videos that do not match a yt-dlp filter expression.",
         "formatSortDesc": "Adjust yt-dlp format sorting without replacing Youwee quality settings.",
-        "youtubePlayerClientDesc": "Use a vetted YouTube extractor player client preset."
+        "youtubePlayerClientDesc": "Use a vetted YouTube extractor player client preset.",
+        "restrictFilenamesDesc": "Force ASCII-only filenames regardless of the download setting.",
+        "trimFilenamesDesc": "Maximum filename length in bytes. Overrides the automatic path-based limit."
       },
       "placeholder": {
         "impersonate": "chrome",
@@ -497,7 +509,8 @@
         "size": "10M",
         "country": "US",
         "matchFilters": "!is_live",
-        "formatSort": "res:1080,fps"
+        "formatSort": "res:1080,fps",
+        "trimFilenames": "120"
       }
     },
     "duplicateDownloads": "วิดีโอที่ดาวน์โหลดแล้ว",

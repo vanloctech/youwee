@@ -14,6 +14,7 @@ pub struct BuiltYtdlpAdvancedArgs {
     pub args: Vec<String>,
     pub youtube_player_client: Option<String>,
     pub skipped_options: Vec<String>,
+    pub filename_overrides: crate::utils::FilenameAdvancedOverrides,
 }
 
 pub fn build_ytdlp_advanced_args(
@@ -26,6 +27,7 @@ pub fn build_ytdlp_advanced_args(
             args: Vec::new(),
             youtube_player_client: None,
             skipped_options: Vec::new(),
+            filename_overrides: crate::utils::FilenameAdvancedOverrides::default(),
         });
     }
 
@@ -34,6 +36,7 @@ pub fn build_ytdlp_advanced_args(
     let mut skipped_options = Vec::new();
     let mut youtube_player_client = None;
     let mut force_ip_mode: Option<&str> = None;
+    let mut filename_overrides = crate::utils::FilenameAdvancedOverrides::default();
 
     for option in options {
         if option.id.starts_with('-') {
@@ -154,6 +157,14 @@ pub fn build_ytdlp_advanced_args(
                     "player client",
                 )?)?);
             }
+            "restrictFilenames" => {
+                ensure_no_value(option)?;
+                filename_overrides.restrict_filenames = true;
+            }
+            "trimFilenames" => {
+                let value = validate_integer(required_value(option, "trim filenames")?, 50, 200)?;
+                filename_overrides.trim_filenames = value.parse().ok();
+            }
             _ => {
                 return Err(validation_error(format!(
                     "Unsupported yt-dlp option '{}'. Use the supported advanced options list.",
@@ -167,6 +178,7 @@ pub fn build_ytdlp_advanced_args(
         args,
         youtube_player_client,
         skipped_options,
+        filename_overrides,
     })
 }
 

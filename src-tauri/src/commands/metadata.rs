@@ -14,10 +14,13 @@ use crate::database::{add_history_internal, add_log_internal};
 use crate::services::{
     add_safe_filename_args, build_cookie_args, build_site_header_args, get_deno_path,
     get_ffmpeg_path, get_ytdlp_path, get_ytdlp_source, run_ytdlp_with_stderr_and_cookies,
-    search_youtube_videos_internal, system_ytdlp_not_found_message,
+    search_youtube_videos_internal, system_ytdlp_not_found_message, SafeFilenameOptions,
 };
 use crate::types::{BackendError, DependencySource, YoutubeSearchVideo};
-use crate::utils::{normalize_url, sanitize_output_path, validate_url, CommandExt};
+use crate::utils::{
+    build_ytdlp_metadata_output_template, normalize_url, sanitize_filename_part,
+    sanitize_output_path, validate_url, FilenameTemplatePreset, CommandExt,
+};
 
 pub static METADATA_CANCEL_FLAG: AtomicBool = AtomicBool::new(false);
 pub static DATA_EXPORT_CANCEL_FLAG: AtomicBool = AtomicBool::new(false);
@@ -651,13 +654,7 @@ fn split_info_json_and_comments(
     write_comments: bool,
 ) -> Result<(), String> {
     // Sanitize title for filename (remove invalid chars)
-    let safe_title = title
-        .chars()
-        .map(|c| match c {
-            '/' | '\\' | ':' | '*' | '?' | '"' | '<' | '>' | '|' => '_',
-            _ => c,
-        })
-        .collect::<String>();
+    let safe_title = sanitize_filename_part(title, "metadata");
 
     let info_json_path = Path::new(output_dir).join(format!("{}.info.json", safe_title));
 
@@ -739,8 +736,11 @@ pub async fn fetch_metadata(
 
     let sanitized_path = sanitize_output_path(&output_path)
         .map_err(|e| BackendError::from_message(e).to_wire_string())?;
-    // Use title only without extension - yt-dlp will add .info.json, .description, .jpg etc
-    let output_template = format!("{}/%(title)s", sanitized_path);
+    let output_template = build_ytdlp_metadata_output_template(
+        &sanitized_path,
+        &url,
+        FilenameTemplatePreset::TitleId,
+    );
 
     let mut args = vec![
         "--skip-download".to_string(),
@@ -750,7 +750,14 @@ pub async fn fetch_metadata(
         "-o".to_string(),
         output_template.clone(),
     ];
-    add_safe_filename_args(&mut args);
+    add_safe_filename_args(
+        &mut args,
+        SafeFilenameOptions {
+            output_path: Some(&sanitized_path),
+            restrict_ascii: true,
+            trim_filenames: None,
+        },
+    );
 
     // Description output template - yt-dlp adds .description automatically
     if write_description {
@@ -978,13 +985,7 @@ pub async fn fetch_metadata(
             let title = video_title.clone().unwrap_or_else(|| "Unknown".to_string());
 
             // Sanitize title for filename (same logic as split_info_json_and_comments)
-            let safe_title: String = title
-                .chars()
-                .map(|c| match c {
-                    '/' | '\\' | ':' | '*' | '?' | '"' | '<' | '>' | '|' => '_',
-                    _ => c,
-                })
-                .collect();
+            let safe_title = sanitize_filename_part(&title, "metadata");
 
             // Post-process: rename description file to .description.txt
             if write_description {

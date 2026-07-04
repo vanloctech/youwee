@@ -30,7 +30,10 @@ import {
   isRetryableError,
   waitWithCancellation,
 } from '@/lib/download-retry';
-import { refreshItemPluginWorkflowSnapshots } from '@/lib/download-settings';
+import {
+  buildFilenameInvokeOptions,
+  refreshItemPluginWorkflowSnapshots,
+} from '@/lib/download-settings';
 import {
   buildCookieProxyInvokeOptions,
   loadCookieSettings,
@@ -1099,6 +1102,7 @@ export function UniversalProvider({ children }: { children: ReactNode }) {
               advancedSettings.ytdlpAdvancedOptionsEnabled,
             ytdlpAdvancedOptions:
               itemSettings?.ytdlpAdvancedOptions ?? advancedSettings.ytdlpAdvancedOptions,
+            ...buildFilenameInvokeOptions(downloadSettings, itemSettings),
             // SponsorBlock settings
             sponsorblockRemove: sponsorBlockArgs.remove,
             sponsorblockMark: sponsorBlockArgs.mark,
@@ -1305,13 +1309,7 @@ export function UniversalProvider({ children }: { children: ReactNode }) {
       setIsDownloading(false);
       isDownloadingRef.current = false;
     }
-  }, [
-    downloadSettings.numberChapterFiles,
-    downloadSettings.autoOrganizeCollections,
-    downloadSettings.splitEmbeddedChapters,
-    enqueueFailedWorkflowForItem,
-    settings,
-  ]);
+  }, [downloadSettings, enqueueFailedWorkflowForItem, settings]);
 
   const stopDownload = useCallback(async () => {
     try {

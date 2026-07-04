@@ -52,6 +52,16 @@
     "embedMetadataDesc": "Thêm tiêu đề, nghệ sĩ, mô tả vào file",
     "embedThumbnail": "Nhúng Thumbnail",
     "embedThumbnailDesc": "Thêm ảnh bìa/thumbnail (yêu cầu FFmpeg)",
+    "filenameSettings": "Tên file",
+    "filenameSettingsDesc": "Kiểm soát cách đặt tên file tải về trên ổ đĩa",
+    "filenameTemplate": "Định dạng tên file",
+    "filenameTemplateDesc": "Chọn mẫu tên file yt-dlp. Tiêu đề trong Thư viện không bị ảnh hưởng.",
+    "filenameTemplateTitle": "Tiêu đề đầy đủ",
+    "filenameTemplateTitleId": "Tiêu đề ngắn + ID (khuyến nghị)",
+    "filenameTemplateUploaderTitle": "Người đăng - tiêu đề ngắn",
+    "filenameTemplateIdOnly": "Chỉ ID video",
+    "filenameRestrictAscii": "Tên file an toàn ASCII",
+    "filenameRestrictAsciiDesc": "Giới hạn tên file chỉ dùng ký tự ASCII để tương thích Windows tốt hơn",
     "numberPlaylistItems": "Đánh số item trong playlist",
     "numberPlaylistItemsDesc": "Thêm số thứ tự vào đầu tên file khi tải playlist đã tách thành queue",
     "numberQueueItems": "Đánh số item trong hàng đợi",
@@ -488,7 +498,9 @@
         "geoBypassCountryDesc": "Dùng mã quốc gia 2 ký tự cho geo bypass.",
         "matchFiltersDesc": "Bỏ qua video không khớp biểu thức filter của yt-dlp.",
         "formatSortDesc": "Điều chỉnh cách yt-dlp sắp xếp format mà không thay thế setting chất lượng của Youwee.",
-        "youtubePlayerClientDesc": "Dùng preset player client YouTube đã được kiểm soát."
+        "youtubePlayerClientDesc": "Dùng preset player client YouTube đã được kiểm soát.",
+        "restrictFilenamesDesc": "Buộc tên file chỉ dùng ASCII, bất kể cài đặt tải xuống.",
+        "trimFilenamesDesc": "Độ dài tên file tối đa theo byte. Ghi đè giới hạn tự động theo đường dẫn."
       },
       "placeholder": {
         "impersonate": "chrome",
@@ -502,7 +514,8 @@
         "size": "10M",
         "country": "US",
         "matchFilters": "!is_live",
-        "formatSort": "res:1080,fps"
+        "formatSort": "res:1080,fps",
+        "trimFilenames": "120"
       }
     },
     "duplicateDownloads": "Video đã tải",
