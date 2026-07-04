@@ -28,6 +28,13 @@ src-tauri/target/
 src-tauri/bin/yt-dlp*
 src-tauri/bin/youwee-yt-dlp*
 
+# Flatpak build artifacts
+flatpak/input/
+flatpak/payload/
+flatpak/build-dir/
+flatpak/repo/
+flatpak/*.flatpak
+
 # Python (old version)
 *.py
 __pycache__/

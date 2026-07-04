@@ -7,6 +7,12 @@ và dự án tuân theo [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+### Thêm mới
+- **Gói Flatpak cho Linux** - Thêm gói phát hành Flatpak cho người dùng Linux trên các distro mới, nơi AppImage có thể cần cài thêm FUSE
+
+### Thay đổi
+- **Cập nhật trong Flatpak** - Bỏ qua updater AppImage tích hợp khi Youwee chạy từ Flatpak để việc cập nhật do Flatpak quản lý
+
 ## [0.19.0] - 2026-06-30
 
 ### Thêm mới

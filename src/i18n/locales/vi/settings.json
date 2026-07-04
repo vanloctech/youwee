@@ -844,6 +844,7 @@
     "versionAvailable": "v{{version}} có sẵn",
     "upToDate": "Đã cập nhật",
     "checkFailed": "Kiểm tra thất bại",
+    "flatpakUpdates": "Cập nhật được quản lý bởi Flatpak",
     "update": "Cập nhật",
     "restarting": "Đang khởi động lại...",
     "checkForUpdates": "Kiểm tra cập nhật",

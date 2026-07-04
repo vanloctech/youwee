@@ -844,6 +844,7 @@
     "versionAvailable": "v{{version}} available",
     "upToDate": "Up to date",
     "checkFailed": "Check failed",
+    "flatpakUpdates": "Updates are managed by Flatpak",
     "update": "Update",
     "restarting": "Restarting...",
     "checkForUpdates": "Check for updates",

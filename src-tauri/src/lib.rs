@@ -479,6 +479,7 @@ pub fn run() {
             commands::load_download_queue,
             commands::save_download_queue,
             commands::clear_download_queue,
+            commands::is_flatpak_environment,
             // External deep-link commands
             commands::consume_pending_external_links,
             commands::consume_pending_cli_download_requests,

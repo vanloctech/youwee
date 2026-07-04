@@ -7,6 +7,12 @@ Youwee 的所有重要更改都将记录在此文件中。
 
 ## [Unreleased]
 
+### 新增
+- **Linux Flatpak 包** - 新增 Flatpak 发布包，方便使用较新 Linux 发行版且 AppImage 可能需要额外 FUSE 包的用户
+
+### 变更
+- **Flatpak 更新** - 当 Youwee 以 Flatpak 方式运行时跳过内置 AppImage 更新器，改由 Flatpak 管理更新
+
 ## [0.19.0] - 2026-06-30
 
 ### 新增

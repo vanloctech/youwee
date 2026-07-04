@@ -771,6 +771,7 @@
     "versionAvailable": "يتوفر v{{version}}",
     "upToDate": "أحدث إصدار",
     "checkFailed": "فشل التحقق",
+    "flatpakUpdates": "تتم إدارة التحديثات بواسطة Flatpak",
     "update": "تحديث",
     "restarting": "جارٍ إعادة التشغيل...",
     "checkForUpdates": "التحقق من التحديثات",

@@ -771,6 +771,7 @@
     "versionAvailable": "v{{version}} disponible",
     "upToDate": "À jour",
     "checkFailed": "Échec de la vérification",
+    "flatpakUpdates": "Les mises à jour sont gérées par Flatpak",
     "update": "Mettre à jour",
     "restarting": "Redémarrage...",
     "checkForUpdates": "Vérifier les mises à jour",

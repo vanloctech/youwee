@@ -1,3 +1,4 @@
+import { invoke } from '@tauri-apps/api/core';
 import { relaunch } from '@tauri-apps/plugin-process';
 import { check } from '@tauri-apps/plugin-updater';
 import { useCallback, useState } from 'react';
@@ -23,6 +24,7 @@ export type UpdateStatus =
   | 'downloading'
   | 'ready'
   | 'error'
+  | 'external'
   | 'up-to-date';
 
 export function useAppUpdater() {
@@ -31,11 +33,25 @@ export function useAppUpdater() {
   const [progress, setProgress] = useState<UpdateProgress | null>(null);
   const [error, setError] = useState<string | null>(null);
 
+  const isExternalUpdateManaged = useCallback(async () => {
+    try {
+      return await invoke<boolean>('is_flatpak_environment');
+    } catch {
+      return false;
+    }
+  }, []);
+
   const checkForUpdate = useCallback(async () => {
     setStatus('checking');
     setError(null);
 
     try {
+      if (await isExternalUpdateManaged()) {
+        setUpdateInfo(null);
+        setStatus('external');
+        return false;
+      }
+
       const update = await check();
 
       if (update) {
@@ -60,13 +76,20 @@ export function useAppUpdater() {
       setStatus('error');
       return false;
     }
-  }, []);
+  }, [isExternalUpdateManaged]);
 
   const downloadAndInstall = useCallback(async () => {
     setStatus('downloading');
     setProgress({ downloaded: 0, total: 0 });
 
     try {
+      if (await isExternalUpdateManaged()) {
+        setProgress(null);
+        setUpdateInfo(null);
+        setStatus('external');
+        return;
+      }
+
       const update = await check();
 
       if (!update) {
@@ -99,7 +122,7 @@ export function useAppUpdater() {
       setError(message);
       setStatus('error');
     }
-  }, []);
+  }, [isExternalUpdateManaged]);
 
   const restartApp = useCallback(async () => {
     await relaunch();

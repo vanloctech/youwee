@@ -100,7 +100,7 @@ Chỉ sử dụng Youwee với nội dung bạn sở hữu, được phép sử 
 | **Windows** (x64) | [Tải .msi](https://github.com/vanloctech/youwee/releases/latest/download/Youwee-Windows.msi) · [Tải .exe](https://github.com/vanloctech/youwee/releases/latest/download/Youwee-Windows-Setup.exe) |
 | **macOS** (Apple Silicon) | [Tải .dmg](https://github.com/vanloctech/youwee/releases/latest/download/Youwee-Mac-Apple-Silicon.dmg) |
 | **macOS** (Intel) | [Tải .dmg](https://github.com/vanloctech/youwee/releases/latest/download/Youwee-Mac-Intel.dmg) |
-| **Linux** (x64) | [Tải .deb](https://github.com/vanloctech/youwee/releases/latest/download/Youwee-Linux.deb) · [Tải .AppImage](https://github.com/vanloctech/youwee/releases/latest/download/Youwee-Linux.AppImage) |
+| **Linux** (x64) | [Tải .deb](https://github.com/vanloctech/youwee/releases/latest/download/Youwee-Linux.deb) · [Tải .flatpak](https://github.com/vanloctech/youwee/releases/latest/download/Youwee-Linux.flatpak) · [Tải .AppImage](https://github.com/vanloctech/youwee/releases/latest/download/Youwee-Linux.AppImage) (AppImage có thể cần FUSE) |
 
 > Xem tất cả các phiên bản tại [trang Releases](https://github.com/vanloctech/youwee/releases)
 

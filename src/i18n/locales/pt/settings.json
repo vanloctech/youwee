@@ -771,6 +771,7 @@
     "versionAvailable": "v{{version}} pronto pra sair do forno",
     "upToDate": "Legal, tá fresquinho!",
     "checkFailed": "Não foi dessa vez.",
+    "flatpakUpdates": "Atualizações gerenciadas pelo Flatpak",
     "update": "Baixe agora mesmo!",
     "restarting": "Iniciando processo interno...",
     "checkForUpdates": "Faça eu mesmo uma análise de versão",

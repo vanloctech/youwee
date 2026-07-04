@@ -771,6 +771,7 @@
     "versionAvailable": "Доступна версия v{{version}}",
     "upToDate": "Актуально",
     "checkFailed": "Ошибка проверки",
+    "flatpakUpdates": "Обновления управляются Flatpak",
     "update": "Обновить",
     "restarting": "Перезапуск...",
     "checkForUpdates": "Проверить обновления",

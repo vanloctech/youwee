@@ -1,0 +1,133 @@
+name: Linux Flatpak Test Build
+
+on:
+  push:
+    branches:
+      - feat/flatpak-build
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  CARGO_TERM_COLOR: always
+  LINUX_TARGET: x86_64-unknown-linux-gnu
+  YTDLP_BINARY: youwee-yt-dlp-x86_64-unknown-linux-gnu
+
+jobs:
+  flatpak-test:
+    runs-on: ubuntu-22.04
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ env.LINUX_TARGET }}
+
+      - name: Rust cache
+        uses: swatinem/rust-cache@v2
+        with:
+          workspaces: './src-tauri -> target'
+          key: flatpak-test-${{ env.LINUX_TARGET }}
+
+      - name: Install Linux and Flatpak dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            dpkg \
+            dbus-x11 \
+            flatpak \
+            flatpak-builder \
+            libwebkit2gtk-4.1-dev \
+            librsvg2-dev \
+            patchelf \
+            libssl-dev \
+            libgtk-3-dev \
+            libayatana-appindicator3-dev
+          flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo
+
+      - name: Install frontend dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Download yt-dlp binary
+        run: |
+          mkdir -p src-tauri/bin
+          curl -L -o "src-tauri/bin/${YTDLP_BINARY}" \
+            "https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp_linux"
+          chmod +x "src-tauri/bin/${YTDLP_BINARY}"
+
+      - name: Build Linux deb bundle
+        uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tauriScript: bun run tauri
+          args: --target ${{ env.LINUX_TARGET }} --bundles deb --no-sign --ci
+
+      - name: Prepare Flatpak payload
+        run: |
+          set -eu
+          DEB_FILE="$(find "src-tauri/target/${LINUX_TARGET}/release/bundle/deb" -type f -name "*.deb" | sort | head -n 1)"
+          if [ -z "$DEB_FILE" ]; then
+            echo "No Linux deb bundle found."
+            find "src-tauri/target/${LINUX_TARGET}/release/bundle" -maxdepth 4 -type f || true
+            exit 1
+          fi
+
+          rm -rf flatpak/input flatpak/payload flatpak/build-dir flatpak/repo
+          mkdir -p flatpak/input flatpak/payload
+          cp "$DEB_FILE" flatpak/input/Youwee-Linux.deb
+          dpkg-deb -x "$DEB_FILE" flatpak/payload
+
+          test -x flatpak/payload/usr/bin/youwee
+          test -x flatpak/payload/usr/bin/youwee-yt-dlp
+          test -f flatpak/payload/usr/share/applications/Youwee.desktop
+          test -f flatpak/payload/usr/share/icons/hicolor/32x32/apps/youwee.png
+
+      - name: Build Flatpak bundle
+        run: |
+          flatpak-builder \
+            --force-clean \
+            --user \
+            --install-deps-from=flathub \
+            --repo=flatpak/repo \
+            flatpak/build-dir \
+            flatpak/com.vanloctech.youwee.yml
+          flatpak build-bundle flatpak/repo flatpak/Youwee-Linux.flatpak com.vanloctech.youwee
+          ls -lh flatpak/Youwee-Linux.flatpak
+
+      - name: Validate Flatpak bundle
+        run: |
+          set -eu
+          flatpak install --user --noninteractive -y flatpak/Youwee-Linux.flatpak
+          dbus-run-session -- flatpak run --command=sh com.vanloctech.youwee -c '
+            set -eu
+            test -x /app/bin/youwee
+            test -x /app/bin/youwee-yt-dlp
+            test -f /app/share/applications/com.vanloctech.youwee.desktop
+            ldd /app/bin/youwee | tee /tmp/youwee-ldd.txt
+            if grep -q "not found" /tmp/youwee-ldd.txt; then
+              echo "Missing runtime libraries in Flatpak bundle:"
+              cat /tmp/youwee-ldd.txt
+              exit 1
+            fi
+            /app/bin/youwee-yt-dlp --version >/tmp/youwee-ytdlp-version.txt
+            cat /tmp/youwee-ytdlp-version.txt
+          '
+
+      - name: Upload Linux test artifacts
+        uses: actions/upload-artifact@v6
+        with:
+          name: youwee-linux-flatpak-test
+          path: |
+            flatpak/input/Youwee-Linux.deb
+            flatpak/Youwee-Linux.flatpak
+          if-no-files-found: error

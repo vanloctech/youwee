@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **Linux Flatpak package** - Added a Flatpak release bundle for Linux users on modern distributions where AppImage may require extra FUSE packages
+
+### Changed
+- **Flatpak updates** - Skip the built-in AppImage updater when Youwee runs from Flatpak so updates can be managed by Flatpak instead
+
 ## [0.19.0] - 2026-06-30
 
 ### Added

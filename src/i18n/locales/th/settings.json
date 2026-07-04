@@ -771,6 +771,7 @@
     "versionAvailable": "มี v{{version}} ให้ใช้งาน",
     "upToDate": "เป็นเวอร์ชันล่าสุด",
     "checkFailed": "ตรวจสอบไม่สำเร็จ",
+    "flatpakUpdates": "การอัปเดตจัดการโดย Flatpak",
     "update": "อัปเดต",
     "restarting": "กำลังรีสตาร์ต...",
     "checkForUpdates": "ตรวจสอบอัปเดต",

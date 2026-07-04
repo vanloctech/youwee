@@ -47,7 +47,12 @@ export function UpdateDialog({
   const { t, i18n } = useTranslation('common');
 
   // Only show dialog for specific states
-  if (status === 'idle' || status === 'checking' || status === 'up-to-date') {
+  if (
+    status === 'idle' ||
+    status === 'checking' ||
+    status === 'up-to-date' ||
+    status === 'external'
+  ) {
     return null;
   }
 

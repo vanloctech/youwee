@@ -844,6 +844,7 @@
     "versionAvailable": "v{{version}} 可用",
     "upToDate": "已是最新",
     "checkFailed": "检查失败",
+    "flatpakUpdates": "更新由 Flatpak 管理",
     "update": "更新",
     "restarting": "重启中...",
     "checkForUpdates": "检查更新",

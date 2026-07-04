@@ -97,6 +97,7 @@ export function SettingsPage({
   const isAppUpdateAvailable = updater.status === 'available';
   const isAppUpToDate = updater.status === 'up-to-date';
   const isAppError = updater.status === 'error';
+  const isAppExternalUpdater = updater.status === 'external';
 
   return (
     <div className="h-full flex flex-col">
@@ -161,6 +162,7 @@ export function SettingsPage({
                     isAppUpdateAvailable={isAppUpdateAvailable}
                     isAppUpToDate={isAppUpToDate}
                     isAppError={isAppError}
+                    isAppExternalUpdater={isAppExternalUpdater}
                     highlightId={highlightId}
                   />
                 )}
@@ -181,6 +183,7 @@ function AboutSettingsContent({
   isAppUpdateAvailable,
   isAppUpToDate,
   isAppError,
+  isAppExternalUpdater,
   highlightId,
 }: {
   appVersion: string;
@@ -189,6 +192,7 @@ function AboutSettingsContent({
   isAppUpdateAvailable: boolean;
   isAppUpToDate: boolean;
   isAppError: boolean;
+  isAppExternalUpdater: boolean;
   highlightId: string | null;
 }) {
   const { t } = useTranslation('settings');
@@ -329,6 +333,11 @@ function AboutSettingsContent({
                       <span className="flex items-center gap-1.5 text-emerald-500">
                         <CheckCircle2 className="w-3 h-3" />
                         {t('about.upToDate')}
+                      </span>
+                    ) : isAppExternalUpdater ? (
+                      <span className="flex items-center gap-1.5 text-muted-foreground">
+                        <Info className="w-3 h-3" />
+                        {t('about.flatpakUpdates')}
                       </span>
                     ) : isAppError ? (
                       <span className="text-destructive">

@@ -1,0 +1,64 @@
+id: com.vanloctech.youwee
+runtime: org.gnome.Platform
+runtime-version: '50'
+sdk: org.gnome.Sdk
+command: youwee
+
+finish-args:
+  - --share=ipc
+  - --share=network
+  - --socket=fallback-x11
+  - --socket=wayland
+  - --socket=pulseaudio
+  - --device=dri
+  - --filesystem=home
+  - --filesystem=/media
+  - --filesystem=/mnt
+  - --filesystem=/run/media
+  - --talk-name=org.freedesktop.Notifications
+  - --talk-name=org.freedesktop.portal.Desktop
+  - --own-name=org.com_vanloctech_youwee.SingleInstance
+
+modules:
+  - name: youwee
+    buildsystem: simple
+    sources:
+      - type: dir
+        path: payload
+    build-commands:
+      - cp -a usr/. /app/
+      - |
+        set -eu
+        DESKTOP_FILE="$(find /app/share/applications -maxdepth 1 -type f -name '*.desktop' | sort | head -n 1)"
+        if [ -z "$DESKTOP_FILE" ]; then
+          echo "No desktop file found in deb package."
+          exit 1
+        fi
+
+        install -Dm644 "$DESKTOP_FILE" /app/share/applications/com.vanloctech.youwee.desktop
+        sed -i \
+          -e 's|^Exec=.*|Exec=youwee %U|g' \
+          -e 's|^Icon=.*|Icon=com.vanloctech.youwee|g' \
+          /app/share/applications/com.vanloctech.youwee.desktop
+
+        if grep -q '^MimeType=' /app/share/applications/com.vanloctech.youwee.desktop; then
+          sed -i 's|^MimeType=.*|MimeType=x-scheme-handler/youwee;|g' /app/share/applications/com.vanloctech.youwee.desktop
+        else
+          printf '\nMimeType=x-scheme-handler/youwee;\n' >> /app/share/applications/com.vanloctech.youwee.desktop
+        fi
+
+        if ! grep -q '^Categories=' /app/share/applications/com.vanloctech.youwee.desktop; then
+          printf 'Categories=AudioVideo;Video;Network;\n' >> /app/share/applications/com.vanloctech.youwee.desktop
+        fi
+      - |
+        set -eu
+        find /app/share/icons/hicolor -type f -path '*/apps/youwee.png' | while read -r ICON; do
+          RELATIVE_ICON="${ICON#/app/share/icons/hicolor/}"
+          TARGET_ICON="${RELATIVE_ICON%/youwee.png}/com.vanloctech.youwee.png"
+          install -Dm644 "$ICON" "/app/share/icons/hicolor/$TARGET_ICON"
+        done
+
+        if ! find /app/share/icons/hicolor -type f -path '*/apps/com.vanloctech.youwee.png' | grep -q .; then
+          echo "No application icon found in deb package."
+          exit 1
+        fi
