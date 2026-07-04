@@ -15,6 +15,11 @@ và dự án tuân theo [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ### Thay đổi
 - **Cập nhật trong Flatpak** - Bỏ qua updater AppImage tích hợp khi Youwee chạy từ Flatpak để việc cập nhật do Flatpak quản lý
 
+### Sửa lỗi
+- **Phóng to cửa sổ trên Windows** - Sửa lỗi double-click thanh tiêu đề tùy chỉnh trên Windows làm cửa sổ phóng to rồi tự quay lại kích thước cũ
+- **Mở vị trí file** - Chuyển các thao tác mở file trong thư mục qua command có xử lý theo từng hệ điều hành của Youwee để mở thư mục ổn định hơn
+- **Nhận diện dependency** - Thêm `~/.local/bin` vào đường dẫn tìm kiếm trên Unix để app mở từ GUI tìm được các công cụ người dùng tự cài ổn định hơn
+
 ## [0.19.0] - 2026-06-30
 
 ### Thêm mới

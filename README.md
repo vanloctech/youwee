@@ -10,6 +10,8 @@
   ![العربية](https://img.shields.io/badge/lang-%D8%A7%D9%84%D8%B9%D8%B1%D8%A8%D9%8A%D8%A9-0A8F6A)
   ![ไทย](https://img.shields.io/badge/lang-%E0%B9%84%E0%B8%97%E0%B8%A2-7B1FA2)
   ![Português](https://img.shields.io/badge/lang-Português-009C3B)
+  ![日本語](https://img.shields.io/badge/lang-%E6%97%A5%E6%9C%AC%E8%AA%9E-E60012)
+  ![Español](https://img.shields.io/badge/lang-Espa%C3%B1ol-C60B1E)
   [![Vote for next language](https://img.shields.io/badge/Vote-Next_Language-orange?logo=github)](https://github.com/vanloctech/youwee/discussions/18)
 
   <img src="src-tauri/icons/icon.png" alt="Youwee Logo" width="128" height="128">
@@ -21,8 +23,6 @@
   [![Reddit](https://img.shields.io/badge/Reddit-r%2Fyouwee-FF4500?logo=reddit&logoColor=white)](https://www.reddit.com/r/youwee)
   [![Website](https://img.shields.io/badge/Website-youwee.app-0EA5E9)](https://youwee.app)
   [![Discord](https://img.shields.io/badge/Discord-Community-5865F2?logo=discord&logoColor=white)](https://discord.gg/yCrs9hcw)
-
-<a href="https://www.producthunt.com/products/youwee/reviews/new?utm_source=badge-product_review&utm_medium=badge&utm_source=badge-youwee" target="_blank"><img src="https://api.producthunt.com/widgets/embed-image/v1/product_review.svg?product_id=1154224&theme=light" alt="Youwee - A modern YouTube downloader @yt-dlp GUI for cross-platform | Product Hunt" width="250" height="54"></a>
 </div>
 
 ---

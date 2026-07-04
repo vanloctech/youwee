@@ -15,6 +15,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 - **Flatpak updates** - Skip the built-in AppImage updater when Youwee runs from Flatpak so updates can be managed by Flatpak instead
 
+### Fixed
+- **Windows titlebar maximize** - Fixed double-clicking the custom titlebar on Windows maximizing and immediately restoring the window
+- **Open in folder actions** - Routed file reveal actions through Youwee's platform-aware app command for more reliable folder opening
+- **Dependency detection** - Added `~/.local/bin` to Unix dependency lookup so GUI-launched apps can find user-installed tools more reliably
+
 ## [0.19.0] - 2026-06-30
 
 ### Added
