@@ -218,7 +218,7 @@ jobs:
       - name: Install Flatpak tools
         run: |
           sudo apt-get update
-          sudo apt-get install -y flatpak flatpak-builder
+          sudo apt-get install -y dbus-x11 flatpak flatpak-builder
           flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo
 
       - name: Download Linux deb artifact
@@ -254,6 +254,26 @@ jobs:
             flatpak/com.vanloctech.youwee.yml
           flatpak build-bundle flatpak/repo flatpak/Youwee-Linux.flatpak com.vanloctech.youwee
           ls -lh flatpak/Youwee-Linux.flatpak
+
+      - name: Validate Flatpak bundle
+        run: |
+          set -eu
+          flatpak install --user --noninteractive -y flatpak/Youwee-Linux.flatpak
+          dbus-run-session -- flatpak run --command=sh com.vanloctech.youwee -c '
+            set -eu
+            test -x /app/bin/youwee
+            test -x /app/bin/youwee-yt-dlp
+            test -f /app/share/applications/com.vanloctech.youwee.desktop
+            test -f /app/share/metainfo/com.vanloctech.youwee.metainfo.xml
+            ldd /app/bin/youwee | tee /tmp/youwee-ldd.txt
+            if grep -q "not found" /tmp/youwee-ldd.txt; then
+              echo "Missing runtime libraries in Flatpak bundle:"
+              cat /tmp/youwee-ldd.txt
+              exit 1
+            fi
+            /app/bin/youwee-yt-dlp --version >/tmp/youwee-ytdlp-version.txt
+            cat /tmp/youwee-ytdlp-version.txt
+          '
 
       - name: Upload Flatpak artifact
         uses: actions/upload-artifact@v6

@@ -2,9 +2,8 @@ name: Linux Flatpak Test Build
 
 on:
   push:
-    branches-ignore:
-      - main
-      - master
+    branches:
+      - feat/flatpak-build
   workflow_dispatch:
 
 permissions:
@@ -44,6 +43,7 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y \
             dpkg \
+            dbus-x11 \
             flatpak \
             flatpak-builder \
             libwebkit2gtk-4.1-dev \
@@ -70,7 +70,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           tauriScript: bun run tauri
-          args: --target ${{ env.LINUX_TARGET }} --bundles deb
+          args: --target ${{ env.LINUX_TARGET }} --bundles deb --no-sign --ci
 
       - name: Prepare Flatpak payload
         run: |
@@ -103,6 +103,26 @@ jobs:
             flatpak/com.vanloctech.youwee.yml
           flatpak build-bundle flatpak/repo flatpak/Youwee-Linux.flatpak com.vanloctech.youwee
           ls -lh flatpak/Youwee-Linux.flatpak
+
+      - name: Validate Flatpak bundle
+        run: |
+          set -eu
+          flatpak install --user --noninteractive -y flatpak/Youwee-Linux.flatpak
+          dbus-run-session -- flatpak run --command=sh com.vanloctech.youwee -c '
+            set -eu
+            test -x /app/bin/youwee
+            test -x /app/bin/youwee-yt-dlp
+            test -f /app/share/applications/com.vanloctech.youwee.desktop
+            test -f /app/share/metainfo/com.vanloctech.youwee.metainfo.xml
+            ldd /app/bin/youwee | tee /tmp/youwee-ldd.txt
+            if grep -q "not found" /tmp/youwee-ldd.txt; then
+              echo "Missing runtime libraries in Flatpak bundle:"
+              cat /tmp/youwee-ldd.txt
+              exit 1
+            fi
+            /app/bin/youwee-yt-dlp --version >/tmp/youwee-ytdlp-version.txt
+            cat /tmp/youwee-ytdlp-version.txt
+          '
 
       - name: Upload Linux test artifacts
         uses: actions/upload-artifact@v6
