@@ -7,11 +7,13 @@ import {
   ChevronUp,
   Copy,
   Link,
+  Minus,
   Plus,
   Save,
   Settings2,
   Sparkles,
   Square,
+  Type,
   X,
 } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState } from 'react';
@@ -31,6 +33,14 @@ import { SimpleMarkdown } from '@/components/ui/simple-markdown';
 import { useAI } from '@/contexts/AIContext';
 import { useSummarySession } from '@/contexts/summary-session-context';
 import { localizeUnknownError } from '@/lib/backend-error';
+import {
+  DEFAULT_SUMMARY_FONT_SIZE,
+  getNextSummaryFontSize,
+  getSummaryFontSizeClass,
+  normalizeSummaryFontSize,
+  SUMMARY_FONT_SIZE_STORAGE_KEY,
+  type SummaryFontSize,
+} from '@/lib/summary-font-size';
 import { LANGUAGE_OPTIONS, type LongSummaryFormat, type SummaryStyle } from '@/lib/types';
 import { cn } from '@/lib/utils';
 
@@ -47,6 +57,11 @@ function isYouTubeUrl(url: string) {
 
 function providerRequiresApiKey(provider: string) {
   return provider !== 'ollama' && provider !== 'lmstudio';
+}
+
+function loadSummaryFontSize(): SummaryFontSize {
+  if (typeof window === 'undefined') return DEFAULT_SUMMARY_FONT_SIZE;
+  return normalizeSummaryFontSize(window.localStorage.getItem(SUMMARY_FONT_SIZE_STORAGE_KEY));
 }
 
 function SummaryLoadingState({ loadingText }: { loadingText: string }) {
@@ -103,6 +118,7 @@ export function SummaryPage({
   const requiresApiKey = providerRequiresApiKey(ai.config.provider);
   const missingSummaryConfig = !ai.config.enabled || (requiresApiKey && !ai.config.api_key);
   const [copied, setCopied] = useState(false);
+  const [fontSize, setFontSize] = useState<SummaryFontSize>(loadSummaryFontSize);
   const lastExternalRequestIdRef = useRef<number | null>(null);
   const {
     url,
@@ -134,6 +150,18 @@ export function SummaryPage({
     },
     [loadingParams, t],
   );
+
+  useEffect(() => {
+    try {
+      window.localStorage.setItem(SUMMARY_FONT_SIZE_STORAGE_KEY, fontSize);
+    } catch (error) {
+      console.error('Failed to save summary font size:', error);
+    }
+  }, [fontSize]);
+
+  const setNextFontSize = useCallback((direction: -1 | 1) => {
+    setFontSize((current) => getNextSummaryFontSize(current, direction));
+  }, []);
 
   const runSummary = useCallback(
     async (inputUrl: string) => {
@@ -561,12 +589,41 @@ export function SummaryPage({
 
             {/* Summary */}
             <div className="flex-1 flex flex-col p-4 rounded-xl bg-primary/5 border border-primary/10">
-              <div className="flex items-center justify-between mb-3">
+              <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
                 <div className="flex items-center gap-2">
                   <Sparkles className="w-4 h-4 text-primary" />
                   <span className="text-sm font-medium">{t('summary.summary')}</span>
                 </div>
-                <div className="flex items-center gap-1">
+                <div className="flex flex-wrap items-center justify-end gap-1.5">
+                  <div className="flex items-center gap-1 rounded-lg bg-background/50 p-1">
+                    <button
+                      type="button"
+                      onClick={() => setNextFontSize(-1)}
+                      disabled={fontSize === 'small'}
+                      className="flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-background hover:text-foreground disabled:opacity-40"
+                      title={t('library.item.decreaseFontSize')}
+                    >
+                      <Minus className="h-3.5 w-3.5" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setFontSize(DEFAULT_SUMMARY_FONT_SIZE)}
+                      className="flex h-7 items-center gap-1 rounded-md px-2 text-xs font-medium text-muted-foreground transition-colors hover:bg-background hover:text-foreground"
+                      title={t('library.item.resetFontSize')}
+                    >
+                      <Type className="h-3.5 w-3.5" />
+                      {t('library.item.fontSize')}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setNextFontSize(1)}
+                      disabled={fontSize === 'large'}
+                      className="flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-background hover:text-foreground disabled:opacity-40"
+                      title={t('library.item.increaseFontSize')}
+                    >
+                      <Plus className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
                   <Button
                     variant="ghost"
                     size="sm"
@@ -609,7 +666,8 @@ export function SummaryPage({
 
               <div
                 className={cn(
-                  'flex-1 text-sm text-muted-foreground overflow-auto',
+                  'flex-1 overflow-auto text-muted-foreground',
+                  getSummaryFontSizeClass(fontSize),
                   !showFullSummary && 'max-h-32',
                 )}
               >

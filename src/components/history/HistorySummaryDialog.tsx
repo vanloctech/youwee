@@ -9,16 +9,16 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { SimpleMarkdown } from '@/components/ui/simple-markdown';
-import type { HistoryEntry } from '@/lib/types';
-import { cn, isSafeUrl } from '@/lib/utils';
 import {
   DEFAULT_SUMMARY_FONT_SIZE,
   getNextSummaryFontSize,
+  getSummaryFontSizeClass,
   normalizeSummaryFontSize,
-  SUMMARY_FONT_SIZE_CLASS,
   SUMMARY_FONT_SIZE_STORAGE_KEY,
   type SummaryFontSize,
-} from './summaryDialogFontSize';
+} from '@/lib/summary-font-size';
+import type { HistoryEntry } from '@/lib/types';
+import { cn, isSafeUrl } from '@/lib/utils';
 
 interface HistorySummaryDialogProps {
   entry: HistoryEntry;
@@ -156,7 +156,7 @@ export function HistorySummaryDialog({
           <div
             className={cn(
               'summary-dialog-content leading-7 text-muted-foreground',
-              SUMMARY_FONT_SIZE_CLASS[fontSize],
+              getSummaryFontSizeClass(fontSize),
             )}
           >
             <SimpleMarkdown content={summary} />
