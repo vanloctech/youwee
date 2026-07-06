@@ -1,4 +1,11 @@
-import type { SummaryStyle } from '@/lib/types';
+import type { LongSummaryFormat, SummaryStyle } from '@/lib/types';
+
+export const DEFAULT_LONG_SUMMARY_WORDS = 8000;
+export const MIN_LONG_SUMMARY_WORDS = 200;
+export const MAX_LONG_SUMMARY_WORDS = 50_000;
+export const LONG_SUMMARY_WORD_TO_CHAR_RATIO = 4;
+export const LONG_SUMMARY_TRANSCRIPT_THRESHOLD_CHARS =
+  DEFAULT_LONG_SUMMARY_WORDS * LONG_SUMMARY_WORD_TO_CHAR_RATIO;
 
 export type SummarySessionStatus =
   | 'idle'
@@ -25,6 +32,8 @@ export interface SummarySessionOptions {
   style: SummaryStyle;
   language: string;
   transcriptLanguages: string[];
+  longSummaryFormat: LongSummaryFormat;
+  longSummaryWords: number;
 }
 
 export interface SummarySessionState {
@@ -33,6 +42,7 @@ export interface SummarySessionState {
   status: SummarySessionStatus;
   isLoading: boolean;
   loadingStatus: string;
+  loadingParams: Record<string, string | number>;
   error: string | null;
   result: SummarySessionResult | null;
   saved: boolean;
@@ -50,6 +60,7 @@ export type SummarySessionAction =
       type: 'set-status';
       status: Extract<SummarySessionStatus, 'fetching-info' | 'fetching-transcript' | 'generating'>;
       loadingStatus: string;
+      loadingParams?: Record<string, string | number>;
     }
   | { type: 'complete'; result: SummarySessionResult }
   | { type: 'fail'; error: string }
@@ -66,12 +77,40 @@ export function createInitialSummarySessionState(
     status: 'idle',
     isLoading: false,
     loadingStatus: '',
+    loadingParams: {},
     error: null,
     result: null,
     saved: false,
     showFullSummary: true,
     showSettings: false,
   };
+}
+
+export function getBackendSummaryCancelRequestId(requestId: string | null): string | null {
+  const normalized = requestId?.trim();
+  return normalized ? normalized : null;
+}
+
+export function normalizeLongSummaryWords(value: unknown): number {
+  const numericValue = typeof value === 'number' ? value : Number(value);
+  if (!Number.isFinite(numericValue)) {
+    return DEFAULT_LONG_SUMMARY_WORDS;
+  }
+  return Math.min(
+    MAX_LONG_SUMMARY_WORDS,
+    Math.max(MIN_LONG_SUMMARY_WORDS, Math.round(numericValue)),
+  );
+}
+
+export function longSummaryWordsToChars(words: unknown): number {
+  return normalizeLongSummaryWords(words) * LONG_SUMMARY_WORD_TO_CHAR_RATIO;
+}
+
+export function isLongSummaryTranscript(
+  transcript: string,
+  longSummaryWords = DEFAULT_LONG_SUMMARY_WORDS,
+): boolean {
+  return Array.from(transcript).length > longSummaryWordsToChars(longSummaryWords);
 }
 
 export function summarySessionReducer(
@@ -95,6 +134,7 @@ export function summarySessionReducer(
         status: 'fetching-info',
         isLoading: true,
         loadingStatus: '',
+        loadingParams: {},
         error: null,
         result: null,
         saved: false,
@@ -106,6 +146,7 @@ export function summarySessionReducer(
         status: action.status,
         isLoading: true,
         loadingStatus: action.loadingStatus,
+        loadingParams: action.loadingParams || {},
       };
     case 'complete':
       return {
@@ -113,6 +154,7 @@ export function summarySessionReducer(
         status: 'completed',
         isLoading: false,
         loadingStatus: '',
+        loadingParams: {},
         error: null,
         result: action.result,
       };
@@ -122,6 +164,7 @@ export function summarySessionReducer(
         status: 'error',
         isLoading: false,
         loadingStatus: '',
+        loadingParams: {},
         error: action.error,
       };
     case 'cancel':
@@ -130,6 +173,7 @@ export function summarySessionReducer(
         status: 'cancelled',
         isLoading: false,
         loadingStatus: '',
+        loadingParams: {},
         error: null,
       };
     case 'mark-saved':

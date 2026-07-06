@@ -7,11 +7,13 @@ import {
   ChevronUp,
   Copy,
   Link,
+  Minus,
   Plus,
   Save,
   Settings2,
   Sparkles,
   Square,
+  Type,
   X,
 } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState } from 'react';
@@ -31,7 +33,21 @@ import { SimpleMarkdown } from '@/components/ui/simple-markdown';
 import { useAI } from '@/contexts/AIContext';
 import { useSummarySession } from '@/contexts/summary-session-context';
 import { localizeUnknownError } from '@/lib/backend-error';
-import { LANGUAGE_OPTIONS, type SummaryStyle } from '@/lib/types';
+import {
+  DEFAULT_SUMMARY_FONT_SIZE,
+  getNextSummaryFontSize,
+  getSummaryFontSizeClass,
+  normalizeSummaryFontSize,
+  SUMMARY_FONT_SIZE_STORAGE_KEY,
+  type SummaryFontSize,
+} from '@/lib/summary-font-size';
+import {
+  DEFAULT_LONG_SUMMARY_WORDS,
+  MAX_LONG_SUMMARY_WORDS,
+  MIN_LONG_SUMMARY_WORDS,
+  normalizeLongSummaryWords,
+} from '@/lib/summary-session';
+import { LANGUAGE_OPTIONS, type LongSummaryFormat, type SummaryStyle } from '@/lib/types';
 import { cn } from '@/lib/utils';
 
 interface SummaryPageProps {
@@ -47,6 +63,11 @@ function isYouTubeUrl(url: string) {
 
 function providerRequiresApiKey(provider: string) {
   return provider !== 'ollama' && provider !== 'lmstudio';
+}
+
+function loadSummaryFontSize(): SummaryFontSize {
+  if (typeof window === 'undefined') return DEFAULT_SUMMARY_FONT_SIZE;
+  return normalizeSummaryFontSize(window.localStorage.getItem(SUMMARY_FONT_SIZE_STORAGE_KEY));
 }
 
 function SummaryLoadingState({ loadingText }: { loadingText: string }) {
@@ -103,12 +124,14 @@ export function SummaryPage({
   const requiresApiKey = providerRequiresApiKey(ai.config.provider);
   const missingSummaryConfig = !ai.config.enabled || (requiresApiKey && !ai.config.api_key);
   const [copied, setCopied] = useState(false);
+  const [fontSize, setFontSize] = useState<SummaryFontSize>(loadSummaryFontSize);
   const lastExternalRequestIdRef = useRef<number | null>(null);
   const {
     url,
     options,
     isLoading,
     loadingStatus,
+    loadingParams,
     error,
     result,
     saved,
@@ -117,15 +140,39 @@ export function SummaryPage({
   } = state;
   const summaryStyle = options.style;
   const summaryLanguage = options.language;
+  const longSummaryFormat = options.longSummaryFormat;
+  const longSummaryWords = options.longSummaryWords;
   const transcriptLanguages = options.transcriptLanguages;
+  const summaryLanguageLabel =
+    summaryLanguage === 'auto'
+      ? t('summary.autoLanguage')
+      : LANGUAGE_OPTIONS.find((l) => l.code === summaryLanguage)?.name || summaryLanguage;
+  const longSummaryFormatLabel =
+    longSummaryFormat === 'auto' ? null : t(`summary.longVideoFormatOptions.${longSummaryFormat}`);
+  const longSummaryWordsLabel =
+    longSummaryWords === DEFAULT_LONG_SUMMARY_WORDS
+      ? null
+      : t('summary.longVideoWordsSummary', { count: longSummaryWords });
 
   const getLoadingText = useCallback(
     (status: string) => {
       if (!status) return '';
-      return t(`summary.loading.${status}`);
+      return t(`summary.loading.${status}`, loadingParams);
     },
-    [t],
+    [loadingParams, t],
   );
+
+  useEffect(() => {
+    try {
+      window.localStorage.setItem(SUMMARY_FONT_SIZE_STORAGE_KEY, fontSize);
+    } catch (error) {
+      console.error('Failed to save summary font size:', error);
+    }
+  }, [fontSize]);
+
+  const setNextFontSize = useCallback((direction: -1 | 1) => {
+    setFontSize((current) => getNextSummaryFontSize(current, direction));
+  }, []);
 
   const runSummary = useCallback(
     async (inputUrl: string) => {
@@ -353,9 +400,9 @@ export function SummaryPage({
           {!showSettings && (
             <span className="text-xs text-muted-foreground">
               {summaryStyle.charAt(0).toUpperCase() + summaryStyle.slice(1)} •{' '}
-              {summaryLanguage === 'auto'
-                ? t('summary.autoLanguage')
-                : LANGUAGE_OPTIONS.find((l) => l.code === summaryLanguage)?.name || summaryLanguage}
+              {summaryLanguageLabel}
+              {longSummaryFormatLabel ? ` • ${longSummaryFormatLabel}` : ''}
+              {longSummaryWordsLabel ? ` • ${longSummaryWordsLabel}` : ''}
             </span>
           )}
         </div>
@@ -363,7 +410,7 @@ export function SummaryPage({
         {/* Settings Panel */}
         {showSettings && (
           <div className="p-4 rounded-xl bg-muted/30 border border-border/50 space-y-4">
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
               {/* Summary Style */}
               <div className="space-y-1.5">
                 <span className="text-xs font-medium text-muted-foreground">
@@ -405,6 +452,65 @@ export function SummaryPage({
                     ))}
                   </SelectContent>
                 </Select>
+              </div>
+
+              {/* Long Video */}
+              <div className="space-y-1.5 lg:col-span-2">
+                <div className="grid grid-cols-1 gap-2 sm:grid-cols-[minmax(0,1fr)_minmax(8rem,10rem)]">
+                  <div className="space-y-1.5">
+                    <span className="text-xs font-medium text-muted-foreground">
+                      {t('summary.longVideoFormat')}
+                    </span>
+                    <Select
+                      value={longSummaryFormat}
+                      onValueChange={(value) =>
+                        updateOptions({ longSummaryFormat: value as LongSummaryFormat })
+                      }
+                    >
+                      <SelectTrigger className="h-9 bg-background/50">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="auto">
+                          {t('summary.longVideoFormatOptions.auto')}
+                        </SelectItem>
+                        <SelectItem value="final">
+                          {t('summary.longVideoFormatOptions.final')}
+                        </SelectItem>
+                        <SelectItem value="parts">
+                          {t('summary.longVideoFormatOptions.parts')}
+                        </SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-1.5">
+                    <span className="text-xs font-medium text-muted-foreground">
+                      {t('summary.longVideoWords')}
+                    </span>
+                    <Input
+                      type="number"
+                      min={MIN_LONG_SUMMARY_WORDS}
+                      max={MAX_LONG_SUMMARY_WORDS}
+                      step={500}
+                      value={longSummaryWords}
+                      onChange={(event) => {
+                        const value = Number(event.target.value);
+                        if (Number.isFinite(value)) {
+                          updateOptions({ longSummaryWords: value });
+                        }
+                      }}
+                      onBlur={() =>
+                        updateOptions({
+                          longSummaryWords: normalizeLongSummaryWords(longSummaryWords),
+                        })
+                      }
+                      className="h-9 bg-background/50"
+                    />
+                  </div>
+                </div>
+                <p className="text-[11px] text-muted-foreground/70">
+                  {t('summary.longVideoWordsHint')}
+                </p>
               </div>
             </div>
 
@@ -528,12 +634,41 @@ export function SummaryPage({
 
             {/* Summary */}
             <div className="flex-1 flex flex-col p-4 rounded-xl bg-primary/5 border border-primary/10">
-              <div className="flex items-center justify-between mb-3">
+              <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
                 <div className="flex items-center gap-2">
                   <Sparkles className="w-4 h-4 text-primary" />
                   <span className="text-sm font-medium">{t('summary.summary')}</span>
                 </div>
-                <div className="flex items-center gap-1">
+                <div className="flex flex-wrap items-center justify-end gap-1.5">
+                  <div className="flex items-center gap-1 rounded-lg bg-background/50 p-1">
+                    <button
+                      type="button"
+                      onClick={() => setNextFontSize(-1)}
+                      disabled={fontSize === 'small'}
+                      className="flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-background hover:text-foreground disabled:opacity-40"
+                      title={t('library.item.decreaseFontSize')}
+                    >
+                      <Minus className="h-3.5 w-3.5" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setFontSize(DEFAULT_SUMMARY_FONT_SIZE)}
+                      className="flex h-7 items-center gap-1 rounded-md px-2 text-xs font-medium text-muted-foreground transition-colors hover:bg-background hover:text-foreground"
+                      title={t('library.item.resetFontSize')}
+                    >
+                      <Type className="h-3.5 w-3.5" />
+                      {t('library.item.fontSize')}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setNextFontSize(1)}
+                      disabled={fontSize === 'large'}
+                      className="flex h-7 w-7 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-background hover:text-foreground disabled:opacity-40"
+                      title={t('library.item.increaseFontSize')}
+                    >
+                      <Plus className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
                   <Button
                     variant="ghost"
                     size="sm"
@@ -576,7 +711,8 @@ export function SummaryPage({
 
               <div
                 className={cn(
-                  'flex-1 text-sm text-muted-foreground overflow-auto',
+                  'flex-1 overflow-auto text-muted-foreground',
+                  getSummaryFontSizeClass(fontSize),
                   !showFullSummary && 'max-h-32',
                 )}
               >

@@ -949,6 +949,7 @@ export type AIProvider =
   | 'lmstudio'
   | 'proxy';
 export type SummaryStyle = 'short' | 'concise' | 'detailed';
+export type LongSummaryFormat = 'auto' | 'final' | 'parts';
 
 // Network Proxy types
 export type ProxyMode = 'off' | 'http' | 'socks5';

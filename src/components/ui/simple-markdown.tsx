@@ -54,6 +54,7 @@ export function SimpleMarkdown({ content, className }: SimpleMarkdownProps) {
 
   const isTableRow = (line: string) => /^\|(?:[^|\n]*\|)+\s*$/.test(line.trim());
   const isListLine = (line: string) => /^(\s*)([-*]|\d+\.)\s+.+$/.test(line);
+  const isHorizontalRule = (line: string) => /^-{3,}$/.test(line.trim());
 
   const isTableSeparator = (line: string) => {
     const cells = splitTableRow(line);
@@ -155,6 +156,16 @@ export function SimpleMarkdown({ content, className }: SimpleMarkdownProps) {
         </div>,
       );
       i = nextIndex - 1;
+      continue;
+    }
+
+    if (isHorizontalRule(trimmed)) {
+      elements.push(
+        <hr
+          key={i}
+          className="my-4 border-0 h-px bg-gradient-to-r from-transparent via-border/70 to-transparent"
+        />,
+      );
       continue;
     }
 

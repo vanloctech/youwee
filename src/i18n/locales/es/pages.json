@@ -12,6 +12,15 @@
     "concise": "Conciso (puntos clave)",
     "detailed": "Detallado (completo)",
     "outputLanguage": "Idioma de salida",
+    "longVideoFormat": "Formato de video largo",
+    "longVideoFormatOptions": {
+      "auto": "Automático",
+      "final": "Resumen final",
+      "parts": "Por partes"
+    },
+    "longVideoWords": "Palabras por parte",
+    "longVideoWordsHint": "El valor predeterminado es 8.000 palabras (unas 32.000 caracteres). Los valores más altos usan menos solicitudes de IA.",
+    "longVideoWordsSummary": "{{count}} palabras/parte",
     "autoSameAsVideo": "Automático (igual que el vídeo)",
     "transcriptLanguages": "Idiomas de transcripción (orden de prioridad)",
     "add": "Añadir",
@@ -48,7 +57,10 @@
     "loading": {
       "fetchingInfo": "Obteniendo información del vídeo...",
       "fetchingTranscript": "Obteniendo transcripción...",
-      "generating": "Generando resumen..."
+      "generating": "Generando resumen...",
+      "preparingLongSummary": "Vídeo largo detectado. Preparando un resumen IA por partes...",
+      "summarizingChunk": "Resumiendo parte {{current}}/{{total}}...",
+      "combiningSummary": "Combinando resumen final..."
     }
   },
   "processing": {

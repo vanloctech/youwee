@@ -1,6 +1,11 @@
 import { describe, expect, test } from 'bun:test';
 import {
   createInitialSummarySessionState,
+  DEFAULT_LONG_SUMMARY_WORDS,
+  getBackendSummaryCancelRequestId,
+  isLongSummaryTranscript,
+  longSummaryWordsToChars,
+  normalizeLongSummaryWords,
   summarySessionReducer,
 } from '../src/lib/summary-session';
 
@@ -10,6 +15,8 @@ describe('summarySessionReducer', () => {
       style: 'concise',
       language: 'auto',
       transcriptLanguages: ['en'],
+      longSummaryFormat: 'auto',
+      longSummaryWords: DEFAULT_LONG_SUMMARY_WORDS,
     });
 
     const loading = summarySessionReducer(initial, {
@@ -51,6 +58,8 @@ describe('summarySessionReducer', () => {
       style: 'detailed',
       language: 'vi',
       transcriptLanguages: ['vi', 'en'],
+      longSummaryFormat: 'auto',
+      longSummaryWords: DEFAULT_LONG_SUMMARY_WORDS,
     });
     const loading = summarySessionReducer(initial, {
       type: 'start',
@@ -64,5 +73,25 @@ describe('summarySessionReducer', () => {
     expect(cancelled.isLoading).toBe(false);
     expect(cancelled.url).toBe('https://youtu.be/abc');
     expect(cancelled.loadingStatus).toBe('');
+  });
+
+  test('only sends backend cancellation when a backend summary request is active', () => {
+    expect(getBackendSummaryCancelRequestId(null)).toBeNull();
+    expect(getBackendSummaryCancelRequestId('')).toBeNull();
+    expect(getBackendSummaryCancelRequestId('  ')).toBeNull();
+    expect(getBackendSummaryCancelRequestId(' summary-123 ')).toBe('summary-123');
+  });
+
+  test('detects transcripts that will use long summary mode', () => {
+    expect(isLongSummaryTranscript('a'.repeat(32_000), DEFAULT_LONG_SUMMARY_WORDS)).toBe(false);
+    expect(isLongSummaryTranscript('a'.repeat(32_001), DEFAULT_LONG_SUMMARY_WORDS)).toBe(true);
+  });
+
+  test('normalizes custom long summary word limits before converting to chars', () => {
+    expect(DEFAULT_LONG_SUMMARY_WORDS).toBe(8000);
+    expect(longSummaryWordsToChars(8000)).toBe(32_000);
+    expect(normalizeLongSummaryWords(199)).toBe(200);
+    expect(normalizeLongSummaryWords(50_001)).toBe(50_000);
+    expect(normalizeLongSummaryWords(Number.NaN)).toBe(DEFAULT_LONG_SUMMARY_WORDS);
   });
 });

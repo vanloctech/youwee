@@ -12,6 +12,15 @@
     "concise": "กระชับ (ประเด็นสำคัญ)",
     "detailed": "ละเอียด (ครบถ้วน)",
     "outputLanguage": "ภาษาผลลัพธ์",
+    "longVideoFormat": "รูปแบบวิดีโอยาว",
+    "longVideoFormatOptions": {
+      "auto": "อัตโนมัติ",
+      "final": "สรุปสุดท้าย",
+      "parts": "แบ่งตามส่วน"
+    },
+    "longVideoWords": "จำนวนคำต่อส่วน",
+    "longVideoWordsHint": "ค่าเริ่มต้นคือ 8,000 คำ (ประมาณ 32,000 อักขระ) ค่าที่สูงขึ้นจะใช้คำขอ AI น้อยลง",
+    "longVideoWordsSummary": "{{count}} คำ/ส่วน",
     "autoSameAsVideo": "อัตโนมัติ (เหมือนวิดีโอ)",
     "transcriptLanguages": "ภาษาของทรานสคริปต์ (เรียงตามลำดับความสำคัญ)",
     "add": "เพิ่ม",
@@ -40,7 +49,10 @@
     "loading": {
       "fetchingInfo": "กำลังดึงข้อมูลวิดีโอ...",
       "fetchingTranscript": "กำลังดึงทรานสคริปต์...",
-      "generating": "กำลังสร้างสรุป..."
+      "generating": "กำลังสร้างสรุป...",
+      "preparingLongSummary": "ตรวจพบวิดีโอยาว กำลังเตรียมสรุป AI แบบหลายส่วน...",
+      "summarizingChunk": "กำลังสรุปส่วนที่ {{current}}/{{total}}...",
+      "combiningSummary": "กำลังรวมสรุปสุดท้าย..."
     },
     "aiSettings": "การตั้งค่า AI",
     "configureAI": "ตั้งค่าฟีเจอร์ AI",

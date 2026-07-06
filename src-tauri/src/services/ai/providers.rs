@@ -590,6 +590,7 @@ async fn generate_raw_with_gemini(
     model: &str,
     prompt: &str,
     timeout_seconds: Option<u64>,
+    summary_max_tokens: Option<u32>,
 ) -> Result<SummaryResult, AIError> {
     let client = ai_client(timeout_seconds)?;
     let url = format!(
@@ -597,13 +598,15 @@ async fn generate_raw_with_gemini(
         model
     );
 
-    let body = serde_json::json!({
+    let mut body = serde_json::json!({
         "contents": [{ "parts": [{ "text": prompt }] }],
         "generationConfig": {
-            "temperature": 0.3,
-            "maxOutputTokens": 2048
+            "temperature": 0.3
         }
     });
+    if let Some(max_tokens) = normalized_summary_max_tokens(summary_max_tokens) {
+        body["generationConfig"]["maxOutputTokens"] = serde_json::json!(max_tokens);
+    }
 
     #[cfg(debug_assertions)]
     {
@@ -672,14 +675,17 @@ async fn generate_raw_with_openai(
     model: &str,
     prompt: &str,
     timeout_seconds: Option<u64>,
+    summary_max_tokens: Option<u32>,
 ) -> Result<SummaryResult, AIError> {
     let client = ai_client(timeout_seconds)?;
-    let body = serde_json::json!({
+    let mut body = serde_json::json!({
         "model": model,
         "messages": [{ "role": "user", "content": prompt }],
-        "temperature": 0.3,
-        "max_tokens": 2048
+        "temperature": 0.3
     });
+    if let Some(max_tokens) = normalized_summary_max_tokens(summary_max_tokens) {
+        body["max_tokens"] = serde_json::json!(max_tokens);
+    }
 
     let response = client
         .post("https://api.openai.com/v1/chat/completions")
@@ -706,15 +712,23 @@ async fn generate_raw_with_ollama(
     model: &str,
     prompt: &str,
     timeout_seconds: Option<u64>,
+    summary_max_tokens: Option<u32>,
 ) -> Result<SummaryResult, AIError> {
     let client = ai_client(timeout_seconds)?;
     let url = format!("{}/api/generate", base_url.trim_end_matches('/'));
+
+    let mut options = serde_json::json!({
+        "temperature": 0.3
+    });
+    if let Some(max_tokens) = normalized_summary_max_tokens(summary_max_tokens) {
+        options["num_predict"] = serde_json::json!(max_tokens);
+    }
 
     let body = serde_json::json!({
         "model": model,
         "prompt": prompt,
         "stream": false,
-        "options": { "temperature": 0.3 }
+        "options": options
     });
 
     let response = client
@@ -754,16 +768,19 @@ async fn generate_raw_with_lmstudio(
     model: &str,
     prompt: &str,
     timeout_seconds: Option<u64>,
+    summary_max_tokens: Option<u32>,
 ) -> Result<SummaryResult, AIError> {
     let client = ai_client(timeout_seconds)?;
     let url = chat_completions_url(lmstudio_url);
 
-    let body = serde_json::json!({
+    let mut body = serde_json::json!({
         "model": model,
         "messages": [{ "role": "user", "content": prompt }],
-        "temperature": 0.3,
-        "max_tokens": 2048
+        "temperature": 0.3
     });
+    if let Some(max_tokens) = normalized_summary_max_tokens(summary_max_tokens) {
+        body["max_tokens"] = serde_json::json!(max_tokens);
+    }
 
     let response = client
         .post(&url)
@@ -794,14 +811,17 @@ async fn generate_raw_with_deepseek(
     model: &str,
     prompt: &str,
     timeout_seconds: Option<u64>,
+    summary_max_tokens: Option<u32>,
 ) -> Result<SummaryResult, AIError> {
     let client = ai_client(timeout_seconds)?;
-    let body = serde_json::json!({
+    let mut body = serde_json::json!({
         "model": model,
         "messages": [{ "role": "user", "content": prompt }],
-        "temperature": 0.3,
-        "max_tokens": 2048
+        "temperature": 0.3
     });
+    if let Some(max_tokens) = normalized_summary_max_tokens(summary_max_tokens) {
+        body["max_tokens"] = serde_json::json!(max_tokens);
+    }
 
     let response = client
         .post("https://api.deepseek.com/chat/completions")
@@ -828,14 +848,17 @@ async fn generate_raw_with_qwen(
     model: &str,
     prompt: &str,
     timeout_seconds: Option<u64>,
+    summary_max_tokens: Option<u32>,
 ) -> Result<SummaryResult, AIError> {
     let client = ai_client(timeout_seconds)?;
-    let body = serde_json::json!({
+    let mut body = serde_json::json!({
         "model": model,
         "messages": [{ "role": "user", "content": prompt }],
-        "temperature": 0.3,
-        "max_tokens": 2048
+        "temperature": 0.3
     });
+    if let Some(max_tokens) = normalized_summary_max_tokens(summary_max_tokens) {
+        body["max_tokens"] = serde_json::json!(max_tokens);
+    }
 
     let response = client
         .post("https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions")
@@ -863,16 +886,19 @@ async fn generate_raw_with_proxy(
     model: &str,
     prompt: &str,
     timeout_seconds: Option<u64>,
+    summary_max_tokens: Option<u32>,
 ) -> Result<SummaryResult, AIError> {
     let client = ai_client(timeout_seconds)?;
     let url = chat_completions_url(proxy_url);
 
-    let body = serde_json::json!({
+    let mut body = serde_json::json!({
         "model": model,
         "messages": [{ "role": "user", "content": prompt }],
-        "temperature": 0.3,
-        "max_tokens": 2048
+        "temperature": 0.3
     });
+    if let Some(max_tokens) = normalized_summary_max_tokens(summary_max_tokens) {
+        body["max_tokens"] = serde_json::json!(max_tokens);
+    }
 
     let response = client
         .post(&url)
@@ -901,35 +927,75 @@ pub(super) async fn generate_raw_for_provider(
     match config.provider {
         AIProvider::Gemini => {
             let api_key = config.api_key.as_ref().ok_or(AIError::NoApiKey)?;
-            generate_raw_with_gemini(api_key, &config.model, prompt, config.timeout_seconds).await
+            generate_raw_with_gemini(
+                api_key,
+                &config.model,
+                prompt,
+                config.timeout_seconds,
+                config.summary_max_tokens,
+            )
+            .await
         }
         AIProvider::OpenAI => {
             let api_key = config.api_key.as_ref().ok_or(AIError::NoApiKey)?;
-            generate_raw_with_openai(api_key, &config.model, prompt, config.timeout_seconds).await
+            generate_raw_with_openai(
+                api_key,
+                &config.model,
+                prompt,
+                config.timeout_seconds,
+                config.summary_max_tokens,
+            )
+            .await
         }
         AIProvider::DeepSeek => {
             let api_key = config.api_key.as_ref().ok_or(AIError::NoApiKey)?;
-            generate_raw_with_deepseek(api_key, &config.model, prompt, config.timeout_seconds).await
+            generate_raw_with_deepseek(
+                api_key,
+                &config.model,
+                prompt,
+                config.timeout_seconds,
+                config.summary_max_tokens,
+            )
+            .await
         }
         AIProvider::Qwen => {
             let api_key = config.api_key.as_ref().ok_or(AIError::NoApiKey)?;
-            generate_raw_with_qwen(api_key, &config.model, prompt, config.timeout_seconds).await
+            generate_raw_with_qwen(
+                api_key,
+                &config.model,
+                prompt,
+                config.timeout_seconds,
+                config.summary_max_tokens,
+            )
+            .await
         }
         AIProvider::Ollama => {
             let ollama_url = config
                 .ollama_url
                 .as_deref()
                 .unwrap_or("http://localhost:11434");
-            generate_raw_with_ollama(ollama_url, &config.model, prompt, config.timeout_seconds)
-                .await
+            generate_raw_with_ollama(
+                ollama_url,
+                &config.model,
+                prompt,
+                config.timeout_seconds,
+                config.summary_max_tokens,
+            )
+            .await
         }
         AIProvider::LmStudio => {
             let lmstudio_url = config
                 .lmstudio_url
                 .as_deref()
                 .unwrap_or("http://localhost:1234");
-            generate_raw_with_lmstudio(lmstudio_url, &config.model, prompt, config.timeout_seconds)
-                .await
+            generate_raw_with_lmstudio(
+                lmstudio_url,
+                &config.model,
+                prompt,
+                config.timeout_seconds,
+                config.summary_max_tokens,
+            )
+            .await
         }
         AIProvider::Proxy => {
             let api_key = config.api_key.as_ref().ok_or(AIError::NoApiKey)?;
@@ -943,6 +1009,7 @@ pub(super) async fn generate_raw_for_provider(
                 &config.model,
                 prompt,
                 config.timeout_seconds,
+                config.summary_max_tokens,
             )
             .await
         }

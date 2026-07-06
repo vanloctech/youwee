@@ -1,11 +1,120 @@
 use crate::database::update_history_summary;
 use crate::services::{
-    generate_raw, generate_summary, generate_summary_custom, test_connection, AIConfig,
-    SummaryStyle,
+    generate_raw, generate_summary_custom_with_hooks, test_connection, AIConfig, LongSummaryFormat,
+    LongSummaryHooks, LongSummaryProgress, SummaryStyle,
 };
+use std::collections::HashSet;
 use std::fs;
 use std::path::PathBuf;
-use tauri::{AppHandle, Manager};
+use std::sync::{Mutex, OnceLock};
+use tauri::{AppHandle, Emitter, Manager};
+
+static CANCELLED_SUMMARY_REQUESTS: OnceLock<Mutex<HashSet<String>>> = OnceLock::new();
+
+fn cancelled_summary_requests() -> &'static Mutex<HashSet<String>> {
+    CANCELLED_SUMMARY_REQUESTS.get_or_init(|| Mutex::new(HashSet::new()))
+}
+
+fn normalize_request_id(request_id: Option<String>) -> Option<String> {
+    request_id
+        .map(|value| value.trim().to_string())
+        .filter(|value| !value.is_empty())
+}
+
+fn clear_cancelled_summary_request(request_id: Option<&str>) {
+    if let Some(request_id) = request_id {
+        if let Ok(mut requests) = cancelled_summary_requests().lock() {
+            requests.remove(request_id);
+        }
+    }
+}
+
+fn take_cancelled_summary_request(request_id: Option<&str>) -> bool {
+    request_id
+        .and_then(|request_id| {
+            cancelled_summary_requests()
+                .lock()
+                .ok()
+                .map(|mut requests| requests.remove(request_id))
+        })
+        .unwrap_or(false)
+}
+
+fn is_summary_request_cancelled(request_id: &str) -> bool {
+    cancelled_summary_requests()
+        .lock()
+        .map(|requests| requests.contains(request_id))
+        .unwrap_or(false)
+}
+
+#[derive(Clone, serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+struct SummaryProgressPayload {
+    request_id: String,
+    stage: String,
+    chunk_index: Option<usize>,
+    chunk_count: usize,
+}
+
+async fn generate_summary_with_progress(
+    app: &AppHandle,
+    config: &AIConfig,
+    transcript: &str,
+    style: &SummaryStyle,
+    language: &str,
+    title: Option<&str>,
+    long_summary_format: &LongSummaryFormat,
+    long_summary_words: Option<u32>,
+    request_id: Option<String>,
+) -> Result<crate::services::SummaryResult, String> {
+    let request_id = normalize_request_id(request_id);
+    if take_cancelled_summary_request(request_id.as_deref()) {
+        return Err(crate::services::AIError::Cancelled.to_wire_string());
+    }
+    let progress_request_id = request_id.clone();
+    let progress_app = app.clone();
+    let progress = move |progress: LongSummaryProgress| {
+        if let Some(request_id) = progress_request_id.as_deref() {
+            let payload = SummaryProgressPayload {
+                request_id: request_id.to_string(),
+                stage: progress.stage.to_string(),
+                chunk_index: progress.chunk_index,
+                chunk_count: progress.chunk_count,
+            };
+            progress_app.emit("summary-progress", payload).ok();
+        }
+    };
+    let cancel_request_id = request_id.clone();
+    let should_cancel = move || {
+        cancel_request_id
+            .as_deref()
+            .map(is_summary_request_cancelled)
+            .unwrap_or(false)
+    };
+    let hooks = LongSummaryHooks {
+        progress: request_id
+            .as_ref()
+            .map(|_| &progress as &(dyn Fn(LongSummaryProgress) + Send + Sync)),
+        should_cancel: request_id
+            .as_ref()
+            .map(|_| &should_cancel as &(dyn Fn() -> bool + Send + Sync)),
+    };
+
+    let result = generate_summary_custom_with_hooks(
+        config,
+        transcript,
+        style,
+        language,
+        title,
+        long_summary_format,
+        long_summary_words,
+        &hooks,
+    )
+    .await
+    .map_err(|e| e.to_wire_string());
+    clear_cancelled_summary_request(request_id.as_deref());
+    result
+}
 
 /// Get the AI config file path
 fn get_config_path(app: &AppHandle) -> Result<PathBuf, String> {
@@ -58,6 +167,7 @@ pub async fn generate_video_summary(
     transcript: String,
     history_id: Option<String>,
     title: Option<String>,
+    request_id: Option<String>,
 ) -> Result<String, String> {
     let config = get_ai_config(app.clone()).await?;
 
@@ -65,9 +175,18 @@ pub async fn generate_video_summary(
         return Err("AI features are disabled. Enable them in Settings.".to_string());
     }
 
-    let result = generate_summary(&config, &transcript, title.as_deref())
-        .await
-        .map_err(|e| e.to_wire_string())?;
+    let result = generate_summary_with_progress(
+        &app,
+        &config,
+        &transcript,
+        &config.summary_style,
+        &config.summary_language,
+        title.as_deref(),
+        &LongSummaryFormat::Auto,
+        None,
+        request_id,
+    )
+    .await?;
 
     // If history_id is provided, save summary to database
     if let Some(id) = history_id {
@@ -85,6 +204,9 @@ pub async fn generate_summary_with_options(
     style: String,
     language: String,
     title: Option<String>,
+    long_summary_format: Option<String>,
+    long_summary_words: Option<u32>,
+    request_id: Option<String>,
 ) -> Result<SummaryResult, String> {
     let config = get_ai_config(app.clone()).await?;
 
@@ -99,25 +221,88 @@ pub async fn generate_summary_with_options(
         "detailed" => SummaryStyle::Detailed,
         _ => SummaryStyle::Concise,
     };
+    let long_summary_format = parse_long_summary_format(long_summary_format.as_deref());
 
-    let result = generate_summary_custom(
+    let result = generate_summary_with_progress(
+        &app,
         &config,
         &transcript,
         &summary_style,
         &language,
         title.as_deref(),
+        &long_summary_format,
+        long_summary_words,
+        request_id,
     )
-    .await
-    .map_err(|e| e.to_wire_string())?;
+    .await?;
 
     Ok(SummaryResult {
         summary: result.summary,
     })
 }
 
+fn parse_long_summary_format(value: Option<&str>) -> LongSummaryFormat {
+    match value.unwrap_or("auto").to_lowercase().as_str() {
+        "final" | "final-summary" => LongSummaryFormat::Final,
+        "parts" | "by-parts" => LongSummaryFormat::Parts,
+        _ => LongSummaryFormat::Auto,
+    }
+}
+
+#[tauri::command]
+pub fn cancel_summary_generation(request_id: String) -> Result<(), String> {
+    let request_id = request_id.trim();
+    if request_id.is_empty() {
+        return Ok(());
+    }
+
+    cancelled_summary_requests()
+        .lock()
+        .map_err(|e| format!("Failed to lock summary cancellation state: {}", e))?
+        .insert(request_id.to_string());
+    Ok(())
+}
+
 #[derive(Clone, serde::Serialize, serde::Deserialize)]
 pub struct SummaryResult {
     pub summary: String,
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::sync::Mutex;
+
+    static TEST_CANCEL_MUTEX: Mutex<()> = Mutex::new(());
+
+    fn reset_cancelled_summary_requests() {
+        cancelled_summary_requests().lock().unwrap().clear();
+    }
+
+    #[test]
+    fn take_cancelled_summary_request_consumes_existing_marker() {
+        let _guard = TEST_CANCEL_MUTEX.lock().unwrap();
+        reset_cancelled_summary_requests();
+        cancel_summary_generation("summary-race".to_string()).unwrap();
+
+        assert!(take_cancelled_summary_request(Some("summary-race")));
+        assert!(!take_cancelled_summary_request(Some("summary-race")));
+
+        reset_cancelled_summary_requests();
+    }
+
+    #[test]
+    fn clear_cancelled_summary_request_removes_marker_after_completion() {
+        let _guard = TEST_CANCEL_MUTEX.lock().unwrap();
+        reset_cancelled_summary_requests();
+        cancel_summary_generation("summary-complete".to_string()).unwrap();
+
+        clear_cancelled_summary_request(Some("summary-complete"));
+
+        assert!(!take_cancelled_summary_request(Some("summary-complete")));
+
+        reset_cancelled_summary_requests();
+    }
 }
 
 /// Get available AI models for a provider

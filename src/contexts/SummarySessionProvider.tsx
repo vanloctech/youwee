@@ -1,14 +1,26 @@
 import { invoke } from '@tauri-apps/api/core';
+import { listen } from '@tauri-apps/api/event';
 import { type ReactNode, useCallback, useEffect, useMemo, useReducer, useRef } from 'react';
 import { useAI } from '@/contexts/AIContext';
 import { useDownload } from '@/contexts/download-context';
 import { localizeUnknownError } from '@/lib/backend-error';
 import {
   createInitialSummarySessionState,
+  DEFAULT_LONG_SUMMARY_WORDS,
+  getBackendSummaryCancelRequestId,
+  isLongSummaryTranscript,
+  normalizeLongSummaryWords,
   type SummarySessionOptions,
   summarySessionReducer,
 } from '@/lib/summary-session';
 import { SummarySessionContext } from './summary-session-context';
+
+interface SummaryProgressPayload {
+  requestId: string;
+  stage: 'summarizing-chunk' | 'combining';
+  chunkIndex?: number;
+  chunkCount: number;
+}
 
 export function SummarySessionProvider({ children }: { children: ReactNode }) {
   const ai = useAI();
@@ -19,9 +31,12 @@ export function SummarySessionProvider({ children }: { children: ReactNode }) {
       style: ai.config.summary_style,
       language: ai.config.summary_language,
       transcriptLanguages: ai.config.transcript_languages || ['en'],
+      longSummaryFormat: 'auto',
+      longSummaryWords: DEFAULT_LONG_SUMMARY_WORDS,
     }),
   );
   const requestIdRef = useRef(0);
+  const backendSummaryRequestIdRef = useRef<string | null>(null);
   const customizedOptionsRef = useRef(false);
 
   useEffect(() => {
@@ -35,6 +50,8 @@ export function SummarySessionProvider({ children }: { children: ReactNode }) {
         style: ai.config.summary_style,
         language: ai.config.summary_language,
         transcriptLanguages: ai.config.transcript_languages || ['en'],
+        longSummaryFormat: 'auto',
+        longSummaryWords: DEFAULT_LONG_SUMMARY_WORDS,
       },
     });
   }, [
@@ -63,16 +80,54 @@ export function SummarySessionProvider({ children }: { children: ReactNode }) {
     dispatch({ type: 'set-show-full-summary', showFullSummary });
   }, []);
 
+  useEffect(() => {
+    const unlistenPromise = listen<SummaryProgressPayload>('summary-progress', (event) => {
+      const progress = event.payload;
+      if (progress.requestId !== backendSummaryRequestIdRef.current) {
+        return;
+      }
+
+      if (progress.stage === 'summarizing-chunk') {
+        dispatch({
+          type: 'set-status',
+          status: 'generating',
+          loadingStatus: 'summarizingChunk',
+          loadingParams: {
+            current: progress.chunkIndex || 0,
+            total: progress.chunkCount,
+          },
+        });
+        return;
+      }
+
+      if (progress.stage === 'combining') {
+        dispatch({
+          type: 'set-status',
+          status: 'generating',
+          loadingStatus: 'combiningSummary',
+          loadingParams: {
+            total: progress.chunkCount,
+          },
+        });
+      }
+    });
+
+    return () => {
+      void unlistenPromise.then((unlisten) => unlisten());
+    };
+  }, []);
+
   const runSummary = useCallback(
     async (inputUrl: string) => {
-      const requestId = requestIdRef.current + 1;
-      requestIdRef.current = requestId;
+      const requestSequence = requestIdRef.current + 1;
+      requestIdRef.current = requestSequence;
+      const summaryRequestId = `summary-${Date.now()}-${requestSequence}`;
       const normalizedUrl = inputUrl.trim();
       const options = state.options;
 
       dispatch({ type: 'start', url: normalizedUrl, options });
 
-      const isCurrentRequest = () => requestIdRef.current === requestId;
+      const isCurrentRequest = () => requestIdRef.current === requestSequence;
       const setStatus = (
         status: 'fetching-info' | 'fetching-transcript' | 'generating',
         loadingStatus: string,
@@ -123,14 +178,27 @@ export function SummarySessionProvider({ children }: { children: ReactNode }) {
           throw new Error('No transcript available for this video');
         }
 
-        setStatus('generating', 'generating');
+        const longSummaryWords = normalizeLongSummaryWords(options.longSummaryWords);
+        setStatus(
+          'generating',
+          isLongSummaryTranscript(transcript, longSummaryWords)
+            ? 'preparingLongSummary'
+            : 'generating',
+        );
+        backendSummaryRequestIdRef.current = summaryRequestId;
         const summaryResult = await invoke<{ summary: string }>('generate_summary_with_options', {
           transcript,
           style: options.style,
           language: options.language,
           title: videoInfo.title,
+          longSummaryFormat: options.longSummaryFormat,
+          longSummaryWords,
+          requestId: summaryRequestId,
         });
 
+        if (backendSummaryRequestIdRef.current === summaryRequestId) {
+          backendSummaryRequestIdRef.current = null;
+        }
         if (!isCurrentRequest()) return;
 
         dispatch({
@@ -146,6 +214,9 @@ export function SummarySessionProvider({ children }: { children: ReactNode }) {
           },
         });
       } catch (error) {
+        if (backendSummaryRequestIdRef.current === summaryRequestId) {
+          backendSummaryRequestIdRef.current = null;
+        }
         if (!isCurrentRequest()) return;
         const message = localizeUnknownError(error);
         dispatch({ type: 'fail', error: message });
@@ -155,7 +226,12 @@ export function SummarySessionProvider({ children }: { children: ReactNode }) {
   );
 
   const stopSummary = useCallback(() => {
+    const requestId = getBackendSummaryCancelRequestId(backendSummaryRequestIdRef.current);
+    backendSummaryRequestIdRef.current = null;
     requestIdRef.current += 1;
+    if (requestId) {
+      void invoke('cancel_summary_generation', { requestId });
+    }
     dispatch({ type: 'cancel' });
   }, []);
 

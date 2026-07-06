@@ -22,4 +22,15 @@ describe('SimpleMarkdown', () => {
     expect(html).toContain('start="2"');
     expect(html).toContain('start="3"');
   });
+
+  test('renders markdown horizontal rules as dividers', () => {
+    const html = renderToStaticMarkup(
+      <SimpleMarkdown content={['Opening section', '---', 'Next section', '------'].join('\n')} />,
+    );
+
+    expect(html).toContain('<hr');
+    expect(html).toContain('bg-gradient-to-r');
+    expect(html).not.toContain('>---<');
+    expect(html).not.toContain('>------<');
+  });
 });

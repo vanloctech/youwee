@@ -10,6 +10,7 @@ và dự án tuân theo [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ### Thêm mới
 - **Ngôn ngữ tiếng Nhật** - Thêm bản dịch tiếng Nhật cho giao diện ứng dụng
 - **Ngôn ngữ tiếng Tây Ban Nha** - Thêm bản dịch tiếng Tây Ban Nha cho giao diện ứng dụng
+- **AI Summary cho video dài** - Thêm tùy chọn định dạng và tóm tắt nhiều phần liền mạch để bản chi tiết của video dài giữ được nhiều ngữ cảnh hơn
 - **Gói Flatpak cho Linux** - Thêm gói phát hành Flatpak cho người dùng Linux trên các distro mới, nơi AppImage có thể cần cài thêm FUSE
 
 ### Thay đổi

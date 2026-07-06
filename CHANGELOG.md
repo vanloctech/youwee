@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - **Japanese language** - Added Japanese translations for the app interface
 - **Spanish language** - Added Spanish translations for the app interface
+- **Long video AI Summary** - Added format options and connected multi-part summaries so detailed summaries for long videos preserve more context
 - **Linux Flatpak package** - Added a Flatpak release bundle for Linux users on modern distributions where AppImage may require extra FUSE packages
 
 ### Changed

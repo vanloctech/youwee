@@ -12,6 +12,10 @@ export const SUMMARY_FONT_SIZE_CLASS: Record<SummaryFontSize, string> = {
   large: 'text-[17px]',
 };
 
+export function getSummaryFontSizeClass(fontSize: SummaryFontSize): string {
+  return SUMMARY_FONT_SIZE_CLASS[fontSize];
+}
+
 export function normalizeSummaryFontSize(value: unknown): SummaryFontSize {
   return SUMMARY_FONT_SIZES.includes(value as SummaryFontSize)
     ? (value as SummaryFontSize)

@@ -12,6 +12,15 @@
     "concise": "Сжатый (ключевые моменты)",
     "detailed": "Детальный (полный)",
     "outputLanguage": "Язык вывода",
+    "longVideoFormat": "Формат длинного видео",
+    "longVideoFormatOptions": {
+      "auto": "Авто",
+      "final": "Итоговая сводка",
+      "parts": "По частям"
+    },
+    "longVideoWords": "Слов на часть",
+    "longVideoWordsHint": "По умолчанию 8 000 слов (примерно 32 000 символов). Чем выше значение, тем меньше запросов к ИИ.",
+    "longVideoWordsSummary": "{{count}} слов/часть",
     "autoSameAsVideo": "Авто (как в видео)",
     "transcriptLanguages": "Языки транскрипции (приоритет)",
     "add": "Добавить",
@@ -40,7 +49,10 @@
     "loading": {
       "fetchingInfo": "Получение информации о видео...",
       "fetchingTranscript": "Получение транскрипции...",
-      "generating": "Генерация сводки..."
+      "generating": "Генерация сводки...",
+      "preparingLongSummary": "Обнаружено длинное видео. Подготовка многочастной ИИ-сводки...",
+      "summarizingChunk": "Сводка части {{current}}/{{total}}...",
+      "combiningSummary": "Объединение итоговой сводки..."
     },
     "aiSettings": "Настройки ИИ",
     "configureAI": "Настроить функции ИИ",

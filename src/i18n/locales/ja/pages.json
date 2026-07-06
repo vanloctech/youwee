@@ -12,6 +12,15 @@
     "concise": "簡潔 (要点のみ)",
     "detailed": "詳細 (網羅的)",
     "outputLanguage": "出力言語",
+    "longVideoFormat": "長い動画の形式",
+    "longVideoFormatOptions": {
+      "auto": "自動",
+      "final": "最終要約",
+      "parts": "パート別"
+    },
+    "longVideoWords": "1パートあたりの単語数",
+    "longVideoWordsHint": "初期値は 8,000 語（約 32,000 文字）です。大きい値ほど AI リクエスト回数が少なくなります。",
+    "longVideoWordsSummary": "{{count}} 語/パート",
     "autoSameAsVideo": "自動 (動画と同じ言語)",
     "transcriptLanguages": "文字起こしの優先言語",
     "add": "追加",
@@ -48,7 +57,10 @@
     "loading": {
       "fetchingInfo": "動画情報を取得中...",
       "fetchingTranscript": "文字起こしを取得中...",
-      "generating": "要約を生成中..."
+      "generating": "要約を生成中...",
+      "preparingLongSummary": "長い動画を検出しました。複数パートの AI 要約を準備中...",
+      "summarizingChunk": "パート {{current}}/{{total}} を要約中...",
+      "combiningSummary": "最終要約を統合中..."
     }
   },
   "processing": {

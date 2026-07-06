@@ -12,6 +12,15 @@
     "concise": "精炼（要点）",
     "detailed": "详细（全面）",
     "outputLanguage": "输出语言",
+    "longVideoFormat": "长视频格式",
+    "longVideoFormatOptions": {
+      "auto": "自动",
+      "final": "最终摘要",
+      "parts": "按部分"
+    },
+    "longVideoWords": "每部分词数",
+    "longVideoWordsHint": "默认 8,000 词（约 32,000 个字符）。数值越高，AI 请求次数越少。",
+    "longVideoWordsSummary": "每部分 {{count}} 词",
     "autoSameAsVideo": "自动（与视频相同）",
     "transcriptLanguages": "字幕语言（优先顺序）",
     "add": "添加",
@@ -48,7 +57,10 @@
     "loading": {
       "fetchingInfo": "获取视频信息...",
       "fetchingTranscript": "获取字幕...",
-      "generating": "生成摘要中..."
+      "generating": "生成摘要中...",
+      "preparingLongSummary": "检测到长视频，正在准备多段 AI 摘要...",
+      "summarizingChunk": "正在总结第 {{current}}/{{total}} 部分...",
+      "combiningSummary": "正在合成最终摘要..."
     }
   },
   "processing": {
