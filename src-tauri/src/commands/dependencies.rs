@@ -12,7 +12,10 @@ use crate::types::{
     BackendError, DenoStatus, DependencySource, FfmpegStatus, GalleryDlStatus, YtdlpAllVersions,
     YtdlpChannel, YtdlpChannelUpdateInfo, YtdlpVersionInfo,
 };
-use crate::utils::{extract_deno_zip, extract_tar_gz, extract_tar_xz, extract_zip, CommandExt};
+use crate::utils::{
+    extract_deno_zip, extract_tar_gz, extract_tar_xz, extract_zip, firefox_profiles_from_ini,
+    CommandExt,
+};
 use futures_util::StreamExt;
 use serde::{Deserialize, Serialize};
 use std::process::Stdio;
@@ -1166,84 +1169,11 @@ pub async fn get_browser_profiles(browser: String) -> Result<Vec<BrowserProfile>
     }
 
     fn get_firefox_profiles(content: &str) -> Vec<BrowserProfile> {
-        #[derive(Default)]
-        struct FirefoxProfileEntry {
-            name: Option<String>,
-            path: Option<String>,
-            is_default: bool,
-            index: usize,
-        }
-
-        let mut entries = Vec::new();
-        let mut install_default_paths = Vec::new();
-        let mut current_profile: Option<FirefoxProfileEntry> = None;
-        let mut in_install_section = false;
-        let mut next_index = 0;
-
-        for raw_line in content.lines() {
-            let line = raw_line.trim();
-
-            if line.starts_with('[') && line.ends_with(']') {
-                if let Some(entry) = current_profile.take() {
-                    if entry.name.as_deref().is_some_and(|name| !name.is_empty()) {
-                        entries.push(entry);
-                    }
-                }
-
-                in_install_section = line.starts_with("[Install");
-                current_profile = if line.starts_with("[Profile") {
-                    let entry = FirefoxProfileEntry {
-                        index: next_index,
-                        ..Default::default()
-                    };
-                    next_index += 1;
-                    Some(entry)
-                } else {
-                    None
-                };
-                continue;
-            }
-
-            if let Some(entry) = current_profile.as_mut() {
-                if let Some(name) = line.strip_prefix("Name=") {
-                    entry.name = Some(name.to_string());
-                } else if let Some(path) = line.strip_prefix("Path=") {
-                    entry.path = Some(path.to_string());
-                } else if line == "Default=1" {
-                    entry.is_default = true;
-                }
-            } else if in_install_section {
-                if let Some(path) = line.strip_prefix("Default=") {
-                    if !path.is_empty() {
-                        install_default_paths.push(path.to_string());
-                    }
-                }
-            }
-        }
-
-        if let Some(entry) = current_profile {
-            if entry.name.as_deref().is_some_and(|name| !name.is_empty()) {
-                entries.push(entry);
-            }
-        }
-
-        entries.sort_by_key(|entry| {
-            let is_install_default = entry.path.as_ref().is_some_and(|path| {
-                install_default_paths
-                    .iter()
-                    .any(|default_path| default_path == path)
-            });
-
-            (!is_install_default, !entry.is_default, entry.index)
-        });
-
-        entries
+        firefox_profiles_from_ini(content)
             .into_iter()
-            .filter_map(|entry| {
-                entry.name.map(|name| BrowserProfile {
-                    folder_name: name.clone(),
-                    display_name: name,
-                })
+            .map(|profile| BrowserProfile {
+                folder_name: profile.folder_name,
+                display_name: profile.display_name,
             })
             .collect()
     }

@@ -2,7 +2,9 @@ use crate::types::{
     BackendError, DependencySource, YtdlpAllVersions, YtdlpChannel, YtdlpChannelInfo,
     YtdlpVersionInfo,
 };
-use crate::utils::{find_system_binary, unix_system_binary_dirs, CommandExt};
+use crate::utils::{
+    find_system_binary, resolve_firefox_profile_for_cookies, unix_system_binary_dirs, CommandExt,
+};
 use std::path::PathBuf;
 use std::process::Stdio;
 use tauri::{AppHandle, Manager};
@@ -907,6 +909,11 @@ pub fn build_cookie_args(
                 let mut cookie_arg = browser.to_string();
                 if let Some(profile) = cookie_browser_profile {
                     if !profile.is_empty() {
+                        let profile = if browser.eq_ignore_ascii_case("firefox") {
+                            resolve_firefox_profile_for_cookies(profile)
+                        } else {
+                            profile.to_string()
+                        };
                         cookie_arg = format!("{}:{}", browser, profile);
                     }
                 }

@@ -69,9 +69,25 @@ export function NetworkSection({ highlightId }: NetworkSectionProps) {
         });
         setBrowserProfiles(profiles);
 
-        // Auto-select first profile if none selected
-        if (profiles.length > 0 && !cookieSettings.browserProfile) {
-          updateCookieSettings({ browserProfile: profiles[0].folder_name });
+        if (profiles.length > 0) {
+          const selectedProfile = cookieSettings.browserProfile;
+          const exactProfile = profiles.find((profile) => profile.folder_name === selectedProfile);
+          const legacyFirefoxProfile =
+            cookieSettings.browser === 'firefox'
+              ? profiles.find((profile) => profile.display_name === selectedProfile)
+              : undefined;
+
+          if (!selectedProfile) {
+            setUseCustomProfile(false);
+            updateCookieSettings({ browserProfile: profiles[0].folder_name });
+          } else if (exactProfile) {
+            setUseCustomProfile(false);
+          } else if (legacyFirefoxProfile) {
+            setUseCustomProfile(false);
+            updateCookieSettings({ browserProfile: legacyFirefoxProfile.folder_name });
+          } else {
+            setUseCustomProfile(true);
+          }
         }
       } catch (error) {
         console.error('Failed to load profiles:', error);
