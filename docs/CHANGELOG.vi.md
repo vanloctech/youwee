@@ -21,6 +21,11 @@ và dự án tuân theo [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - **Phóng to cửa sổ trên Windows** - Sửa lỗi double-click thanh tiêu đề tùy chỉnh trên Windows làm cửa sổ phóng to rồi tự quay lại kích thước cũ
 - **Mở vị trí file** - Chuyển các thao tác mở file trong thư mục qua command có xử lý theo từng hệ điều hành của Youwee để mở thư mục ổn định hơn
 - **Nhận diện dependency** - Thêm `~/.local/bin` vào đường dẫn tìm kiếm trên Unix để app mở từ GUI tìm được các công cụ người dùng tự cài ổn định hơn
+- **Profile cookie Firefox** - Dùng đúng thư mục profile thật hoặc đường dẫn tuyệt đối từ `profiles.ini` cho tải bằng cookie trình duyệt, trong khi Settings vẫn hiển thị tên dễ đọc
+- **Tiêu đề tải xuống Unicode** - Giữ tiêu đề video Unicode từ metadata và đường dẫn file UTF-8 cuối cùng thay vì fallback sang output tiến trình bị mất ký tự
+- **URL trong đoạn text đã paste** - Tách link HTTP(S) từ đoạn text đã paste trong Download, Universal, Gallery và các ô nhập metadata
+- **Tên file an toàn trên Windows** - Củng cố xử lý tên file yt-dlp trên Windows bằng trim theo độ dài đường dẫn và rule tên file Windows-safe mà không đổi template output
+- **Tóm tắt OpenAI** - Tự điều chỉnh tham số sampling cho OpenAI và Proxy tương thích OpenAI để model legacy và reasoning tạo tóm tắt mà không lỗi 400
 
 ## [0.19.0] - 2026-06-30
 

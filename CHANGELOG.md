@@ -21,6 +21,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Windows titlebar maximize** - Fixed double-clicking the custom titlebar on Windows maximizing and immediately restoring the window
 - **Open in folder actions** - Routed file reveal actions through Youwee's platform-aware app command for more reliable folder opening
 - **Dependency detection** - Added `~/.local/bin` to Unix dependency lookup so GUI-launched apps can find user-installed tools more reliably
+- **Firefox cookie profiles** - Use the real Firefox profile folder or absolute profile path from `profiles.ini` for browser-cookie downloads while keeping display names in Settings
+- **Unicode download titles** - Preserve Unicode video titles from metadata and UTF-8 final file paths instead of falling back to lossy progress output
+- **Pasted text URLs** - Extract HTTP(S) links from pasted text across Download, Universal, Gallery, and metadata inputs
+- **Windows safe filenames** - Harden yt-dlp filename handling on Windows with path-aware trimming and Windows-safe filename rules without changing output templates
+- **OpenAI summaries** - Automatically adjust OpenAI and OpenAI-compatible Proxy sampling parameters so legacy and reasoning models can generate summaries without 400 errors
 
 ## [0.19.0] - 2026-06-30
 

@@ -21,6 +21,11 @@ Youwee 的所有重要更改都将记录在此文件中。
 - **Windows 标题栏最大化** - 修复在 Windows 上双击自定义标题栏后窗口先最大化又立即还原的问题
 - **在文件夹中打开** - 将文件定位操作改为通过 Youwee 的跨平台应用命令执行，让打开所在文件夹更可靠
 - **依赖检测** - 在 Unix 依赖查找路径中加入 `~/.local/bin`，让从图形界面启动的应用更容易找到用户自行安装的工具
+- **Firefox Cookie 配置文件** - 浏览器 Cookie 下载现在使用 `profiles.ini` 中真实的 Firefox 配置文件夹或绝对路径，同时在设置中保留易读显示名
+- **Unicode 下载标题** - 优先保留来自元数据和 UTF-8 最终文件路径的 Unicode 视频标题，避免回退到有损的进度输出
+- **粘贴文本中的 URL** - 在 Download、Universal、Gallery 和元数据输入中从粘贴文本提取 HTTP(S) 链接
+- **Windows 安全文件名** - 在 Windows 上通过路径感知的裁剪和 Windows 安全文件名规则加固 yt-dlp 文件名处理，同时不改变输出模板
+- **OpenAI 摘要** - 自动调整 OpenAI 和兼容 OpenAI 的 Proxy 采样参数，让旧模型与 reasoning 模型都能生成摘要而不触发 400 错误
 
 ## [0.19.0] - 2026-06-30
 
