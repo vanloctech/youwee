@@ -76,13 +76,19 @@ fn apply_openai_sampling_params(
 ///
 /// Prefers the structured `error.param` field when OpenAI provides one; falls
 /// back to matching the field name in the human-readable message otherwise.
+///
+/// The token-limit field is swapped in whichever direction is needed: OpenAI
+/// reasoning models reject `max_tokens` (swap to `max_completion_tokens`),
+/// while some OpenAI-compatible proxies reject `max_completion_tokens` (swap
+/// back to `max_tokens`). Matching either field name covers both cases.
 fn adjust_openai_request(body: &mut serde_json::Value, error: &OpenAIErrorDetail) -> bool {
     let Some(fields) = body.as_object_mut() else {
         return false;
     };
 
     let names_temperature = |s: &str| s.contains("temperature");
-    let names_max_tokens = |s: &str| s.contains("max_tokens");
+    // Substring match, so this also fires for "max_completion_tokens".
+    let names_max_tokens = |s: &str| s.contains("max_tokens") || s.contains("max_completion_tokens");
 
     let targets_temperature = error
         .param
@@ -100,8 +106,13 @@ fn adjust_openai_request(body: &mut serde_json::Value, error: &OpenAIErrorDetail
         adjusted = true;
     }
     if targets_max_tokens {
+        // Swap the token-limit field to whichever name we're not currently
+        // using, preserving its value. Only one of the two is ever present.
         if let Some(value) = fields.remove("max_tokens") {
             fields.insert("max_completion_tokens".to_string(), value);
+            adjusted = true;
+        } else if let Some(value) = fields.remove("max_completion_tokens") {
+            fields.insert("max_tokens".to_string(), value);
             adjusted = true;
         }
     }
@@ -658,31 +669,15 @@ pub async fn generate_with_proxy(
 
     let url = chat_completions_url(proxy_url);
 
+    // Proxy is OpenAI-compatible and defaults to api.openai.com with a GPT-5
+    // model, so it shares OpenAI's sampling-parameter handling and retry path.
     let mut body = serde_json::json!({
         "model": model,
-        "messages": [{ "role": "user", "content": prompt }],
-        "temperature": 0.7
+        "messages": [{ "role": "user", "content": prompt }]
     });
-    if let Some(max_tokens) = max_tokens {
-        body["max_tokens"] = serde_json::json!(max_tokens);
-    }
+    apply_openai_sampling_params(&mut body, model, 0.7, max_tokens);
 
-    let response = client
-        .post(&url)
-        .header("Content-Type", "application/json")
-        .header("Authorization", format!("Bearer {}", api_key))
-        .json(&body)
-        .send()
-        .await
-        .map_err(|e| {
-            AIError::NetworkError(format!(
-                "Failed to connect to proxy at {}: {}",
-                proxy_url, e
-            ))
-        })?;
-
-    let status = response.status();
-    let response_text = response.text().await.unwrap_or_default();
+    let (status, response_text) = post_openai_chat(&client, &url, api_key, body).await?;
 
     let summary = parse_openai_compatible_response("Proxy", status, &response_text)?;
 
@@ -1047,26 +1042,19 @@ async fn generate_raw_with_proxy(
     let client = ai_client(timeout_seconds)?;
     let url = chat_completions_url(proxy_url);
 
+    // Proxy is OpenAI-compatible; share OpenAI's sampling params + retry path.
     let mut body = serde_json::json!({
         "model": model,
-        "messages": [{ "role": "user", "content": prompt }],
-        "temperature": 0.3
+        "messages": [{ "role": "user", "content": prompt }]
     });
-    if let Some(max_tokens) = normalized_summary_max_tokens(summary_max_tokens) {
-        body["max_tokens"] = serde_json::json!(max_tokens);
-    }
+    apply_openai_sampling_params(
+        &mut body,
+        model,
+        0.3,
+        normalized_summary_max_tokens(summary_max_tokens),
+    );
 
-    let response = client
-        .post(&url)
-        .header("Authorization", format!("Bearer {}", api_key))
-        .header("Content-Type", "application/json")
-        .json(&body)
-        .send()
-        .await
-        .map_err(|e| AIError::NetworkError(e.to_string()))?;
-
-    let status = response.status();
-    let response_text = response.text().await.unwrap_or_default();
+    let (status, response_text) = post_openai_chat(&client, &url, api_key, body).await?;
     let text = parse_openai_compatible_response("Proxy", status, &response_text)?;
 
     Ok(SummaryResult {
@@ -1216,5 +1204,148 @@ mod tests {
             .unwrap_err();
 
         assert!(matches!(error, AIError::ApiError(message) if message.contains("cut off")));
+    }
+
+    // --- apply_openai_sampling_params ---
+
+    #[test]
+    fn legacy_model_uses_temperature_and_max_tokens() {
+        let mut body = serde_json::json!({});
+        apply_openai_sampling_params(&mut body, "gpt-4o", 0.7, Some(1024));
+
+        assert_eq!(body["temperature"], serde_json::json!(0.7));
+        assert_eq!(body["max_tokens"], serde_json::json!(1024));
+        assert!(body.get("max_completion_tokens").is_none());
+    }
+
+    #[test]
+    fn reasoning_model_uses_max_completion_tokens_without_temperature() {
+        let mut body = serde_json::json!({});
+        apply_openai_sampling_params(&mut body, "gpt-5.5", 0.7, Some(1024));
+
+        assert_eq!(body["max_completion_tokens"], serde_json::json!(1024));
+        assert!(body.get("temperature").is_none());
+        assert!(body.get("max_tokens").is_none());
+    }
+
+    #[test]
+    fn reasoning_model_omits_token_limit_when_unset() {
+        let mut body = serde_json::json!({});
+        apply_openai_sampling_params(&mut body, "o3", 0.7, None);
+
+        assert!(body.get("max_completion_tokens").is_none());
+        assert!(body.get("temperature").is_none());
+        assert!(body.get("max_tokens").is_none());
+    }
+
+    #[test]
+    fn legacy_model_detection_is_case_insensitive() {
+        assert!(openai_is_legacy_model("GPT-4o"));
+        assert!(openai_is_legacy_model("gpt-4"));
+        assert!(openai_is_legacy_model("gpt-3.5-turbo"));
+        assert!(!openai_is_legacy_model("gpt-5.5"));
+        assert!(!openai_is_legacy_model("o3-mini"));
+    }
+
+    // --- adjust_openai_request ---
+
+    fn error_with_param(message: &str, param: Option<&str>) -> OpenAIErrorDetail {
+        OpenAIErrorDetail {
+            message: message.to_string(),
+            param: param.map(str::to_string),
+        }
+    }
+
+    #[test]
+    fn adjust_removes_rejected_temperature() {
+        let mut body = serde_json::json!({
+            "temperature": 0.7,
+            "max_tokens": 1024
+        });
+        let error = error_with_param(
+            "Unsupported value: 'temperature' does not support 0.7",
+            Some("temperature"),
+        );
+
+        assert!(adjust_openai_request(&mut body, &error));
+        assert!(body.get("temperature").is_none());
+        // Untargeted fields are left alone.
+        assert_eq!(body["max_tokens"], serde_json::json!(1024));
+    }
+
+    #[test]
+    fn adjust_converts_rejected_max_tokens_to_max_completion_tokens() {
+        let mut body = serde_json::json!({
+            "max_tokens": 1024
+        });
+        let error = error_with_param(
+            "Unsupported parameter: 'max_tokens' is not supported with this model. Use 'max_completion_tokens' instead.",
+            Some("max_tokens"),
+        );
+
+        assert!(adjust_openai_request(&mut body, &error));
+        assert!(body.get("max_tokens").is_none());
+        assert_eq!(body["max_completion_tokens"], serde_json::json!(1024));
+    }
+
+    #[test]
+    fn adjust_converts_rejected_max_completion_tokens_back_to_max_tokens() {
+        // An OpenAI-compatible proxy that only understands the legacy field.
+        let mut body = serde_json::json!({
+            "max_completion_tokens": 1024
+        });
+        let error = error_with_param(
+            "Unrecognized request argument supplied: max_completion_tokens",
+            Some("max_completion_tokens"),
+        );
+
+        assert!(adjust_openai_request(&mut body, &error));
+        assert!(body.get("max_completion_tokens").is_none());
+        assert_eq!(body["max_tokens"], serde_json::json!(1024));
+    }
+
+    #[test]
+    fn adjust_falls_back_to_message_when_param_absent() {
+        let mut body = serde_json::json!({
+            "temperature": 0.7
+        });
+        let error = error_with_param(
+            "This model does not support setting temperature.",
+            None,
+        );
+
+        assert!(adjust_openai_request(&mut body, &error));
+        assert!(body.get("temperature").is_none());
+    }
+
+    #[test]
+    fn adjust_reports_no_change_when_field_already_absent() {
+        // OpenAI names max_tokens, but the body has neither token field.
+        let mut body = serde_json::json!({
+            "temperature": 0.7
+        });
+        let error = error_with_param("max_tokens is not supported", Some("max_tokens"));
+
+        assert!(!adjust_openai_request(&mut body, &error));
+        // Nothing was touched.
+        assert_eq!(body["temperature"], serde_json::json!(0.7));
+    }
+
+    #[test]
+    fn adjust_removes_temperature_and_swaps_tokens_together() {
+        let mut body = serde_json::json!({
+            "temperature": 0.7,
+            "max_tokens": 512
+        });
+        // Some models complain about both fields in one message.
+        let error = error_with_param(
+            "temperature is unsupported and max_tokens must be max_completion_tokens",
+            None,
+        );
+
+        assert!(adjust_openai_request(&mut body, &error));
+        assert!(body.get("temperature").is_none());
+        assert!(body.get("max_tokens").is_none());
+        assert_eq!(body["max_completion_tokens"], serde_json::json!(512));
     }
 }
