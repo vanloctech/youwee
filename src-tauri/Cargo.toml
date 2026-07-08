@@ -13,22 +13,22 @@ name = "app_lib"
 crate-type = ["staticlib", "cdylib", "rlib"]
 
 [build-dependencies]
-tauri-build = { version = "2.5.3", features = [] }
+tauri-build = { version = "2.6.3", features = [] }
 
 [dependencies]
 serde_json = "1.0"
 serde = { version = "1.0", features = ["derive"] }
 log = "0.4"
-tauri = { version = "2.9.5", features = ["protocol-asset", "macos-private-api", "tray-icon", "image-png"] }
-tauri-plugin-log = "2"
-tauri-plugin-dialog = "2"
-tauri-plugin-fs = "2"
-tauri-plugin-shell = "2"
-tauri-plugin-updater = "2"
-tauri-plugin-process = "2"
-tauri-plugin-deep-link = "2"
-tauri-plugin-single-instance = "2"
-tauri-plugin-cli = "2"
+tauri = { version = "2.11.5", features = ["protocol-asset", "macos-private-api", "tray-icon", "image-png"] }
+tauri-plugin-log = "2.8.0"
+tauri-plugin-dialog = "2.7.1"
+tauri-plugin-fs = "2.5.1"
+tauri-plugin-shell = "2.3.5"
+tauri-plugin-updater = "2.10.1"
+tauri-plugin-process = "2.3.1"
+tauri-plugin-deep-link = "2.4.9"
+tauri-plugin-single-instance = "2.4.2"
+tauri-plugin-cli = "2.4.1"
 tokio = { version = "1", features = ["full"] }
 regex = "1"
 reqwest = { version = "0.12", features = ["json", "multipart", "stream"] }
@@ -42,8 +42,8 @@ zip = "0.6"
 rusqlite = { version = "0.31", features = ["bundled"] }
 uuid = { version = "1", features = ["v4"] }
 chrono = "0.4"
-tauri-plugin-opener = "2.5.3"
-tauri-plugin-notification = "2"
+tauri-plugin-opener = "2.5.4"
+tauri-plugin-notification = "2.3.3"
 image = { version = "0.25", default-features = false, features = ["png", "jpeg", "webp", "gif"] }
 base64 = "0.22"
 ed25519-dalek = "2"
