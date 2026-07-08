@@ -7,6 +7,8 @@ và dự án tuân theo [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+## [0.20.0] - 2026-07-08
+
 ### Thêm mới
 - **Ngôn ngữ tiếng Nhật** - Thêm bản dịch tiếng Nhật cho giao diện ứng dụng
 - **Ngôn ngữ tiếng Tây Ban Nha** - Thêm bản dịch tiếng Tây Ban Nha cho giao diện ứng dụng
