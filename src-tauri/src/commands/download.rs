@@ -90,7 +90,6 @@ fn build_queue_prefix(
 }
 
 fn build_output_template(
-    output_path: &str,
     number_playlist_items: bool,
     playlist_index: Option<u32>,
     playlist_total: Option<u32>,
@@ -101,11 +100,10 @@ fn build_output_template(
     let prefix = build_playlist_prefix(number_playlist_items, playlist_index, playlist_total)
         .or_else(|| build_queue_prefix(number_queue_items, queue_index, queue_total))
         .unwrap_or_default();
-    format!("{output_path}/{prefix}%(title)s.%(ext)s")
+    format!("{prefix}%(title)s.%(ext)s")
 }
 
 fn build_chapter_output_template(
-    output_path: &str,
     number_playlist_items: bool,
     playlist_index: Option<u32>,
     playlist_total: Option<u32>,
@@ -122,7 +120,11 @@ fn build_chapter_output_template(
     } else {
         ""
     };
-    format!("{output_path}/{item_prefix}{chapter_prefix}%(section_title)s.%(ext)s")
+    format!("{item_prefix}{chapter_prefix}%(section_title)s.%(ext)s")
+}
+
+fn output_path_arg(output_path: &str) -> String {
+    format!("home:{output_path}")
 }
 
 fn build_auto_collection_names(
@@ -187,6 +189,40 @@ fn parse_printed_filepaths(contents: &str) -> Vec<String> {
         paths.push(path.to_string());
     }
     paths
+}
+
+fn is_media_filepath(path: &str) -> bool {
+    matches!(
+        std::path::Path::new(path)
+            .extension()
+            .and_then(|ext| ext.to_str())
+            .map(str::to_ascii_lowercase)
+            .as_deref(),
+        Some("mp3" | "m4a" | "opus" | "mp4" | "mkv" | "webm" | "flac" | "wav")
+    )
+}
+
+fn newest_media_filepath_in_dir(output_directory: &str) -> Option<String> {
+    let mut newest: Option<(std::time::SystemTime, String)> = None;
+    for entry in std::fs::read_dir(output_directory).ok()? {
+        let entry = entry.ok()?;
+        let path = entry.path();
+        let path_text = path.to_string_lossy().to_string();
+        if !is_media_filepath(&path_text) {
+            continue;
+        }
+        let modified = entry
+            .metadata()
+            .and_then(|metadata| metadata.modified())
+            .ok()?;
+        if match newest.as_ref() {
+            Some((current_modified, _)) => modified > *current_modified,
+            None => true,
+        } {
+            newest = Some((modified, path_text));
+        }
+    }
+    newest.map(|(_, path)| path)
 }
 
 fn output_filepaths(printed_filepaths: &[String], final_filepath: &Option<String>) -> Vec<String> {
@@ -272,65 +308,56 @@ mod playlist_chapter_tests {
     #[test]
     fn output_template_is_unchanged_when_numbering_is_off() {
         assert_eq!(
-            build_output_template("/tmp/out", false, None, None, false, None, None),
-            "/tmp/out/%(title)s.%(ext)s"
+            build_output_template(false, None, None, false, None, None),
+            "%(title)s.%(ext)s"
         );
     }
 
     #[test]
     fn output_template_uses_frontend_playlist_index_for_expanded_playlist_items() {
         assert_eq!(
-            build_output_template("/tmp/out", true, Some(3), Some(120), false, None, None),
-            "/tmp/out/003 - %(title)s.%(ext)s"
+            build_output_template(true, Some(3), Some(120), false, None, None),
+            "003 - %(title)s.%(ext)s"
         );
     }
 
     #[test]
     fn output_template_uses_frontend_queue_index_for_regular_queue_items() {
         assert_eq!(
-            build_output_template("/tmp/out", false, None, None, true, Some(7), Some(42)),
-            "/tmp/out/07 - %(title)s.%(ext)s"
+            build_output_template(false, None, None, true, Some(7), Some(42)),
+            "07 - %(title)s.%(ext)s"
         );
     }
 
     #[test]
     fn output_template_prefers_playlist_index_over_queue_index() {
         assert_eq!(
-            build_output_template(
-                "/tmp/out",
-                true,
-                Some(3),
-                Some(120),
-                true,
-                Some(7),
-                Some(42)
-            ),
-            "/tmp/out/003 - %(title)s.%(ext)s"
+            build_output_template(true, Some(3), Some(120), true, Some(7), Some(42)),
+            "003 - %(title)s.%(ext)s"
         );
     }
 
     #[test]
     fn chapter_template_numbers_chapters_without_playlist_prefix() {
         assert_eq!(
-            build_chapter_output_template("/tmp/out", false, None, None, false, None, None, true),
-            "/tmp/out/%(section_number)02d - %(section_title)s.%(ext)s"
+            build_chapter_output_template(false, None, None, false, None, None, true),
+            "%(section_number)02d - %(section_title)s.%(ext)s"
         );
     }
 
     #[test]
     fn chapter_template_uses_playlist_and_chapter_numbers_when_both_are_enabled() {
         assert_eq!(
-            build_chapter_output_template(
-                "/tmp/out",
-                true,
-                Some(3),
-                Some(120),
-                false,
-                None,
-                None,
-                true
-            ),
-            "/tmp/out/003 - %(section_number)02d - %(section_title)s.%(ext)s"
+            build_chapter_output_template(true, Some(3), Some(120), false, None, None, true),
+            "003 - %(section_number)02d - %(section_title)s.%(ext)s"
+        );
+    }
+
+    #[test]
+    fn output_path_arg_uses_ytdlp_home_path_slot() {
+        assert_eq!(
+            output_path_arg("C:/very/long/folder"),
+            "home:C:/very/long/folder"
         );
     }
 
@@ -347,6 +374,27 @@ mod playlist_chapter_tests {
                 "/tmp/02 - End.mp4".to_string(),
             ]
         );
+    }
+
+    #[test]
+    fn newest_media_filepath_scans_output_directory() {
+        let root = std::env::temp_dir().join(format!("youwee-newest-media-{}", std::process::id()));
+        std::fs::remove_dir_all(&root).ok();
+        std::fs::create_dir_all(&root).unwrap();
+        let older = root.join("older.mp4");
+        let ignored = root.join("note.txt");
+        let newer = root.join("newer.webm");
+        std::fs::write(&older, b"old").unwrap();
+        std::fs::write(&ignored, b"text").unwrap();
+        std::thread::sleep(std::time::Duration::from_millis(5));
+        std::fs::write(&newer, b"new").unwrap();
+
+        assert_eq!(
+            newest_media_filepath_in_dir(&root.to_string_lossy()).as_deref(),
+            Some(newer.to_string_lossy().as_ref())
+        );
+
+        std::fs::remove_dir_all(root).ok();
     }
 
     #[test]
@@ -995,7 +1043,6 @@ pub async fn download_video(
     let split_embedded_chapters = split_embedded_chapters.unwrap_or(false);
     let number_chapter_files = number_chapter_files.unwrap_or(true);
     let output_template = build_output_template(
-        &sanitized_path,
         number_playlist_items,
         playlist_index,
         playlist_total,
@@ -1017,6 +1064,8 @@ pub async fn download_video(
         "--no-warnings".to_string(),
         "-f".to_string(),
         format_string,
+        "--paths".to_string(),
+        output_path_arg(&sanitized_path),
         "-o".to_string(),
         output_template,
         "--print-to-file".to_string(),
@@ -1041,7 +1090,6 @@ pub async fn download_video(
         args.push(format!(
             "chapter:{}",
             build_chapter_output_template(
-                &sanitized_path,
                 number_playlist_items,
                 playlist_index,
                 playlist_total,
@@ -1680,6 +1728,13 @@ pub async fn download_video(
                         std::fs::remove_file(&filepath_tmp).ok();
 
                         if status.code == Some(0) {
+                            let final_path_exists = final_filepath
+                                .as_ref()
+                                .is_some_and(|path| std::path::Path::new(path).exists());
+                            if !final_path_exists {
+                                final_filepath = newest_media_filepath_in_dir(&sanitized_path);
+                            }
+
                             let actual_filesize = final_filepath
                                 .as_ref()
                                 .and_then(|fp| std::fs::metadata(fp).ok())
@@ -2350,6 +2405,13 @@ async fn handle_tokio_download(
     }
 
     if status.success() {
+        let final_path_exists = final_filepath
+            .as_ref()
+            .is_some_and(|path| std::path::Path::new(path).exists());
+        if !final_path_exists {
+            final_filepath = newest_media_filepath_in_dir(&output_directory);
+        }
+
         let actual_filesize = final_filepath
             .as_ref()
             .and_then(|fp| std::fs::metadata(fp).ok())
