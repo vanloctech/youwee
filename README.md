@@ -156,14 +156,6 @@ bun run tauri dev
 bun run tauri build
 ```
 
-## Sponsor
-
-<div>
-  <a href="https://www.atlascloud.ai/">
-    <img src="docs/sponsors/atlascloud.svg" alt="Atlas Cloud" width="220">
-  </a>
-</div>
-
 ## Contributing
 
 We welcome contributions. See [Contributing Guide](CONTRIBUTING.md).

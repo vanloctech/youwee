@@ -155,14 +155,6 @@ bun run tauri dev
 bun run tauri build
 ```
 
-## 赞助商
-
-<div align="center">
-  <a href="https://www.atlascloud.ai/">
-    <img src="sponsors/atlascloud.svg" alt="Atlas Cloud" width="220">
-  </a>
-</div>
-
 ## 贡献
 
 欢迎贡献，详情见[贡献指南](CONTRIBUTING.zh-CN.md)。
