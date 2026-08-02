@@ -124,7 +124,6 @@ fn build_filename_metadata_prefix(enabled: bool, fields: &[String]) -> Option<St
 }
 
 fn build_output_template(
-    output_path: &str,
     number_playlist_items: bool,
     playlist_index: Option<u32>,
     playlist_total: Option<u32>,
@@ -140,11 +139,10 @@ fn build_output_template(
     let metadata_prefix =
         build_filename_metadata_prefix(filename_metadata_enabled, filename_metadata_fields)
             .unwrap_or_default();
-    format!("{output_path}/{item_prefix}{metadata_prefix}%(title)s.%(ext)s")
+    format!("{item_prefix}{metadata_prefix}%(title)s.%(ext)s")
 }
 
 fn build_chapter_output_template(
-    output_path: &str,
     number_playlist_items: bool,
     playlist_index: Option<u32>,
     playlist_total: Option<u32>,
@@ -161,7 +159,11 @@ fn build_chapter_output_template(
     } else {
         ""
     };
-    format!("{output_path}/{item_prefix}{chapter_prefix}%(section_title)s.%(ext)s")
+    format!("{item_prefix}{chapter_prefix}%(section_title)s.%(ext)s")
+}
+
+fn output_path_arg(output_path: &str) -> String {
+    format!("home:{output_path}")
 }
 
 fn build_auto_collection_names(
@@ -228,11 +230,81 @@ fn parse_printed_filepaths(contents: &str) -> Vec<String> {
     paths
 }
 
-fn output_filepaths(printed_filepaths: &[String], final_filepath: &Option<String>) -> Vec<String> {
-    if !printed_filepaths.is_empty() {
-        return printed_filepaths.to_vec();
+fn is_media_filepath(path: &str) -> bool {
+    matches!(
+        std::path::Path::new(path)
+            .extension()
+            .and_then(|ext| ext.to_str())
+            .map(str::to_ascii_lowercase)
+            .as_deref(),
+        Some("mp3" | "m4a" | "opus" | "mp4" | "mkv" | "webm" | "flac" | "wav")
+    )
+}
+
+fn push_unique_filepath(paths: &mut Vec<String>, path: &str) {
+    if !path.is_empty() && !paths.iter().any(|existing| existing == path) {
+        paths.push(path.to_string());
     }
-    final_filepath.iter().cloned().collect()
+}
+
+fn parse_ytdlp_output_filepath(line: &str) -> Option<String> {
+    let line = line.trim();
+    let candidate = if line.contains("[download]")
+        || line.contains("[ExtractAudio]")
+        || line.contains("[SplitChapters]")
+        || line.contains("[VideoRemuxer]")
+        || line.contains("[VideoConvertor]")
+    {
+        line.split_once("Destination:")
+            .map(|(_, path)| path)
+            .or_else(|| {
+                line.strip_prefix("[download] ")
+                    .and_then(|path| path.strip_suffix(" has already been downloaded"))
+            })
+    } else if let Some(path) = line.strip_prefix("[Merger] Merging formats into ") {
+        Some(path)
+    } else if !line.starts_with('[') && is_media_filepath(line) {
+        Some(line)
+    } else {
+        None
+    }?;
+
+    let candidate = candidate
+        .trim()
+        .trim_matches(|character| character == '"' || character == '\'');
+    (!candidate.is_empty() && is_media_filepath(candidate)).then(|| candidate.to_string())
+}
+
+fn job_output_filepaths(
+    output_directory: &str,
+    printed_filepaths: &[String],
+    observed_filepaths: &[String],
+) -> Vec<String> {
+    let Ok(output_directory) = std::fs::canonicalize(output_directory) else {
+        return Vec::new();
+    };
+    let mut paths = Vec::new();
+
+    for filepath in printed_filepaths.iter().chain(observed_filepaths) {
+        let filepath = std::path::Path::new(filepath);
+        let filepath = if filepath.is_absolute() {
+            filepath.to_path_buf()
+        } else {
+            output_directory.join(filepath)
+        };
+        let Ok(filepath) = std::fs::canonicalize(filepath) else {
+            continue;
+        };
+        let filepath_text = filepath.to_string_lossy();
+        if filepath.is_file()
+            && filepath.starts_with(&output_directory)
+            && is_media_filepath(&filepath_text)
+        {
+            push_unique_filepath(&mut paths, &filepath_text);
+        }
+    }
+
+    paths
 }
 
 fn title_from_filepath(filepath: &str) -> Option<String> {
@@ -311,44 +383,24 @@ mod playlist_chapter_tests {
     #[test]
     fn output_template_is_unchanged_when_numbering_is_off() {
         assert_eq!(
-            build_output_template("/tmp/out", false, None, None, false, None, None, false, &[]),
-            "/tmp/out/%(title)s.%(ext)s"
+            build_output_template(false, None, None, false, None, None, false, &[]),
+            "%(title)s.%(ext)s"
         );
     }
 
     #[test]
     fn output_template_uses_frontend_playlist_index_for_expanded_playlist_items() {
         assert_eq!(
-            build_output_template(
-                "/tmp/out",
-                true,
-                Some(3),
-                Some(120),
-                false,
-                None,
-                None,
-                false,
-                &[]
-            ),
-            "/tmp/out/003 - %(title)s.%(ext)s"
+            build_output_template(true, Some(3), Some(120), false, None, None, false, &[]),
+            "003 - %(title)s.%(ext)s"
         );
     }
 
     #[test]
     fn output_template_uses_frontend_queue_index_for_regular_queue_items() {
         assert_eq!(
-            build_output_template(
-                "/tmp/out",
-                false,
-                None,
-                None,
-                true,
-                Some(7),
-                Some(42),
-                false,
-                &[]
-            ),
-            "/tmp/out/07 - %(title)s.%(ext)s"
+            build_output_template(false, None, None, true, Some(7), Some(42), false, &[]),
+            "07 - %(title)s.%(ext)s"
         );
     }
 
@@ -356,7 +408,6 @@ mod playlist_chapter_tests {
     fn output_template_prefers_playlist_index_over_queue_index() {
         assert_eq!(
             build_output_template(
-                "/tmp/out",
                 true,
                 Some(3),
                 Some(120),
@@ -366,7 +417,7 @@ mod playlist_chapter_tests {
                 false,
                 &[]
             ),
-            "/tmp/out/003 - %(title)s.%(ext)s"
+            "003 - %(title)s.%(ext)s"
         );
     }
 
@@ -375,8 +426,8 @@ mod playlist_chapter_tests {
         let fields = vec!["uploadDate".to_string(), "viewCount".to_string()];
 
         assert_eq!(
-            build_output_template("/tmp/out", false, None, None, false, None, None, true, &fields),
-            "/tmp/out/%(upload_date>%Y-%m-%d)s_%(view_count)sviews_%(title)s.%(ext)s"
+            build_output_template(false, None, None, false, None, None, true, &fields),
+            "%(upload_date>%Y-%m-%d)s_%(view_count)sviews_%(title)s.%(ext)s"
         );
     }
 
@@ -386,7 +437,6 @@ mod playlist_chapter_tests {
 
         assert_eq!(
             build_output_template(
-                "/tmp/out",
                 true,
                 Some(3),
                 Some(120),
@@ -396,7 +446,7 @@ mod playlist_chapter_tests {
                 true,
                 &fields
             ),
-            "/tmp/out/003 - %(id)s_%(title)s.%(ext)s"
+            "003 - %(id)s_%(title)s.%(ext)s"
         );
     }
 
@@ -410,33 +460,32 @@ mod playlist_chapter_tests {
         ];
 
         assert_eq!(
-            build_output_template("/tmp/out", false, None, None, false, None, None, true, &fields),
-            "/tmp/out/%(upload_date>%Y-%m-%d)s_%(title)s.%(ext)s"
+            build_output_template(false, None, None, false, None, None, true, &fields),
+            "%(upload_date>%Y-%m-%d)s_%(title)s.%(ext)s"
         );
     }
 
     #[test]
     fn chapter_template_numbers_chapters_without_playlist_prefix() {
         assert_eq!(
-            build_chapter_output_template("/tmp/out", false, None, None, false, None, None, true),
-            "/tmp/out/%(section_number)02d - %(section_title)s.%(ext)s"
+            build_chapter_output_template(false, None, None, false, None, None, true),
+            "%(section_number)02d - %(section_title)s.%(ext)s"
         );
     }
 
     #[test]
     fn chapter_template_uses_playlist_and_chapter_numbers_when_both_are_enabled() {
         assert_eq!(
-            build_chapter_output_template(
-                "/tmp/out",
-                true,
-                Some(3),
-                Some(120),
-                false,
-                None,
-                None,
-                true
-            ),
-            "/tmp/out/003 - %(section_number)02d - %(section_title)s.%(ext)s"
+            build_chapter_output_template(true, Some(3), Some(120), false, None, None, true),
+            "003 - %(section_number)02d - %(section_title)s.%(ext)s"
+        );
+    }
+
+    #[test]
+    fn output_path_arg_uses_ytdlp_home_path_slot() {
+        assert_eq!(
+            output_path_arg("C:/very/long/folder"),
+            "home:C:/very/long/folder"
         );
     }
 
@@ -453,6 +502,95 @@ mod playlist_chapter_tests {
                 "/tmp/02 - End.mp4".to_string(),
             ]
         );
+    }
+
+    #[test]
+    fn parses_only_paths_emitted_by_the_current_ytdlp_process() {
+        assert_eq!(
+            parse_ytdlp_output_filepath(
+                r#"[Merger] Merging formats into "C:\Downloads\Video.mp4""#
+            )
+            .as_deref(),
+            Some(r"C:\Downloads\Video.mp4")
+        );
+        assert_eq!(
+            parse_ytdlp_output_filepath(
+                r"[SplitChapters] Chapter 001; Destination: C:\Downloads\01 - Intro.mp4"
+            )
+            .as_deref(),
+            Some(r"C:\Downloads\01 - Intro.mp4")
+        );
+        assert_eq!(
+            parse_ytdlp_output_filepath(
+                r"[download] C:\Downloads\Video.mp4 has already been downloaded"
+            )
+            .as_deref(),
+            Some(r"C:\Downloads\Video.mp4")
+        );
+        assert_eq!(
+            parse_ytdlp_output_filepath(
+                r"[VideoRemuxer] Remuxing video from webm to mp4; Destination: C:\Downloads\Video.mp4"
+            )
+            .as_deref(),
+            Some(r"C:\Downloads\Video.mp4")
+        );
+        assert_eq!(
+            parse_ytdlp_output_filepath("unrelated process output"),
+            None
+        );
+    }
+
+    #[test]
+    fn output_fallback_ignores_concurrent_and_outside_files() {
+        let nonce = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .expect("system time should be after epoch")
+            .as_nanos();
+        let root = std::env::temp_dir().join(format!("youwee-job-output-{nonce}"));
+        let outside = std::env::temp_dir().join(format!("youwee-unrelated-{nonce}.mp4"));
+        std::fs::create_dir_all(&root).expect("test output directory should be created");
+        let main = root.join("video.mp4");
+        let chapter = root.join("01 - Intro.mp4");
+        let concurrent = root.join("unrelated-concurrent.mp4");
+        std::fs::write(&main, b"main").expect("main output should be written");
+        std::fs::write(&chapter, b"chapter").expect("chapter output should be written");
+        std::fs::write(&concurrent, b"other").expect("concurrent output should be written");
+        std::fs::write(&outside, b"outside").expect("outside output should be written");
+
+        let filepaths = job_output_filepaths(
+            &root.to_string_lossy(),
+            &[main.to_string_lossy().to_string()],
+            &[
+                chapter.to_string_lossy().to_string(),
+                outside.to_string_lossy().to_string(),
+            ],
+        );
+
+        assert_eq!(filepaths.len(), 2);
+        assert!(filepaths.contains(
+            &std::fs::canonicalize(main)
+                .unwrap()
+                .to_string_lossy()
+                .to_string()
+        ));
+        assert!(filepaths.contains(
+            &std::fs::canonicalize(chapter)
+                .unwrap()
+                .to_string_lossy()
+                .to_string()
+        ));
+        assert!(!filepaths
+            .iter()
+            .any(|path| path.contains("unrelated-concurrent")));
+        assert!(!filepaths.contains(
+            &std::fs::canonicalize(&outside)
+                .unwrap()
+                .to_string_lossy()
+                .to_string()
+        ));
+
+        std::fs::remove_dir_all(root).ok();
+        std::fs::remove_file(outside).ok();
     }
 
     #[test]
@@ -1108,7 +1246,6 @@ pub async fn download_video(
         build_filename_metadata_prefix(filename_metadata_enabled, &filename_metadata_fields)
             .is_some();
     let output_template = build_output_template(
-        &sanitized_path,
         number_playlist_items,
         playlist_index,
         playlist_total,
@@ -1124,7 +1261,8 @@ pub async fn download_video(
     // in the system ANSI code page which cannot represent all Unicode characters
     // (such as ⧸ U+29F8 used by yt-dlp to replace / in filenames).
     // --print-to-file always writes UTF-8, so we get the exact filepath.
-    let filepath_tmp = std::env::temp_dir().join(format!("youwee-fp-{}.txt", id));
+    let filepath_tmp =
+        std::env::temp_dir().join(format!("youwee-fp-{}-{}.txt", id, uuid::Uuid::new_v4()));
 
     let mut args = vec![
         "--newline".to_string(),
@@ -1132,6 +1270,8 @@ pub async fn download_video(
         "--no-warnings".to_string(),
         "-f".to_string(),
         format_string,
+        "--paths".to_string(),
+        output_path_arg(&sanitized_path),
         "-o".to_string(),
         output_template,
         "--print-to-file".to_string(),
@@ -1160,7 +1300,6 @@ pub async fn download_video(
         args.push(format!(
             "chapter:{}",
             build_chapter_output_template(
-                &sanitized_path,
                 number_playlist_items,
                 playlist_index,
                 playlist_total,
@@ -1569,6 +1708,7 @@ pub async fn download_video(
             let mut current_stream_size: Option<u64> = None;
             let mut final_filepath: Option<String> = None;
             let mut printed_filepaths: Vec<String> = Vec::new();
+            let mut observed_filepaths: Vec<String> = Vec::new();
             let mut recent_output: VecDeque<String> = VecDeque::new();
 
             let quality_display = match quality.as_str() {
@@ -1595,6 +1735,9 @@ pub async fn download_video(
                     CommandEvent::Stdout(line_bytes) => {
                         let line = decode_process_output(&line_bytes);
                         push_recent_output(&mut recent_output, &line);
+                        if let Some(filepath) = parse_ytdlp_output_filepath(&line) {
+                            push_unique_filepath(&mut observed_filepaths, &filepath);
+                        }
 
                         // Parse playlist item info
                         if line.contains("Downloading item") {
@@ -1715,6 +1858,9 @@ pub async fn download_video(
                         let stderr_line = decode_process_output(&bytes);
                         let stderr_line = stderr_line.trim().to_string();
                         push_recent_output(&mut recent_output, &stderr_line);
+                        if let Some(filepath) = parse_ytdlp_output_filepath(&stderr_line) {
+                            push_unique_filepath(&mut observed_filepaths, &filepath);
+                        }
 
                         if let Some((percent, speed, eta, pi, pc, downloaded_size, elapsed_time)) =
                             parse_progress(&stderr_line)
@@ -1799,6 +1945,16 @@ pub async fn download_video(
                         std::fs::remove_file(&filepath_tmp).ok();
 
                         if status.code == Some(0) {
+                            if let Some(filepath) = final_filepath.as_deref() {
+                                push_unique_filepath(&mut observed_filepaths, filepath);
+                            }
+                            let output_paths = job_output_filepaths(
+                                &sanitized_path,
+                                &printed_filepaths,
+                                &observed_filepaths,
+                            );
+                            final_filepath = output_paths.first().cloned();
+
                             let actual_filesize = final_filepath
                                 .as_ref()
                                 .and_then(|fp| std::fs::metadata(fp).ok())
@@ -1820,8 +1976,6 @@ pub async fn download_video(
                                 &final_filepath,
                                 total_count,
                             );
-                            let output_paths =
-                                output_filepaths(&printed_filepaths, &final_filepath);
                             let auto_collection_names = build_auto_collection_names(
                                 auto_organize_collections.unwrap_or(false),
                                 playlist_collection_name.as_deref(),
@@ -2175,7 +2329,7 @@ async fn handle_tokio_download(
     let mut final_filepath: Option<String> = None;
     let mut printed_filepaths: Vec<String> = Vec::new();
     let recent_output = Arc::new(Mutex::new(VecDeque::new()));
-    let stderr_filepath: Arc<Mutex<Option<String>>> = Arc::new(Mutex::new(None));
+    let observed_filepaths = Arc::new(Mutex::new(Vec::new()));
 
     let quality_display = match quality.as_str() {
         "8k" => Some("8K".to_string()),
@@ -2195,7 +2349,7 @@ async fn handle_tokio_download(
     let stderr_id = id.clone();
     let stderr_url = url.clone();
     let stderr_recent_output = recent_output.clone();
-    let stderr_fp_clone = stderr_filepath.clone();
+    let stderr_observed_filepaths = observed_filepaths.clone();
     let stderr_task = if let Some(stderr_handle) = stderr {
         Some(tokio::spawn(async move {
             let mut stderr_reader = BufReader::new(stderr_handle);
@@ -2216,36 +2370,9 @@ async fn handle_tokio_download(
                     break;
                 }
                 push_recent_output_shared(&stderr_recent_output, &line);
-
-                // On Windows, yt-dlp may print --print after_move:filepath to stderr.
-                // Capture it here as a fallback in case stdout doesn't contain the path.
-                let t = line.trim();
-                if !t.is_empty()
-                    && !t.starts_with('[')
-                    && (t.ends_with(".mp4")
-                        || t.ends_with(".mkv")
-                        || t.ends_with(".mp3")
-                        || t.ends_with(".m4a")
-                        || t.ends_with(".opus")
-                        || t.ends_with(".webm")
-                        || t.ends_with(".flac")
-                        || t.ends_with(".wav"))
-                {
-                    if let Ok(mut guard) = stderr_fp_clone.lock() {
-                        *guard = Some(t.to_string());
-                    }
-                }
-
-                // Capture audio filepath from [ExtractAudio] Destination lines in stderr
-                // e.g. "[ExtractAudio] Destination: C:\Users\...\song.mp3"
-                if line.contains("[ExtractAudio]") && line.contains("Destination:") {
-                    if let Some(pos) = line.find("Destination:") {
-                        let path = line[pos + "Destination:".len()..].trim();
-                        if !path.is_empty() {
-                            if let Ok(mut guard) = stderr_fp_clone.lock() {
-                                *guard = Some(path.to_string());
-                            }
-                        }
+                if let Some(filepath) = parse_ytdlp_output_filepath(&line) {
+                    if let Ok(mut paths) = stderr_observed_filepaths.lock() {
+                        push_unique_filepath(&mut paths, &filepath);
                     }
                 }
 
@@ -2310,6 +2437,11 @@ async fn handle_tokio_download(
             return Err(BackendError::from_message("Download cancelled").to_wire_string());
         }
         push_recent_output_shared(&recent_output, &line);
+        if let Some(filepath) = parse_ytdlp_output_filepath(&line) {
+            if let Ok(mut paths) = observed_filepaths.lock() {
+                push_unique_filepath(&mut paths, &filepath);
+            }
+        }
 
         // Parse progress and emit events
         if let Some((percent, speed, eta, pi, pc, downloaded_size, elapsed_time)) =
@@ -2459,16 +2591,20 @@ async fn handle_tokio_download(
     // Clean up the temp file
     std::fs::remove_file(&filepath_tmp).ok();
 
-    // Fallback: if the temp file didn't yield a filepath, try stdout/stderr captures
-    if final_filepath.is_none() {
-        if let Ok(guard) = stderr_filepath.lock() {
-            if guard.is_some() {
-                final_filepath = guard.clone();
+    if status.success() {
+        if let Some(filepath) = final_filepath.as_deref() {
+            if let Ok(mut paths) = observed_filepaths.lock() {
+                push_unique_filepath(&mut paths, filepath);
             }
         }
-    }
+        let observed_filepaths = observed_filepaths
+            .lock()
+            .map(|paths| paths.clone())
+            .unwrap_or_default();
+        let output_paths =
+            job_output_filepaths(&output_directory, &printed_filepaths, &observed_filepaths);
+        final_filepath = output_paths.first().cloned();
 
-    if status.success() {
         let actual_filesize = final_filepath
             .as_ref()
             .and_then(|fp| std::fs::metadata(fp).ok())
@@ -2486,7 +2622,6 @@ async fn handle_tokio_download(
 
         let display_title =
             display_title_for_download(metadata_title, current_title, &final_filepath, total_count);
-        let output_paths = output_filepaths(&printed_filepaths, &final_filepath);
         let auto_collection_names = build_auto_collection_names(
             auto_organize_collections,
             playlist_collection_name.as_deref(),
