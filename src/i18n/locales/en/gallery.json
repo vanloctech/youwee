@@ -85,7 +85,9 @@
       "pending": "Pending",
       "downloading": "Downloading",
       "completed": "Completed",
-      "failed": "Failed"
+      "failed": "Failed",
+      "paused": "Paused",
+      "failedHint": "Failed — check the logs for details"
     },
     "empty": {
       "title": "Drop a gallery URL to begin",
@@ -93,7 +95,33 @@
       "moreCount": "and many more",
       "viewFullList": "View supported sites"
     },
-    "countFiles": "{{count}} files"
+    "countFiles": "{{count}} files",
+    "pause": "Pause",
+    "resume": "Resume",
+    "retry": "Retry",
+    "cancel": "Cancel",
+    "duplicate": "Duplicate",
+    "moveToTop": "Move to top",
+    "incognito": "Incognito",
+    "incognitoToggle": "Toggle incognito (skips history)",
+    "errorClass": {
+      "transient": "Transient",
+      "auth": "Auth error",
+      "geo": "Geo-restricted",
+      "unavailable": "Unavailable",
+      "disk": "Disk error",
+      "config": "Config error",
+      "unknown": "Unknown"
+    },
+    "errorClassAction": {
+      "transient": "Retry later",
+      "auth": "Re-authenticate",
+      "geo": "Use a proxy/VPN",
+      "unavailable": "Check source",
+      "disk": "Free disk space",
+      "config": "Fix settings",
+      "unknown": "View logs"
+    }
   },
   "urlInput": {
     "single": "Single",

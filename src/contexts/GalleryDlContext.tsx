@@ -19,6 +19,7 @@ import { buildCookieProxyInvokeOptions, loadNetworkSettings } from '@/lib/networ
 import { parseUniversalUrls } from '@/lib/sources';
 import type { DownloadItem } from '@/lib/types';
 import { useDownload } from './download-context';
+import { classifyDownloadError } from './DownloadContext';
 import { GalleryDlContext } from './gallerydl-context';
 
 const STORAGE_KEY = 'youwee-gallerydl-settings';
@@ -85,6 +86,13 @@ export interface GalleryDlContextType {
   clearCompleted: () => void;
   startDownload: () => Promise<void>;
   stopDownload: () => Promise<void>;
+  retryFailedDownload: (itemId: string) => void;
+  toggleItemIncognito: (id: string) => void;
+  pauseItem: (id: string) => void;
+  resumeItem: (id: string) => void;
+  cancelItem: (id: string) => void;
+  duplicateItem: (id: string) => void;
+  moveItemToTop: (id: string) => void;
   updateConcurrentDownloads: (concurrent: number) => void;
   updateSettings: (patch: Partial<GalleryDlSettings>) => void;
 }
@@ -183,6 +191,7 @@ export function GalleryDlProvider({ children }: { children: ReactNode }) {
 
   const isDownloadingRef = useRef(false);
   const itemsRef = useRef<DownloadItem[]>([]);
+const startDownloadRef = useRef<() => Promise<void>>(async () => {});
   const settingsRef = useRef<GalleryDlSettings>(settings);
   const focusClearTimerRef = useRef<number | null>(null);
   const { settings: downloadSettings, filterDownloadedDuplicateCandidates } = useDownload();
@@ -425,6 +434,143 @@ export function GalleryDlProvider({ children }: { children: ReactNode }) {
     });
   }, []);
 
+  // P0-5: per-item incognito flag (backend history gate is a mainline follow-up).
+  const toggleItemIncognito = useCallback((id: string) => {
+    setItems((current) => {
+      const nextItems = current.map((item) =>
+        item.id === id ? { ...item, incognito: !item.incognito } : item,
+      );
+      itemsRef.current = nextItems;
+      return nextItems;
+    });
+  }, []);
+
+  // P0-7: pause (queued/failed items only; active items are soft-cancelled instead).
+  const pauseItem = useCallback((id: string) => {
+    setItems((current) => {
+      const nextItems = current.map((item) =>
+        item.id === id && (item.status === 'pending' || item.status === 'error')
+          ? { ...item, status: 'paused' as const, retryState: undefined }
+          : item,
+      );
+      itemsRef.current = nextItems;
+      return nextItems;
+    });
+  }, []);
+
+  // P0-7: resume a paused item; running workers pick it up automatically.
+  const resumeItem = useCallback((id: string) => {
+    setItems((current) => {
+      const nextItems = current.map((item) =>
+        item.id === id && item.status === 'paused'
+          ? { ...item, status: 'pending' as const }
+          : item,
+      );
+      itemsRef.current = nextItems;
+      return nextItems;
+    });
+  }, []);
+
+  // P0-7: cancel = soft detach (marks item skipped and ignores late backend events)
+  // + real per-item process cancellation for active downloads via the id-keyed
+  // backend registry (cancel_download_item).
+  const cancelItem = useCallback((id: string) => {
+    const current = itemsRef.current.find((item) => item.id === id);
+    if (current && (current.status === 'downloading' || current.status === 'fetching')) {
+      void invoke('cancel_download_item', { id }).catch((error) => {
+        console.error('Failed to cancel download item:', error);
+      });
+    }
+    setItems((current) => {
+      const nextItems = current.map((item) =>
+        item.id === id && item.status !== 'completed' && item.status !== 'skipped'
+          ? {
+              ...item,
+              status: 'skipped' as const,
+              progress: 0,
+              speed: '',
+              eta: '',
+              error: undefined,
+              errorCode: undefined,
+              errorClass: undefined,
+              retryState: undefined,
+            }
+          : item,
+      );
+      itemsRef.current = nextItems;
+      return nextItems;
+    });
+  }, []);
+
+  // P0-7: clone an item with a fresh id, reset to pending.
+  const duplicateItem = useCallback((id: string) => {
+    const source = itemsRef.current.find((item) => item.id === id);
+    if (!source) return;
+    const copy: DownloadItem = {
+      ...source,
+      id: createClientId(),
+      status: 'pending' as const,
+      progress: 0,
+      speed: '',
+      eta: '',
+      error: undefined,
+      errorCode: undefined,
+      errorClass: undefined,
+      retryState: undefined,
+      completedFilepath: undefined,
+      completedHistoryId: undefined,
+      completedFilesize: undefined,
+      completedResolution: undefined,
+      completedFormat: undefined,
+    };
+    setItems((current) => {
+      const index = current.findIndex((item) => item.id === id);
+      const nextItems = [...current];
+      nextItems.splice(index < 0 ? nextItems.length : index + 1, 0, copy);
+      itemsRef.current = nextItems;
+      return nextItems;
+    });
+  }, []);
+
+  // P0-7: move an item to the front of the queue (claim order = array order).
+  const moveItemToTop = useCallback((id: string) => {
+    setItems((current) => {
+      const index = current.findIndex((item) => item.id === id);
+      if (index <= 0) return current;
+      const nextItems = [...current];
+      const [moved] = nextItems.splice(index, 1);
+      nextItems.unshift(moved);
+      itemsRef.current = nextItems;
+      return nextItems;
+    });
+  }, []);
+
+  // P0-7: retry a failed download (reset item and restart the queue).
+  const retryFailedDownload = useCallback(
+    (itemId: string) => {
+      setItems((current) =>
+        current.map((item) =>
+          item.id === itemId
+            ? {
+                ...item,
+                status: 'pending',
+                progress: 0,
+                error: undefined,
+                errorCode: undefined,
+                errorClass: undefined,
+                retryState: undefined,
+              }
+            : item,
+        ),
+      );
+      // Use a short delay to ensure state update before starting download.
+      setTimeout(() => {
+        void startDownloadRef.current();
+      }, 100);
+    },
+    [],
+  );
+
   const startDownload = useCallback(async () => {
     const hasPendingItems = () =>
       itemsRef.current.some((item) => item.status === 'pending' || item.status === 'error');
@@ -478,25 +624,38 @@ export function GalleryDlProvider({ children }: { children: ReactNode }) {
             ...networkOptions,
             source: item.extractor || null,
             thumbnail: item.thumbnail || null,
+            // Incognito (P0-5): backend should skip history/log URL writes for this item
+            incognito: item.incognito === true,
             options: buildGalleryOptions(settingsRef.current),
           });
 
           setItems((current) =>
             current.map((entry) =>
               entry.id === item.id
-                ? {
-                    ...entry,
-                    status: 'completed',
-                    progress: 100,
-                    completedFilepath: result.filepath,
-                    completedHistoryId: result.history_id ?? undefined,
-                    retryState: undefined,
-                  }
+                ? entry.status === 'paused' || entry.status === 'skipped'
+                  ? entry
+                  : {
+                      ...entry,
+                      status: 'completed',
+                      progress: 100,
+                      completedFilepath: result.filepath,
+                      completedHistoryId: result.history_id ?? undefined,
+                      retryState: undefined,
+                    }
                 : entry,
             ),
           );
           return;
         } catch (invokeError) {
+          if (
+            itemsRef.current.some(
+              (entry) =>
+                entry.id === item.id &&
+                (entry.status === 'paused' || entry.status === 'skipped'),
+            )
+          ) {
+            return;
+          }
           const parsedError = extractBackendError(invokeError);
           const errorMessage = localizeBackendError(parsedError);
           setError(errorMessage);
@@ -512,7 +671,13 @@ export function GalleryDlProvider({ children }: { children: ReactNode }) {
             setItems((current) =>
               current.map((entry) =>
                 entry.id === item.id
-                  ? { ...entry, status: 'error', error: errorMessage, retryState: undefined }
+                  ? {
+                      ...entry,
+                      status: 'error',
+                      error: errorMessage,
+                      errorClass: classifyDownloadError(parsedError.message, parsedError.code),
+                      retryState: undefined,
+                    }
                   : entry,
               ),
             );
@@ -528,6 +693,7 @@ export function GalleryDlProvider({ children }: { children: ReactNode }) {
                     ...entry,
                     status: 'pending',
                     error: errorMessage,
+                    errorClass: classifyDownloadError(parsedError.message, parsedError.code),
                     retryState: {
                       retryIndex,
                       maxRetries: settingsRef.current.autoRetryMaxAttempts,
@@ -628,6 +794,7 @@ export function GalleryDlProvider({ children }: { children: ReactNode }) {
       isDownloadingRef.current = false;
     }
   }, [settings.concurrentDownloads]);
+  startDownloadRef.current = startDownload;
 
   const value: GalleryDlContextType = useMemo(
     () => ({
@@ -645,6 +812,13 @@ export function GalleryDlProvider({ children }: { children: ReactNode }) {
       clearCompleted,
       startDownload,
       stopDownload,
+      retryFailedDownload,
+      toggleItemIncognito,
+      pauseItem,
+      resumeItem,
+      cancelItem,
+      duplicateItem,
+      moveItemToTop,
       updateConcurrentDownloads,
       updateSettings,
     }),
@@ -663,6 +837,13 @@ export function GalleryDlProvider({ children }: { children: ReactNode }) {
       clearCompleted,
       startDownload,
       stopDownload,
+      retryFailedDownload,
+      toggleItemIncognito,
+      pauseItem,
+      resumeItem,
+      cancelItem,
+      duplicateItem,
+      moveItemToTop,
       updateConcurrentDownloads,
       updateSettings,
     ],

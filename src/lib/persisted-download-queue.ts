@@ -26,7 +26,9 @@ export function normalizeDownloadQueueItems(items: DownloadItem[]): DownloadItem
 }
 
 export function serializeDownloadQueueItems(items: DownloadItem[]): string {
-  return JSON.stringify(normalizeDownloadQueueItems(items));
+  // P0-5: incognito items must never be persisted (the queue JSON is a privacy surface).
+  const persistable = items.filter((item) => item.incognito !== true);
+  return JSON.stringify(normalizeDownloadQueueItems(persistable));
 }
 
 export async function loadPersistedDownloadQueue(

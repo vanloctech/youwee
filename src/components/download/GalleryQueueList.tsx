@@ -1,12 +1,20 @@
 import {
+  ArrowUpToLine,
+  Ban,
   Check,
   CheckCircle2,
   Clock,
+  CopyPlus,
   ExternalLink,
+  Eye,
+  EyeOff,
   FolderOpen,
   Globe,
   Images,
   Loader2,
+  Pause,
+  Play,
+  RotateCcw,
   Search,
   Trash2,
   X,
@@ -19,6 +27,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { convertFileSrc } from '@tauri-apps/api/core';
+import { useGalleryDl } from '@/contexts/gallerydl-context';
 import { openFileLocation } from '@/lib/open-file-location';
 import type { DownloadItem } from '@/lib/types';
 import { cn } from '@/lib/utils';
@@ -84,6 +93,16 @@ function siteInitial(item: DownloadItem): string {
     return (item.extractor || '?').charAt(0).toUpperCase();
   }
 }
+
+const ERROR_CLASS_BADGE_STYLES: Record<string, string> = {
+  transient: 'bg-cyan-500/10 text-cyan-600 dark:text-cyan-400',
+  auth: 'bg-amber-500/10 text-amber-600 dark:text-amber-400',
+  geo: 'bg-violet-500/10 text-violet-600 dark:text-violet-400',
+  unavailable: 'bg-slate-500/10 text-slate-600 dark:text-slate-400',
+  disk: 'bg-orange-500/10 text-orange-600 dark:text-orange-400',
+  config: 'bg-rose-500/10 text-rose-600 dark:text-rose-400',
+  unknown: 'bg-muted/50 text-muted-foreground',
+};
 
 export function GalleryQueueList({
   items,
@@ -342,10 +361,13 @@ function GalleryGridCard({
 }: GalleryGridCardProps) {
   const { t } = useTranslation('gallery');
   const cardRef = useRef<HTMLDivElement | null>(null);
+  const { retryFailedDownload, pauseItem, resumeItem, cancelItem, duplicateItem, moveItemToTop, toggleItemIncognito } =
+    useGalleryDl();
   const isActive = item.status === 'downloading' || item.status === 'fetching';
   const isCompleted = item.status === 'completed';
   const isError = item.status === 'error';
   const isPending = item.status === 'pending';
+  const isPaused = item.status === 'paused';
 
   // Lazy reveal: fade the card in when it scrolls into view
   useEffect(() => {
@@ -388,7 +410,9 @@ function GalleryGridCard({
       ? t('queue.status.failed')
       : isActive
         ? t('queue.status.downloading')
-        : t('queue.status.pending');
+        : isPaused
+          ? t('download:queue.status.paused')
+          : t('queue.status.pending');
 
   return (
     <div
@@ -418,6 +442,14 @@ function GalleryGridCard({
           </div>
         )}
 
+        {/* P0-5: incognito indicator */}
+        {item.incognito && (
+          <span className="absolute bottom-2 end-2 inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-black/60 text-[10px] font-medium text-amber-300 backdrop-blur-sm">
+            <EyeOff className="w-2.5 h-2.5" />
+            {t('download:queue.incognito')}
+          </span>
+        )}
+
         {/* File count (from probe) */}
         {item.fileCount ? (
           <span className="absolute bottom-2 start-2 inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-black/60 text-[10px] font-medium text-white backdrop-blur-sm">
@@ -431,12 +463,14 @@ function GalleryGridCard({
           className={cn(
             'absolute top-2 end-2 inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[10px] font-medium backdrop-blur-sm',
             isPending && 'bg-muted/80 text-muted-foreground',
+            isPaused && 'bg-amber-500/80 text-white',
             isActive && 'bg-primary/80 text-primary-foreground',
             isCompleted && 'bg-emerald-500/80 text-white',
             isError && 'bg-red-500/80 text-white',
           )}
         >
           {isPending && <Clock className="w-2.5 h-2.5" />}
+          {isPaused && <Pause className="w-2.5 h-2.5" />}
           {isActive && <Loader2 className="w-2.5 h-2.5 animate-spin" />}
           {isCompleted && <CheckCircle2 className="w-2.5 h-2.5" />}
           {isError && <XCircle className="w-2.5 h-2.5" />}
@@ -504,6 +538,97 @@ function GalleryGridCard({
         )}
       </div>
 
+      {/* P0-7: per-item controls cluster */}
+      <div className="px-2.5 pb-2 flex items-center gap-1 flex-wrap">
+        {!isActive && isError && (
+          <button
+            type="button"
+            onClick={() => retryFailedDownload(item.id)}
+            disabled={disabled}
+            title={t('download:queue.retry')}
+            className="inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded-md border border-dashed border-muted-foreground/30 text-muted-foreground hover:border-muted-foreground/50 hover:text-foreground hover:bg-muted/50 transition-colors font-medium disabled:opacity-50"
+          >
+            <RotateCcw className="w-2.5 h-2.5" />
+            {t('download:queue.retry')}
+          </button>
+        )}
+        {!isActive && (isPending || isError) && (
+          <button
+            type="button"
+            onClick={() => pauseItem(item.id)}
+            disabled={disabled}
+            title={t('download:queue.pause')}
+            className="inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded-md border border-dashed border-muted-foreground/30 text-muted-foreground hover:border-muted-foreground/50 hover:text-foreground hover:bg-muted/50 transition-colors font-medium disabled:opacity-50"
+          >
+            <Pause className="w-2.5 h-2.5" />
+            {t('download:queue.pause')}
+          </button>
+        )}
+        {isPaused && (
+          <button
+            type="button"
+            onClick={() => resumeItem(item.id)}
+            disabled={disabled}
+            title={t('download:queue.resume')}
+            className="inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded-md border border-dashed border-muted-foreground/30 text-muted-foreground hover:border-muted-foreground/50 hover:text-foreground hover:bg-muted/50 transition-colors font-medium disabled:opacity-50"
+          >
+            <Play className="w-2.5 h-2.5" />
+            {t('download:queue.resume')}
+          </button>
+        )}
+        {(isPending || isPaused || isError || isActive) && (
+          <button
+            type="button"
+            onClick={() => cancelItem(item.id)}
+            disabled={disabled}
+            title={t('download:queue.cancel')}
+            className="inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded-md border border-dashed border-red-500/30 text-red-500 hover:border-red-500/50 hover:bg-red-500/10 transition-colors font-medium disabled:opacity-50"
+          >
+            <Ban className="w-2.5 h-2.5" />
+            {t('download:queue.cancel')}
+          </button>
+        )}
+        {!isActive && (
+          <button
+            type="button"
+            onClick={() => duplicateItem(item.id)}
+            disabled={disabled}
+            title={t('download:queue.duplicate')}
+            className="inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded-md border border-dashed border-muted-foreground/30 text-muted-foreground hover:border-muted-foreground/50 hover:text-foreground hover:bg-muted/50 transition-colors font-medium disabled:opacity-50"
+          >
+            <CopyPlus className="w-2.5 h-2.5" />
+            {t('download:queue.duplicate')}
+          </button>
+        )}
+        <button
+          type="button"
+          onClick={() => moveItemToTop(item.id)}
+          disabled={disabled}
+          title={t('download:queue.moveToTop')}
+          className="inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded-md border border-dashed border-muted-foreground/30 text-muted-foreground hover:border-muted-foreground/50 hover:text-foreground hover:bg-muted/50 transition-colors font-medium disabled:opacity-50"
+        >
+          <ArrowUpToLine className="w-2.5 h-2.5" />
+          {t('download:queue.moveToTop')}
+        </button>
+        {!isActive && (
+          <button
+            type="button"
+            onClick={() => toggleItemIncognito(item.id)}
+            disabled={disabled}
+            title={t('download:queue.incognitoToggle')}
+            className={cn(
+              'inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded-md border border-dashed font-medium disabled:opacity-50 transition-colors',
+              item.incognito
+                ? 'border-amber-500/40 bg-amber-500/10 text-amber-600 dark:text-amber-400'
+                : 'border-muted-foreground/30 text-muted-foreground hover:border-muted-foreground/50 hover:text-foreground hover:bg-muted/50',
+            )}
+          >
+            {item.incognito ? <EyeOff className="w-2.5 h-2.5" /> : <Eye className="w-2.5 h-2.5" />}
+            {t('download:queue.incognito')}
+          </button>
+        )}
+      </div>
+
       {/* Body */}
       <div className="p-2.5 space-y-1.5">
         <p className="text-xs font-medium leading-snug line-clamp-2" title={item.title}>
@@ -514,6 +639,18 @@ function GalleryGridCard({
             <span className="inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded bg-blue-500/10 text-blue-600 dark:text-blue-400 font-medium">
               <Globe className="w-2.5 h-2.5" />
               {item.extractor}
+            </span>
+          )}
+          {isError && item.errorClass && (
+            <span
+              className={cn(
+                'inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded font-medium',
+                ERROR_CLASS_BADGE_STYLES[item.errorClass] ?? 'bg-muted/50 text-muted-foreground',
+              )}
+            >
+              {t(`download:queue.errorClass.${item.errorClass}`)}
+              <span className="opacity-60">·</span>
+              {t(`download:queue.errorClassAction.${item.errorClass}`)}
             </span>
           )}
           {isCompleted && item.completedFilepath && (

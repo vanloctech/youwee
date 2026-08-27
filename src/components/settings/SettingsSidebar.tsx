@@ -4,6 +4,7 @@ import {
   Globe,
   Info,
   MessageCircleCode,
+  Archive,
   Package,
   Palette,
   Puzzle,
@@ -22,6 +23,8 @@ interface SettingsSidebarProps {
 const SECTION_ICONS: Record<SettingsSectionId, React.ReactNode> = {
   general: <Palette className="w-4 h-4" />,
   dependencies: <Package className="w-4 h-4" />,
+  engines: <Package className="w-4 h-4" />,
+  backup: <Archive className="w-4 h-4" />,
   download: <ArrowDownToLine className="w-4 h-4" />,
   'remote-download': <MessageCircleCode className="w-4 h-4" />,
   plugins: <Atom className="w-4 h-4" />,
@@ -37,7 +40,8 @@ export function SettingsSidebar({ activeSection, onSectionChange }: SettingsSide
 
   const sections: { id: SettingsSectionId; labelKey: string }[] = [
     { id: 'general', labelKey: 'sections.general' },
-    { id: 'dependencies', labelKey: 'sections.dependencies' },
+    { id: 'engines', labelKey: 'sections.engines' },
+    { id: 'backup', labelKey: 'sections.backup' },
     { id: 'download', labelKey: 'sections.download' },
     { id: 'ai', labelKey: 'sections.ai' },
     { id: 'network', labelKey: 'sections.network' },

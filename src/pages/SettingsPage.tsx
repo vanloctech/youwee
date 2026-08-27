@@ -31,6 +31,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   AISection,
+  BackupSection,
   DependenciesSection,
   DownloadSection,
   ExtensionSection,
@@ -148,6 +149,10 @@ export function SettingsPage({
                   <DependenciesSection highlightId={highlightId} />
                 )}
 
+                {activeSection === 'engines' && (
+                  <DependenciesSection highlightId={highlightId} />
+                )}
+
                 {activeSection === 'download' && <DownloadSection highlightId={highlightId} />}
 
                 {activeSection === 'remote-download' && (
@@ -166,7 +171,8 @@ export function SettingsPage({
 
                 {activeSection === 'network' && <NetworkSection highlightId={highlightId} />}
 
-                {activeSection === 'about' && (
+                {activeSection === 'backup' && <BackupSection highlightId={highlightId} />}
+  {activeSection === 'about' && (
                   <AboutSettingsContent
                     appVersion={appVersion}
                     updater={updater}

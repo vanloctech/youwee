@@ -204,8 +204,9 @@
       "completed": "تکمیل‌شده",
       "failed": "ناموفق",
       "skipped": "ردشده",
-      "failedHint": "برای جزئیات، صفحه گزارش‌ها را ببینید",
-      "retrying": "تلاش دوباره {{current}}/{{total}} تا {{seconds}} ثانیه دیگر"
+      "failedHint": "ناموفق — برای جزئیات لاگ‌ها را ببینید",
+      "retrying": "تلاش دوباره {{current}}/{{total}} تا {{seconds}} ثانیه دیگر",
+      "paused": "متوقف"
     },
     "summarize": "خلاصه‌سازی",
     "openFolder": "نمایش در پوشه",
@@ -227,6 +228,34 @@
     "upcomingLive": {
       "hint": "پخش زنده هنوز شروع نشده است",
       "schedule": "زمان‌بندی"
+    },
+    "advancedBadge": "پیشرفته",
+    "advancedOptions": "گزینه‌های پیشرفته",
+    "cancel": "لغو",
+    "duplicate": "تکثیر",
+    "incognito": "ناشناس",
+    "incognitoToggle": "تغییر حالت ناشناس (رد شدن از تاریخچه)",
+    "moveToTop": "انتقال به بالا",
+    "pause": "توقف موقت",
+    "resume": "ادامه",
+    "retry": "تلاش دوباره",
+    "errorClass": {
+      "transient": "موقت",
+      "auth": "خطای احراز هویت",
+      "geo": "محدودیت جغرافیایی",
+      "unavailable": "در دسترس نیست",
+      "disk": "خطای دیسک",
+      "config": "خطای تنظیمات",
+      "unknown": "ناشناخته"
+    },
+    "errorClassAction": {
+      "transient": "بعداً دوباره تلاش کنید",
+      "auth": "دوباره وارد شوید",
+      "geo": "از پروکسی/VPN استفاده کنید",
+      "unavailable": "منبع را بررسی کنید",
+      "disk": "فضای دیسک آزاد کنید",
+      "config": "تنظیمات را اصلاح کنید",
+      "unknown": "لاگها را ببینید"
     }
   },
   "actions": {
@@ -285,5 +314,39 @@
     "cancel": "لغو",
     "skippedToastTitle": "ویدیوهای از قبل دانلودشده رد شدند",
     "skippedToastMessage": "{{count}} ویدیوی از قبل موجود در کتابخانه رد شدند."
+  },
+  "ytdlpAdvanced": {
+    "advancedBadge": "پیشرفته",
+    "placeholder": {
+      "headerName": "گزینه",
+      "headerValue": "مقدار"
+    }
+  },
+  "ytdlpEditor": {
+    "addOption": "افزودن گزینه",
+    "copied": "کپی شد",
+    "copy": "کپی",
+    "description": "گزینه‌های اضافی yt-dlp فقط برای همین دانلود.",
+    "enableToggle": "فعال‌سازی گزینه‌های سفارشی",
+    "presetApplied": "پیش‌تنظیم اعمال شد",
+    "presetDeleted": "پیش‌تنظیم حذف شد",
+    "presetEmpty": "هنوز پیش‌تنظیمی نیست",
+    "presetMax": "سقف پیش‌تنظیم‌ها (۲۰)",
+    "presetPlaceholder": "نام پیش‌تنظیم…",
+    "presets": "پیش‌تنظیم‌ها",
+    "presetSave": "ذخیره به‌عنوان پیش‌تنظیم",
+    "presetSaved": "پیش‌تنظیم ذخیره شد",
+    "presetSavePlaceholder": "نام این پیش‌تنظیم…",
+    "preview": "پیش‌نمایش دستور",
+    "previewFailed": "پیش‌نمایش ناموفق بود",
+    "previewTitle": "دستور تولیدشده",
+    "previewUnavailable": "پیش‌نمایش دستور در این نسخه در دسترس نیست",
+    "rawArgsActive": "آرگومان‌های خام تخصصی فعال هستند",
+    "rawArgsCancel": "انصراف",
+    "rawArgsConfirm": "فعال‌سازی حالت تخصصی",
+    "rawArgsHint": "فلگ‌های آزاد yt-dlp. فلگ‌های خطرناک مسدود می‌شوند.",
+    "rawArgsTitle": "آرگومان‌های خام تخصصی",
+    "rawArgsWarningBody": "آرگومان‌های خام از اعتبارسنجی عبور نمی‌کنند و ممکن است دانلود را خراب کنند. فقط اگر فلگ‌های yt-dlp را می‌دانید استفاده کنید. فلگ‌های خطرناک (--exec، --config-location و…) مسدود می‌شوند.",
+    "rawArgsWarningTitle": "احتیاط — حالت تخصصی"
   }
 }

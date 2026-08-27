@@ -1,5 +1,6 @@
 mod ai;
 mod assets;
+mod backup;
 mod channels;
 mod cli;
 mod cli_shortcut;
@@ -22,6 +23,7 @@ mod youtube_search;
 
 pub use ai::*;
 pub use assets::*;
+pub use backup::*;
 pub use channels::*;
 pub use cli::*;
 pub use cli_shortcut::*;

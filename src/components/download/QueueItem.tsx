@@ -1,4 +1,6 @@
 import {
+  ArrowUpToLine,
+  Ban,
   Check,
   CheckCircle2,
   ChevronDown,
@@ -6,15 +8,22 @@ import {
   CircleSlash,
   Clock,
   Copy,
+  CopyPlus,
+  Eye,
+  EyeOff,
   FolderOpen,
   HardDrive,
   Lightbulb,
   ListVideo,
   Loader2,
   MonitorPlay,
+  Pause,
   Pencil,
+  Play,
   RefreshCw,
+  RotateCcw,
   Scissors,
+  SlidersHorizontal,
   Sparkles,
   X,
   XCircle,
@@ -22,8 +31,11 @@ import {
 import { type ChangeEvent, useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { SchedulePopover } from '@/components/download/SchedulePopover';
+import { YtDlpOptionsEditor } from '@/components/download/YtDlpOptionsEditor';
 import { SimpleMarkdown } from '@/components/ui/simple-markdown';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { useAI } from '@/contexts/AIContext';
+import { useDownload } from '@/contexts/download-context';
 import type { ScheduleConfig } from '@/hooks/useSchedule';
 import { openFileLocation } from '@/lib/open-file-location';
 import type { DownloadItem, ItemDownloadSettings } from '@/lib/types';
@@ -104,6 +116,16 @@ function getFolderName(path: string): string {
   return segments.at(-1) || path;
 }
 
+const ERROR_CLASS_BADGE_STYLES: Record<string, string> = {
+  transient: 'bg-cyan-500/10 text-cyan-600 dark:text-cyan-400',
+  auth: 'bg-amber-500/10 text-amber-600 dark:text-amber-400',
+  geo: 'bg-violet-500/10 text-violet-600 dark:text-violet-400',
+  unavailable: 'bg-slate-500/10 text-slate-600 dark:text-slate-400',
+  disk: 'bg-orange-500/10 text-orange-600 dark:text-orange-400',
+  config: 'bg-rose-500/10 text-rose-600 dark:text-rose-400',
+  unknown: 'bg-muted/50 text-muted-foreground',
+};
+
 interface QueueItemProps {
   item: DownloadItem;
   isFocused?: boolean;
@@ -129,6 +151,16 @@ export function QueueItem({
 }: QueueItemProps) {
   const { t } = useTranslation('download');
   const ai = useAI();
+  const {
+    pauseItem,
+    resumeItem,
+    retryFailedDownload,
+    cancelItem,
+    duplicateItem,
+    moveItemToTop,
+    updateItemAdvancedOptions,
+    toggleItemIncognito,
+  } = useDownload();
   const [showFullSummary, setShowFullSummary] = useState(false);
   const [showTimeRange, setShowTimeRange] = useState(false);
   const [timeStart, setTimeStart] = useState('');
@@ -178,6 +210,7 @@ export function QueueItem({
   const isCompleted = item.status === 'completed';
   const isError = item.status === 'error';
   const isPending = item.status === 'pending';
+  const isPaused = item.status === 'paused';
   const isSkipped = item.status === 'skipped';
   const retryState = item.retryState;
   const isUpcomingLiveError = item.errorCode === 'YT_UPCOMING_LIVE';
@@ -434,6 +467,7 @@ export function QueueItem({
               'inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full font-medium',
               isPending && 'bg-muted text-muted-foreground',
               isActive && 'bg-primary/10 text-primary',
+              isPaused && 'bg-slate-500/10 text-slate-600 dark:text-slate-400',
               isCompleted && 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400',
               isError && 'bg-red-500/10 text-red-600 dark:text-red-400',
               isSkipped && 'bg-amber-500/10 text-amber-600 dark:text-amber-400',
@@ -441,6 +475,7 @@ export function QueueItem({
           >
             {isPending && <Clock className="w-3 h-3" />}
             {isActive && <Loader2 className="w-3 h-3 animate-spin" />}
+            {isPaused && <Pause className="w-3 h-3" />}
             {isCompleted && <CheckCircle2 className="w-3 h-3" />}
             {isError && <XCircle className="w-3 h-3" />}
             {isSkipped && <CircleSlash className="w-3 h-3" />}
@@ -450,6 +485,7 @@ export function QueueItem({
                 (item.status === 'fetching'
                   ? t('queue.status.fetching')
                   : t('queue.status.downloading'))}
+              {isPaused && t('queue.status.paused')}
               {isCompleted && t('queue.status.completed')}
               {isError && t('queue.status.failed')}
               {isSkipped && t('queue.status.skipped')}
@@ -466,6 +502,26 @@ export function QueueItem({
               })}
             </span>
           )}
+
+          {/* P0-5: incognito indicator */}
+          {item.incognito && (
+            <span
+              className="inline-flex items-center gap-1 text-[11px] px-1.5 py-0.5 rounded bg-zinc-500/10 text-zinc-600 dark:text-zinc-400 font-medium"
+              title={t('queue.incognitoToggle')}
+            >
+              <EyeOff className="w-3 h-3" />
+              {t('queue.incognito')}
+            </span>
+          )}
+
+          {/* P0-2: advanced options indicator */}
+          {itemSettings?.ytdlpAdvancedOptionsEnabled &&
+            itemSettings.ytdlpAdvancedOptions.length > 0 && (
+              <span className="inline-flex items-center gap-1 text-[11px] px-1.5 py-0.5 rounded bg-violet-500/10 text-violet-600 dark:text-violet-400 font-medium">
+                <SlidersHorizontal className="w-3 h-3" />
+                {t('queue.advancedBadge')}
+              </span>
+            )}
 
           {/* Settings badges for pending/downloading items */}
           {(isPending || isActive) && itemSettings && (
@@ -515,6 +571,21 @@ export function QueueItem({
           {isError && item.error && (
             <span className="text-xs text-red-500/80 line-clamp-2" title={item.error}>
               {item.error}
+            </span>
+          )}
+
+          {/* P0-7: error class badge + suggested action */}
+          {isError && item.errorClass && (
+            <span
+              className={cn(
+                'inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded font-medium',
+                ERROR_CLASS_BADGE_STYLES[item.errorClass] ??
+                  'bg-muted/50 text-muted-foreground',
+              )}
+            >
+              {t(`queue.errorClass.${item.errorClass}`)}
+              <span className="opacity-60">·</span>
+              {t(`queue.errorClassAction.${item.errorClass}`)}
             </span>
           )}
 
@@ -778,6 +849,128 @@ export function QueueItem({
               {t('queue.renameCancel')}
             </button>
           </div>
+        )}
+      </div>
+
+      {/* P0-7: per-item controls cluster (hover reveal, matches remove button style) */}
+      <div
+        className={cn(
+          'absolute top-2 end-8 flex items-center gap-0.5 rounded-full bg-black/40 p-0.5 backdrop-blur-sm',
+          'opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-all',
+        )}
+      >
+        {!isActive && isError && (
+          <button
+            type="button"
+            onClick={() => retryFailedDownload(item.id)}
+            disabled={disabled}
+            title={t('queue.retry')}
+            className="rounded-full p-1 text-white/80 transition-colors hover:bg-black/60 hover:text-white disabled:opacity-50"
+          >
+            <RotateCcw className="w-3 h-3" />
+          </button>
+        )}
+        {!isActive && (isPending || isError) && (
+          <button
+            type="button"
+            onClick={() => pauseItem(item.id)}
+            disabled={disabled}
+            title={t('queue.pause')}
+            className="rounded-full p-1 text-white/80 transition-colors hover:bg-black/60 hover:text-white disabled:opacity-50"
+          >
+            <Pause className="w-3 h-3" />
+          </button>
+        )}
+        {isPaused && (
+          <button
+            type="button"
+            onClick={() => resumeItem(item.id)}
+            disabled={disabled}
+            title={t('queue.resume')}
+            className="rounded-full p-1 text-white/80 transition-colors hover:bg-black/60 hover:text-white disabled:opacity-50"
+          >
+            <Play className="w-3 h-3" />
+          </button>
+        )}
+        {(isPending || isPaused || isError || isActive) && (
+          <button
+            type="button"
+            onClick={() => cancelItem(item.id)}
+            disabled={disabled}
+            title={t('queue.cancel')}
+            className="rounded-full p-1 text-white/80 transition-colors hover:bg-black/60 hover:text-white disabled:opacity-50"
+          >
+            <Ban className="w-3 h-3" />
+          </button>
+        )}
+        {!isActive && (
+          <button
+            type="button"
+            onClick={() => duplicateItem(item.id)}
+            disabled={disabled}
+            title={t('queue.duplicate')}
+            className="rounded-full p-1 text-white/80 transition-colors hover:bg-black/60 hover:text-white disabled:opacity-50"
+          >
+            <CopyPlus className="w-3 h-3" />
+          </button>
+        )}
+        <button
+          type="button"
+          onClick={() => moveItemToTop(item.id)}
+          disabled={disabled}
+          title={t('queue.moveToTop')}
+          className="rounded-full p-1 text-white/80 transition-colors hover:bg-black/60 hover:text-white disabled:opacity-50"
+        >
+          <ArrowUpToLine className="w-3 h-3" />
+        </button>
+        {!isActive && (
+          <button
+            type="button"
+            onClick={() => toggleItemIncognito(item.id)}
+            disabled={disabled}
+            title={t('queue.incognitoToggle')}
+            className={cn(
+              'rounded-full p-1 transition-colors disabled:opacity-50',
+              item.incognito
+                ? 'text-amber-300 hover:bg-black/60'
+                : 'text-white/80 hover:bg-black/60 hover:text-white',
+            )}
+          >
+            {item.incognito ? <EyeOff className="w-3 h-3" /> : <Eye className="w-3 h-3" />}
+          </button>
+        )}
+        {(isPending || isError) && itemSettings && (
+          <Popover>
+            <PopoverTrigger asChild>
+              <button
+                type="button"
+                disabled={disabled}
+                title={t('queue.advancedOptions')}
+                className={cn(
+                  'rounded-full p-1 transition-colors disabled:opacity-50',
+                  itemSettings.ytdlpAdvancedOptionsEnabled &&
+                    (itemSettings.ytdlpAdvancedOptions.length > 0 || itemSettings.rawArgs)
+                    ? 'text-violet-300 hover:bg-black/60'
+                    : 'text-white/80 hover:bg-black/60 hover:text-white',
+                )}
+              >
+                <SlidersHorizontal className="w-3 h-3" />
+              </button>
+            </PopoverTrigger>
+            <PopoverContent className="w-[22rem] p-0" align="end" side="bottom" sideOffset={8}>
+              <div className="px-4 py-3 border-b bg-muted/30">
+                <h4 className="text-sm font-medium">{t('queue.advancedOptions')}</h4>
+              </div>
+              <div className="max-h-[26rem] overflow-y-auto p-4">
+                <YtDlpOptionsEditor
+                  item={item}
+                  settings={itemSettings}
+                  disabled={disabled}
+                  onChange={(patch) => updateItemAdvancedOptions(item.id, patch)}
+                />
+              </div>
+            </PopoverContent>
+          </Popover>
         )}
       </div>
 

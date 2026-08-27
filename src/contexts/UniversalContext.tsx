@@ -68,6 +68,7 @@ import {
 } from '@/lib/universal-settings';
 import { sanitizeYtdlpAdvancedOptions } from '@/lib/ytdlp-advanced-options';
 import { useDownload } from './download-context';
+import { classifyDownloadError } from './DownloadContext';
 import { UniversalContext } from './universal-context';
 
 const STORAGE_KEY = 'youwee-universal-settings';
@@ -249,6 +250,20 @@ export interface UniversalContextType {
   retryFailedDownload: (itemId: string) => void;
   // Per-item time range
   updateItemTimeRange: (id: string, start?: string, end?: string) => void;
+  // Per-item yt-dlp advanced options (P0-2)
+  updateItemAdvancedOptions: (
+    id: string,
+    patch: Partial<
+      Pick<ItemUniversalSettings, 'ytdlpAdvancedOptionsEnabled' | 'ytdlpAdvancedOptions' | 'rawArgs'>
+    >,
+  ) => void;
+  // Per-item queue controls (P0-7)
+  toggleItemIncognito: (id: string) => void;
+  pauseItem: (id: string) => void;
+  resumeItem: (id: string) => void;
+  cancelItem: (id: string) => void;
+  duplicateItem: (id: string) => void;
+  moveItemToTop: (id: string) => void;
   selectItemOutputFolder: (id: string) => Promise<void>;
   // Rename completed file
   renameCompletedItem: (id: string, newName: string) => Promise<void>;
@@ -362,6 +377,7 @@ export function UniversalProvider({ children }: { children: ReactNode }) {
                   eta: '',
                   error: undefined,
                   errorCode: undefined,
+                  errorClass: undefined,
                   retryState: undefined,
                 }
               : item,
@@ -374,39 +390,44 @@ export function UniversalProvider({ children }: { children: ReactNode }) {
             : progress.status === 'error'
               ? 'error'
               : 'downloading';
-        const nextItems = currentItems.map((item) =>
-          item.id === progress.id
-            ? {
-                ...item,
-                progress: progress.percent,
-                speed: progress.speed,
-                eta: progress.eta,
-                title: progress.title || item.title,
-                status,
-                error: localizeProgressError(
-                  progress.error_code,
-                  progress.error_message,
-                  progress.error_params,
-                ),
-                errorCode: progress.status === 'error' ? progress.error_code : undefined,
-                retryState: undefined,
-                downloadedSize: progress.downloaded_size,
-                elapsedTime: progress.elapsed_time,
-                // Auto-detect live stream if we receive downloaded_size (live stream format)
-                isLive: progress.downloaded_size ? true : item.isLive,
-                // Store completed info when finished
-                ...(progress.status === 'finished'
-                  ? {
-                      completedFilesize: progress.filesize,
-                      completedResolution: progress.resolution,
-                      completedFormat: progress.format_ext,
-                      completedFilepath: progress.filepath,
-                      completedHistoryId: progress.history_id,
-                    }
-                  : {}),
-              }
-            : item,
-        );
+        const nextItems = currentItems.map((item) => {
+          if (item.id !== progress.id) return item;
+          // P0-7: ignore late backend events for items the user paused or cancelled.
+          if (item.status === 'paused' || item.status === 'skipped') return item;
+          return {
+            ...item,
+            progress: progress.percent,
+            speed: progress.speed,
+            eta: progress.eta,
+            title: progress.title || item.title,
+            status,
+            error: localizeProgressError(
+              progress.error_code,
+              progress.error_message,
+              progress.error_params,
+            ),
+            errorCode: progress.status === 'error' ? progress.error_code : undefined,
+            errorClass:
+              progress.status === 'error'
+                ? classifyDownloadError(progress.error_message, progress.error_code)
+                : undefined,
+            retryState: undefined,
+            downloadedSize: progress.downloaded_size,
+            elapsedTime: progress.elapsed_time,
+            // Auto-detect live stream if we receive downloaded_size (live stream format)
+            isLive: progress.downloaded_size ? true : item.isLive,
+            // Store completed info when finished
+            ...(progress.status === 'finished'
+              ? {
+                  completedFilesize: progress.filesize,
+                  completedResolution: progress.resolution,
+                  completedFormat: progress.format_ext,
+                  completedFilepath: progress.filepath,
+                  completedHistoryId: progress.history_id,
+                }
+              : {}),
+          };
+        });
         itemsRef.current = nextItems;
         return nextItems;
       });
@@ -841,6 +862,150 @@ export function UniversalProvider({ children }: { children: ReactNode }) {
     });
   }, []);
 
+  // P0-2: mutate a single item's yt-dlp advanced options snapshot.
+  const updateItemAdvancedOptions = useCallback(
+    (
+      id: string,
+      patch: Partial<
+        Pick<ItemUniversalSettings, 'ytdlpAdvancedOptionsEnabled' | 'ytdlpAdvancedOptions' | 'rawArgs'>
+      >,
+    ) => {
+      setItems((items) => {
+        const nextItems = items.map((item) => {
+          if (item.id !== id || !item.settings) return item;
+          const settings = item.settings as ItemUniversalSettings;
+          const nextSettings: ItemUniversalSettings = { ...settings };
+          if (patch.ytdlpAdvancedOptionsEnabled !== undefined) {
+            nextSettings.ytdlpAdvancedOptionsEnabled = patch.ytdlpAdvancedOptionsEnabled;
+          }
+          if (patch.ytdlpAdvancedOptions !== undefined) {
+            nextSettings.ytdlpAdvancedOptions = sanitizeYtdlpAdvancedOptions(
+              patch.ytdlpAdvancedOptions,
+            );
+          }
+          if (patch.rawArgs !== undefined) {
+            nextSettings.rawArgs = patch.rawArgs;
+          }
+          return { ...item, settings: nextSettings };
+        });
+        itemsRef.current = nextItems;
+        return nextItems;
+      });
+    },
+    [],
+  );
+
+  // P0-5: per-item incognito flag (backend history gate is a mainline follow-up).
+  const toggleItemIncognito = useCallback((id: string) => {
+    setItems((items) => {
+      const nextItems = items.map((item) =>
+        item.id === id ? { ...item, incognito: !item.incognito } : item,
+      );
+      itemsRef.current = nextItems;
+      return nextItems;
+    });
+  }, []);
+
+  // P0-7: pause (queued/failed items only; active items are soft-cancelled instead).
+  const pauseItem = useCallback((id: string) => {
+    setItems((items) => {
+      const nextItems = items.map((item) =>
+        item.id === id && (item.status === 'pending' || item.status === 'error')
+          ? { ...item, status: 'paused' as const, retryState: undefined }
+          : item,
+      );
+      itemsRef.current = nextItems;
+      return nextItems;
+    });
+  }, []);
+
+  // P0-7: resume a paused item; running workers pick it up automatically.
+  const resumeItem = useCallback((id: string) => {
+    setItems((items) => {
+      const nextItems = items.map((item) =>
+        item.id === id && item.status === 'paused'
+          ? { ...item, status: 'pending' as const }
+          : item,
+      );
+      itemsRef.current = nextItems;
+      return nextItems;
+    });
+  }, []);
+
+  // P0-7: cancel = soft detach (marks item skipped and ignores late backend events)
+  // + real per-item process cancellation for active downloads via the id-keyed
+  // backend registry (cancel_download_item).
+  const cancelItem = useCallback((id: string) => {
+    const current = itemsRef.current.find((item) => item.id === id);
+    if (current && (current.status === 'downloading' || current.status === 'fetching')) {
+      void invoke('cancel_download_item', { id }).catch((error) => {
+        console.error('Failed to cancel download item:', error);
+      });
+    }
+    setItems((items) => {
+      const nextItems = items.map((item) =>
+        item.id === id && item.status !== 'completed' && item.status !== 'skipped'
+          ? {
+              ...item,
+              status: 'skipped' as const,
+              progress: 0,
+              speed: '',
+              eta: '',
+              error: undefined,
+              errorCode: undefined,
+              errorClass: undefined,
+              retryState: undefined,
+            }
+          : item,
+      );
+      itemsRef.current = nextItems;
+      return nextItems;
+    });
+  }, []);
+
+  // P0-7: clone an item with a fresh id, reset to pending.
+  const duplicateItem = useCallback((id: string) => {
+    const source = itemsRef.current.find((item) => item.id === id);
+    if (!source) return;
+    const copy: DownloadItem = {
+      ...source,
+      id: createClientId(),
+      status: 'pending' as const,
+      progress: 0,
+      speed: '',
+      eta: '',
+      error: undefined,
+      errorCode: undefined,
+      errorClass: undefined,
+      retryState: undefined,
+      completedFilepath: undefined,
+      completedHistoryId: undefined,
+      completedFilesize: undefined,
+      completedResolution: undefined,
+      completedFormat: undefined,
+    };
+    setItems((items) => {
+      const index = items.findIndex((item) => item.id === id);
+      const nextItems = [...items];
+      nextItems.splice(index < 0 ? nextItems.length : index + 1, 0, copy);
+      itemsRef.current = nextItems;
+      return nextItems;
+    });
+  }, []);
+
+  // P0-7: move an item to the front of the queue (claim order = array order).
+  const moveItemToTop = useCallback((id: string) => {
+    setItems((items) => {
+      const index = items.findIndex((item) => item.id === id);
+      if (index <= 0) return items;
+      const nextItems = [...items];
+      const [moved] = nextItems.splice(index, 1);
+      nextItems.unshift(moved);
+      itemsRef.current = nextItems;
+      return nextItems;
+    });
+  }, []);
+
   const selectItemOutputFolder = useCallback(
     async (id: string) => {
       if (isDownloadingRef.current) return;
@@ -1045,6 +1210,10 @@ export function UniversalProvider({ children }: { children: ReactNode }) {
               advancedSettings.ytdlpAdvancedOptionsEnabled,
             ytdlpAdvancedOptions:
               itemSettings?.ytdlpAdvancedOptions ?? advancedSettings.ytdlpAdvancedOptions,
+            // Expert raw yt-dlp arguments (backend validates against a safe allowlist)
+            ytdlpRawArgs: itemSettings?.rawArgs ?? '',
+            // Incognito (P0-5): backend should skip history/log URL writes for this item
+            incognito: item.incognito === true,
             // SponsorBlock settings
             sponsorblockRemove: sponsorBlockArgs.remove,
             sponsorblockMark: sponsorBlockArgs.mark,
@@ -1070,13 +1239,21 @@ export function UniversalProvider({ children }: { children: ReactNode }) {
           setItems((items) =>
             items.map((i) =>
               i.id === item.id
-                ? { ...i, status: 'completed', progress: 100, retryState: undefined }
+                ? i.status === 'paused' || i.status === 'skipped'
+                  ? i
+                  : { ...i, status: 'completed', progress: 100, retryState: undefined }
                 : i,
             ),
           );
           return;
         } catch (error) {
-          if (itemsRef.current.some((i) => i.id === item.id && i.status === 'completed')) {
+          if (
+            itemsRef.current.some(
+              (i) =>
+                i.id === item.id &&
+                (i.status === 'completed' || i.status === 'paused' || i.status === 'skipped'),
+            )
+          ) {
             return;
           }
 
@@ -1093,6 +1270,7 @@ export function UniversalProvider({ children }: { children: ReactNode }) {
                       eta: '',
                       error: undefined,
                       errorCode: undefined,
+                      errorClass: undefined,
                       retryState: undefined,
                     }
                   : i,
@@ -1111,6 +1289,7 @@ export function UniversalProvider({ children }: { children: ReactNode }) {
                       progress: 0,
                       error: errorMessage,
                       errorCode: parsedError.code,
+                      errorClass: undefined,
                       retryState: undefined,
                     }
                   : i,
@@ -1135,6 +1314,7 @@ export function UniversalProvider({ children }: { children: ReactNode }) {
                       status: 'error',
                       error: errorMessage,
                       errorCode: parsedError.code,
+                      errorClass: classifyDownloadError(parsedError.message, parsedError.code),
                       retryState: undefined,
                     }
                   : i,
@@ -1152,6 +1332,7 @@ export function UniversalProvider({ children }: { children: ReactNode }) {
                     status: 'pending',
                     error: errorMessage,
                     errorCode: parsedError.code,
+                    errorClass: classifyDownloadError(parsedError.message, parsedError.code),
                     retryState: {
                       retryIndex,
                       maxRetries,
@@ -1423,6 +1604,13 @@ export function UniversalProvider({ children }: { children: ReactNode }) {
       retryFailedDownload,
       // Per-item time range
       updateItemTimeRange,
+      updateItemAdvancedOptions,
+      toggleItemIncognito,
+      pauseItem,
+      resumeItem,
+      cancelItem,
+      duplicateItem,
+      moveItemToTop,
       selectItemOutputFolder,
       renameCompletedItem,
     }),
@@ -1455,6 +1643,13 @@ export function UniversalProvider({ children }: { children: ReactNode }) {
       clearCookieError,
       retryFailedDownload,
       updateItemTimeRange,
+      updateItemAdvancedOptions,
+      toggleItemIncognito,
+      pauseItem,
+      resumeItem,
+      cancelItem,
+      duplicateItem,
+      moveItemToTop,
       selectItemOutputFolder,
       renameCompletedItem,
     ],

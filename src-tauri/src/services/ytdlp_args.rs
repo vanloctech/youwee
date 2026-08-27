@@ -197,19 +197,264 @@ pub fn redact_ytdlp_advanced_args(args: &[String]) -> Vec<String> {
     for arg in args {
         if let Some(flag) = redact_next_value_for.take() {
             redacted.push(match flag {
-                "--add-headers" => redact_header_value(arg),
+                "--add-headers" | "--add-header" => redact_header_value(arg),
                 _ => "<redacted>".to_string(),
             });
             continue;
         }
 
         redacted.push(arg.clone());
-        if matches!(arg.as_str(), "--add-headers" | "--user-agent" | "--referer") {
+        if matches!(
+            arg.as_str(),
+            "--add-headers"
+                | "--add-header"
+                | "--user-agent"
+                | "--referer"
+                | "--cookies"
+                | "--cookies-from-browser"
+                | "--proxy"
+        ) {
             redact_next_value_for = Some(arg);
         }
     }
 
     redacted
+}
+
+/// Masks the query string (and any embedded credentials) of a URL before it is
+/// written to logs or shown in the diagnostics panel. The scheme, host and path
+/// are preserved so the command stays recognizable.
+pub fn redact_url_for_log(url: &str) -> String {
+    let Ok(mut parsed) = reqwest::Url::parse(url) else {
+        return url.split(['?', '&']).next().unwrap_or(url).to_string();
+    };
+    if parsed.query().map_or(false, |q| !q.is_empty()) {
+        parsed.set_query(Some("<redacted>"));
+    }
+    if parsed.username().is_empty() && parsed.password().is_none() {
+        return parsed.to_string();
+    }
+    let _ = parsed.set_username("");
+    let _ = parsed.set_password(None);
+    parsed.to_string()
+}
+
+/// Redacts a full yt-dlp arg vector for logs / diagnostics. When `redact_url` is
+/// set, the trailing URL argument (position after `--`) is masked too.
+pub fn redact_download_args_for_log(args: &[String], redact_url: bool) -> Vec<String> {
+    let mut redacted = redact_ytdlp_advanced_args(args);
+    if redact_url {
+        if let Some(last) = redacted.last_mut() {
+            *last = redact_url_for_log(last);
+        }
+    }
+    redacted
+}
+
+/// Flags that may be passed through the expert raw-arguments textarea.
+/// Everything else starting with `-` is rejected so the app-managed download
+/// pipeline (output paths, cookies, proxy, retries, post-processing) cannot be
+/// silently overridden by raw input.
+const SAFE_RAW_ARG_ALLOWLIST: &[&str] = &[
+    "--limit-rate",
+    "--retries",
+    "--fragment-retries",
+    "--extractor-retries",
+    "--file-access-retries",
+    "--concurrent-fragments",
+    "--socket-timeout",
+    "--http-chunk-size",
+    "--throttled-rate",
+    "--sleep-requests",
+    "--sleep-interval",
+    "--max-sleep-interval",
+    "--user-agent",
+    "--referer",
+    "--add-header",
+    "--geo-bypass",
+    "--geo-bypass-country",
+    "--match-filters",
+    "--format-sort",
+    "--impersonate",
+];
+
+/// Flags that are dangerous or app-managed. Defense-in-depth: even if a flag is
+/// ever added to the allowlist above, these are still rejected.
+const RAW_ARG_BLOCKLIST: &[&str] = &[
+    "--exec",
+    "--exec-before-download",
+    "--downloader",
+    "--downloader-args",
+    "--external-downloader",
+    "--external-downloader-args",
+    "--config-location",
+    "--load-info-json",
+    "--write-info-json",
+    "--print",
+    "--print-to-file",
+    "--cookies",
+    "--cookies-from-browser",
+    "--proxy",
+    "--ffmpeg-location",
+    "--js-runtimes",
+    "--extractor-args",
+    "--plugin-dirs",
+    "--cache-dir",
+    "--output",
+    "-o",
+    "--format",
+    "-f",
+    "--playlist-start",
+    "--playlist-end",
+    "--download-archive",
+    "--write-pages",
+    "--skip-download",
+    "--simulate",
+    "--dump-json",
+    "--flat-playlist",
+    "--lazy-playlist",
+    "--postprocessor-args",
+    "--ppa",
+    "--remux-video",
+    "--recode-video",
+    "--convert-subs",
+    "--convert-thumbnails",
+    "--xattrs",
+    "--embed-metadata",
+    "--embed-thumbnail",
+    "--split-chapters",
+    "--download-sections",
+    "--force-overwrites",
+    "--no-overwrites",
+    "--newline",
+    "--progress",
+    "--no-warnings",
+];
+
+/// Tokenizes an expert raw-arguments string (whitespace-split, quote-aware) and
+/// validates every flag against the safe allowlist. Returns the argv tokens so
+/// they can be appended to the download command as an array (never a shell
+/// string). Invalid or dangerous flags produce a validation error BEFORE the
+/// download starts.
+pub fn build_ytdlp_raw_args(raw: &str) -> Result<Vec<String>, BackendError> {
+    let trimmed = raw.trim();
+    if trimmed.is_empty() {
+        return Ok(Vec::new());
+    }
+    if trimmed.len() > 4000 {
+        return Err(validation_error(
+            "Raw yt-dlp arguments are too long (max 4000 characters).",
+        ));
+    }
+
+    let tokens = tokenize_raw_args(trimmed)?;
+
+    let mut args = Vec::with_capacity(tokens.len());
+    for token in &tokens {
+        if token.chars().any(|ch| ch.is_control()) {
+            return Err(validation_error(
+                "Raw yt-dlp arguments cannot contain control characters.",
+            ));
+        }
+        if token == "--" {
+            return Err(validation_error(
+                "Raw yt-dlp arguments cannot contain the '--' separator.",
+            ));
+        }
+        if token.starts_with('-') {
+            if RAW_ARG_BLOCKLIST.contains(&token.as_str()) {
+                return Err(validation_error(format!(
+                    "Raw yt-dlp flag '{}' is blocked for safety.",
+                    token
+                )));
+            }
+            if !SAFE_RAW_ARG_ALLOWLIST.contains(&token.as_str()) {
+                return Err(validation_error(format!(
+                    "Raw yt-dlp flag '{}' is not in the safe allowlist.",
+                    token
+                )));
+            }
+        }
+        args.push(token.clone());
+    }
+
+    Ok(args)
+}
+
+/// Whitespace-splits a raw argument string while honoring single and double
+/// quotes (with backslash escapes inside double quotes).
+fn tokenize_raw_args(raw: &str) -> Result<Vec<String>, BackendError> {
+    let mut tokens = Vec::new();
+    let mut current = String::new();
+    let mut chars = raw.chars().peekable();
+    let mut in_token = false;
+
+    while let Some(ch) = chars.next() {
+        match ch {
+            ' ' | '\t' | '\r' => {
+                if in_token {
+                    tokens.push(std::mem::take(&mut current));
+                    in_token = false;
+                }
+            }
+            '"' => {
+                in_token = true;
+                let mut closed = false;
+                while let Some(inner) = chars.next() {
+                    match inner {
+                        '"' => {
+                            closed = true;
+                            break;
+                        }
+                        '\\' => {
+                            if let Some(escaped) = chars.next() {
+                                current.push(escaped);
+                            }
+                        }
+                        c => current.push(c),
+                    }
+                }
+                if !closed {
+                    return Err(validation_error(
+                        "Unterminated double quote in raw yt-dlp arguments.",
+                    ));
+                }
+            }
+            '\'' => {
+                in_token = true;
+                let mut closed = false;
+                while let Some(inner) = chars.next() {
+                    match inner {
+                        '\'' => {
+                            closed = true;
+                            break;
+                        }
+                        c => current.push(c),
+                    }
+                }
+                if !closed {
+                    return Err(validation_error(
+                        "Unterminated single quote in raw yt-dlp arguments.",
+                    ));
+                }
+            }
+            c if c.is_control() => {
+                return Err(validation_error(
+                    "Raw yt-dlp arguments cannot contain control characters.",
+                ));
+            }
+            c => {
+                in_token = true;
+                current.push(c);
+            }
+        }
+    }
+
+    if in_token {
+        tokens.push(current);
+    }
+
+    Ok(tokens)
 }
 
 fn push_flag_value(args: &mut Vec<String>, flag: &str, value: String) {
@@ -580,5 +825,108 @@ mod tests {
                 "<redacted>"
             ]
         );
+    }
+
+    #[test]
+    fn build_ytdlp_raw_args_tokenizes_quoted_values() {
+        let args = build_ytdlp_raw_args(
+            "--limit-rate 5M --retries 5 --add-header \"X-Test: hello world\" --match-filters '!is_live'",
+        )
+        .expect("safe raw args should tokenize");
+
+        assert_eq!(
+            args,
+            vec![
+                "--limit-rate",
+                "5M",
+                "--retries",
+                "5",
+                "--add-header",
+                "X-Test: hello world",
+                "--match-filters",
+                "!is_live",
+            ]
+        );
+    }
+
+    #[test]
+    fn build_ytdlp_raw_args_rejects_dangerous_flags() {
+        for bad in ["--exec", "--downloader-args", "--config-location", "--load-info-json"] {
+            let err = build_ytdlp_raw_args(&format!("--limit-rate 5M {bad} echo pwned"))
+                .expect_err("dangerous raw flags must be rejected");
+            assert!(
+                err.message().contains("blocked for safety"),
+                "unexpected message: {}",
+                err.message()
+            );
+        }
+    }
+
+    #[test]
+    fn build_ytdlp_raw_args_rejects_non_allowlisted_flags() {
+        let err = build_ytdlp_raw_args("--output /tmp/x.mp4")
+            .expect_err("app-managed flags must be rejected");
+        assert!(err.message().contains("not in the safe allowlist"));
+
+        let err2 = build_ytdlp_raw_args("-f best")
+            .expect_err("short app-managed flags must be rejected");
+        assert!(err2.message().contains("blocked for safety"));
+    }
+
+    #[test]
+    fn build_ytdlp_raw_args_rejects_unterminated_quotes() {
+        let err = build_ytdlp_raw_args("--limit-rate \"5M")
+            .expect_err("unterminated quotes must be rejected");
+        assert!(err.message().contains("Unterminated"));
+
+        let err2 = build_ytdlp_raw_args("--retries '3")
+            .expect_err("unterminated single quotes must be rejected");
+        assert!(err2.message().contains("Unterminated"));
+    }
+
+    #[test]
+    fn build_ytdlp_raw_args_accepts_empty_input() {
+        assert!(build_ytdlp_raw_args("").unwrap().is_empty());
+        assert!(build_ytdlp_raw_args("   ").unwrap().is_empty());
+    }
+
+    #[test]
+    fn redact_download_args_for_log_redacts_secrets_and_url() {
+        let redacted = redact_download_args_for_log(
+            &[
+                "--cookies".to_string(),
+                "C:\\secrets\\cookies.txt".to_string(),
+                "--proxy".to_string(),
+                "http://user:pass@127.0.0.1:8080".to_string(),
+                "--add-header".to_string(),
+                "X-Api-Key:abc".to_string(),
+                "--".to_string(),
+                "https://example.com/watch?v=secret123&t=10".to_string(),
+            ],
+            true,
+        );
+
+        assert_eq!(
+            redacted,
+            vec![
+                "--cookies",
+                "<redacted>",
+                "--proxy",
+                "<redacted>",
+                "--add-header",
+                "X-Api-Key:<redacted>",
+                "--",
+                "https://example.com/watch?<redacted>"
+            ]
+        );
+    }
+
+    #[test]
+    fn redact_url_for_log_keeps_scheme_host_path() {
+        let redacted = redact_url_for_log("https://example.com/watch?v=abc&token=secret");
+        assert_eq!(redacted, "https://example.com/watch?<redacted>");
+
+        let plain = redact_url_for_log("https://example.com/video/123");
+        assert_eq!(plain, "https://example.com/video/123");
     }
 }

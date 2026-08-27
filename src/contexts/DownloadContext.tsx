@@ -55,6 +55,7 @@ import {
   refreshPostDownloadWorkflowSteps,
 } from '@/lib/post-download-plugins';
 import { extractUrls } from '@/lib/sources';
+import { sanitizeYtdlpAdvancedOptions } from '@/lib/ytdlp-advanced-options';
 import type {
   AudioBitrate,
   CookieSettings,
@@ -63,6 +64,7 @@ import type {
   DownloadDuplicateMatch,
   DownloadDuplicateReview,
   DownloadDuplicateReviewAction,
+  DownloadErrorClass,
   DownloadItem,
   DownloadProgress,
   DownloadSettings,
@@ -90,6 +92,66 @@ import { DownloadContext } from './download-context';
 
 const STORAGE_KEY = 'youwee-settings';
 const DOWNLOAD_QUEUE_IDLE_GRACE_MS = 1000;
+
+// P0-7: map a failure (message + backend code) to a 6-class taxonomy:
+// transient | auth | geo | unavailable | disk | config | unknown.
+const ERROR_CLASS_CODE_MAP: Record<string, DownloadErrorClass> = {
+  NETWORK_TIMEOUT: 'transient',
+  NETWORK_REQUEST_FAILED: 'transient',
+  YT_RATE_LIMITED: 'transient',
+  PROCESS_START_FAILED: 'transient',
+  PROCESS_EXECUTION_FAILED: 'transient',
+  PROCESS_EXIT_NON_ZERO: 'transient',
+  YT_SIGNIN_REQUIRED: 'auth',
+  YT_FRESH_COOKIES_REQUIRED: 'auth',
+  YT_COOKIE_DB_LOCKED: 'auth',
+  YT_MEMBERS_ONLY: 'auth',
+  YT_AGE_RESTRICTED: 'auth',
+  YT_GEO_RESTRICTED: 'geo',
+  YT_PRIVATE_VIDEO: 'unavailable',
+  YT_VIDEO_UNAVAILABLE: 'unavailable',
+  YT_UPCOMING_LIVE: 'unavailable',
+  YT_SKIPPED_LIVE: 'unavailable',
+  YT_SKIPPED_FILTER: 'unavailable',
+  IO_OPERATION_FAILED: 'disk',
+  FFMPEG_NOT_FOUND: 'disk',
+  ARIA2_NOT_FOUND: 'disk',
+  GALLERYDL_NOT_FOUND: 'disk',
+  VALIDATION_INVALID_URL: 'config',
+  VALIDATION_INVALID_INPUT: 'config',
+  YTDLP_NOT_FOUND: 'config',
+  YTDLP_SYSTEM_NOT_FOUND: 'config',
+  YTDLP_APP_NOT_FOUND: 'config',
+  YTDLP_SYSTEM_MANAGED: 'config',
+  FFMPEG_SYSTEM_MANAGED: 'config',
+};
+
+const ERROR_CLASS_PATTERNS: Array<[RegExp, DownloadErrorClass]> = [
+  [
+    /timed?s*out|timeout|connection (reset|aborted|closed|refused)|network(?:s+is)?s+unreachable|temporar(?:ily|y)s+unavailable|try again|too many requests|\b429\b|\b5\d{2}\b|http error 5\d{2}/i,
+    'transient',
+  ],
+  [/sign in|login required|cookie|members-only|member only|join this channel|dpapi|app.bound/i, 'auth'],
+  [/geo(?:-|\s)?restricted|not available in your country/i, 'geo'],
+  [/private video|video unavailable|not available|premiere|upcoming|live event/i, 'unavailable'],
+  [
+    /permission denied|no such file|failed to (read|write|open)|ffmpeg not found|ffprobe not found|aria2c not found|gallery-dl not found|no space|disk/i,
+    'disk',
+  ],
+  [/invalid|unsupported|managed externally/i, 'config'],
+];
+
+export function classifyDownloadError(message: string | undefined, code?: string): DownloadErrorClass {
+  if (code) {
+    const byCode = ERROR_CLASS_CODE_MAP[code];
+    if (byCode) return byCode;
+  }
+  const text = message || '';
+  for (const [pattern, errorClass] of ERROR_CLASS_PATTERNS) {
+    if (pattern.test(text)) return errorClass;
+  }
+  return 'unknown';
+}
 
 // Check if path is absolute (cross-platform)
 const isAbsolutePath = (path: string): boolean => {
@@ -138,7 +200,7 @@ function loadSavedSettings(): Partial<DownloadSettings> {
 }
 
 // Build SponsorBlock category strings for yt-dlp args
-function buildSponsorBlockArgs(settings: DownloadSettings): {
+export function buildSponsorBlockArgs(settings: DownloadSettings): {
   remove: string | null;
   mark: string | null;
 } {
@@ -163,6 +225,122 @@ function buildSponsorBlockArgs(settings: DownloadSettings): {
   return {
     remove: removeCats.length > 0 ? removeCats.join(',') : null,
     mark: markCats.length > 0 ? markCats.join(',') : null,
+  };
+}
+
+// Build the exact argument object passed to the `download_video` Tauri command.
+// Shared with the P0-2 command-preview flow so the diagnostics panel always
+// reproduces the real download configuration (no drift between preview and run).
+interface DownloadVideoInvokeArgsOptions {
+  item: DownloadItem;
+  itemSettings: ItemDownloadSettings | undefined;
+  settings: DownloadSettings;
+  cookieSettings: CookieSettings;
+  proxySettings: ProxySettings;
+  sponsorBlockArgs: { remove: string | null; mark: string | null };
+  logStderr: boolean;
+  override?: Partial<
+    Pick<ItemDownloadSettings, 'ytdlpAdvancedOptionsEnabled' | 'ytdlpAdvancedOptions' | 'rawArgs'>
+  >;
+}
+
+export function buildDownloadVideoInvokeArgs(
+  opts: DownloadVideoInvokeArgsOptions,
+): Record<string, unknown> {
+  const {
+    item,
+    itemSettings,
+    settings,
+    cookieSettings,
+    proxySettings,
+    sponsorBlockArgs,
+    logStderr,
+    override,
+  } = opts;
+  return {
+    id: item.id,
+    url: item.url,
+    outputPath: itemSettings?.outputPath || settings.outputPath,
+    quality: itemSettings?.quality ?? settings.quality,
+    format: itemSettings?.format ?? settings.format,
+    downloadPlaylist: itemSettings?.downloadPlaylist ?? false,
+    playlistIndex: item.playlistIndex ?? null,
+    playlistTotal: item.playlistTotal ?? null,
+    numberPlaylistItems: itemSettings?.numberPlaylistItems ?? false,
+    queueIndex: item.queueIndex ?? null,
+    queueTotal: item.queueTotal ?? null,
+    numberQueueItems: itemSettings?.numberQueueItems ?? false,
+    filenameMetadataEnabled: itemSettings?.filenameMetadataEnabled ?? false,
+    filenameMetadataFields: itemSettings?.filenameMetadataFields ?? [],
+    splitEmbeddedChapters: itemSettings?.splitEmbeddedChapters ?? false,
+    numberChapterFiles: itemSettings?.numberChapterFiles ?? true,
+    autoOrganizeCollections: itemSettings?.autoOrganizeCollections ?? false,
+    playlistCollectionName: itemSettings?.playlistCollectionName ?? null,
+    videoCodec: itemSettings?.videoCodec ?? settings.videoCodec,
+    preferredFps: itemSettings?.preferredFps ?? settings.preferredFps,
+    audioBitrate: itemSettings?.audioBitrate ?? settings.audioBitrate,
+    playlistLimit:
+      itemSettings?.playlistLimit && itemSettings.playlistLimit > 0
+        ? itemSettings.playlistLimit
+        : null,
+    // Subtitle settings
+    subtitleMode: itemSettings?.subtitleMode ?? settings.subtitleMode,
+    subtitleLangs: (itemSettings?.subtitleLangs ?? settings.subtitleLangs).join(','),
+    subtitleEmbed: itemSettings?.subtitleEmbed ?? settings.subtitleEmbed,
+    subtitleFormat: itemSettings?.subtitleFormat ?? settings.subtitleFormat,
+    // Logging settings
+    logStderr,
+    // YouTube specific settings
+    useBunRuntime: settings.useBunRuntime,
+    useActualPlayerJs: settings.useActualPlayerJs,
+    // Network settings
+    ...buildCookieProxyInvokeOptions(cookieSettings, proxySettings),
+    // Post-processing settings
+    embedMetadata: settings.embedMetadata,
+    embedThumbnail: settings.embedThumbnail,
+    // Live stream settings
+    liveFromStart: itemSettings?.liveFromStart ?? settings.liveFromStart,
+    skipLive: itemSettings?.skipLive ?? false,
+    // Speed limit settings
+    speedLimit: settings.speedLimitEnabled
+      ? `${settings.speedLimitValue}${settings.speedLimitUnit}`
+      : null,
+    // External downloader settings
+    useAria2: itemSettings?.useAria2 ?? settings.useAria2,
+    aria2Args: itemSettings?.aria2Args ?? settings.aria2Args,
+    // yt-dlp advanced options
+    ytdlpAdvancedOptionsEnabled:
+      override?.ytdlpAdvancedOptionsEnabled ??
+      itemSettings?.ytdlpAdvancedOptionsEnabled ??
+      settings.ytdlpAdvancedOptionsEnabled,
+    ytdlpAdvancedOptions:
+      override?.ytdlpAdvancedOptions ?? itemSettings?.ytdlpAdvancedOptions ?? settings.ytdlpAdvancedOptions,
+    // Expert raw yt-dlp arguments (backend validates against a safe allowlist)
+    ytdlpRawArgs: override?.rawArgs ?? itemSettings?.rawArgs ?? '',
+    // Incognito (P0-5): backend should skip history/log URL writes for this item
+    incognito: item.incognito === true,
+    // SponsorBlock settings
+    sponsorblockRemove: sponsorBlockArgs.remove,
+    sponsorblockMark: sponsorBlockArgs.mark,
+    // Download sections (time range)
+    downloadSections:
+      itemSettings?.timeRangeStart && itemSettings?.timeRangeEnd
+        ? `*${itemSettings.timeRangeStart}-${itemSettings.timeRangeEnd}`
+        : null,
+    // No history_id for new downloads
+    historyId: null,
+    // Title from video info fetch
+    title: item.title || null,
+    // Thumbnail from video info fetch
+    thumbnail: item.thumbnail || null,
+    // Source/extractor from video info fetch
+    source: item.extractor || null,
+    pluginWorkflowSnapshots:
+      itemSettings?.pluginWorkflowSnapshots ?? loadPluginWorkflowSnapshots(),
+    postDownloadWorkflowSteps:
+      itemSettings?.postDownloadWorkflowSteps ?? loadPostDownloadWorkflowSteps(),
+    emitFailedWorkflow: false,
+    downloadKind: 'download',
   };
 }
 
@@ -282,6 +460,20 @@ export interface DownloadContextType {
   ) => Promise<T[]>;
   // Per-item time range
   updateItemTimeRange: (id: string, start?: string, end?: string) => void;
+  // Per-item yt-dlp advanced options (P0-2)
+  updateItemAdvancedOptions: (
+    id: string,
+    patch: Partial<
+      Pick<ItemDownloadSettings, 'ytdlpAdvancedOptionsEnabled' | 'ytdlpAdvancedOptions' | 'rawArgs'>
+    >,
+  ) => void;
+  // Per-item queue controls (P0-7)
+  toggleItemIncognito: (id: string) => void;
+  pauseItem: (id: string) => void;
+  resumeItem: (id: string) => void;
+  cancelItem: (id: string) => void;
+  duplicateItem: (id: string) => void;
+  moveItemToTop: (id: string) => void;
   selectItemOutputFolder: (id: string) => Promise<void>;
   // Rename completed file
   renameCompletedItem: (id: string, newName: string) => Promise<void>;
@@ -444,7 +636,7 @@ export function DownloadProvider({ children }: { children: ReactNode }) {
       setItems((currentItems) => {
         if (progress.status === 'error' && progress.error_code === 'DOWNLOAD_CANCELLED') {
           return currentItems.map((item) =>
-            item.id === progress.id
+            item.id === progress.id && item.status !== 'paused' && item.status !== 'skipped'
               ? {
                   ...item,
                   status: 'pending',
@@ -452,6 +644,7 @@ export function DownloadProvider({ children }: { children: ReactNode }) {
                   eta: '',
                   error: undefined,
                   errorCode: undefined,
+                  errorClass: undefined,
                   retryState: undefined,
                 }
               : item,
@@ -464,41 +657,46 @@ export function DownloadProvider({ children }: { children: ReactNode }) {
             : progress.status === 'error'
               ? 'error'
               : 'downloading';
-        const nextItems = currentItems.map((item) =>
-          item.id === progress.id
-            ? {
-                ...item,
-                progress: progress.percent,
-                speed: progress.speed,
-                eta: progress.eta,
-                title: progress.title || item.title,
-                status,
-                error: localizeProgressError(
-                  progress.error_code,
-                  progress.error_message,
-                  progress.error_params,
-                ),
-                errorCode: progress.status === 'error' ? progress.error_code : undefined,
-                retryState: undefined,
-                playlistIndex: progress.playlist_index,
-                playlistTotal: progress.playlist_count,
-                downloadedSize: progress.downloaded_size,
-                elapsedTime: progress.elapsed_time,
-                // Auto-detect live stream if we receive downloaded_size (live stream format)
-                isLive: progress.downloaded_size ? true : item.isLive,
-                // Store completed info when finished
-                ...(progress.status === 'finished'
-                  ? {
-                      completedFilesize: progress.filesize,
-                      completedResolution: progress.resolution,
-                      completedFormat: progress.format_ext,
-                      completedFilepath: progress.filepath,
-                      completedHistoryId: progress.history_id,
-                    }
-                  : {}),
-              }
-            : item,
-        );
+        const nextItems = currentItems.map((item) => {
+          if (item.id !== progress.id) return item;
+          // P0-7: ignore late backend events for items the user paused or cancelled.
+          if (item.status === 'paused' || item.status === 'skipped') return item;
+          return {
+            ...item,
+            progress: progress.percent,
+            speed: progress.speed,
+            eta: progress.eta,
+            title: progress.title || item.title,
+            status,
+            error: localizeProgressError(
+              progress.error_code,
+              progress.error_message,
+              progress.error_params,
+            ),
+            errorCode: progress.status === 'error' ? progress.error_code : undefined,
+            errorClass:
+              progress.status === 'error'
+                ? classifyDownloadError(progress.error_message, progress.error_code)
+                : undefined,
+            retryState: undefined,
+            playlistIndex: progress.playlist_index,
+            playlistTotal: progress.playlist_count,
+            downloadedSize: progress.downloaded_size,
+            elapsedTime: progress.elapsed_time,
+            // Auto-detect live stream if we receive downloaded_size (live stream format)
+            isLive: progress.downloaded_size ? true : item.isLive,
+            // Store completed info when finished
+            ...(progress.status === 'finished'
+              ? {
+                  completedFilesize: progress.filesize,
+                  completedResolution: progress.resolution,
+                  completedFormat: progress.format_ext,
+                  completedFilepath: progress.filepath,
+                  completedHistoryId: progress.history_id,
+                }
+              : {}),
+          };
+        });
         itemsRef.current = nextItems;
         return nextItems;
       });
@@ -1231,6 +1429,150 @@ export function DownloadProvider({ children }: { children: ReactNode }) {
     });
   }, []);
 
+  // P0-2: mutate a single item's yt-dlp advanced options snapshot.
+  const updateItemAdvancedOptions = useCallback(
+    (
+      id: string,
+      patch: Partial<
+        Pick<ItemDownloadSettings, 'ytdlpAdvancedOptionsEnabled' | 'ytdlpAdvancedOptions' | 'rawArgs'>
+      >,
+    ) => {
+      setItems((items) => {
+        const nextItems = items.map((item) => {
+          if (item.id !== id || !item.settings) return item;
+          const settings = item.settings as ItemDownloadSettings;
+          const nextSettings: ItemDownloadSettings = { ...settings };
+          if (patch.ytdlpAdvancedOptionsEnabled !== undefined) {
+            nextSettings.ytdlpAdvancedOptionsEnabled = patch.ytdlpAdvancedOptionsEnabled;
+          }
+          if (patch.ytdlpAdvancedOptions !== undefined) {
+            nextSettings.ytdlpAdvancedOptions = sanitizeYtdlpAdvancedOptions(
+              patch.ytdlpAdvancedOptions,
+            );
+          }
+          if (patch.rawArgs !== undefined) {
+            nextSettings.rawArgs = patch.rawArgs;
+          }
+          return { ...item, settings: nextSettings };
+        });
+        itemsRef.current = nextItems;
+        return nextItems;
+      });
+    },
+    [],
+  );
+
+  // P0-5: per-item incognito flag (backend history gate is a mainline follow-up).
+  const toggleItemIncognito = useCallback((id: string) => {
+    setItems((items) => {
+      const nextItems = items.map((item) =>
+        item.id === id ? { ...item, incognito: !item.incognito } : item,
+      );
+      itemsRef.current = nextItems;
+      return nextItems;
+    });
+  }, []);
+
+  // P0-7: pause (queued/failed items only; active items are soft-cancelled instead).
+  const pauseItem = useCallback((id: string) => {
+    setItems((items) => {
+      const nextItems = items.map((item) =>
+        item.id === id && (item.status === 'pending' || item.status === 'error')
+          ? { ...item, status: 'paused' as const, retryState: undefined }
+          : item,
+      );
+      itemsRef.current = nextItems;
+      return nextItems;
+    });
+  }, []);
+
+  // P0-7: resume a paused item; running workers pick it up automatically.
+  const resumeItem = useCallback((id: string) => {
+    setItems((items) => {
+      const nextItems = items.map((item) =>
+        item.id === id && item.status === 'paused'
+          ? { ...item, status: 'pending' as const }
+          : item,
+      );
+      itemsRef.current = nextItems;
+      return nextItems;
+    });
+  }, []);
+
+  // P0-7: cancel = soft detach (marks item skipped and ignores late backend
+  // events) + real per-item process cancellation for active downloads via the
+  // id-keyed backend registry (cancel_download_item).
+  const cancelItem = useCallback((id: string) => {
+    const current = itemsRef.current.find((item) => item.id === id);
+    if (current && (current.status === 'downloading' || current.status === 'fetching')) {
+      void invoke('cancel_download_item', { id }).catch((error) => {
+        console.error('Failed to cancel download item:', error);
+      });
+    }
+    setItems((items) => {
+      const nextItems = items.map((item) =>
+        item.id === id && item.status !== 'completed' && item.status !== 'skipped'
+          ? {
+              ...item,
+              status: 'skipped' as const,
+              progress: 0,
+              speed: '',
+              eta: '',
+              error: undefined,
+              errorCode: undefined,
+              errorClass: undefined,
+              retryState: undefined,
+            }
+          : item,
+      );
+      itemsRef.current = nextItems;
+      return nextItems;
+    });
+  }, []);
+
+  // P0-7: clone an item with a fresh id, reset to pending.
+  const duplicateItem = useCallback((id: string) => {
+    const source = itemsRef.current.find((item) => item.id === id);
+    if (!source) return;
+    const copy: DownloadItem = {
+      ...source,
+      id: createClientId(),
+      status: 'pending' as const,
+      progress: 0,
+      speed: '',
+      eta: '',
+      error: undefined,
+      errorCode: undefined,
+      errorClass: undefined,
+      retryState: undefined,
+      completedFilepath: undefined,
+      completedHistoryId: undefined,
+      completedFilesize: undefined,
+      completedResolution: undefined,
+      completedFormat: undefined,
+    };
+    setItems((items) => {
+      const index = items.findIndex((item) => item.id === id);
+      const nextItems = [...items];
+      nextItems.splice(index < 0 ? nextItems.length : index + 1, 0, copy);
+      itemsRef.current = nextItems;
+      return nextItems;
+    });
+  }, []);
+
+  // P0-7: move an item to the front of the queue (claim order = array order).
+  const moveItemToTop = useCallback((id: string) => {
+    setItems((items) => {
+      const index = items.findIndex((item) => item.id === id);
+      if (index <= 0) return items;
+      const nextItems = [...items];
+      const [moved] = nextItems.splice(index, 1);
+      nextItems.unshift(moved);
+      itemsRef.current = nextItems;
+      return nextItems;
+    });
+  }, []);
+
   const selectItemOutputFolder = useCallback(
     async (id: string) => {
       if (isDownloadingRef.current) return;
@@ -1385,96 +1727,37 @@ export function DownloadProvider({ children }: { children: ReactNode }) {
         );
 
         try {
-          await invoke('download_video', {
-            id: item.id,
-            url: item.url,
-            outputPath: itemSettings?.outputPath || settings.outputPath,
-            quality: itemSettings?.quality ?? settings.quality,
-            format: itemSettings?.format ?? settings.format,
-            downloadPlaylist: itemSettings?.downloadPlaylist ?? false,
-            playlistIndex: item.playlistIndex ?? null,
-            playlistTotal: item.playlistTotal ?? null,
-            numberPlaylistItems: itemSettings?.numberPlaylistItems ?? false,
-            queueIndex: item.queueIndex ?? null,
-            queueTotal: item.queueTotal ?? null,
-            numberQueueItems: itemSettings?.numberQueueItems ?? false,
-            filenameMetadataEnabled: itemSettings?.filenameMetadataEnabled ?? false,
-            filenameMetadataFields: itemSettings?.filenameMetadataFields ?? [],
-            splitEmbeddedChapters: itemSettings?.splitEmbeddedChapters ?? false,
-            numberChapterFiles: itemSettings?.numberChapterFiles ?? true,
-            autoOrganizeCollections: itemSettings?.autoOrganizeCollections ?? false,
-            playlistCollectionName: itemSettings?.playlistCollectionName ?? null,
-            videoCodec: itemSettings?.videoCodec ?? settings.videoCodec,
-            preferredFps: itemSettings?.preferredFps ?? settings.preferredFps,
-            audioBitrate: itemSettings?.audioBitrate ?? settings.audioBitrate,
-            playlistLimit:
-              itemSettings?.playlistLimit && itemSettings.playlistLimit > 0
-                ? itemSettings.playlistLimit
-                : null,
-            // Subtitle settings
-            subtitleMode: itemSettings?.subtitleMode ?? settings.subtitleMode,
-            subtitleLangs: (itemSettings?.subtitleLangs ?? settings.subtitleLangs).join(','),
-            subtitleEmbed: itemSettings?.subtitleEmbed ?? settings.subtitleEmbed,
-            subtitleFormat: itemSettings?.subtitleFormat ?? settings.subtitleFormat,
-            // Logging settings
-            logStderr,
-            // YouTube specific settings
-            useBunRuntime: settings.useBunRuntime,
-            useActualPlayerJs: settings.useActualPlayerJs,
-            // Network settings
-            ...buildCookieProxyInvokeOptions(cookieSettings, proxySettings),
-            // Post-processing settings
-            embedMetadata: settings.embedMetadata,
-            embedThumbnail: settings.embedThumbnail,
-            // Live stream settings
-            liveFromStart: itemSettings?.liveFromStart ?? settings.liveFromStart,
-            skipLive: itemSettings?.skipLive ?? false,
-            // Speed limit settings
-            speedLimit: settings.speedLimitEnabled
-              ? `${settings.speedLimitValue}${settings.speedLimitUnit}`
-              : null,
-            // External downloader settings
-            useAria2: itemSettings?.useAria2 ?? settings.useAria2,
-            aria2Args: itemSettings?.aria2Args ?? settings.aria2Args,
-            // yt-dlp advanced options
-            ytdlpAdvancedOptionsEnabled:
-              itemSettings?.ytdlpAdvancedOptionsEnabled ?? settings.ytdlpAdvancedOptionsEnabled,
-            ytdlpAdvancedOptions:
-              itemSettings?.ytdlpAdvancedOptions ?? settings.ytdlpAdvancedOptions,
-            // SponsorBlock settings
-            sponsorblockRemove: sponsorBlockArgs.remove,
-            sponsorblockMark: sponsorBlockArgs.mark,
-            // Download sections (time range)
-            downloadSections:
-              itemSettings?.timeRangeStart && itemSettings?.timeRangeEnd
-                ? `*${itemSettings.timeRangeStart}-${itemSettings.timeRangeEnd}`
-                : null,
-            // No history_id for new downloads
-            historyId: null,
-            // Title from video info fetch
-            title: item.title || null,
-            // Thumbnail from video info fetch
-            thumbnail: item.thumbnail || null,
-            // Source/extractor from video info fetch
-            source: item.extractor || null,
-            pluginWorkflowSnapshots:
-              itemSettings?.pluginWorkflowSnapshots ?? loadPluginWorkflowSnapshots(),
-            postDownloadWorkflowSteps:
-              itemSettings?.postDownloadWorkflowSteps ?? loadPostDownloadWorkflowSteps(),
-            emitFailedWorkflow: false,
-            downloadKind: 'download',
-          });
+          await invoke(
+            'download_video',
+            buildDownloadVideoInvokeArgs({
+              item,
+              itemSettings,
+              settings,
+              cookieSettings,
+              proxySettings,
+              sponsorBlockArgs,
+              logStderr,
+            }),
+          );
 
           setItems((items) =>
             items.map((i) =>
               i.id === item.id
-                ? { ...i, status: 'completed', progress: 100, retryState: undefined }
+                ? i.status === 'paused' || i.status === 'skipped'
+                  ? i
+                  : { ...i, status: 'completed', progress: 100, retryState: undefined }
                 : i,
             ),
           );
           return;
         } catch (error) {
-          if (itemsRef.current.some((i) => i.id === item.id && i.status === 'completed')) {
+          if (
+            itemsRef.current.some(
+              (i) =>
+                i.id === item.id &&
+                (i.status === 'completed' || i.status === 'paused' || i.status === 'skipped'),
+            )
+          ) {
             return;
           }
 
@@ -1491,6 +1774,7 @@ export function DownloadProvider({ children }: { children: ReactNode }) {
                       eta: '',
                       error: undefined,
                       errorCode: undefined,
+                      errorClass: undefined,
                       retryState: undefined,
                     }
                   : i,
@@ -1509,6 +1793,7 @@ export function DownloadProvider({ children }: { children: ReactNode }) {
                       progress: 0,
                       error: errorMessage,
                       errorCode: parsedError.code,
+                      errorClass: undefined,
                       retryState: undefined,
                     }
                   : i,
@@ -1533,6 +1818,7 @@ export function DownloadProvider({ children }: { children: ReactNode }) {
                       status: 'error',
                       error: errorMessage,
                       errorCode: parsedError.code,
+                      errorClass: classifyDownloadError(parsedError.message, parsedError.code),
                       retryState: undefined,
                     }
                   : i,
@@ -1550,6 +1836,7 @@ export function DownloadProvider({ children }: { children: ReactNode }) {
                     status: 'pending',
                     error: errorMessage,
                     errorCode: parsedError.code,
+                    errorClass: classifyDownloadError(parsedError.message, parsedError.code),
                     retryState: {
                       retryIndex,
                       maxRetries,
@@ -2053,6 +2340,13 @@ export function DownloadProvider({ children }: { children: ReactNode }) {
       filterDownloadedDuplicateCandidates,
       // Per-item time range
       updateItemTimeRange,
+      updateItemAdvancedOptions,
+      toggleItemIncognito,
+      pauseItem,
+      resumeItem,
+      cancelItem,
+      duplicateItem,
+      moveItemToTop,
       selectItemOutputFolder,
       renameCompletedItem,
     }),
@@ -2118,6 +2412,13 @@ export function DownloadProvider({ children }: { children: ReactNode }) {
       dismissDuplicateSkipNotice,
       filterDownloadedDuplicateCandidates,
       updateItemTimeRange,
+      updateItemAdvancedOptions,
+      toggleItemIncognito,
+      pauseItem,
+      resumeItem,
+      cancelItem,
+      duplicateItem,
+      moveItemToTop,
       selectItemOutputFolder,
       renameCompletedItem,
     ],

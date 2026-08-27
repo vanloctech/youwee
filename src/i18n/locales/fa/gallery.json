@@ -85,7 +85,9 @@
       "pending": "در انتظار",
       "downloading": "در حال دانلود",
       "completed": "تکمیل‌شده",
-      "failed": "ناموفق"
+      "failed": "ناموفق",
+      "paused": "متوقف",
+      "failedHint": "ناموفق — برای جزئیات لاگ‌ها را ببینید"
     },
     "empty": {
       "title": "برای شروع، نشانی یک گالری را رها کنید",
@@ -93,7 +95,33 @@
       "moreCount": "و موارد بسیار دیگر",
       "viewFullList": "مشاهده سایت‌های پشتیبانی‌شده"
     },
-    "countFiles": "{{count}} فایل"
+    "countFiles": "{{count}} فایل",
+    "pause": "توقف موقت",
+    "resume": "ادامه",
+    "retry": "تلاش دوباره",
+    "cancel": "لغو",
+    "duplicate": "تکثیر",
+    "moveToTop": "انتقال به بالا",
+    "incognito": "ناشناس",
+    "incognitoToggle": "تغییر حالت ناشناس (رد شدن از تاریخچه)",
+    "errorClass": {
+      "transient": "موقت",
+      "auth": "خطای احراز هویت",
+      "geo": "محدودیت جغرافیایی",
+      "unavailable": "در دسترس نیست",
+      "disk": "خطای دیسک",
+      "config": "خطای تنظیمات",
+      "unknown": "ناشناخته"
+    },
+    "errorClassAction": {
+      "transient": "بعداً دوباره تلاش کنید",
+      "auth": "دوباره وارد شوید",
+      "geo": "از پروکسی/VPN استفاده کنید",
+      "unavailable": "منبع را بررسی کنید",
+      "disk": "فضای دیسک آزاد کنید",
+      "config": "تنظیمات را اصلاح کنید",
+      "unknown": "لاگها را ببینید"
+    }
   },
   "urlInput": {
     "single": "تکی",

@@ -218,6 +218,7 @@ pub async fn download_gallery(
     source: Option<String>,
     thumbnail: Option<String>,
     options: Option<GalleryDownloadOptions>,
+    incognito: Option<bool>,
 ) -> Result<GalleryDownloadResult, String> {
     validate_url(&url).map_err(|e| BackendError::from_message(e).to_wire_string())?;
     let url = normalize_url(&url);
@@ -387,22 +388,27 @@ pub async fn download_gallery(
         .to_wire_string());
     }
 
-    let title = source.clone().unwrap_or_else(|| url.clone());
-    let history_id = add_history_internal(
-        url.clone(),
-        title,
-        thumbnail,
-        sanitized_path.clone(),
-        None,
-        None,
-        None,
-        Some("gallery".to_string()),
-        source.or(Some("gallery-dl".to_string())),
-        None,
-    )
-    .ok();
-
-    add_log_internal("success", "Gallery download completed", None, Some(&url)).ok();
+    let history_id = if incognito.unwrap_or(false) {
+        add_log_internal("success", "Gallery download completed (incognito)", None, None).ok();
+        None
+    } else {
+        let title = source.clone().unwrap_or_else(|| url.clone());
+        let id = add_history_internal(
+            url.clone(),
+            title,
+            thumbnail,
+            sanitized_path.clone(),
+            None,
+            None,
+            None,
+            Some("gallery".to_string()),
+            source.or(Some("gallery-dl".to_string())),
+            None,
+        )
+        .ok();
+        add_log_internal("success", "Gallery download completed", None, Some(&url)).ok();
+        id
+    };
 
     Ok(GalleryDownloadResult {
         filepath: sanitized_path,
