@@ -281,6 +281,13 @@ fn validate_backup(backup: &BackupFile) -> Vec<String> {
 /// Read + parse + validate a backup file. Returns Err(errors) for anything
 /// that must not be imported.
 fn read_backup_file(path: &str) -> Result<BackupFile, Vec<String>> {
+    // Reject oversized files before reading (protects against OOM from
+    // accidentally pointing at a multi-GB file).
+    if let Ok(meta) = fs::metadata(path) {
+        if meta.len() > 50 * 1024 * 1024 {
+            return Err(vec!["Backup file is larger than 50 MB and was rejected.".to_string()]);
+        }
+    }
     let raw = fs::read_to_string(path).map_err(|e| vec![format!("Failed to read backup file: {e}")])?;
 
     let parsed: Value = serde_json::from_str(&raw)
