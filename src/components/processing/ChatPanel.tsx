@@ -503,11 +503,11 @@ export function ChatPanel({
                 {/* Progress Bar */}
                 <div className="relative h-2 bg-muted rounded-full overflow-hidden">
                   <div
-                    className="absolute inset-y-0 left-0 bg-gradient-to-r from-primary to-primary/80 rounded-full transition-all duration-300 ease-out"
+                    className="absolute inset-y-0 start-0 bg-gradient-to-r from-primary to-primary/80 rounded-full transition-all duration-300 ease-out"
                     style={{ width: `${Math.min(progress.percent, 100)}%` }}
                   />
                   <div
-                    className="absolute inset-y-0 left-0 bg-gradient-to-r from-white/20 to-transparent rounded-full animate-pulse"
+                    className="absolute inset-y-0 start-0 bg-gradient-to-r from-white/20 to-transparent rounded-full animate-pulse"
                     style={{ width: `${Math.min(progress.percent, 100)}%` }}
                   />
                 </div>
@@ -643,7 +643,7 @@ export function ChatPanel({
                   <button
                     type="button"
                     onClick={() => onRemoveAttachment(img.id)}
-                    className="absolute -top-0.5 -right-0.5 w-4 h-4 rounded-full bg-destructive text-destructive-foreground flex items-center justify-center opacity-0 group-hover/preview:opacity-100 transition-opacity shadow-sm"
+                    className="absolute -top-0.5 -end-0.5 w-4 h-4 rounded-full bg-destructive text-destructive-foreground flex items-center justify-center opacity-0 group-hover/preview:opacity-100 transition-opacity shadow-sm"
                   >
                     <X className="w-2.5 h-2.5" />
                   </button>
@@ -688,7 +688,7 @@ export function ChatPanel({
                 {showSuggestions && (
                   <div
                     className={cn(
-                      'absolute bottom-full left-0 mb-2 w-64',
+                      'absolute bottom-full start-0 mb-2 w-64',
                       'bg-background/95 backdrop-blur-xl',
                       'border border-border/50 rounded-xl shadow-xl',
                       'p-2 z-50',
@@ -704,7 +704,7 @@ export function ChatPanel({
                           key={suggestion.id}
                           onClick={() => handleSelectSuggestion(suggestion.prompt)}
                           className={cn(
-                            'w-full text-left px-3 py-2 rounded-lg',
+                            'w-full text-start px-3 py-2 rounded-lg',
                             'text-sm transition-colors',
                             'hover:bg-muted/70 text-foreground',
                           )}

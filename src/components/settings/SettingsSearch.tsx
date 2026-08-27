@@ -80,7 +80,7 @@ export function SettingsSearch({ onNavigate }: SettingsSearchProps) {
   return (
     <div ref={containerRef} className="relative w-72">
       <div className="relative">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+        <Search className="absolute start-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
         <Input
           ref={inputRef}
           type="text"
@@ -89,7 +89,7 @@ export function SettingsSearch({ onNavigate }: SettingsSearchProps) {
           onChange={(e) => setQuery(e.target.value)}
           onKeyDown={handleKeyDown}
           onFocus={() => query.trim() && results.length > 0 && setIsOpen(true)}
-          className="pl-9 pr-8 h-9 bg-muted/50 border-transparent focus:border-primary/50"
+          className="ps-9 pe-8 h-9 bg-muted/50 border-transparent focus:border-primary/50"
         />
         {query && (
           <button
@@ -98,7 +98,7 @@ export function SettingsSearch({ onNavigate }: SettingsSearchProps) {
               setQuery('');
               inputRef.current?.focus();
             }}
-            className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-muted-foreground hover:text-foreground rounded"
+            className="absolute end-2 top-1/2 -translate-y-1/2 p-1 text-muted-foreground hover:text-foreground rounded"
           >
             <X className="w-3.5 h-3.5" />
           </button>
@@ -107,14 +107,14 @@ export function SettingsSearch({ onNavigate }: SettingsSearchProps) {
 
       {/* Results Dropdown */}
       {isOpen && results.length > 0 && (
-        <div className="absolute top-full left-0 right-0 mt-1 py-1 bg-popover border border-border rounded-lg shadow-lg z-50 max-h-80 overflow-auto">
+        <div className="absolute top-full start-0 end-0 mt-1 py-1 bg-popover border border-border rounded-lg shadow-lg z-50 max-h-80 overflow-auto">
           {results.map((result, index) => (
             <button
               key={result.id}
               type="button"
               onClick={() => handleSelect(result)}
               className={cn(
-                'w-full text-left px-3 py-2 transition-colors',
+                'w-full text-start px-3 py-2 transition-colors',
                 index === selectedIndex ? 'bg-accent' : 'hover:bg-accent/50',
               )}
             >

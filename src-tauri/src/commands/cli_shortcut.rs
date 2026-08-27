@@ -1,15 +1,15 @@
-//! Install a global `youwee` CLI shortcut so users can invoke the app from a
+//! Install a global `weeb` CLI shortcut so users can invoke the app from a
 //! terminal anywhere.
 //!
 //! Behavior per platform:
-//! - **macOS**: create a symlink at `/usr/local/bin/youwee` (falls back to
-//!   `~/.local/bin/youwee` when `/usr/local/bin` is not writable) pointing at
+//! - **macOS**: create a symlink at `/usr/local/bin/weeb` (falls back to
+//!   `~/.local/bin/weeb` when `/usr/local/bin` is not writable) pointing at
 //!   the binary inside the `.app` bundle.
-//! - **Windows**: create a `youwee.cmd` shim in the current user's WindowsApps
+//! - **Windows**: create a `weeb.cmd` shim in the current user's WindowsApps
 //!   command directory when available.
-//! - **Linux**: the `.deb` package already installs `/usr/bin/youwee`, so this
+//! - **Linux**: the `.deb` package already installs `/usr/bin/weeb`, so this
 //!   reports the existing status; for AppImage it creates a
-//!   `~/.local/bin/youwee` symlink.
+//!   `~/.local/bin/weeb` symlink.
 
 use serde::Serialize;
 use std::path::{Path, PathBuf};
@@ -18,7 +18,7 @@ use std::path::{Path, PathBuf};
 pub struct CliShortcutStatus {
     /// "macos" | "windows" | "linux" | "unknown"
     pub platform: String,
-    /// Whether `youwee` is already reachable as a global command.
+    /// Whether `weeb` is already reachable as a global command.
     pub installed: bool,
     /// Path where the shortcut is (or would be) installed.
     pub target_path: Option<String>,
@@ -131,10 +131,10 @@ fn ensure_command_parent_is_in_path(command_path: &Path) -> Result<(), String> {
 fn windows_apps_shim_path() -> Option<PathBuf> {
     std::env::var_os("LOCALAPPDATA")
         .map(PathBuf::from)
-        .map(|dir| dir.join("Microsoft").join("WindowsApps").join("youwee.cmd"))
+        .map(|dir| dir.join("Microsoft").join("WindowsApps").join("weeb.cmd"))
 }
 
-/// Inspect whether the `youwee` command is already available globally.
+/// Inspect whether the `weeb` command is already available globally.
 #[tauri::command]
 pub fn get_cli_shortcut_status() -> CliShortcutStatus {
     let platform = current_platform().to_string();
@@ -143,8 +143,8 @@ pub fn get_cli_shortcut_status() -> CliShortcutStatus {
 
     #[cfg(target_os = "macos")]
     {
-        let primary = PathBuf::from("/usr/local/bin/youwee");
-        let fallback = user_local_bin().map(|d| d.join("youwee"));
+        let primary = PathBuf::from("/usr/local/bin/weeb");
+        let fallback = user_local_bin().map(|d| d.join("weeb"));
         let installed = primary.exists() || fallback.as_ref().map(|p| p.exists()).unwrap_or(false);
         let target_path = if primary.exists() {
             Some(primary.display().to_string())
@@ -209,9 +209,9 @@ pub fn get_cli_shortcut_status() -> CliShortcutStatus {
 
     #[cfg(target_os = "linux")]
     {
-        // .deb installs /usr/bin/youwee.
-        let system = PathBuf::from("/usr/bin/youwee");
-        let local = user_local_bin().map(|d| d.join("youwee"));
+        // .deb installs /usr/bin/weeb.
+        let system = PathBuf::from("/usr/bin/weeb");
+        let local = user_local_bin().map(|d| d.join("weeb"));
         let system_installed = system.exists();
         let installed = system_installed || local.as_ref().map(|p| p.exists()).unwrap_or(false);
         let target_path = if system_installed {
@@ -226,7 +226,7 @@ pub fn get_cli_shortcut_status() -> CliShortcutStatus {
             exe_path: exe_path_str,
             can_auto_install: !system_installed,
             note: if system_installed {
-                Some("Installed via system package (/usr/bin/youwee).".to_string())
+                Some("Installed via system package (/usr/bin/weeb).".to_string())
             } else if let Some(path) = local
                 .as_ref()
                 .filter(|p| p.exists() && !command_parent_is_in_path(p))
@@ -247,7 +247,7 @@ pub fn get_cli_shortcut_status() -> CliShortcutStatus {
                 None
             },
             note_path: if system_installed {
-                Some("/usr/bin/youwee".to_string())
+                Some("/usr/bin/weeb".to_string())
             } else {
                 local
                     .as_ref()
@@ -284,7 +284,7 @@ fn path_contains_exe_dir(exe: Option<&std::path::Path>) -> bool {
         .unwrap_or(false)
 }
 
-/// Install the global `youwee` shortcut for the current platform.
+/// Install the global `weeb` shortcut for the current platform.
 /// Returns the path of the installed shortcut on success.
 #[tauri::command]
 pub fn install_cli_shortcut() -> Result<String, String> {
@@ -323,7 +323,7 @@ fn create_symlink(exe: &Path, link: &Path) -> Result<(), String> {
     if let Ok(metadata) = std::fs::symlink_metadata(link) {
         if !metadata.file_type().is_symlink() {
             return Err(format!(
-                "{} already exists and is not a Youwee symlink. Remove it manually before reinstalling.",
+                "{} already exists and is not a weeb symlink. Remove it manually before reinstalling.",
                 link.display()
             ));
         }
@@ -348,7 +348,7 @@ fn create_symlink(exe: &Path, link: &Path) -> Result<(), String> {
 
 #[cfg(target_os = "macos")]
 fn install_macos_symlink(exe: &Path) -> Result<String, String> {
-    let primary = PathBuf::from("/usr/local/bin/youwee");
+    let primary = PathBuf::from("/usr/local/bin/weeb");
     if create_symlink(exe, &primary).is_ok() {
         return Ok(primary.display().to_string());
     }
@@ -356,20 +356,20 @@ fn install_macos_symlink(exe: &Path) -> Result<String, String> {
     // Fall back to a per-user location that does not require admin rights.
     let fallback = user_local_bin()
         .ok_or_else(|| "Could not resolve HOME directory.".to_string())?
-        .join("youwee");
+        .join("weeb");
     create_symlink(exe, &fallback)?;
     Ok(fallback.display().to_string())
 }
 
 #[cfg(target_os = "linux")]
 fn install_linux_symlink(exe: &Path) -> Result<String, String> {
-    let system = PathBuf::from("/usr/bin/youwee");
+    let system = PathBuf::from("/usr/bin/weeb");
     if system.exists() {
-        return Ok("/usr/bin/youwee".to_string());
+        return Ok("/usr/bin/weeb".to_string());
     }
     let link = user_local_bin()
         .ok_or_else(|| "Could not resolve HOME directory.".to_string())?
-        .join("youwee");
+        .join("weeb");
     create_symlink(exe, &link)?;
     Ok(link.display().to_string())
 }

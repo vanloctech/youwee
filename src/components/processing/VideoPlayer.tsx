@@ -345,7 +345,7 @@ export const VideoPlayer = memo(function VideoPlayer({
           >
             {videoPath && (
               <>
-                <div className="flex-1 min-w-0 mr-3">
+                <div className="flex-1 min-w-0 me-3">
                   <div className="flex items-center gap-2">
                     <p className="text-sm font-medium text-white truncate">
                       {videoPath.split('/').pop()}
@@ -371,7 +371,7 @@ export const VideoPlayer = memo(function VideoPlayer({
                   className="h-6 text-xs text-white/70 hover:text-white hover:bg-white/20 flex-shrink-0"
                   onClick={onSelectVideo}
                 >
-                  <Upload className="w-3 h-3 mr-1" />
+                  <Upload className="w-3 h-3 me-1" />
                   {t('processing.player.change')}
                 </Button>
               </>
@@ -447,7 +447,7 @@ export const VideoPlayer = memo(function VideoPlayer({
               <div className="flex-1" />
 
               {/* Volume */}
-              <div className="flex items-center gap-1 ml-2">
+              <div className="flex items-center gap-1 ms-2">
                 <Button
                   variant="ghost"
                   size="icon"
@@ -511,7 +511,7 @@ export const VideoPlayer = memo(function VideoPlayer({
             <p className="text-sm text-muted-foreground/70 mt-1 max-w-sm">{videoError}</p>
           </div>
           <Button onClick={onSelectVideo} variant="outline" className="mt-2">
-            <Upload className="w-4 h-4 mr-2" />
+            <Upload className="w-4 h-4 me-2" />
             {t('processing.player.tryAnother')}
           </Button>
         </div>
@@ -527,7 +527,7 @@ export const VideoPlayer = memo(function VideoPlayer({
             </p>
           </div>
           <Button onClick={onSelectVideo} className="mt-2">
-            <Upload className="w-4 h-4 mr-2" />
+            <Upload className="w-4 h-4 me-2" />
             {t('processing.player.selectVideo')}
           </Button>
         </div>

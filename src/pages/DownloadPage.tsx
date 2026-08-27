@@ -129,11 +129,11 @@ export function DownloadPage({ onNavigateToSettings }: DownloadPageProps) {
             <button
               type="button"
               onClick={() => setActiveView('download')}
-              className="-ml-2 inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+              className="-ms-2 inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
               title={t('urlInput.keyword.back')}
               aria-label={t('urlInput.keyword.back')}
             >
-              <ArrowLeft className="h-5 w-5" />
+              <ArrowLeft className="h-5 w-5 rtl:rotate-180" />
             </button>
             <h1 className="truncate text-base font-semibold sm:text-lg">
               {t('urlInput.keyword.pageTitle')}
@@ -241,7 +241,7 @@ export function DownloadPage({ onNavigateToSettings }: DownloadPageProps) {
                       <Play className="w-5 h-5" />
                       <span>{t('actions.startDownload')}</span>
                       {pendingCount > 0 && (
-                        <span className="ml-1 px-2 py-0.5 rounded-full bg-white/20 text-xs">
+                        <span className="ms-1 px-2 py-0.5 rounded-full bg-white/20 text-xs">
                           {pendingCount}
                         </span>
                       )}
@@ -275,7 +275,7 @@ export function DownloadPage({ onNavigateToSettings }: DownloadPageProps) {
                     onClick={stopDownload}
                     title={t('actions.stopDownload')}
                   >
-                    <Square className="w-5 h-5 mr-2" />
+                    <Square className="w-5 h-5 me-2" />
                     {t('actions.stopDownload')}
                   </Button>
                 )}

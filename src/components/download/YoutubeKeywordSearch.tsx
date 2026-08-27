@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import i18n from '@/i18n';
 import { EmptyStateIllustration } from '@/components/shared/EmptyStateIllustration';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -177,7 +178,7 @@ function SearchResultGridItem({
       onClick={onToggle}
       disabled={disabled || isAdded}
       className={cn(
-        'group relative flex flex-col text-left transition-all duration-300 rounded-xl focus:outline-none',
+        'group relative flex flex-col text-start transition-all duration-300 rounded-xl focus:outline-none',
         isAdded ? 'cursor-not-allowed opacity-70 grayscale-[0.4]' : 'cursor-pointer',
       )}
     >
@@ -208,7 +209,7 @@ function SearchResultGridItem({
         {!isAdded && (
           <div
             className={cn(
-              'absolute top-2 left-2 z-20 transition-opacity duration-200',
+              'absolute top-2 start-2 z-20 transition-opacity duration-200',
               selected ? 'opacity-100' : 'opacity-0 group-hover:opacity-100',
             )}
           >
@@ -224,7 +225,7 @@ function SearchResultGridItem({
 
         {/* Subtle top gradient for hover checkbox visibility */}
         {!isAdded && !selected && (
-          <div className="absolute top-0 left-0 right-0 h-16 bg-gradient-to-b from-black/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none z-10" />
+          <div className="absolute top-0 start-0 end-0 h-16 bg-gradient-to-b from-black/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none z-10" />
         )}
 
         {/* Added Overlay */}
@@ -240,7 +241,7 @@ function SearchResultGridItem({
 
         {/* Duration */}
         {video.duration && !isAdded && (
-          <span className="absolute bottom-1.5 right-1.5 px-1.5 py-0.5 rounded text-[12px] font-medium text-white bg-black/80 tracking-wide backdrop-blur-md">
+          <span className="absolute bottom-1.5 end-1.5 px-1.5 py-0.5 rounded text-[12px] font-medium text-white bg-black/80 tracking-wide backdrop-blur-md">
             {video.duration}
           </span>
         )}
@@ -349,6 +350,7 @@ export function YoutubeKeywordSearch({
           limit: clampLimit(limit),
           filters,
           continuation: nextContinuation || null,
+          lang: i18n.language || 'en',
         });
 
         setVideos((current) =>
@@ -502,21 +504,21 @@ export function YoutubeKeywordSearch({
             className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center"
           >
             <div className="relative flex-1">
-              <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              <Search className="absolute start-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
               <Input
                 ref={searchInputRef}
                 value={query}
                 onChange={(e) => handleQueryChange(e.target.value)}
                 disabled={disabled || isSearching}
                 placeholder={t('urlInput.keyword.placeholder')}
-                className="pl-10 pr-10 h-12 rounded-xl bg-background border-border/60 focus:bg-background text-base sm:text-sm shadow-sm"
+                className="ps-10 pe-10 h-12 rounded-xl bg-background border-border/60 focus:bg-background text-base sm:text-sm shadow-sm"
               />
               {query ? (
                 <button
                   type="button"
                   onClick={clearQuery}
                   disabled={disabled || isSearching}
-                  className="absolute right-2.5 top-1/2 flex h-7 w-7 -translate-y-1/2 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-muted hover:text-foreground disabled:pointer-events-none disabled:opacity-50"
+                  className="absolute end-2.5 top-1/2 flex h-7 w-7 -translate-y-1/2 items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-muted hover:text-foreground disabled:pointer-events-none disabled:opacity-50"
                   title={t('urlInput.clearInput')}
                   aria-label={t('urlInput.clearInput')}
                 >
@@ -536,10 +538,10 @@ export function YoutubeKeywordSearch({
                       activeFilterCount > 0 && 'border-primary/40 bg-primary/5 text-primary',
                     )}
                   >
-                    <Filter className="w-4 h-4 sm:mr-2" />
+                    <Filter className="w-4 h-4 sm:me-2" />
                     <span className="hidden sm:inline">{t('urlInput.keyword.filters.title')}</span>
                     {activeFilterCount > 0 && (
-                      <span className="ml-2 inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-primary px-1.5 text-xs font-semibold text-primary-foreground">
+                      <span className="ms-2 inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-primary px-1.5 text-xs font-semibold text-primary-foreground">
                         {activeFilterCount}
                       </span>
                     )}
@@ -689,9 +691,9 @@ export function YoutubeKeywordSearch({
                 className="h-12 px-6 rounded-xl font-medium shadow-sm transition-all"
               >
                 {isSearching ? (
-                  <Loader2 className="w-4 h-4 sm:mr-2 animate-spin" />
+                  <Loader2 className="w-4 h-4 sm:me-2 animate-spin" />
                 ) : (
-                  <Search className="w-4 h-4 sm:mr-2" />
+                  <Search className="w-4 h-4 sm:me-2" />
                 )}
                 <span className="hidden sm:inline">{t('urlInput.keyword.search')}</span>
               </Button>
@@ -716,7 +718,7 @@ export function YoutubeKeywordSearch({
           <div className="absolute inset-0 flex flex-col items-center justify-center p-6 text-center">
             <EmptyStateIllustration className="mb-5" icon={Search} isActive />
             <h3 className="text-lg font-medium mb-2">{t('urlInput.keyword.emptyTitle')}</h3>
-            <div className="mt-1 w-full max-w-sm rounded-xl border border-primary/15 bg-primary/5 p-3 text-left shadow-sm">
+            <div className="mt-1 w-full max-w-sm rounded-xl border border-primary/15 bg-primary/5 p-3 text-start shadow-sm">
               <div className="flex items-center gap-2 text-xs font-medium text-primary">
                 <span className="relative flex h-2 w-2">
                   <span className="absolute inline-flex h-full w-full rounded-full bg-primary opacity-75 animate-ping" />
@@ -774,7 +776,7 @@ export function YoutubeKeywordSearch({
         <div className="absolute bottom-4 sm:bottom-6 left-1/2 -translate-x-1/2 z-10 w-full max-w-fit px-4 pointer-events-none animate-in slide-in-from-bottom-4 fade-in duration-300">
           <div className="bg-background/80 backdrop-blur-2xl supports-[backdrop-filter]:bg-background/60 border border-border/50 shadow-[0_8px_30px_rgb(0,0,0,0.12)] dark:shadow-[0_8px_30px_rgb(0,0,0,0.3)] rounded-full p-1.5 flex items-center gap-1 sm:gap-2 pointer-events-auto ring-1 ring-white/10 transition-all">
             {/* Selection Status */}
-            <div className="hidden sm:flex items-center pl-4 pr-2 py-1.5">
+            <div className="hidden sm:flex items-center ps-4 pe-2 py-1.5">
               <span className="text-sm font-semibold text-foreground whitespace-nowrap">
                 {t('urlInput.keyword.selectedCount', {
                   selected: selectedVideos.length,
@@ -784,7 +786,7 @@ export function YoutubeKeywordSearch({
             </div>
 
             {/* Mobile Selection Status */}
-            <div className="sm:hidden flex items-center pl-3 pr-1 py-1.5">
+            <div className="sm:hidden flex items-center ps-3 pe-1 py-1.5">
               <span className="text-sm font-bold text-foreground whitespace-nowrap">
                 {selectedVideos.length}/{videos.length}
               </span>
@@ -833,7 +835,7 @@ export function YoutubeKeywordSearch({
             <div className="w-px h-5 bg-border/60 mx-1" />
 
             {/* Load More & Add */}
-            <div className="flex items-center gap-1.5 pr-0.5">
+            <div className="flex items-center gap-1.5 pe-0.5">
               <Button
                 type="button"
                 variant="secondary"
@@ -842,9 +844,9 @@ export function YoutubeKeywordSearch({
                 className="h-9 px-4 rounded-full text-sm font-medium bg-secondary/60 hover:bg-secondary/80 transition-colors"
               >
                 {isLoadingMore ? (
-                  <Loader2 className="w-4 h-4 sm:mr-1.5 animate-spin" />
+                  <Loader2 className="w-4 h-4 sm:me-1.5 animate-spin" />
                 ) : (
-                  <ListPlus className="w-4 h-4 sm:mr-1.5" />
+                  <ListPlus className="w-4 h-4 sm:me-1.5" />
                 )}
                 <span className="hidden sm:inline">{t('urlInput.keyword.loadMore')}</span>
               </Button>
@@ -855,9 +857,9 @@ export function YoutubeKeywordSearch({
                 className="h-9 px-5 rounded-full text-sm font-semibold shadow-md bg-primary hover:bg-primary/90 text-primary-foreground transition-all active:scale-95"
               >
                 {isAdding ? (
-                  <Loader2 className="w-4 h-4 sm:mr-1.5 animate-spin" />
+                  <Loader2 className="w-4 h-4 sm:me-1.5 animate-spin" />
                 ) : (
-                  <Plus className="w-4 h-4 sm:mr-1.5" />
+                  <Plus className="w-4 h-4 sm:me-1.5" />
                 )}
                 <span className="hidden sm:inline">{t('urlInput.keyword.addSelected')}</span>
                 <span className="sm:hidden">{t('urlInput.keyword.addSelected').split(' ')[0]}</span>

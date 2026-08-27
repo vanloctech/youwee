@@ -41,7 +41,7 @@ export function useAppUpdater() {
     }
   }, []);
 
-  const checkForUpdate = useCallback(async () => {
+  const checkForUpdate = useCallback(async (silent = false) => {
     setStatus('checking');
     setError(null);
 
@@ -72,6 +72,12 @@ export function useAppUpdater() {
       }
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to check for updates';
+      // Background auto-checks must never block the UI with an error dialog —
+      // especially when no update endpoint is configured (endpoints: []).
+      if (silent) {
+        setStatus('up-to-date');
+        return false;
+      }
       setError(message);
       setStatus('error');
       return false;

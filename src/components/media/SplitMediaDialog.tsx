@@ -459,7 +459,7 @@ export function SplitMediaDialog({
             disabled={isSplitting}
             onClick={() => onOpenChange(false)}
           >
-            <X className="mr-2 h-4 w-4" />
+            <X className="me-2 h-4 w-4" />
             {t('library.split.cancel')}
           </Button>
           <Button
@@ -475,9 +475,9 @@ export function SplitMediaDialog({
             onClick={handleSplit}
           >
             {isSplitting ? (
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              <Loader2 className="me-2 h-4 w-4 animate-spin" />
             ) : (
-              <Check className="mr-2 h-4 w-4" />
+              <Check className="me-2 h-4 w-4" />
             )}
             {isSplitting ? t('library.split.splitting') : t('library.split.splitFiles')}
           </Button>

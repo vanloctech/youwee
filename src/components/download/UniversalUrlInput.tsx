@@ -235,7 +235,7 @@ export function UniversalUrlInput({
         {!isExpanded ? (
           <div className="relative flex items-center gap-2">
             <div className="relative flex-1">
-              <Globe className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              <Globe className="absolute start-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
               <Input
                 ref={inputRef}
                 placeholder={t('urlInput.placeholder')}
@@ -244,7 +244,7 @@ export function UniversalUrlInput({
                 onKeyDown={handleKeyDown}
                 disabled={disabled}
                 className={cn(
-                  'pl-10 pr-11 h-11 text-sm',
+                  'ps-10 pe-11 h-11 text-sm',
                   'bg-background/50 border-border/50',
                   'focus:bg-background transition-colors',
                   'placeholder:text-muted-foreground/50',
@@ -255,7 +255,7 @@ export function UniversalUrlInput({
                   type="button"
                   onClick={handleClearSingleInput}
                   disabled={disabled}
-                  className="absolute right-2.5 top-1/2 flex h-6 w-6 -translate-y-1/2 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground disabled:pointer-events-none disabled:opacity-50"
+                  className="absolute end-2.5 top-1/2 flex h-6 w-6 -translate-y-1/2 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground disabled:pointer-events-none disabled:opacity-50"
                   title={t('urlInput.clearInput')}
                   aria-label={t('urlInput.clearInput')}
                 >
@@ -295,7 +295,7 @@ export function UniversalUrlInput({
               )}
             />
             {urlCount > 0 && (
-              <div className="absolute bottom-2 right-2">
+              <div className="absolute bottom-2 end-2">
                 <span className="text-xs text-muted-foreground bg-background/80 px-2 py-1 rounded">
                   {urlCount !== 1
                     ? t('urlInput.urlCount_plural', { count: urlCount })

@@ -49,7 +49,7 @@ export function PluginLogsDialog({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="flex h-[80vh] w-[calc(100vw-2rem)] max-w-[min(72rem,calc(100vw-2rem))] flex-col gap-0 overflow-hidden p-0">
-        <DialogHeader className="border-b border-border/60 px-6 py-5 pr-16">
+        <DialogHeader className="border-b border-border/60 px-6 py-5 pe-16">
           <div className="flex items-start justify-between gap-4">
             <div className="min-w-0">
               <DialogTitle className="flex items-center gap-2 text-base">

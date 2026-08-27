@@ -104,9 +104,12 @@ const navItems: NavItem[] = [
 ];
 
 export function Sidebar({ currentPage, onPageChange }: SidebarProps) {
-  const { t } = useTranslation('common');
+  const { t, i18n } = useTranslation('common');
   const [isCollapsed, setIsCollapsed] = useState(true);
   const { mode, toggleMode } = useTheme();
+  const isRtl = ['ar', 'fa'].includes(
+    (i18n.resolvedLanguage || i18n.language || 'en').toLowerCase().split('-')[0],
+  );
 
   return (
     <TooltipProvider delayDuration={0}>
@@ -144,15 +147,15 @@ export function Sidebar({ currentPage, onPageChange }: SidebarProps) {
                 isCollapsed ? 'w-9 h-9' : 'w-10 h-10',
               )}
             >
-              <img src="/logo-128.png" alt="Youwee" className="w-full h-full object-cover" />
+              <img src="/logo-128.png" alt="weeb" className="w-full h-full object-cover" />
             </div>
             <span
               className={cn(
                 'font-bold text-lg whitespace-nowrap transition-all duration-300 gradient-text',
-                isCollapsed ? 'opacity-0 w-0 ml-0' : 'opacity-100',
+                isCollapsed ? 'opacity-0 w-0 ms-0' : 'opacity-100',
               )}
             >
-              Youwee
+              weeb
             </span>
           </div>
         </div>
@@ -196,12 +199,12 @@ export function Sidebar({ currentPage, onPageChange }: SidebarProps) {
 
                   {/* Active indicator */}
                   {currentPage === item.id && (
-                    <div className="absolute left-0 w-1 h-5 rounded-r-full bg-primary shadow-[0_0_10px_hsl(var(--primary)/0.5)]" />
+                    <div className="absolute start-0 w-1 h-5 rounded-s-full bg-primary shadow-[0_0_10px_hsl(var(--primary)/0.5)]" />
                   )}
                 </button>
               </TooltipTrigger>
               {isCollapsed && (
-                <TooltipContent side="right" className="font-medium">
+                <TooltipContent side={isRtl ? 'left' : 'right'} className="font-medium">
                   {t(item.labelKey)}
                 </TooltipContent>
               )}
@@ -245,7 +248,7 @@ export function Sidebar({ currentPage, onPageChange }: SidebarProps) {
               </button>
             </TooltipTrigger>
             {isCollapsed && (
-              <TooltipContent side="right" className="font-medium">
+              <TooltipContent side={isRtl ? 'left' : 'right'} className="font-medium">
                 {mode === 'dark' ? t('sidebar.lightMode') : t('sidebar.darkMode')}
               </TooltipContent>
             )}
@@ -266,9 +269,9 @@ export function Sidebar({ currentPage, onPageChange }: SidebarProps) {
               >
                 <span className="flex-shrink-0 transition-transform duration-200 group-hover:scale-110">
                   {isCollapsed ? (
-                    <ChevronRight className="w-5 h-5" />
+                    <ChevronRight className="w-5 h-5 rtl:rotate-180" />
                   ) : (
-                    <ChevronLeft className="w-5 h-5" />
+                    <ChevronLeft className="w-5 h-5 rtl:rotate-180" />
                   )}
                 </span>
                 <span
@@ -282,7 +285,7 @@ export function Sidebar({ currentPage, onPageChange }: SidebarProps) {
               </button>
             </TooltipTrigger>
             {isCollapsed && (
-              <TooltipContent side="right" className="font-medium">
+              <TooltipContent side={isRtl ? 'left' : 'right'} className="font-medium">
                 {t('sidebar.expand')}
               </TooltipContent>
             )}

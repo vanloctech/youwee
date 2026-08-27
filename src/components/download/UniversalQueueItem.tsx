@@ -327,7 +327,7 @@ export function UniversalQueueItem({
         {isActive && (
           <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent">
             {/* Progress Bar at bottom */}
-            <div className="absolute bottom-0 left-0 right-0 p-2">
+            <div className="absolute bottom-0 inset-x-0 p-2">
               <div className="h-1.5 rounded-full overflow-hidden bg-white/20 mb-1 backdrop-blur-sm">
                 {/* Live stream: indeterminate shimmer progress bar */}
                 {item.isLive && item.progress === 0 ? (
@@ -786,7 +786,7 @@ export function UniversalQueueItem({
         disabled={disabled}
         title={t('queue.remove')}
         className={cn(
-          'absolute top-2 right-2 p-1.5 rounded-full transition-all',
+          'absolute top-2 end-2 p-1.5 rounded-full transition-all',
           'bg-black/50 hover:bg-black/70 text-white/70 hover:text-white',
           'opacity-0 group-hover:opacity-100',
           'disabled:opacity-50 disabled:cursor-not-allowed',

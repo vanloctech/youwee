@@ -83,7 +83,7 @@ export function DenoDialog({ onDismiss }: DenoDialogProps) {
         <div className="px-6 py-4 bg-muted/30 border-t border-border flex gap-3 justify-end">
           {denoDownloading ? (
             <Button variant="outline" size="sm" disabled>
-              <Loader2 className="w-4 h-4 mr-1 animate-spin" />
+              <Loader2 className="w-4 h-4 me-1 animate-spin" />
               Installing...
             </Button>
           ) : denoSuccess ? (

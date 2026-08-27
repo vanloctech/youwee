@@ -23,7 +23,7 @@ export function ChannelFetchLoadingState({ progress }: ChannelFetchLoadingStateP
   return (
     <div className="flex flex-col items-center justify-center py-14 text-center">
       <EmptyStateIllustration className="mb-5" icon={Tv} size="sm" isActive />
-      <div className="mt-1 w-full max-w-sm rounded-xl border border-primary/15 bg-primary/5 p-3 text-left shadow-sm">
+      <div className="mt-1 w-full max-w-sm rounded-xl border border-primary/15 bg-primary/5 p-3 text-start shadow-sm">
         <div className="flex items-center justify-between gap-3">
           <div className="flex items-center gap-2 text-xs font-medium text-primary">
             <span className="relative flex h-2 w-2">

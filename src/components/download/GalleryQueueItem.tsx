@@ -128,7 +128,7 @@ export function GalleryQueueItem({
         disabled={disabled}
         title={t('queue.remove')}
         className={cn(
-          'absolute top-2 right-2 p-1.5 rounded-full transition-all',
+          'absolute top-2 end-2 p-1.5 rounded-full transition-all',
           'bg-black/50 hover:bg-black/70 text-white/70 hover:text-white',
           'opacity-0 group-hover:opacity-100',
           'disabled:opacity-50 disabled:cursor-not-allowed',

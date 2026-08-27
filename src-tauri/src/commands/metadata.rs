@@ -59,6 +59,7 @@ pub struct ExtractDataRowsInput {
     pub source: ExportSource,
     pub text: String,
     pub limit: Option<u32>,
+    pub lang: Option<String>,
     pub detail_mode: bool,
     pub cookie_mode: Option<String>,
     pub cookie_browser: Option<String>,
@@ -452,8 +453,9 @@ async fn run_export_ytdlp(
 async fn run_export_youtube_keyword(
     query: &str,
     limit: Option<u32>,
+    lang: Option<String>,
 ) -> Result<Vec<ExportRow>, String> {
-    let response = search_youtube_videos_internal(query.to_string(), limit, None, None).await?;
+    let response = search_youtube_videos_internal(query.to_string(), limit, None, None, lang).await?;
     Ok(response
         .videos
         .into_iter()
@@ -486,7 +488,7 @@ pub async fn extract_data_rows(
         let effective_source = detect_export_source(&line, &input.source);
 
         let export_result = if matches!(effective_source, ExportSource::YoutubeKeyword) {
-            run_export_youtube_keyword(&line, input.limit)
+            run_export_youtube_keyword(&line, input.limit, input.lang.clone())
                 .await
                 .map(|rows| (rows, Some(line.clone())))
         } else {

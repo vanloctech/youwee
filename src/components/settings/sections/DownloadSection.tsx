@@ -103,7 +103,7 @@ export function DownloadSection({ highlightId }: DownloadSectionProps) {
   const filenameMetadataPreviewParts: Record<FilenameMetadataField, string> = {
     uploadDate: '2026-07-24',
     viewCount: '1234567views',
-    uploader: 'Youwee Channel',
+    uploader: 'weeb Channel',
     duration: '12m34s',
     resolution: '1080p',
     videoId: 'dQw4w9WgXcQ',
@@ -422,7 +422,7 @@ export function DownloadSection({ highlightId }: DownloadSectionProps) {
                           {t(`download.sb_${cat}_desc`)}
                         </p>
                       </div>
-                      <div className="flex items-center gap-0.5 p-0.5 bg-muted/50 rounded-md shrink-0 ml-3">
+                      <div className="flex items-center gap-0.5 p-0.5 bg-muted/50 rounded-md shrink-0 ms-3">
                         {(['remove', 'mark', 'off'] as SponsorBlockAction[]).map((action) => (
                           <button
                             key={action}

@@ -582,7 +582,7 @@ fn set_status(state: TelegramStatusState, message: Option<String>) -> bool {
 }
 
 fn help_text() -> &'static str {
-    "Youwee Telegram commands:\n/start - Show command keyboard.\n/add <url> [quality] - Add a URL to the queue.\n/download <url> [quality] - Add a URL and start downloading when idle.\n/status - Show download status.\n/queue - Show recent queue items.\n/run - Start pending downloads.\n/stop - Stop the current download.\n/help - Show this help.\n\nYou can also send a link directly.\nQuality: best, 8k, 4k, 2k, 1080, 720, 480, 360, audio, mp3."
+    "weeb Telegram commands:\n/start - Show command keyboard.\n/add <url> [quality] - Add a URL to the queue.\n/download <url> [quality] - Add a URL and start downloading when idle.\n/status - Show download status.\n/queue - Show recent queue items.\n/run - Start pending downloads.\n/stop - Stop the current download.\n/help - Show this help.\n\nYou can also send a link directly.\nQuality: best, 8k, 4k, 2k, 1080, 720, 480, 360, audio, mp3."
 }
 
 pub fn parse_command(text: &str) -> TelegramCommand {

@@ -33,7 +33,8 @@
     "select": "Choisir la langue",
     "tr": "Türkçe",
     "uz": "O‘zbekcha",
-    "ro": "Română"
+    "ro": "Română",
+    "fa": "فارسی"
   },
   "actions": {
     "cancel": "Annuler"
@@ -46,7 +47,7 @@
   "update": {
     "available": "Mise à jour disponible",
     "error": "Erreur de mise à jour",
-    "description": "Une nouvelle version de Youwee est disponible. Voulez-vous mettre à jour maintenant ?",
+    "description": "Une nouvelle version de weeb est disponible. Voulez-vous mettre à jour maintenant ?",
     "downloading": "Téléchargement de la mise à jour...",
     "ready": "Mise à jour téléchargée avec succès. Redémarrez pour appliquer les changements.",
     "errorGeneric": "Une erreur est survenue pendant la mise à jour.",
@@ -58,9 +59,9 @@
   },
   "legalDisclaimer": {
     "title": "Avis d'utilisation responsable",
-    "description": "Youwee est un outil local pour télécharger et traiter des médias à partir des URL que vous fournissez. Youwee n'est affilié ni à YouTube ni à aucune autre plateforme média.",
+    "description": "weeb est un outil local pour télécharger et traiter des médias à partir des URL que vous fournissez. weeb n'est affilié ni à YouTube ni à aucune autre plateforme média.",
     "notice": "Téléchargez uniquement du contenu que vous possédez, que vous êtes autorisé à utiliser ou que la loi vous permet d'accéder et de conserver.",
-    "responsibility": "En continuant, vous confirmez être responsable du respect des lois applicables, des conditions des plateformes, des règles de droit d'auteur et des autorisations nécessaires pour le contenu téléchargé. Le projet Youwee et ses mainteneurs ne sont pas responsables d'une mauvaise utilisation.",
+    "responsibility": "En continuant, vous confirmez être responsable du respect des lois applicables, des conditions des plateformes, des règles de droit d'auteur et des autorisations nécessaires pour le contenu téléchargé. Le projet weeb et ses mainteneurs ne sont pas responsables d'une mauvaise utilisation.",
     "accept": "Je comprends / J'accepte"
   },
   "backendErrors": {

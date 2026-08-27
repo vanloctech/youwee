@@ -24,17 +24,50 @@ import { GalleryDlContext } from './gallerydl-context';
 const STORAGE_KEY = 'youwee-gallerydl-settings';
 const DOWNLOAD_QUEUE_IDLE_GRACE_MS = 1000;
 
-interface GalleryDlSettings {
+export interface GalleryDlSettings {
   outputPath: string;
   concurrentDownloads: number;
   autoRetryEnabled: boolean;
   autoRetryMaxAttempts: number;
   autoRetryDelaySeconds: number;
+  // Advanced gallery-dl options (round 4)
+  range: string;
+  filenameTemplate: string;
+  flatOutput: boolean;
+  cbzOutput: boolean;
+  rateLimit: string;
+  minFileSize: string;
+  maxFileSize: string;
+  sleep: string;
+  retries: number;
+  timeout: number;
 }
 
 interface GalleryDownloadResult {
   filepath: string;
   history_id?: string | null;
+}
+
+interface GalleryProbe {
+  title?: string | null;
+  thumbnail?: string | null;
+  count?: number | null;
+  category?: string | null;
+  subcategory?: string | null;
+  error?: string | null;
+}
+
+interface GalleryDownloadOptions {
+  retries?: number;
+  timeout?: number;
+  range?: string;
+  filename?: string;
+  flatOutput?: boolean;
+  cbz?: boolean;
+  rateLimit?: string;
+  filesizeMin?: string;
+  filesizeMax?: string;
+  sleep?: number;
 }
 
 export interface GalleryDlContextType {
@@ -53,6 +86,7 @@ export interface GalleryDlContextType {
   startDownload: () => Promise<void>;
   stopDownload: () => Promise<void>;
   updateConcurrentDownloads: (concurrent: number) => void;
+  updateSettings: (patch: Partial<GalleryDlSettings>) => void;
 }
 
 function isAbsolutePath(path: string): boolean {
@@ -93,6 +127,22 @@ function buildItemTitle(url: string): string {
   }
 }
 
+function buildGalleryOptions(settings: GalleryDlSettings): GalleryDownloadOptions {
+  const sleep = Number(settings.sleep);
+  return {
+    retries: settings.retries > 0 ? settings.retries : undefined,
+    timeout: settings.timeout > 0 ? settings.timeout : undefined,
+    range: settings.range.trim() || undefined,
+    filename: settings.filenameTemplate.trim() || undefined,
+    flatOutput: settings.flatOutput || undefined,
+    cbz: settings.cbzOutput || undefined,
+    rateLimit: settings.rateLimit.trim() || undefined,
+    filesizeMin: settings.minFileSize.trim() || undefined,
+    filesizeMax: settings.maxFileSize.trim() || undefined,
+    sleep: Number.isFinite(sleep) && sleep > 0 ? sleep : undefined,
+  };
+}
+
 function buildExtractor(url: string): string | undefined {
   try {
     return new URL(url).hostname.replace(/^www\./, '');
@@ -118,6 +168,16 @@ export function GalleryDlProvider({ children }: { children: ReactNode }) {
       autoRetryDelaySeconds: clampAutoRetryDelaySeconds(
         saved.autoRetryDelaySeconds || AUTO_RETRY_LIMITS.delaySeconds.default,
       ),
+      range: saved.range ?? '',
+      filenameTemplate: saved.filenameTemplate ?? '',
+      flatOutput: saved.flatOutput === true,
+      cbzOutput: saved.cbzOutput === true,
+      rateLimit: saved.rateLimit ?? '',
+      minFileSize: saved.minFileSize ?? '',
+      maxFileSize: saved.maxFileSize ?? '',
+      sleep: saved.sleep ?? '',
+      retries: saved.retries ?? 8,
+      timeout: saved.timeout ?? 60,
     };
   });
 
@@ -189,6 +249,49 @@ export function GalleryDlProvider({ children }: { children: ReactNode }) {
     }, 3000);
   }, []);
 
+  const probeItems = useCallback(
+    async (newItems: DownloadItem[]) => {
+      const { cookieSettings, proxySettings } = loadNetworkSettings();
+      const networkOptions = buildCookieProxyInvokeOptions(cookieSettings, proxySettings);
+      for (const item of newItems) {
+        try {
+          setItems((current) =>
+            current.map((entry) =>
+              entry.id === item.id
+                ? { ...entry, status: 'fetching' as const }
+                : entry,
+            ),
+          );
+          const probe = await invoke<GalleryProbe>('probe_gallery', {
+            url: item.url,
+            ...networkOptions,
+          });
+          setItems((current) =>
+            current.map((entry) => {
+              if (entry.id !== item.id) return entry;
+              const next: DownloadItem = { ...entry, status: 'pending' as const };
+              if (probe.thumbnail) next.thumbnail = probe.thumbnail;
+              if (probe.title) next.title = probe.title;
+              if (probe.count) next.fileCount = probe.count;
+              if (probe.error) console.warn('gallery probe:', probe.error);
+              return next;
+            }),
+          );
+        } catch (invokeError) {
+          console.error('Failed to probe gallery URL:', invokeError);
+          setItems((current) =>
+            current.map((entry) =>
+              entry.id === item.id
+                ? { ...entry, status: 'pending' as const }
+                : entry,
+            ),
+          );
+        }
+      }
+    },
+    [],
+  );
+
   const addFromText = useCallback(
     async (text: string): Promise<number> => {
       const urls = parseUniversalUrls(text);
@@ -226,11 +329,12 @@ export function GalleryDlProvider({ children }: { children: ReactNode }) {
           return nextItems;
         });
         focusItem(newItems[newItems.length - 1].id);
+        void probeItems(newItems);
       }
 
       return newItems.length;
     },
-    [filterDownloadedDuplicateCandidates, focusItem],
+    [filterDownloadedDuplicateCandidates, focusItem, probeItems],
   );
 
   const importFromFile = useCallback(async (): Promise<number> => {
@@ -313,6 +417,14 @@ export function GalleryDlProvider({ children }: { children: ReactNode }) {
     });
   }, []);
 
+  const updateSettings = useCallback((patch: Partial<GalleryDlSettings>) => {
+    setSettings((current) => {
+      const next = { ...current, ...patch };
+      saveSettings(next);
+      return next;
+    });
+  }, []);
+
   const startDownload = useCallback(async () => {
     const hasPendingItems = () =>
       itemsRef.current.some((item) => item.status === 'pending' || item.status === 'error');
@@ -365,6 +477,8 @@ export function GalleryDlProvider({ children }: { children: ReactNode }) {
             logStderr,
             ...networkOptions,
             source: item.extractor || null,
+            thumbnail: item.thumbnail || null,
+            options: buildGalleryOptions(settingsRef.current),
           });
 
           setItems((current) =>
@@ -532,6 +646,7 @@ export function GalleryDlProvider({ children }: { children: ReactNode }) {
       startDownload,
       stopDownload,
       updateConcurrentDownloads,
+      updateSettings,
     }),
     [
       items,
@@ -549,6 +664,7 @@ export function GalleryDlProvider({ children }: { children: ReactNode }) {
       startDownload,
       stopDownload,
       updateConcurrentDownloads,
+      updateSettings,
     ],
   );
 

@@ -115,6 +115,7 @@ struct YoutubeSearchVideosRequest {
     limit: Option<u32>,
     filters: Option<YoutubeSearchFilters>,
     continuation: Option<String>,
+    lang: Option<String>,
 }
 
 #[derive(Debug, Serialize)]
@@ -394,6 +395,7 @@ async fn handle_bridge_request(
                 request.limit,
                 request.filters,
                 request.continuation,
+                request.lang.clone(),
             )
             .await?;
             Ok((

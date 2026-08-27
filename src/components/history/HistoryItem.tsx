@@ -355,7 +355,7 @@ export function HistoryItem({ entry }: HistoryItemProps) {
                 )}
               </div>
               <span className="rounded bg-background/35 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground/80">
-                Youwee
+                weeb
               </span>
             </div>
           </div>
@@ -364,7 +364,7 @@ export function HistoryItem({ entry }: HistoryItemProps) {
         {/* Source badge */}
         <div
           className={cn(
-            'absolute top-1.5 left-1.5 flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium bg-black/60',
+            'absolute top-1.5 start-1.5 flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium bg-black/60',
             sourceConfig.color,
           )}
         >
@@ -386,7 +386,7 @@ export function HistoryItem({ entry }: HistoryItemProps) {
 
         {/* Quality badge */}
         {entry.quality && !isDataExport && (
-          <div className="absolute bottom-1.5 right-1.5 px-1.5 py-0.5 rounded bg-black/70 text-[10px] text-white font-medium">
+          <div className="absolute bottom-1.5 end-1.5 px-1.5 py-0.5 rounded bg-black/70 text-[10px] text-white font-medium">
             {entry.quality}
           </div>
         )}
@@ -396,7 +396,7 @@ export function HistoryItem({ entry }: HistoryItemProps) {
             type="button"
             onClick={handlePlayAudio}
             className={cn(
-              'absolute bottom-1.5 left-1.5 w-6 h-6 rounded-full flex items-center justify-center shadow-sm',
+              'absolute bottom-1.5 start-1.5 w-6 h-6 rounded-full flex items-center justify-center shadow-sm',
               'bg-primary text-primary-foreground hover:bg-primary/90',
               'opacity-0 group-hover:opacity-100 transition-opacity',
               isCurrentAudio && 'opacity-100',
@@ -807,7 +807,7 @@ export function HistoryItem({ entry }: HistoryItemProps) {
                   : t('library.item.deleteConfirm', { title: entry.title })}
               </AlertDialogDescription>
             </AlertDialogHeader>
-            <AlertDialogFooter className="gap-2 sm:space-x-0">
+            <AlertDialogFooter className="gap-2">
               <AlertDialogCancel disabled={isDeleting}>
                 {t('library.item.deleteCancel')}
               </AlertDialogCancel>

@@ -25,7 +25,7 @@
     "guideFfmpegTitle": "Vídeo e áudio baixados separadamente",
     "guideFfmpegText": "Instale o FFmpeg em Configurações > Dependências para permitir a mesclagem de vídeo e áudio em um único arquivo de saída.",
     "guidePreferredFpsTitle": "A taxa de quadros pode alterar a qualidade",
-    "guidePreferredFpsText": "30 FPS pode economizar espaço, mas o Youwee seleciona apenas streams existentes. Alguns vídeos só oferecem 30 FPS em qualidades menores, como 720p ou 480p, então a qualidade baixada pode ficar abaixo da escolhida.",
+    "guidePreferredFpsText": "30 FPS pode economizar espaço, mas o weeb seleciona apenas streams existentes. Alguns vídeos só oferecem 30 FPS em qualidades menores, como 720p ou 480p, então a qualidade baixada pode ficar abaixo da escolhida.",
     "guideOpenSettings": "Abrir Configurações",
     "guideGotIt": "Entendi",
     "detectedMultiple": "{{count}} URLs detectados",

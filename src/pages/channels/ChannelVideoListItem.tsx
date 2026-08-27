@@ -50,7 +50,7 @@ export function ChannelVideoListItem({
       type="button"
       onClick={onToggle}
       className={cn(
-        'group w-full flex gap-3 p-2 rounded-xl transition-all duration-200 text-left',
+        'group w-full flex gap-3 p-2 rounded-xl transition-all duration-200 text-start',
         'bg-card/50 hover:bg-card/80',
         isSelected && !videoState && 'bg-primary/5',
         isActive && 'bg-primary/5',
@@ -90,14 +90,14 @@ export function ChannelVideoListItem({
         )}
 
         {video.duration && !isActive && (
-          <span className="absolute bottom-1.5 right-1.5 px-1.5 py-0.5 rounded bg-black/70 text-[10px] text-white font-medium tabular-nums">
+          <span className="absolute bottom-1.5 end-1.5 px-1.5 py-0.5 rounded bg-black/70 text-[10px] text-white font-medium tabular-nums">
             {formatDuration(video.duration)}
           </span>
         )}
 
         {isActive && (
           <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent">
-            <div className="absolute bottom-0 left-0 right-0 p-2">
+            <div className="absolute bottom-0 inset-x-0 p-2">
               <div className="h-1.5 rounded-full overflow-hidden bg-white/20 mb-1 backdrop-blur-sm">
                 <div
                   className="h-full rounded-full transition-all duration-300 relative overflow-hidden"

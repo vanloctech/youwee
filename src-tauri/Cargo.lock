@@ -5811,6 +5811,45 @@ dependencies = [
 ]
 
 [[package]]
+name = "weeb"
+version = "0.20.3"
+dependencies = [
+ "base64 0.23.0",
+ "chrono",
+ "ed25519-dalek",
+ "flate2",
+ "futures-util",
+ "hex",
+ "image",
+ "log",
+ "regex",
+ "reqwest",
+ "rusqlite",
+ "serde",
+ "serde_json",
+ "sha2 0.11.0",
+ "tar",
+ "tauri",
+ "tauri-build",
+ "tauri-plugin-cli",
+ "tauri-plugin-deep-link",
+ "tauri-plugin-dialog",
+ "tauri-plugin-fs",
+ "tauri-plugin-log",
+ "tauri-plugin-notification",
+ "tauri-plugin-opener",
+ "tauri-plugin-process",
+ "tauri-plugin-shell",
+ "tauri-plugin-single-instance",
+ "tauri-plugin-updater",
+ "tokio",
+ "uuid",
+ "windows-sys 0.61.2",
+ "xz2",
+ "zip 8.6.0",
+]
+
+[[package]]
 name = "weezl"
 version = "0.1.12"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -6423,45 +6462,6 @@ dependencies = [
  "quote",
  "syn 2.0.119",
  "synstructure",
-]
-
-[[package]]
-name = "youwee"
-version = "0.20.3"
-dependencies = [
- "base64 0.23.0",
- "chrono",
- "ed25519-dalek",
- "flate2",
- "futures-util",
- "hex",
- "image",
- "log",
- "regex",
- "reqwest",
- "rusqlite",
- "serde",
- "serde_json",
- "sha2 0.11.0",
- "tar",
- "tauri",
- "tauri-build",
- "tauri-plugin-cli",
- "tauri-plugin-deep-link",
- "tauri-plugin-dialog",
- "tauri-plugin-fs",
- "tauri-plugin-log",
- "tauri-plugin-notification",
- "tauri-plugin-opener",
- "tauri-plugin-process",
- "tauri-plugin-shell",
- "tauri-plugin-single-instance",
- "tauri-plugin-updater",
- "tokio",
- "uuid",
- "windows-sys 0.61.2",
- "xz2",
- "zip 8.6.0",
 ]
 
 [[package]]

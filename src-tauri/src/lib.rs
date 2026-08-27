@@ -1,4 +1,4 @@
-//! Youwee - Modern YouTube Video Downloader
+//! weeb - Modern YouTube Video Downloader
 //!
 //! This is the main entry point for the Tauri application.
 //! The codebase is organized into the following modules:
@@ -325,6 +325,7 @@ pub fn run() {
             commands::stop_download,
             commands::download_gallery,
             commands::stop_gallery_download,
+            commands::probe_gallery,
             // Video info commands
             commands::get_video_basic_info,
             commands::get_video_info,
@@ -369,6 +370,8 @@ pub fn run() {
             // History commands
             commands::add_history,
             commands::get_history,
+            commands::list_gallery_items,
+            commands::get_gallery_thumbnail,
             commands::get_history_entries_by_ids,
             commands::find_duplicate_downloads,
             commands::delete_history,
@@ -522,7 +525,7 @@ pub fn run() {
 /// Setup system tray icon and menu
 fn setup_tray(app: &tauri::App) -> Result<(), Box<dyn std::error::Error>> {
     // Build a minimal initial menu (will be replaced by rebuild_tray_menu)
-    let show = MenuItemBuilder::with_id("show", "Open Youwee").build(app)?;
+    let show = MenuItemBuilder::with_id("show", "Open weeb").build(app)?;
     let quit = MenuItemBuilder::with_id("quit", "Quit").build(app)?;
     let menu = MenuBuilder::new(app)
         .item(&show)
@@ -542,7 +545,7 @@ fn setup_tray(app: &tauri::App) -> Result<(), Box<dyn std::error::Error>> {
 
     let tray_builder = TrayIconBuilder::with_id("main-tray")
         .icon(icon)
-        .tooltip("Youwee")
+        .tooltip("weeb")
         .menu(&menu)
         .on_menu_event(move |_tray, event| {
             let id = event.id().as_ref();
@@ -651,7 +654,7 @@ fn tray_text(key: &str) -> &'static str {
         ("vi", "check_all") => "Kiểm tra kênh theo dõi ngay",
         ("vi", "settings") => "Cài đặt",
         ("vi", "check_update") => "Kiểm tra cập nhật...",
-        ("vi", "open") => "Mở Youwee",
+        ("vi", "open") => "Mở weeb",
         ("vi", "browser_extension") => "Browser Extension",
         ("vi", "quit") => "Thoát",
         // Chinese
@@ -670,7 +673,7 @@ fn tray_text(key: &str) -> &'static str {
         ("zh-CN", "check_all") => "立即检查已关注频道",
         ("zh-CN", "settings") => "设置",
         ("zh-CN", "check_update") => "检查更新...",
-        ("zh-CN", "open") => "打开 Youwee",
+        ("zh-CN", "open") => "打开 weeb",
         ("zh-CN", "browser_extension") => "浏览器扩展",
         ("zh-CN", "quit") => "退出",
         // French
@@ -689,7 +692,7 @@ fn tray_text(key: &str) -> &'static str {
         ("fr", "check_all") => "Verifier les chaines suivies maintenant",
         ("fr", "settings") => "Parametres",
         ("fr", "check_update") => "Verifier les mises a jour...",
-        ("fr", "open") => "Ouvrir Youwee",
+        ("fr", "open") => "Ouvrir weeb",
         ("fr", "browser_extension") => "Extension navigateur",
         ("fr", "quit") => "Quitter",
         // Japanese
@@ -708,7 +711,7 @@ fn tray_text(key: &str) -> &'static str {
         ("ja", "check_all") => "フォロー中チャンネルを今すぐチェック",
         ("ja", "settings") => "設定",
         ("ja", "check_update") => "更新をチェック...",
-        ("ja", "open") => "Youwee を開く",
+        ("ja", "open") => "weeb を開く",
         ("ja", "browser_extension") => "ブラウザ拡張機能",
         ("ja", "quit") => "終了",
         // Spanish
@@ -727,7 +730,7 @@ fn tray_text(key: &str) -> &'static str {
         ("es", "check_all") => "Comprobar canales seguidos ahora",
         ("es", "settings") => "Ajustes",
         ("es", "check_update") => "Buscar actualizaciones...",
-        ("es", "open") => "Abrir Youwee",
+        ("es", "open") => "Abrir weeb",
         ("es", "browser_extension") => "Extensión de navegador",
         ("es", "quit") => "Salir",
         // English (default)
@@ -746,7 +749,7 @@ fn tray_text(key: &str) -> &'static str {
         (_, "check_all") => "Check Followed Channels Now",
         (_, "settings") => "Settings",
         (_, "check_update") => "Check for Updates...",
-        (_, "open") => "Open Youwee",
+        (_, "open") => "Open weeb",
         (_, "browser_extension") => "Browser Extension",
         (_, "quit") => "Quit",
         _ => "???",

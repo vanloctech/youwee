@@ -335,7 +335,7 @@ pub async fn get_ytdlp_path(app: &AppHandle) -> Option<(PathBuf, bool)> {
         YtdlpChannel::Bundled => {
             // Bundled must mean the sidecar shipped with the current app build.
             // Keep the old app-data binary only as a compatibility fallback for
-            // installs that predate the Youwee-specific sidecar name.
+            // installs that predate the weeb-specific sidecar name.
             if let Some(bundled) = get_bundled_ytdlp_path() {
                 return Some((bundled, true));
             }

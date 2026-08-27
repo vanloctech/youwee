@@ -1,0 +1,113 @@
+{
+  "title": "گالری",
+  "tabs": {
+    "queue": "صف",
+    "library": "کتابخانه"
+  },
+  "page": {
+    "systemManagedOnly": "فقط مدیریت‌شده توسط سیستم"
+  },
+  "missing": {
+    "title": "gallery-dl الزامی است",
+    "checking": "در حال بررسی gallery-dl سیستم...",
+    "description": "برای دانلود گالری‌ها، مجموعه‌ها و فید سازندگان، gallery-dl را روی سیستم خود نصب کنید.",
+    "refresh": "به‌روزرسانی وضعیت",
+    "openDependencies": "باز کردن وابستگی‌ها",
+    "installGuide": "راهنمای نصب"
+  },
+  "actions": {
+    "startDownload": "شروع دانلود",
+    "stopDownload": "توقف دانلود",
+    "clearAll": "پاک کردن همه"
+  },
+  "settings": {
+    "notSelected": "انتخاب پوشه",
+    "selectFolder": "انتخاب پوشه خروجی",
+    "systemManagedOnly": "فقط مدیریت‌شده توسط سیستم",
+    "advanced": "پیشرفته",
+    "more": "بیشتر",
+    "parallelDownloads": "دانلودهای هم‌زمان",
+    "atATime": "{{count}} در هر بار",
+    "systemManagedHint": "weeb فقط در این صفحه از gallery-dl سیستم استفاده می‌کند.",
+    "range": "بازه‌ی صفحه‌ها",
+    "rangeHint": "مثلاً 1-20 یا 1:24:3",
+    "filenameTemplate": "قالب نام فایل",
+    "filenameHint": "مثلاً {manga}_c{chapter}_{num:>03}.{extension}",
+    "flatOutput": "خروجی تخت (بدون زیرپوشه)",
+    "cbzOutput": "ذخیره به‌صورت CBZ (کمیک)",
+    "rateLimit": "حداکثر سرعت",
+    "minFileSize": "کمینه اندازه فایل",
+    "maxFileSize": "بیشینه اندازه فایل",
+    "sleep": "فاصله بین فایل‌ها (ثانیه)",
+    "retries": "تلاش مجدد",
+    "timeout": "مهلت (ثانیه)"
+  },
+  "browser": {
+    "searchPlaceholder": "جستجو بر اساس عنوان یا منبع…",
+    "selectAll": "انتخاب همه",
+    "selectNone": "انتخاب هیچ‌کدام",
+    "selectedCount": "{{count}} انتخاب شده",
+    "deleteSelected": "حذف موارد انتخاب‌شده",
+    "noResults": "هیچ موردی با جستجوی شما مطابقت ندارد",
+    "noResultsHint": "عنوان یا نام منبع دیگری را امتحان کنید.",
+    "openFolder": "باز کردن پوشه",
+    "deleteTitle": "حذف گالری‌های انتخاب‌شده؟",
+    "deleteConfirm": "{{count}} مورد گالری از کتابخانه حذف شود؟ پرونده‌های دانلودشده روی دستگاه شما باقی می‌مانند.",
+    "delete": "حذف",
+    "deleted": "{{count}} مورد از کتابخانه حذف شد",
+    "cancel": "لغو",
+    "refresh": "تازه‌سازی",
+    "emptyTitle": "هنوز گالری‌ای نیست",
+    "emptyDescription": "برای دیدن گالری‌ها در اینجا، ابتدا یکی را دانلود کنید. از تب صف برای افزودن و دانلود گالری‌ها استفاده کنید.",
+    "fileMissing": "پرونده گم شده است",
+    "downloading": "در حال دانلود {{count}} مورد…",
+    "viewQueue": "مشاهده صف",
+    "viewLibrary": "مشاهده کتابخانه",
+    "finished": "{{count}} دانلود به پایان رسید",
+    "goToQueue": "رفتن به صف",
+    "discoverTitle": "یافتن گالری‌های جدید",
+    "discoverHint": "جستجو در سایت‌های کمیک و مانها با کلیدواژه. نتیجه‌ها به صف دانلود اضافه می‌شوند.",
+    "discoverKeyword": "کلیدواژه… (مثلاً نام سری)",
+    "discoverSearch": "جستجو و افزودن به صف",
+    "discoverGeneric": "نشانی گالری را وارد کنید…",
+    "discoverAdded": "به صف اضافه شد",
+    "discoverEmpty": "ابتدا کلیدواژه یا نشانی را وارد کنید",
+    "items": "{{count}} مورد",
+    "selectItem": "انتخاب مورد"
+  },
+  "queue": {
+    "title": "صف",
+    "pending": "{{count}} در انتظار",
+    "clearCompleted": "پاک کردن تکمیل‌شده‌ها ({{count}})",
+    "openFolder": "باز کردن پوشه",
+    "remove": "حذف مورد",
+    "status": {
+      "pending": "در انتظار",
+      "downloading": "در حال دانلود",
+      "completed": "تکمیل‌شده",
+      "failed": "ناموفق"
+    },
+    "empty": {
+      "title": "برای شروع، نشانی یک گالری را رها کنید",
+      "description": "از این صفحه برای گالری‌های تصویری، فید هنرمندان، فصل‌های مانگا و سایر منابع مجموعه‌ای که با gallery-dl بهتر از Universal کار می‌کنند استفاده کنید.",
+      "moreCount": "و موارد بسیار دیگر",
+      "viewFullList": "مشاهده سایت‌های پشتیبانی‌شده"
+    },
+    "countFiles": "{{count}} فایل"
+  },
+  "urlInput": {
+    "single": "تکی",
+    "singleHint": "نشانی یک گالری را بچسبانید",
+    "multiple": "چندتایی",
+    "multipleHint": "چند نشانی گالری اضافه کنید (هر خط یکی)",
+    "paste": "چسباندن",
+    "import": "وارد کردن",
+    "detectedMultiple": "{{count}} نشانی شناسایی شد",
+    "placeholder": "نشانی گالری، پست یا سازنده را بچسبانید",
+    "placeholderMultiple": "هر خط یک نشانی. خطوطی که با # شروع می‌شوند نادیده گرفته می‌شوند.",
+    "urlCount": "{{count}} نشانی",
+    "urlCount_plural": "{{count}} نشانی",
+    "clearInput": "پاک کردن",
+    "addToQueue": "افزودن"
+  }
+}

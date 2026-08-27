@@ -33,7 +33,8 @@
     "uz": "O‘zbekcha",
     "label": "Til",
     "select": "Tilni tanlang",
-    "ro": "Română"
+    "ro": "Română",
+    "fa": "فارسی"
   },
   "actions": {
     "cancel": "Bekor qilish"
@@ -46,7 +47,7 @@
   "update": {
     "available": "Yangilanish mavjud",
     "error": "Yangilash xatosi",
-    "description": "Youwee uchun yangi versiya mavjud. Hozir yangilashni xohlaysizmi?",
+    "description": "weeb uchun yangi versiya mavjud. Hozir yangilashni xohlaysizmi?",
     "downloading": "Yangilanish yuklab olinmoqda...",
     "ready": "Yangilanish muvaffaqiyatli yuklab olindi! O'zgarishlarni qo'llash uchun qayta ishga tushiring.",
     "errorGeneric": "Yangilashda xatolik yuz berdi.",
@@ -58,9 +59,9 @@
   },
   "legalDisclaimer": {
     "title": "Mas'uliyatli foydalanish haqida eslatma",
-    "description": "Youwee siz taqdim etgan URL manzillardan media yuklab olish va qayta ishlash uchun mahalliy vositadir. U YouTube yoki boshqa media platformasi bilan bog'liq emas.",
+    "description": "weeb siz taqdim etgan URL manzillardan media yuklab olish va qayta ishlash uchun mahalliy vositadir. U YouTube yoki boshqa media platformasi bilan bog'liq emas.",
     "notice": "Faqat sizga tegishli boʻlgan, foydalanishga ruxsati bor yoki qonuniy ravishda kirish va saqlashga ruxsat berilgan kontentni yuklab oling.",
-    "responsibility": "Davom etish orqali siz amaldagi qonunlar, platforma shartlari, mualliflik huquqi qoidalari va yuklab olingan kontent uchun talab qilinadigan ruxsatlarga rioya qilish uchun javobgar ekanligingizni tasdiqlaysiz. Youwee loyihasi va ta'minotchilar noto'g'ri foydalanish uchun javobgar emas.",
+    "responsibility": "Davom etish orqali siz amaldagi qonunlar, platforma shartlari, mualliflik huquqi qoidalari va yuklab olingan kontent uchun talab qilinadigan ruxsatlarga rioya qilish uchun javobgar ekanligingizni tasdiqlaysiz. weeb loyihasi va ta'minotchilar noto'g'ri foydalanish uchun javobgar emas.",
     "accept": "Men tushunaman / roziman"
   },
   "backendErrors": {

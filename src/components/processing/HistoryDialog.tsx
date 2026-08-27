@@ -270,7 +270,7 @@ export function HistoryDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-4xl h-[85vh] p-0 gap-0 flex flex-col overflow-hidden">
         <DialogHeader className="flex-shrink-0 px-6 py-4 border-b">
-          <div className="flex items-center justify-between pr-8">
+          <div className="flex items-center justify-between pe-8">
             <DialogTitle className="flex items-center gap-2">
               <History className="w-5 h-5" />
               {t('processing.historyDialog.title')}
@@ -300,24 +300,24 @@ export function HistoryDialog({
               {/* Search + Date range */}
               <div className="flex items-center gap-1.5">
                 <div className="relative flex-1">
-                  <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
+                  <Search className="absolute start-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
                   <Input
                     placeholder={t('processing.historyDialog.searchPlaceholder')}
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     className={cn(
-                      'h-8 pl-8 text-xs',
+                      'h-8 ps-8 text-xs',
                       'bg-background/50 border-border/50',
                       'focus:bg-background transition-colors',
                       'placeholder:text-muted-foreground/50',
-                      searchQuery ? 'pr-7' : 'pr-3',
+                      searchQuery ? 'pe-7' : 'pe-3',
                     )}
                   />
                   {searchQuery && (
                     <button
                       type="button"
                       onClick={() => setSearchQuery('')}
-                      className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                      className="absolute end-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
                     >
                       <X className="w-3 h-3" />
                     </button>
@@ -343,7 +343,7 @@ export function HistoryDialog({
                     >
                       <Calendar className="w-3.5 h-3.5 shrink-0" />
                       <span className="truncate">{dateRangeLabel}</span>
-                      <ChevronDown className="w-3 h-3 ml-auto shrink-0 opacity-70" />
+                      <ChevronDown className="w-3 h-3 ms-auto shrink-0 opacity-70" />
                     </Button>
                   </PopoverTrigger>
                   <PopoverContent
@@ -364,7 +364,7 @@ export function HistoryDialog({
                           type="button"
                           onClick={() => setActiveDateField('from')}
                           className={cn(
-                            'text-left rounded-md border px-2.5 py-2 transition-colors',
+                            'text-start rounded-md border px-2.5 py-2 transition-colors',
                             activeDateField === 'from'
                               ? 'border-primary/40 bg-primary/10'
                               : 'border-border/60 bg-background/70 hover:bg-muted/40',
@@ -381,7 +381,7 @@ export function HistoryDialog({
                           type="button"
                           onClick={() => setActiveDateField('to')}
                           className={cn(
-                            'text-left rounded-md border px-2.5 py-2 transition-colors',
+                            'text-start rounded-md border px-2.5 py-2 transition-colors',
                             activeDateField === 'to'
                               ? 'border-primary/40 bg-primary/10'
                               : 'border-border/60 bg-background/70 hover:bg-muted/40',
@@ -497,7 +497,7 @@ export function HistoryDialog({
                         className="h-7 px-2 text-[11px]"
                         disabled={!hasDateFilter}
                       >
-                        <X className="w-3 h-3 mr-1" />
+                        <X className="w-3 h-3 me-1" />
                         {t('processing.historyDialog.clearDates')}
                       </Button>
                     </div>
@@ -569,7 +569,7 @@ export function HistoryDialog({
                       key={job.id}
                       onClick={() => setSelectedJob(job)}
                       className={cn(
-                        'w-full text-left p-3 rounded-lg transition-colors',
+                        'w-full text-start p-3 rounded-lg transition-colors',
                         'hover:bg-muted/50',
                         selectedJob?.id === job.id && 'bg-muted',
                       )}
@@ -581,11 +581,11 @@ export function HistoryDialog({
                             {job.input_path.split('/').pop()}
                           </p>
                         </div>
-                        <p className="text-xs text-muted-foreground mt-0.5 ml-3.5">
+                        <p className="text-xs text-muted-foreground mt-0.5 ms-3.5">
                           {formatDate(job.created_at)}
                         </p>
                         {job.user_prompt && (
-                          <p className="text-xs text-muted-foreground/70 mt-1 ml-3.5 break-all line-clamp-2">
+                          <p className="text-xs text-muted-foreground/70 mt-1 ms-3.5 break-all line-clamp-2">
                             "{job.user_prompt}"
                           </p>
                         )}

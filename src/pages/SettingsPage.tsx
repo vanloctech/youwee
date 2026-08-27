@@ -317,11 +317,11 @@ function AboutSettingsContent({
             <div className="flex items-start justify-between gap-4">
               <div className="flex items-center gap-4">
                 <div className="w-16 h-16 flex-shrink-0 rounded-2xl overflow-hidden">
-                  <img src="/logo-128.png" alt="Youwee" className="w-full h-full object-cover" />
+                  <img src="/logo-128.png" alt="weeb" className="w-full h-full object-cover" />
                 </div>
                 <div>
                   <div className="flex items-center gap-2.5">
-                    <span className="text-xl font-bold tracking-tight gradient-text">Youwee</span>
+                    <span className="text-xl font-bold tracking-tight gradient-text">weeb</span>
                     <Badge
                       variant="secondary"
                       className="font-mono text-xs bg-primary/10 text-primary border-0"
@@ -385,7 +385,7 @@ function AboutSettingsContent({
                 <Button
                   variant="ghost"
                   size="icon"
-                  onClick={updater.checkForUpdate}
+                  onClick={() => void updater.checkForUpdate()}
                   disabled={isAppChecking}
                   title={t('about.checkForUpdates')}
                   className="h-9 w-9"
@@ -450,9 +450,9 @@ function AboutSettingsContent({
             </div>
 
             <div className="space-y-3.5 text-[13px] leading-relaxed text-muted-foreground mt-1">
-              <p>{tCommon('legalDisclaimer.description')}</p>
+              <p className="text-start leading-relaxed">{tCommon('legalDisclaimer.description')}</p>
               <div className="relative overflow-hidden rounded-xl bg-background/60 p-4 shadow-sm backdrop-blur-sm">
-                <div className="absolute left-0 top-0 bottom-0 w-1 bg-gradient-to-b from-amber-400 to-orange-500" />
+                <div className="absolute start-0 top-0 bottom-0 w-1 bg-gradient-to-b from-amber-400 to-orange-500" />
                 <p className="font-medium text-foreground/90">
                   {tCommon('legalDisclaimer.notice')}
                 </p>

@@ -77,7 +77,7 @@ export function SubtitlesQuickActions({
               type="button"
               onClick={item.onClick}
               className={cn(
-                'rounded-xl border border-dashed px-3.5 py-3 text-left transition-colors',
+                'rounded-xl border border-dashed px-3.5 py-3 text-start transition-colors',
                 'hover:bg-accent/40',
                 item.accent === 'primary' &&
                   'border-primary/40 bg-primary/5 hover:bg-primary/10 text-primary',

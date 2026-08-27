@@ -135,7 +135,7 @@ export function DataFieldSelector({ selectedFields, setSelectedFields }: DataFie
                         type="button"
                         onClick={() => toggleField(field)}
                         className={cn(
-                          'flex h-8 w-full items-center gap-2 rounded-md px-2 text-left text-sm transition hover:bg-muted/60',
+                          'flex h-8 w-full items-center gap-2 rounded-md px-2 text-start text-sm transition hover:bg-muted/60',
                           selected && 'bg-primary/10 text-primary',
                         )}
                       >

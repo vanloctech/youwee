@@ -109,7 +109,7 @@ export function useSchedule({
     if (schedule && startTriggeredRef.current && !isDownloading) {
       // Download finished after schedule triggered
       const label = sourceLabel ? ` (${sourceLabel})` : '';
-      notify('Youwee', `Scheduled download completed${label}`);
+      notify('weeb', `Scheduled download completed${label}`);
       setScheduleState(null);
       saveSchedule(storageKey, null);
       startTriggeredRef.current = false;
@@ -130,7 +130,7 @@ export function useSchedule({
       if (schedule.stopAt && now >= schedule.stopAt && isDownloading) {
         onStopRef.current();
         const label = sourceLabel ? ` (${sourceLabel})` : '';
-        notify('Youwee', `Scheduled download stopped${label}`);
+        notify('weeb', `Scheduled download stopped${label}`);
         setScheduleState(null);
         saveSchedule(storageKey, null);
         startTriggeredRef.current = false;
@@ -142,7 +142,7 @@ export function useSchedule({
         startTriggeredRef.current = true;
         onStartRef.current();
         const label = sourceLabel ? ` (${sourceLabel})` : '';
-        notify('Youwee', `Scheduled download started${label}`);
+        notify('weeb', `Scheduled download started${label}`);
         // If there's a stopAt, keep the schedule for stop monitoring
         if (!schedule.stopAt) {
           setScheduleState(null);

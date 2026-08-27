@@ -57,7 +57,7 @@ pub async fn get_ytdlp_version(app: AppHandle) -> Result<YtdlpVersionInfo, Strin
 #[tauri::command]
 pub async fn check_ytdlp_update() -> Result<String, String> {
     let client = reqwest::Client::builder()
-        .user_agent("Youwee/0.4.0")
+        .user_agent("weeb/0.4.0")
         .timeout(std::time::Duration::from_secs(10))
         .build()
         .map_err(|e| format!("Failed to create HTTP client: {}", e))?;
@@ -122,7 +122,7 @@ pub async fn update_ytdlp(app: AppHandle) -> Result<String, String> {
     let binary_path = bin_dir.join(filename);
 
     let client = reqwest::Client::builder()
-        .user_agent("Youwee/0.4.0")
+        .user_agent("weeb/0.4.0")
         .timeout(std::time::Duration::from_secs(300))
         .build()
         .map_err(|e| format!("Failed to create HTTP client: {}", e))?;
@@ -310,7 +310,7 @@ pub async fn check_ytdlp_channel_update(
 
     // Fetch latest version from GitHub
     let client = reqwest::Client::builder()
-        .user_agent("Youwee/0.6.0")
+        .user_agent("weeb/0.6.0")
         .timeout(std::time::Duration::from_secs(10))
         .build()
         .map_err(|e| format!("Failed to create HTTP client: {}", e))?;
@@ -396,7 +396,7 @@ pub async fn download_ytdlp_channel(app: AppHandle, channel: String) -> Result<S
     let binary_path = bin_dir.join(binary_name);
 
     let client = reqwest::Client::builder()
-        .user_agent("Youwee/0.6.0")
+        .user_agent("weeb/0.6.0")
         .timeout(std::time::Duration::from_secs(300))
         .build()
         .map_err(|e| format!("Failed to create HTTP client: {}", e))?;
@@ -564,7 +564,7 @@ pub async fn download_ffmpeg(app: AppHandle) -> Result<String, String> {
         .map_err(|e| format!("Failed to create bin directory: {}", e))?;
 
     let client = reqwest::Client::builder()
-        .user_agent("Youwee/0.6.0")
+        .user_agent("weeb/0.6.0")
         .build()
         .map_err(|e| format!("Failed to create HTTP client: {}", e))?;
 
@@ -836,7 +836,7 @@ pub async fn download_deno(app: AppHandle) -> Result<String, String> {
         .map_err(|e| format!("Failed to create bin directory: {}", e))?;
 
     let client = reqwest::Client::builder()
-        .user_agent("Youwee/0.6.0")
+        .user_agent("weeb/0.6.0")
         .build()
         .map_err(|e| format!("Failed to create HTTP client: {}", e))?;
 

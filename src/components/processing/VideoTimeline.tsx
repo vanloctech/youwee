@@ -103,7 +103,7 @@ export function VideoTimeline({
       {/* Progress background */}
       <div className="absolute inset-0 rounded-lg overflow-hidden">
         <div
-          className="absolute inset-y-0 left-0 bg-gradient-to-r from-primary/20 to-primary/10"
+          className="absolute inset-y-0 start-0 bg-gradient-to-r from-primary/20 to-primary/10"
           style={{ width: `${playheadPercent}%` }}
         />
       </div>
@@ -118,13 +118,13 @@ export function VideoTimeline({
           }}
         >
           {/* Selection handles */}
-          <div className="absolute left-0 top-1/2 -translate-x-1/2 -translate-y-1/2 w-3 h-8 bg-primary rounded cursor-ew-resize hover:bg-primary/80 transition-colors" />
-          <div className="absolute right-0 top-1/2 translate-x-1/2 -translate-y-1/2 w-3 h-8 bg-primary rounded cursor-ew-resize hover:bg-primary/80 transition-colors" />
+          <div className="absolute start-0 top-1/2 -translate-x-1/2 -translate-y-1/2 w-3 h-8 bg-primary rounded cursor-ew-resize hover:bg-primary/80 transition-colors" />
+          <div className="absolute end-0 top-1/2 translate-x-1/2 -translate-y-1/2 w-3 h-8 bg-primary rounded cursor-ew-resize hover:bg-primary/80 transition-colors" />
         </div>
       )}
 
       {/* Time markers */}
-      <div className="absolute bottom-1 left-0 right-0 flex justify-between px-2 text-[10px] text-muted-foreground/60 pointer-events-none">
+      <div className="absolute bottom-1 inset-x-0 flex justify-between px-2 text-[10px] text-muted-foreground/60 pointer-events-none">
         <span>0:00</span>
         <span>{formatTimeShort(duration / 4)}</span>
         <span>{formatTimeShort(duration / 2)}</span>

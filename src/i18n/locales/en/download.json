@@ -1,5 +1,7 @@
 {
   "title": "YouTube",
+  "upTo": "Up to {{height}}p",
+  "views": "views",
   "urlInput": {
     "single": "Single",
     "multiple": "Multiple",
@@ -23,9 +25,9 @@
     "guideHighResTitle": "2K/4K/8K with H.264",
     "guideHighResText": "Many sources only provide H.264 up to Full HD. For 2K/4K/8K, use Auto (or VP9/AV1 when available) to get higher resolution.",
     "guideFfmpegTitle": "Video and audio downloaded separately",
-    "guideFfmpegText": "Install FFmpeg in Settings > Dependencies so Youwee can merge video and audio into one output file.",
+    "guideFfmpegText": "Install FFmpeg in Settings > Dependencies so weeb can merge video and audio into one output file.",
     "guidePreferredFpsTitle": "Frame rate can change quality",
-    "guidePreferredFpsText": "30 FPS can save space, but Youwee only selects existing streams. Some videos only provide 30 FPS at lower qualities such as 720p or 480p, so the downloaded quality may be lower than the quality you selected.",
+    "guidePreferredFpsText": "30 FPS can save space, but weeb only selects existing streams. Some videos only provide 30 FPS at lower qualities such as 720p or 480p, so the downloaded quality may be lower than the quality you selected.",
     "guideOpenSettings": "Open Settings",
     "guideGotIt": "Got it",
     "detectedMultiple": "{{count}} URLs detected",

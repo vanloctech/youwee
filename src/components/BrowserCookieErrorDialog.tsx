@@ -34,7 +34,7 @@ export function BrowserCookieErrorDialog({
           <button
             type="button"
             onClick={onDismiss}
-            className="absolute top-4 right-4 p-1 rounded-md hover:bg-black/10 transition-colors"
+            className="absolute top-4 end-4 p-1 rounded-md hover:bg-black/10 transition-colors"
           >
             <X className="w-4 h-4 text-muted-foreground" />
           </button>
@@ -74,7 +74,7 @@ export function BrowserCookieErrorDialog({
         <div className="px-6 py-4 bg-muted/30 border-t border-border">
           <div className="flex flex-col gap-2">
             <Button className="w-full" onClick={onRetry}>
-              <RefreshCw className="w-4 h-4 mr-2" />
+              <RefreshCw className="w-4 h-4 me-2" />
               Retry Download
             </Button>
             <div className="flex gap-2">

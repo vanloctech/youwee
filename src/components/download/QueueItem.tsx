@@ -324,7 +324,7 @@ export function QueueItem({
         {isActive && (
           <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent">
             {/* Progress Bar at bottom */}
-            <div className="absolute bottom-0 left-0 right-0 p-2">
+            <div className="absolute bottom-0 inset-x-0 p-2">
               <div className="h-1.5 rounded-full overflow-hidden bg-white/20 mb-1 backdrop-blur-sm">
                 {/* Live stream: indeterminate shimmer progress bar */}
                 {item.isLive && item.progress === 0 ? (
@@ -391,7 +391,7 @@ export function QueueItem({
 
         {/* Playlist Badge */}
         {item.isPlaylist && showPlaylistBadge && (
-          <div className="absolute top-1.5 left-1.5 px-1.5 py-0.5 rounded bg-black/70 text-white text-[10px] flex items-center gap-1">
+          <div className="absolute top-1.5 start-1.5 px-1.5 py-0.5 rounded bg-black/70 text-white text-[10px] flex items-center gap-1">
             <ListVideo className="w-3 h-3" />
             <span>{t('queue.playlist')}</span>
           </div>
@@ -399,7 +399,7 @@ export function QueueItem({
 
         {/* Live Badge */}
         {item.isLive && (
-          <div className="absolute top-1.5 left-1.5 px-1.5 py-0.5 rounded bg-red-600 text-white text-[10px] flex items-center gap-1 font-medium animate-pulse">
+          <div className="absolute top-1.5 start-1.5 px-1.5 py-0.5 rounded bg-red-600 text-white text-[10px] flex items-center gap-1 font-medium animate-pulse">
             <span className="w-1.5 h-1.5 rounded-full bg-white" />
             <span>{t('queue.live')}</span>
           </div>
@@ -407,7 +407,7 @@ export function QueueItem({
 
         {/* Playlist Progress */}
         {item.playlistIndex && item.playlistTotal && (
-          <div className="absolute top-1.5 right-1.5 px-1.5 py-0.5 rounded bg-black/70 text-white text-[10px] font-medium tabular-nums">
+          <div className="absolute top-1.5 end-1.5 px-1.5 py-0.5 rounded bg-black/70 text-white text-[10px] font-medium tabular-nums">
             {item.playlistIndex}/{item.playlistTotal}
           </div>
         )}
@@ -788,7 +788,7 @@ export function QueueItem({
         disabled={disabled}
         title={t('queue.remove')}
         className={cn(
-          'absolute top-2 right-2 p-1.5 rounded-full transition-all',
+          'absolute top-2 end-2 p-1.5 rounded-full transition-all',
           'bg-black/50 hover:bg-black/70 text-white/70 hover:text-white',
           'opacity-0 group-hover:opacity-100',
           'disabled:opacity-50 disabled:cursor-not-allowed',

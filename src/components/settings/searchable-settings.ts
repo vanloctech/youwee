@@ -37,6 +37,8 @@ export const SEARCHABLE_SETTINGS: SearchableSetting[] = [
       'color',
       'appearance',
       'theme',
+      'custom',
+      'palette',
       'midnight',
       'aurora',
       'sunset',

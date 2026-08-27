@@ -395,7 +395,7 @@ export function ToggleChoiceCard({
       aria-pressed={checked}
       onClick={onToggle}
       className={cn(
-        'group flex w-full items-start gap-3 rounded-xl border px-3 py-3 text-left transition-all',
+        'group flex w-full items-start gap-3 rounded-xl border px-3 py-3 text-start transition-all',
         checked
           ? 'border-primary/35 bg-primary/[0.07] shadow-sm'
           : 'border-border/60 bg-background/70 hover:border-border hover:bg-muted/35',

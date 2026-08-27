@@ -285,7 +285,7 @@ export function SubtitleVideoPreview() {
             )}
 
             {isUsingPreview && (
-              <div className="absolute top-3 left-3 inline-flex items-center gap-1.5 px-2 py-1 rounded-full bg-amber-500/20 text-amber-300 text-[10px] font-medium">
+              <div className="absolute top-3 start-3 inline-flex items-center gap-1.5 px-2 py-1 rounded-full bg-amber-500/20 text-amber-300 text-[10px] font-medium">
                 <Eye className="w-3 h-3" />
                 {t('video.previewMode')}
               </div>
@@ -293,7 +293,7 @@ export function SubtitleVideoPreview() {
 
             {/* Subtitle Overlay */}
             {currentSubText && (
-              <div className="absolute bottom-4 left-4 right-4 text-center">
+              <div className="absolute bottom-4 inset-x-4 text-center">
                 <span
                   className={cn(
                     'inline-block px-3 py-1.5 rounded-md',

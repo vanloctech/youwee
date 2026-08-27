@@ -229,7 +229,7 @@ pub fn validate_ffmpeg_args(args: &[String]) -> Result<(), String> {
 
 /// Parse an AI-generated FFmpeg command into argv safely.
 ///
-/// Youwee never executes this string through a shell, but parsing still rejects
+/// weeb never executes this string through a shell, but parsing still rejects
 /// unquoted shell control syntax so malicious model output cannot be carried
 /// forward as a plausible command.
 pub fn parse_ffmpeg_command_args(command: &str) -> Result<Vec<String>, String> {

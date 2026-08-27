@@ -86,25 +86,93 @@
 
 /* Theme: Midnight 🌙 */
 [data-theme="midnight"] {
-  --primary: 262 83% 58%;
+  --primary: 221 83% 53%;
   --primary-foreground: 0 0% 100%;
-  --accent: 280 60% 95%;
-  --accent-foreground: 262 83% 30%;
-  --ring: 262 83% 58%;
-  --gradient-from: 240 60% 50%;
-  --gradient-via: 280 70% 55%;
-  --gradient-to: 320 65% 50%;
+  --accent: 26 100% 95%;
+  --accent-foreground: 26 90% 40%;
+  --ring: 221 83% 53%;
+  --gradient-from: 221 83% 55%;
+  --gradient-via: 260 80% 60%;
+  --gradient-to: 26 100% 55%;
 }
 .dark[data-theme="midnight"],
 [data-theme="midnight"].dark {
-  --primary: 270 80% 65%;
+  --primary: 218 91% 60%;
   --primary-foreground: 0 0% 100%;
-  --accent: 280 50% 20%;
-  --accent-foreground: 270 80% 85%;
-  --ring: 270 80% 65%;
-  --gradient-from: 240 70% 35%;
-  --gradient-via: 280 80% 40%;
-  --gradient-to: 320 75% 35%;
+  --accent: 26 60% 14%;
+  --accent-foreground: 26 100% 70%;
+  --ring: 218 91% 60%;
+  --gradient-from: 221 90% 40%;
+  --gradient-via: 260 85% 45%;
+  --gradient-to: 26 100% 48%;
+}
+/* Theme: Sunny ☀️ */
+[data-theme="sunny"] {
+  --primary: 38 92% 50%;
+  --primary-foreground: 0 0% 100%;
+  --accent: 45 100% 93%;
+  --accent-foreground: 38 90% 35%;
+  --ring: 38 92% 50%;
+  --gradient-from: 35 95% 55%;
+  --gradient-via: 45 100% 52%;
+  --gradient-to: 15 90% 55%;
+}
+.dark[data-theme="sunny"],
+[data-theme="sunny"].dark {
+  --primary: 42 95% 55%;
+  --primary-foreground: 30 100% 10%;
+  --accent: 40 60% 16%;
+  --accent-foreground: 42 95% 80%;
+  --ring: 42 95% 55%;
+  --gradient-from: 35 90% 40%;
+  --gradient-via: 45 95% 42%;
+  --gradient-to: 15 88% 40%;
+}
+
+/* Theme: Rain 🌧️ */
+[data-theme="rain"] {
+  --primary: 215 40% 45%;
+  --primary-foreground: 0 0% 100%;
+  --accent: 215 45% 92%;
+  --accent-foreground: 215 50% 30%;
+  --ring: 215 40% 45%;
+  --gradient-from: 220 45% 50%;
+  --gradient-via: 200 40% 48%;
+  --gradient-to: 240 30% 42%;
+}
+.dark[data-theme="rain"],
+[data-theme="rain"].dark {
+  --primary: 215 45% 62%;
+  --primary-foreground: 215 60% 10%;
+  --accent: 215 35% 16%;
+  --accent-foreground: 215 45% 85%;
+  --ring: 215 45% 62%;
+  --gradient-from: 220 50% 35%;
+  --gradient-via: 205 45% 34%;
+  --gradient-to: 240 35% 30%;
+}
+
+/* Theme: Custom 🎨 */
+[data-theme="custom"] {
+  --primary: 221 83% 53%;
+  --primary-foreground: 0 0% 100%;
+  --accent: 26 100% 95%;
+  --accent-foreground: 26 90% 40%;
+  --ring: 221 83% 53%;
+  --gradient-from: 221 83% 55%;
+  --gradient-via: 260 60% 60%;
+  --gradient-to: 26 100% 55%;
+}
+.dark[data-theme="custom"],
+[data-theme="custom"].dark {
+  --primary: 221 83% 62%;
+  --primary-foreground: 0 0% 100%;
+  --accent: 26 55% 14%;
+  --accent-foreground: 26 100% 72%;
+  --ring: 221 83% 62%;
+  --gradient-from: 221 83% 40%;
+  --gradient-via: 260 65% 40%;
+  --gradient-to: 26 100% 45%;
 }
 
 /* Theme: Aurora 🌌 */
@@ -739,4 +807,58 @@
 
 .screen-shake {
   animation: screen-shake 0.2s ease-in-out;
+}
+
+/* Gallery masonry cards: lazy reveal on scroll into view */
+.gallery-card {
+  opacity: 0;
+  transform: translateY(8px);
+  transition:
+    opacity 0.35s ease,
+    transform 0.35s ease,
+    border-color 0.3s ease,
+    box-shadow 0.3s ease;
+}
+.gallery-card-visible {
+  opacity: 1;
+  transform: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  .gallery-card {
+    opacity: 1;
+    transform: none;
+    transition: none;
+  }
+}
+
+/* RTL languages: Nunito has no Persian/Arabic glyphs — fall back to a
+   Persian-capable stack when the document language is fa or ar. */
+html[lang="fa"] body,
+html[lang="fa"] button,
+html[lang="fa"] input,
+html[lang="fa"] textarea,
+html[lang="fa"] select {
+  font-family:
+    "Segoe UI", "Tahoma", "Nunito", system-ui, -apple-system, sans-serif;
+}
+html[lang="ar"] body,
+html[lang="ar"] button,
+html[lang="ar"] input,
+html[lang="ar"] textarea,
+html[lang="ar"] select {
+  font-family:
+    "Segoe UI", "Tahoma", "Nunito", system-ui, -apple-system, sans-serif;
+}
+
+/* Indeterminate activity bar for gallery downloads (gallery-dl emits no progress events) */
+.gallery-progress-indeterminate {
+  width: 30%;
+  animation: gallery-progress-slide 1.2s ease-in-out infinite;
+}
+@keyframes gallery-progress-slide {
+  0%   { transform: translateX(-100%); }
+  100% { transform: translateX(400%); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .gallery-progress-indeterminate { animation: none; width: 50%; }
 }

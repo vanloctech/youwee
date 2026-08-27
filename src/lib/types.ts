@@ -178,6 +178,7 @@ export interface DownloadItem {
   queueIndex?: number;
   queueTotal?: number;
   thumbnail?: string;
+  fileCount?: number;
   duration?: string;
   channel?: string;
   filesize?: number; // File size in bytes from video info
@@ -965,6 +966,29 @@ export interface HistoryEntry {
   time_range?: string; // Time range cut (e.g. "00:10-01:00")
   tags: HistoryTag[];
   collections: HistoryCollection[];
+}
+
+export interface GalleryProbe {
+  title?: string | null;
+  thumbnail?: string | null;
+  count?: number | null;
+  category?: string | null;
+  subcategory?: string | null;
+  error?: string | null;
+}
+
+export interface GalleryLibraryItem {
+  id: string;
+  url: string;
+  title: string;
+  thumbnail?: string;
+  filepath: string;
+  source?: string;
+  downloaded_at: string; // ISO 8601
+  file_exists: boolean;
+  folder_name: string;
+  file_size?: number;
+  cover_image?: string;
 }
 
 export type HistoryFilter =

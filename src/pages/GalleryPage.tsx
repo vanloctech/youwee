@@ -1,5 +1,7 @@
-import { ExternalLink, Play, RefreshCw, Square, Trash2, TriangleAlert } from 'lucide-react';
+import { CheckCircle2, ExternalLink, Loader2, Play, RefreshCw, Square, Trash2, TriangleAlert } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { GalleryBrowser } from '@/components/gallery/GalleryBrowser';
 import { GalleryQueueList } from '@/components/download/GalleryQueueList';
 import { GallerySettingsPanel } from '@/components/download/GallerySettingsPanel';
 import { GalleryUrlInput } from '@/components/download/GalleryUrlInput';
@@ -31,24 +33,117 @@ export function GalleryPage({ onNavigateToSettings }: GalleryPageProps) {
     startDownload,
     stopDownload,
     updateConcurrentDownloads,
+    updateSettings,
   } = useGalleryDl();
   const { galleryDlStatus, galleryDlLoading, galleryDlError, checkGalleryDl } = useDependencies();
+  const [tab, setTab] = useState<'queue' | 'library'>('queue');
 
   const pendingCount = items.filter((i) => i.status !== 'completed').length;
   const hasItems = items.length > 0;
   const isReady = galleryDlStatus?.installed === true;
 
+  const activeItems = items.filter((i) => i.status === 'downloading' || i.status === 'fetching');
+  // Track downloads that finished during this session so the user can jump to the Library.
+  const [finishedCount, setFinishedCount] = useState(0);
+  // Seed from initial items so returning to the page with already-completed
+  // downloads doesn't flash a spurious "finished" banner.
+  const prevCompletedRef = useRef(
+    items.filter((i) => i.status === 'completed').length,
+  );
+  useEffect(() => {
+    const completed = items.filter((i) => i.status === 'completed').length;
+    if (completed > prevCompletedRef.current) {
+      setFinishedCount((f) => f + (completed - prevCompletedRef.current));
+    }
+    prevCompletedRef.current = completed;
+  }, [items]);
+
   return (
     <div className="flex-1 flex flex-col overflow-hidden">
       <header className="flex-shrink-0 flex items-center justify-between h-12 sm:h-14 px-4 sm:px-6">
-        <h1 className="text-base sm:text-lg font-semibold">{t('title')}</h1>
+        <div className="flex min-w-0 items-center gap-3">
+          <h1 className="text-base sm:text-lg font-semibold">{t('title')}</h1>
+          <div className="flex items-center gap-1 rounded-xl bg-muted/60 p-1">
+            <button
+              type="button"
+              onClick={() => setTab('queue')}
+              className={cn(
+                'h-7 px-3 rounded-lg text-xs sm:text-sm font-medium transition-all',
+                tab === 'queue'
+                  ? 'bg-background text-foreground shadow-sm'
+                  : 'text-muted-foreground hover:text-foreground',
+              )}
+            >
+              {t('tabs.queue')}
+            </button>
+            <button
+              type="button"
+              onClick={() => setTab('library')}
+              className={cn(
+                'h-7 px-3 rounded-lg text-xs sm:text-sm font-medium transition-all',
+                tab === 'library'
+                  ? 'bg-background text-foreground shadow-sm'
+                  : 'text-muted-foreground hover:text-foreground',
+              )}
+            >
+              {t('tabs.library')}
+            </button>
+          </div>
+        </div>
         <ThemePicker />
       </header>
 
       <div className="mx-4 sm:mx-6 h-px bg-gradient-to-r from-transparent via-border/50 to-transparent" />
 
-      <div className="flex-1 flex flex-col overflow-hidden">
-        <div className="flex-shrink-0 p-4 sm:p-6 space-y-3">
+      {isDownloading ? (
+        <div className="flex-shrink-0 border-b border-border/40 bg-primary/5 px-4 py-2 sm:px-6">
+          <div className="flex items-center gap-3">
+            <Loader2 className="h-4 w-4 animate-spin text-primary" />
+            <span className="text-xs font-medium">
+              {t('browser.downloading', { count: activeItems.length })}
+            </span>
+            <div className="h-1.5 w-full max-w-xs overflow-hidden rounded-full bg-black/10 dark:bg-white/10">
+              <div className="gallery-progress-indeterminate h-full rounded-full bg-primary" />
+            </div>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-7 ms-auto"
+              onClick={() => setTab('queue')}
+            >
+              {t('browser.viewQueue')}
+            </Button>
+          </div>
+        </div>
+      ) : finishedCount > 0 ? (
+        <div className="flex-shrink-0 border-b border-border/40 bg-emerald-500/5 px-4 py-2 sm:px-6">
+          <div className="flex items-center gap-3">
+            <CheckCircle2 className="h-4 w-4 text-emerald-500" />
+            <span className="text-xs font-medium">
+              {t('browser.finished', { count: finishedCount })}
+            </span>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-7 ms-auto"
+              onClick={() => setTab('library')}
+            >
+              {t('browser.viewLibrary')}
+            </Button>
+          </div>
+        </div>
+      ) : null}
+
+      {tab === 'library' ? (
+        <GalleryBrowser
+          queueItems={items}
+          onGoToQueue={() => setTab('queue')}
+          onAddUrls={addFromText}
+        />
+      ) : (
+        <>
+          <div className="flex-1 flex flex-col overflow-hidden">
+            <div className="flex-shrink-0 p-4 sm:p-6 space-y-3">
           {!isReady && (
             <div className="rounded-2xl border border-amber-500/20 bg-amber-500/5 px-4 py-3">
               <div className="flex items-start gap-3">
@@ -116,6 +211,7 @@ export function GalleryPage({ onNavigateToSettings }: GalleryPageProps) {
             disabled={!isReady || isDownloading}
             onSelectFolder={selectOutputFolder}
             onConcurrentChange={updateConcurrentDownloads}
+            onSettingsChange={updateSettings}
           />
         </div>
 
@@ -155,7 +251,7 @@ export function GalleryPage({ onNavigateToSettings }: GalleryPageProps) {
                     <Play className="w-5 h-5" />
                     <span>{t('actions.startDownload')}</span>
                     {pendingCount > 0 && (
-                      <span className="ml-1 px-2 py-0.5 rounded-full bg-white/20 text-xs">
+                      <span className="ms-1 px-2 py-0.5 rounded-full bg-white/20 text-xs">
                         {pendingCount}
                       </span>
                     )}
@@ -196,6 +292,8 @@ export function GalleryPage({ onNavigateToSettings }: GalleryPageProps) {
             </div>
           </div>
         </footer>
+      )}
+        </>
       )}
     </div>
   );

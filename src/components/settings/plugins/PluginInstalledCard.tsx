@@ -57,7 +57,7 @@ export function PluginInstalledCard({
       <div className="rounded-xl border border-border/60 bg-background/60">
         <div className="flex items-center gap-3 px-4 py-3">
           <CollapsibleTrigger asChild>
-            <button type="button" className="flex min-w-0 flex-1 items-center gap-3 text-left">
+            <button type="button" className="flex min-w-0 flex-1 items-center gap-3 text-start">
               <div className="rounded-xl bg-purple-500/10 p-2 text-purple-500">
                 {renderPluginManifestIcon(plugin.manifest.icon)}
               </div>
@@ -90,7 +90,7 @@ export function PluginInstalledCard({
                   )}
                 </div>
 
-                <p className="mt-1 line-clamp-2 text-[11px] text-muted-foreground">
+                <p dir="auto" className="mt-1 line-clamp-2 text-[11px] text-muted-foreground">
                   {plugin.manifest.description || t('download.pluginNoDescription')}
                 </p>
               </div>

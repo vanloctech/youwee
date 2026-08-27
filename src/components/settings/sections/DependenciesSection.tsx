@@ -381,7 +381,7 @@ export function DependenciesSection({ highlightId }: DependenciesSectionProps) {
                         onClick={() => handleChannelChange(ch)}
                         disabled={isChannelLoading || isChannelDownloading}
                         className={cn(
-                          'w-full flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-left transition-all',
+                          'w-full flex items-center gap-2.5 px-2.5 py-2 rounded-lg text-start transition-all',
                           'disabled:opacity-50 disabled:cursor-not-allowed',
                           isActive
                             ? 'bg-primary/[0.06] ring-1 ring-primary/30'
@@ -447,7 +447,7 @@ export function DependenciesSection({ highlightId }: DependenciesSectionProps) {
                       <Loader2 className="w-4 h-4 animate-spin" />
                     ) : (
                       <>
-                        <Download className="w-4 h-4 mr-1.5" />
+                        <Download className="w-4 h-4 me-1.5" />
                         {t('dependencies.install')}
                       </>
                     )}
@@ -466,7 +466,7 @@ export function DependenciesSection({ highlightId }: DependenciesSectionProps) {
                         <Loader2 className="w-4 h-4 animate-spin" />
                       ) : (
                         <>
-                          <Download className="w-4 h-4 mr-1.5" />
+                          <Download className="w-4 h-4 me-1.5" />
                           {t('dependencies.update')}
                         </>
                       )}
@@ -478,7 +478,7 @@ export function DependenciesSection({ highlightId }: DependenciesSectionProps) {
                       <Loader2 className="w-4 h-4 animate-spin" />
                     ) : (
                       <>
-                        <Download className="w-4 h-4 mr-1.5" />
+                        <Download className="w-4 h-4 me-1.5" />
                         {t('dependencies.update')}
                       </>
                     )}

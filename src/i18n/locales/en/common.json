@@ -33,7 +33,8 @@
     "select": "Select language",
     "tr": "Türkçe",
     "uz": "O‘zbekcha",
-    "ro": "Română"
+    "ro": "Română",
+    "fa": "فارسی"
   },
   "actions": {
     "cancel": "Cancel"
@@ -46,7 +47,7 @@
   "update": {
     "available": "Update Available",
     "error": "Update Error",
-    "description": "A new version of Youwee is available. Would you like to update now?",
+    "description": "A new version of weeb is available. Would you like to update now?",
     "downloading": "Downloading update...",
     "ready": "Update downloaded successfully! Restart to apply changes.",
     "errorGeneric": "An error occurred while updating.",
@@ -58,9 +59,9 @@
   },
   "legalDisclaimer": {
     "title": "Responsible use notice",
-    "description": "Youwee is a local tool for downloading and processing media from URLs you provide. It is not affiliated with YouTube or any other media platform.",
+    "description": "weeb is a local tool for downloading and processing media from URLs you provide. It is not affiliated with YouTube or any other media platform.",
     "notice": "Only download content that you own, have permission to use, or are legally allowed to access and store.",
-    "responsibility": "By continuing, you confirm that you are responsible for following applicable laws, platform terms, copyright rules, and any permissions required for the content you download. The Youwee project and maintainers are not responsible for misuse.",
+    "responsibility": "By continuing, you confirm that you are responsible for following applicable laws, platform terms, copyright rules, and any permissions required for the content you download. The weeb project and maintainers are not responsible for misuse.",
     "accept": "I Understand / Agree"
   },
   "backendErrors": {
@@ -105,5 +106,13 @@
     "WHISPER_NO_API_KEY": "Whisper API key not configured.",
     "WHISPER_UNSUPPORTED_FORMAT": "Unsupported audio format for Whisper.",
     "YT_SKIPPED_FILTER": "Skipped by yt-dlp match filter."
+  },
+  "general": {
+    "customPalette": "Custom palette",
+    "customPalettePrimary": "Primary",
+    "customPaletteAccent": "Accent",
+    "customPaletteApplied": "Applied",
+    "customPaletteReset": "Reset custom palette",
+    "customPaletteHint": "Accent colors hover highlights and the end of gradients - set it close to Primary for a minimal look."
   }
 }

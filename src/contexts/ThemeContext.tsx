@@ -40,6 +40,10 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     return 'dark';
   });
 
+  // Bumped on every setTheme call so the apply-effect re-runs even when the
+  // theme name is unchanged (e.g. re-applying a modified custom palette).
+  const [themeVersion, setThemeVersion] = useState(0);
+
   // Meteor transition state
   const [isTransitioning, setIsTransitioning] = useState(false);
   const [pendingMode, setPendingMode] = useState<ThemeMode | null>(null);
@@ -48,6 +52,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   const setTheme = (newTheme: ThemeName) => {
     setThemeState(newTheme);
     localStorage.setItem(THEME_KEY, newTheme);
+    setThemeVersion((v) => v + 1);
   };
 
   const setMode = useCallback(
@@ -113,7 +118,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
       .catch(() => {
         // Ignore outside Tauri runtime.
       });
-  }, [theme, mode]);
+  }, [theme, mode, themeVersion]);
 
   return (
     <ThemeContext.Provider

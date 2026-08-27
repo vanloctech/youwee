@@ -4,6 +4,7 @@ import { localizeUnknownError } from '@/lib/backend-error';
 import type { ExportRow, ExportSource, ExtractDataRowsOutput } from '@/lib/types';
 import { DataExportContext } from './data-export-context';
 import { useDownload } from './download-context';
+import i18n from '@/i18n';
 
 const STORAGE_KEY = 'youwee_data_export_settings';
 
@@ -89,6 +90,7 @@ export function DataExportProvider({ children }: { children: ReactNode }) {
           source: settings.source,
           text: inputText,
           limit: settings.limit,
+          lang: i18n.language || 'en',
           detailMode: settings.detailMode,
           cookieMode: cookieSettings.mode,
           cookieBrowser: cookieSettings.browser || null,

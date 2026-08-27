@@ -336,18 +336,18 @@ export function AISection({ highlightId }: AISectionProps) {
                     type="button"
                     onClick={() => handleProviderSelect(prov.id)}
                     className={cn(
-                      'relative flex items-center gap-3 text-left p-3.5 rounded-xl transition-all duration-200 group w-full',
+                      'relative flex items-center gap-3 text-start p-3.5 rounded-xl transition-all duration-200 group w-full',
                       isActive ? 'bg-primary/10' : 'bg-muted/30 hover:bg-muted/50',
                     )}
                   >
                     {isActive && (
-                      <span className="absolute top-2.5 right-2.5 flex h-4 w-4 items-center justify-center rounded-full bg-primary text-primary-foreground">
+                      <span className="absolute top-2.5 end-2.5 flex h-4 w-4 items-center justify-center rounded-full bg-primary text-primary-foreground">
                         <Check className="h-2.5 w-2.5 stroke-[3]" />
                       </span>
                     )}
 
                     {prov.logo}
-                    <div className="min-w-0 pr-4">
+                    <div className="min-w-0 pe-4">
                       <h4 className="text-xs font-semibold truncate group-hover:text-primary dark:group-hover:text-primary transition-colors">
                         {prov.name}
                       </h4>
@@ -430,12 +430,12 @@ export function AISection({ highlightId }: AISectionProps) {
                                 ? t('ai.enterQwenApiKey')
                                 : t('ai.enterProxyApiKey')
                       }
-                      className="h-10 bg-background/50 border-border/80 pr-10 focus-visible:ring-primary"
+                      className="h-10 bg-background/50 border-border/80 pe-10 focus-visible:ring-primary"
                     />
                     <button
                       type="button"
                       onClick={() => setShowApiKey(!showApiKey)}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 p-1 text-muted-foreground hover:text-foreground transition-colors"
+                      className="absolute end-3 top-1/2 -translate-y-1/2 p-1 text-muted-foreground hover:text-foreground transition-colors"
                     >
                       {showApiKey ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                     </button>
@@ -650,7 +650,7 @@ export function AISection({ highlightId }: AISectionProps) {
 
               {/* Recommended chips for ease of use */}
               <div className="flex flex-wrap items-center gap-1.5 pt-1">
-                <span className="text-[11px] font-medium text-muted-foreground mr-1">
+                <span className="text-[11px] font-medium text-muted-foreground me-1">
                   {t('ai.recommended')}
                 </span>
                 {getProviderModelChips(ai.config.provider).map((mName) => (
@@ -830,7 +830,7 @@ export function AISection({ highlightId }: AISectionProps) {
                   </p>
 
                   {/* Draggable-vibed order list */}
-                  <div className="space-y-1.5 max-h-48 overflow-y-auto pr-1">
+                  <div className="space-y-1.5 max-h-48 overflow-y-auto pe-1">
                     {(ai.config.transcript_languages || DEFAULT_TRANSCRIPT_LANGUAGES).map(
                       (code, index) => {
                         const lang = LANGUAGE_OPTIONS.find((l) => l.code === code);
@@ -894,7 +894,7 @@ export function AISection({ highlightId }: AISectionProps) {
 
                               <button
                                 type="button"
-                                className="p-1 hover:bg-destructive/15 hover:text-destructive rounded text-muted-foreground transition-colors ml-1"
+                                className="p-1 hover:bg-destructive/15 hover:text-destructive rounded text-muted-foreground transition-colors ms-1"
                                 onClick={() => {
                                   const langs = currentLangs.filter((l) => l !== code);
                                   ai.updateConfig({
@@ -974,10 +974,10 @@ export function AISection({ highlightId }: AISectionProps) {
             </div>
 
             {ai.config.whisper_enabled && (
-              <div className="space-y-4 pl-4 border-l-2 border-primary/20 pt-1 animate-in slide-in-from-left-3 duration-300">
+              <div className="space-y-4 ps-4 border-s-2 border-primary/20 pt-1 animate-in slide-in-from-left-3 duration-300">
                 {/* Whisper backend provider toggle: OpenAI cloud vs Custom endpoint */}
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-muted/20 p-2 rounded-xl border border-border/50">
-                  <span className="text-xs font-semibold text-muted-foreground/80 pl-1">
+                  <span className="text-xs font-semibold text-muted-foreground/80 ps-1">
                     {t('ai.whisperProvider')}
                   </span>
 
@@ -1031,12 +1031,12 @@ export function AISection({ highlightId }: AISectionProps) {
                             value={ai.config.whisper_api_key || ''}
                             onChange={(e) => ai.updateConfig({ whisper_api_key: e.target.value })}
                             placeholder={t('ai.whisperApiKey')}
-                            className="h-9 bg-background/50 text-xs focus-visible:ring-primary pr-9"
+                            className="h-9 bg-background/50 text-xs focus-visible:ring-primary pe-9"
                           />
                           <button
                             type="button"
                             onClick={() => setShowWhisperApiKey(!showWhisperApiKey)}
-                            className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors p-0.5"
+                            className="absolute end-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors p-0.5"
                           >
                             {showWhisperApiKey ? (
                               <EyeOff className="w-3.5 h-3.5" />
@@ -1093,12 +1093,12 @@ export function AISection({ highlightId }: AISectionProps) {
                             value={ai.config.whisper_api_key || ''}
                             onChange={(e) => ai.updateConfig({ whisper_api_key: e.target.value })}
                             placeholder={t('ai.whisperApiKey')}
-                            className="h-9 bg-background/50 text-xs focus-visible:ring-primary pr-9"
+                            className="h-9 bg-background/50 text-xs focus-visible:ring-primary pe-9"
                           />
                           <button
                             type="button"
                             onClick={() => setShowWhisperApiKey(!showWhisperApiKey)}
-                            className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors p-0.5"
+                            className="absolute end-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors p-0.5"
                           >
                             {showWhisperApiKey ? (
                               <EyeOff className="w-3.5 h-3.5" />

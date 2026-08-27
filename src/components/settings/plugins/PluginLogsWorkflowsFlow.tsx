@@ -82,7 +82,7 @@ export const PluginLogsWorkflowsFlow = memo(function PluginLogsWorkflowsFlow(
                 <CollapsibleTrigger asChild>
                   <button
                     type="button"
-                    className="relative z-10 flex w-full items-center justify-between gap-3 text-left"
+                    className="relative z-10 flex w-full items-center justify-between gap-3 text-start"
                   >
                     <div className="min-w-0 flex-1 space-y-0.5">
                       <div className="flex flex-wrap items-center gap-2">

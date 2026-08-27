@@ -94,7 +94,7 @@ export function ProcessingPage() {
               <History className="w-4 h-4" />
               <span className="hidden sm:inline">{t('processing.history')}</span>
               {history.length > 0 && (
-                <Badge variant="secondary" className="ml-1 h-5 px-1.5 text-xs">
+                <Badge variant="secondary" className="ms-1 h-5 px-1.5 text-xs">
                   {history.length}
                 </Badge>
               )}
@@ -159,12 +159,12 @@ export function ProcessingPage() {
 
                   <div className="mt-3 flex flex-wrap gap-2">
                     <Badge className="rounded-full border-0 shadow-none bg-blue-500/10 text-blue-600 hover:bg-blue-500/10 hover:text-blue-600 dark:text-blue-400 dark:hover:text-blue-400">
-                      <Film className="w-3 h-3 mr-1.5" />
+                      <Film className="w-3 h-3 me-1.5" />
                       {metadata.video_codec}
                     </Badge>
                     {metadata.audio_codec && (
                       <Badge className="rounded-full border-0 shadow-none bg-teal-500/10 text-teal-600 hover:bg-teal-500/10 hover:text-teal-600 dark:text-teal-400 dark:hover:text-teal-400">
-                        <Music className="w-3 h-3 mr-1.5" />
+                        <Music className="w-3 h-3 me-1.5" />
                         {metadata.audio_codec}
                       </Badge>
                     )}

@@ -205,7 +205,7 @@ export function SchedulePopover({
       <DialogContent className="max-h-[min(calc(100vh-2rem),42rem)] w-[min(calc(100vw-2rem),26rem)] max-w-none gap-0 overflow-y-auto overflow-x-hidden rounded-3xl border-border/70 p-0 shadow-2xl sm:rounded-3xl">
         <div className="relative bg-card">
           <div className="absolute -right-12 -top-12 h-32 w-32 rounded-full bg-primary/15 blur-3xl" />
-          <div className="relative border-b border-border/60 px-4 py-4 pr-12">
+          <div className="relative border-b border-border/60 px-4 py-4 pe-12">
             <div className="flex items-start gap-3">
               <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-primary/10 text-primary ring-1 ring-primary/15">
                 <CalendarClock className="h-5 w-5" />

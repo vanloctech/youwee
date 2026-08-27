@@ -68,7 +68,7 @@ pub fn print_cli_usage_and_should_exit(argv: &[String]) -> bool {
         .skip(1)
         .any(|arg| arg == "--version" || arg == "-V")
     {
-        print_cli_text(&format!("Youwee {}", env!("CARGO_PKG_VERSION")));
+        print_cli_text(&format!("weeb {}", env!("CARGO_PKG_VERSION")));
         return true;
     }
 
@@ -128,7 +128,7 @@ fn command_name(argv: &[String]) -> &str {
 fn cli_help_text(command: &str) -> String {
     format!(
         "\
-Youwee {version}
+weeb {version}
 GUI for yt-dlp. Pass a video URL to queue or download it.
 
 Usage:
@@ -672,7 +672,7 @@ mod tests {
     #[test]
     fn raw_argv_supports_positional_url_and_flags() {
         let argv = vec![
-            "youwee".to_string(),
+            "weeb".to_string(),
             "https://example.com/video".to_string(),
             "--quality=480".to_string(),
             "--output".to_string(),
@@ -749,7 +749,7 @@ mod tests {
     #[test]
     fn raw_argv_supports_download_option_overrides() {
         let argv = vec![
-            "youwee".to_string(),
+            "weeb".to_string(),
             "https://example.com/video".to_string(),
             "--skip-live".to_string(),
             "--playlist".to_string(),
@@ -817,14 +817,14 @@ mod tests {
 
     #[test]
     fn cli_help_request_exits_before_app_start() {
-        let argv = vec!["youwee".to_string(), "--help".to_string()];
+        let argv = vec!["weeb".to_string(), "--help".to_string()];
 
         assert!(print_cli_usage_and_should_exit(&argv));
     }
 
     #[test]
     fn cli_version_request_exits_before_app_start() {
-        let argv = vec!["youwee".to_string(), "-V".to_string()];
+        let argv = vec!["weeb".to_string(), "-V".to_string()];
 
         assert!(print_cli_usage_and_should_exit(&argv));
     }

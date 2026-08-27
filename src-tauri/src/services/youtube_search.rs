@@ -251,14 +251,60 @@ async fn fetch_search_page(
     query: &str,
     filters: Option<&YoutubeSearchFilters>,
     continuation: Option<&str>,
+    lang: &str,
 ) -> Result<YoutubeSearchResponse, String> {
+    // Map app UI language to a YouTube "hl"/"gl" pair. Fall back to en/US so
+    // search results never come back in an unexpected (e.g. Vietnamese) locale.
+    let (hl, gl) = match lang {
+        "ar" => ("ar", "SA"),
+        "fa" => ("fa", "IR"),
+        "zh-CN" | "zh" => ("zh-Hans", "CN"),
+        "zh-TW" => ("zh-Hant", "TW"),
+        "ja" => ("ja", "JP"),
+        "ko" => ("ko", "KR"),
+        "ru" => ("ru", "RU"),
+        "tr" => ("tr", "TR"),
+        "th" => ("th", "TH"),
+        "vi" => ("vi", "VN"),
+        "pt" => ("pt", "BR"),
+        "es" => ("es", "ES"),
+        "fr" => ("fr", "FR"),
+        "de" => ("de", "DE"),
+        "it" => ("it", "IT"),
+        "id" => ("id", "ID"),
+        "uz" => ("uz", "UZ"),
+        "ro" => ("ro", "RO"),
+        other => {
+            let base = other.split('-').next().unwrap_or("en");
+            match base {
+                "zh" => ("zh-Hans", "CN"),
+                "ar" => ("ar", "SA"),
+                "fa" => ("fa", "IR"),
+                "ja" => ("ja", "JP"),
+                "ko" => ("ko", "KR"),
+                "ru" => ("ru", "RU"),
+                "tr" => ("tr", "TR"),
+                "th" => ("th", "TH"),
+                "vi" => ("vi", "VN"),
+                "pt" => ("pt", "BR"),
+                "es" => ("es", "ES"),
+                "fr" => ("fr", "FR"),
+                "de" => ("de", "DE"),
+                "it" => ("it", "IT"),
+                "id" => ("id", "ID"),
+                "uz" => ("uz", "UZ"),
+                "ro" => ("ro", "RO"),
+                _ => ("en", "US"),
+            }
+        }
+    };
     let mut body = json!({
         "context": {
             "client": {
                 "clientName": YOUTUBE_WEB_CLIENT_NAME,
                 "clientVersion": YOUTUBE_WEB_CLIENT_VERSION,
-                "hl": "vi",
-                "gl": "VN"
+                "hl": hl,
+                "gl": gl
             }
         }
     });
@@ -308,7 +354,14 @@ pub async fn search_youtube_videos_internal(
     limit: Option<u32>,
     filters: Option<YoutubeSearchFilters>,
     continuation: Option<String>,
+    lang: Option<String>,
 ) -> Result<YoutubeSearchResponse, String> {
+    let lang = lang
+        .as_deref()
+        .map(str::trim)
+        .filter(|s| !s.is_empty())
+        .unwrap_or("en")
+        .to_string();
     let query = query.trim().to_string();
     let initial_continuation = continuation
         .as_deref()
@@ -338,6 +391,7 @@ pub async fn search_youtube_videos_internal(
             &query,
             filters.as_ref(),
             next_continuation.as_deref(),
+            &lang,
         )
         .await?;
         for video in page.videos {

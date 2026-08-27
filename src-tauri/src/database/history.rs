@@ -3,6 +3,7 @@ use std::collections::HashMap;
 use super::get_db;
 use crate::types::{
     DownloadDuplicateIdentity, DownloadDuplicateMatch, HistoryAdvancedFilters, HistoryCollection,
+    GalleryLibraryItem,
     HistoryEntry, HistoryFilterMatchMode, HistoryMediaType, HistorySearchScope, HistorySort,
     HistoryTag,
 };
@@ -885,6 +886,112 @@ pub fn add_history_with_summary(
     .map_err(|e| format!("Failed to add history: {}", e))?;
 
     Ok(id)
+}
+
+const GALLERY_COVER_EXTS: &[&str] = &["jpg", "jpeg", "png", "webp", "gif", "avif", "bmp", "jfif"];
+
+/// Total size of a gallery folder (recursive walk, capped to stay responsive).
+fn gallery_dir_size(path: &std::path::Path) -> Option<u64> {
+    let mut total: u64 = 0;
+    let mut stack: Vec<std::path::PathBuf> = vec![path.to_path_buf()];
+    let mut visited: usize = 0;
+    while let Some(dir) = stack.pop() {
+        let entries = match std::fs::read_dir(&dir) {
+            Ok(entries) => entries,
+            Err(_) => continue,
+        };
+        for entry in entries.flatten() {
+            let entry_path = entry.path();
+            if entry_path.is_dir() {
+                stack.push(entry_path);
+            } else if let Ok(meta) = entry.metadata() {
+                total += meta.len();
+            }
+            visited += 1;
+            if visited >= 100_000 {
+                return Some(total);
+            }
+        }
+    }
+    Some(total)
+}
+
+/// First image file inside a gallery folder, used as the library card cover.
+fn gallery_cover_image(path: &std::path::Path) -> Option<String> {
+    let entries = std::fs::read_dir(path).ok()?;
+    for entry in entries.flatten() {
+        let entry_path = entry.path();
+        if !entry_path.is_file() {
+            continue;
+        }
+        let ext = entry_path
+            .extension()
+            .and_then(|e| e.to_str())
+            .map(|e| e.to_lowercase())
+            .unwrap_or_default();
+        if GALLERY_COVER_EXTS.contains(&ext.as_str()) {
+            return entry_path.to_str().map(|s| s.to_string());
+        }
+    }
+    None
+}
+
+/// List completed gallery downloads (history rows tagged with format = 'gallery').
+pub fn list_gallery_items_from_db() -> Result<Vec<GalleryLibraryItem>, String> {
+    let conn = get_db()?;
+    let mut stmt = conn
+        .prepare(
+            "SELECT id, url, title, thumbnail, filepath, source, downloaded_at
+             FROM history
+             WHERE format = 'gallery'
+             ORDER BY downloaded_at DESC",
+        )
+        .map_err(|e| format!("Failed to prepare gallery listing: {}", e))?;
+
+    let rows = stmt
+        .query_map([], |row| {
+            let filepath: String = row.get(4)?;
+            let downloaded_at: i64 = row.get(6)?;
+            let dt = chrono::DateTime::from_timestamp(downloaded_at, 0)
+                .map(|d| d.to_rfc3339())
+                .unwrap_or_default();
+            let file_exists = std::path::Path::new(&filepath).exists();
+            let item_path = std::path::Path::new(&filepath);
+            let folder_name = item_path
+                .file_name()
+                .map(|n| n.to_string_lossy().into_owned())
+                .unwrap_or_default();
+            let file_size = if item_path.is_dir() {
+                gallery_dir_size(item_path)
+            } else {
+                std::fs::metadata(item_path).ok().map(|m| m.len())
+            };
+            let cover_image = if item_path.is_dir() {
+                gallery_cover_image(item_path)
+            } else {
+                None
+            };
+            Ok(GalleryLibraryItem {
+                id: row.get(0)?,
+                url: row.get(1)?,
+                title: row.get(2)?,
+                thumbnail: row.get(3)?,
+                filepath,
+                source: row.get(5)?,
+                downloaded_at: dt,
+                file_exists,
+                folder_name,
+                file_size,
+                cover_image,
+            })
+        })
+        .map_err(|e| format!("Failed to query gallery items: {}", e))?;
+
+    let mut items = Vec::new();
+    for row in rows {
+        items.push(row.map_err(|e| format!("Failed to read gallery item: {}", e))?);
+    }
+    Ok(items)
 }
 
 pub fn get_history_from_db(

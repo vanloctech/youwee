@@ -320,7 +320,7 @@ export function MusicPlayer() {
             )}
           >
             {/* Track Info */}
-            <div className="flex items-center gap-3 pl-1 sm:pl-2 pr-1">
+            <div className="flex items-center gap-3 ps-1 sm:ps-2 pe-1">
               <div className="relative h-10 w-10 sm:h-11 sm:w-11 flex-shrink-0 overflow-hidden rounded-full bg-muted ring-1 ring-black/10 dark:ring-white/20 shadow-sm">
                 {currentEntry.thumbnail && !thumbError ? (
                   <img
@@ -400,7 +400,7 @@ export function MusicPlayer() {
 
             {/* Progress Bar */}
             <div className="hidden md:flex items-center gap-3 w-[200px] lg:w-[280px]">
-              <span className="w-8 flex-shrink-0 text-right text-[11px] font-medium tabular-nums text-muted-foreground">
+              <span className="w-8 flex-shrink-0 text-end text-[11px] font-medium tabular-nums text-muted-foreground">
                 {formatTime(displayTime)}
               </span>
               <div
@@ -445,7 +445,7 @@ export function MusicPlayer() {
             <div className="hidden sm:block w-px h-6 bg-border/60 mx-1" />
 
             {/* Right Controls */}
-            <div className="flex items-center gap-1 pr-1">
+            <div className="flex items-center gap-1 pe-1">
               <button
                 type="button"
                 onClick={cycleMode}
@@ -487,7 +487,7 @@ export function MusicPlayer() {
               </button>
 
               {/* Volume Control */}
-              <div className="hidden sm:flex items-center gap-1 sm:gap-2 pl-1 pr-1 sm:pr-2 group/vol">
+              <div className="hidden sm:flex items-center gap-1 sm:gap-2 ps-1 pe-1 sm:pe-2 group/vol">
                 <button
                   type="button"
                   onClick={() => setVolume(volume > 0 ? 0 : 1)}
@@ -522,7 +522,7 @@ export function MusicPlayer() {
               <button
                 type="button"
                 onClick={() => setIsCollapsed(true)}
-                className="inline-flex h-9 w-9 items-center justify-center rounded-full text-muted-foreground transition-all hover:text-foreground hover:bg-foreground/5 ml-1"
+                className="inline-flex h-9 w-9 items-center justify-center rounded-full text-muted-foreground transition-all hover:text-foreground hover:bg-foreground/5 ms-1"
                 title={t('player.minimize')}
               >
                 <ChevronDown className="h-4 w-4" />
@@ -545,7 +545,7 @@ export function MusicPlayer() {
       {isCollapsed && (
         <div
           className={cn(
-            'pointer-events-none absolute right-4 sm:right-6',
+            'pointer-events-none absolute end-4 sm:end-6',
             !isMiniPlayerDragging &&
               'transition-all duration-500 [transition-timing-function:cubic-bezier(0.32,0.72,0,1)]',
           )}
@@ -585,7 +585,7 @@ export function MusicPlayer() {
             </div>
 
             {!isPlaying && (
-              <div className="absolute bottom-0 right-0 bg-background/90 rounded-full p-0.5 shadow-sm ring-1 ring-white/10">
+              <div className="absolute bottom-0 end-0 bg-background/90 rounded-full p-0.5 shadow-sm ring-1 ring-white/10">
                 <Pause className="h-3 w-3 text-muted-foreground" />
               </div>
             )}

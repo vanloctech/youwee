@@ -33,7 +33,8 @@
     "select": "Chọn ngôn ngữ",
     "tr": "Türkçe",
     "uz": "O‘zbekcha",
-    "ro": "Română"
+    "ro": "Română",
+    "fa": "فارسی"
   },
   "actions": {
     "cancel": "Hủy"
@@ -46,7 +47,7 @@
   "update": {
     "available": "Có bản cập nhật",
     "error": "Lỗi cập nhật",
-    "description": "Đã có phiên bản mới của Youwee. Bạn có muốn cập nhật ngay không?",
+    "description": "Đã có phiên bản mới của weeb. Bạn có muốn cập nhật ngay không?",
     "downloading": "Đang tải bản cập nhật...",
     "ready": "Đã tải xong bản cập nhật! Khởi động lại để áp dụng.",
     "errorGeneric": "Đã xảy ra lỗi khi cập nhật.",
@@ -58,9 +59,9 @@
   },
   "legalDisclaimer": {
     "title": "Thông báo sử dụng có trách nhiệm",
-    "description": "Youwee là công cụ cục bộ để tải và xử lý media từ các URL do bạn cung cấp. Youwee không liên kết với YouTube hoặc bất kỳ nền tảng media nào khác.",
+    "description": "weeb là công cụ cục bộ để tải và xử lý media từ các URL do bạn cung cấp. weeb không liên kết với YouTube hoặc bất kỳ nền tảng media nào khác.",
     "notice": "Chỉ tải nội dung mà bạn sở hữu, được phép sử dụng, hoặc được pháp luật cho phép truy cập và lưu trữ.",
-    "responsibility": "Khi tiếp tục, bạn xác nhận rằng bạn chịu trách nhiệm tuân thủ pháp luật hiện hành, điều khoản nền tảng, quy định bản quyền và mọi quyền sử dụng cần thiết đối với nội dung bạn tải. Dự án Youwee và các maintainer không chịu trách nhiệm cho việc sử dụng sai mục đích.",
+    "responsibility": "Khi tiếp tục, bạn xác nhận rằng bạn chịu trách nhiệm tuân thủ pháp luật hiện hành, điều khoản nền tảng, quy định bản quyền và mọi quyền sử dụng cần thiết đối với nội dung bạn tải. Dự án weeb và các maintainer không chịu trách nhiệm cho việc sử dụng sai mục đích.",
     "accept": "Tôi hiểu và đồng ý"
   },
   "backendErrors": {

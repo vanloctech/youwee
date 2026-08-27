@@ -431,7 +431,7 @@ export function UniversalSettingsPanel({
                 type="button"
                 onClick={onSelectFolder}
                 disabled={disabled}
-                className="w-full h-8 px-3 rounded-md border bg-background text-xs flex items-center gap-2 text-left hover:bg-muted/50 transition-colors"
+                className="w-full h-8 px-3 rounded-md border bg-background text-xs flex items-center gap-2 text-start hover:bg-muted/50 transition-colors"
               >
                 <FolderOpen className="w-3.5 h-3.5 text-muted-foreground flex-shrink-0" />
                 <span className="truncate flex-1 text-muted-foreground">
