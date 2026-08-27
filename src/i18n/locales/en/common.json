@@ -47,7 +47,7 @@
   "update": {
     "available": "Update Available",
     "error": "Update Error",
-    "description": "A new version of weeb is available. Would you like to update now?",
+    "description": "A new version of youwee is available. Would you like to update now?",
     "downloading": "Downloading update...",
     "ready": "Update downloaded successfully! Restart to apply changes.",
     "errorGeneric": "An error occurred while updating.",
@@ -59,9 +59,9 @@
   },
   "legalDisclaimer": {
     "title": "Responsible use notice",
-    "description": "weeb is a local tool for downloading and processing media from URLs you provide. It is not affiliated with YouTube or any other media platform.",
+    "description": "youwee is a local tool for downloading and processing media from URLs you provide. It is not affiliated with YouTube or any other media platform.",
     "notice": "Only download content that you own, have permission to use, or are legally allowed to access and store.",
-    "responsibility": "By continuing, you confirm that you are responsible for following applicable laws, platform terms, copyright rules, and any permissions required for the content you download. The weeb project and maintainers are not responsible for misuse.",
+    "responsibility": "By continuing, you confirm that you are responsible for following applicable laws, platform terms, copyright rules, and any permissions required for the content you download. The youwee project and maintainers are not responsible for misuse.",
     "accept": "I Understand / Agree"
   },
   "backendErrors": {

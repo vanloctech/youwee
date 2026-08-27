@@ -555,7 +555,7 @@ export function GeneralSection({ highlightId }: GeneralSectionProps) {
 
               <div className="rounded-lg border border-border/60 bg-background/70 px-3 py-2">
                 <code className="block truncate font-mono text-xs text-muted-foreground">
-                  weeb &lt;url&gt; --quality 720 --skip-live
+                  youwee &lt;url&gt; --quality 720 --skip-live
                 </code>
               </div>
 

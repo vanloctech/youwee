@@ -47,7 +47,7 @@
   "update": {
     "available": "Actualización disponible",
     "error": "Error de actualización",
-    "description": "Hay una nueva versión de weeb disponible. ¿Deseas actualizar ahora?",
+    "description": "Hay una nueva versión de youwee disponible. ¿Deseas actualizar ahora?",
     "downloading": "Descargando actualización...",
     "ready": "¡Actualización descargada con éxito! Reinicia para aplicar los cambios.",
     "errorGeneric": "Se produjo un error al actualizar.",
@@ -59,9 +59,9 @@
   },
   "legalDisclaimer": {
     "title": "Aviso de uso responsable",
-    "description": "weeb es una herramienta local para descargar y procesar archivos multimedia a partir de las URL que proporciones. No está afiliada a YouTube ni a ninguna otra plataforma multimedia.",
+    "description": "youwee es una herramienta local para descargar y procesar archivos multimedia a partir de las URL que proporciones. No está afiliada a YouTube ni a ninguna otra plataforma multimedia.",
     "notice": "Descarga únicamente contenido que sea de tu propiedad, que tengas permiso para usar o al que tengas derecho legal de acceder y almacenar.",
-    "responsibility": "Al continuar, confirmas que eres responsable de cumplir las leyes aplicables, los términos de la plataforma, las normas de derechos de autor y cualquier permiso necesario para el contenido que descargues. El proyecto weeb y sus mantenedores no son responsables del mal uso.",
+    "responsibility": "Al continuar, confirmas que eres responsable de cumplir las leyes aplicables, los términos de la plataforma, las normas de derechos de autor y cualquier permiso necesario para el contenido que descargues. El proyecto youwee y sus mantenedores no son responsables del mal uso.",
     "accept": "Entendido / Acepto"
   },
   "backendErrors": {

@@ -103,7 +103,7 @@ export function DownloadSection({ highlightId }: DownloadSectionProps) {
   const filenameMetadataPreviewParts: Record<FilenameMetadataField, string> = {
     uploadDate: '2026-07-24',
     viewCount: '1234567views',
-    uploader: 'weeb Channel',
+    uploader: 'youwee Channel',
     duration: '12m34s',
     resolution: '1080p',
     videoId: 'dQw4w9WgXcQ',

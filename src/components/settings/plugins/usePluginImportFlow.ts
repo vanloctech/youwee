@@ -55,7 +55,7 @@ export function usePluginImportFlow(
       directory: false,
       multiple: false,
       title: t('download.pluginImportPlugin'),
-      filters: [{ name: 'weeb Plugin File', extensions: ['ywp'] }],
+      filters: [{ name: 'youwee Plugin File', extensions: ['ywp'] }],
     });
     if (typeof selected !== 'string') return;
     await inspectSource({ kind: 'package-ywp', value: selected }, 'inspect_plugin_package', 'path');

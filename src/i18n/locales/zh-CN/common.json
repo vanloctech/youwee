@@ -47,7 +47,7 @@
   "update": {
     "available": "有新版本可用",
     "error": "更新出错",
-    "description": "weeb 有新版本可用，是否立即更新？",
+    "description": "youwee 有新版本可用，是否立即更新？",
     "downloading": "正在下载更新...",
     "ready": "更新已下载完成！重启以应用更改。",
     "errorGeneric": "更新时发生错误。",
@@ -59,9 +59,9 @@
   },
   "legalDisclaimer": {
     "title": "负责任使用提示",
-    "description": "weeb 是一个本地工具，用于下载和处理你提供的 URL 中的媒体内容。weeb 与 YouTube 或任何其他媒体平台均无隶属关系。",
+    "description": "youwee 是一个本地工具，用于下载和处理你提供的 URL 中的媒体内容。youwee 与 YouTube 或任何其他媒体平台均无隶属关系。",
     "notice": "请仅下载你拥有、已获得许可，或依法可以访问和保存的内容。",
-    "responsibility": "继续使用即表示你确认会自行负责遵守适用法律、平台条款、版权规则以及下载内容所需的任何授权。weeb 项目及维护者不对滥用行为负责。",
+    "responsibility": "继续使用即表示你确认会自行负责遵守适用法律、平台条款、版权规则以及下载内容所需的任何授权。youwee 项目及维护者不对滥用行为负责。",
     "accept": "我理解并同意"
   },
   "backendErrors": {

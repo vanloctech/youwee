@@ -28,7 +28,7 @@
     "more": "بیشتر",
     "parallelDownloads": "دانلودهای هم‌زمان",
     "atATime": "{{count}} در هر بار",
-    "systemManagedHint": "weeb فقط در این صفحه از gallery-dl سیستم استفاده می‌کند.",
+    "systemManagedHint": "youwee فقط در این صفحه از gallery-dl سیستم استفاده می‌کند.",
     "range": "بازه‌ی صفحه‌ها",
     "rangeHint": "مثلاً 1-20 یا 1:24:3",
     "filenameTemplate": "قالب نام فایل",

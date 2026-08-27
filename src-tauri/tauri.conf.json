@@ -1,8 +1,9 @@
 {
   "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
-  "productName": "weeb",
+  "productName": "youwee",
+  "mainBinaryName": "youwee",
   "version": "0.20.3",
-  "identifier": "com.weeb.desktop",
+  "identifier": "com.youwee.desktop",
   "build": {
     "frontendDist": "../dist",
     "devUrl": "http://localhost:5173",
@@ -13,7 +14,7 @@
     "macOSPrivateApi": true,
     "windows": [
       {
-        "title": "weeb",
+        "title": "youwee",
         "width": 1100,
         "height": 800,
         "minWidth": 800,
@@ -68,8 +69,8 @@
   },
   "plugins": {
     "cli": {
-      "description": "weeb - GUI for yt-dlp. Pass a video URL to queue or download it.",
-      "longDescription": "weeb opens the desktop app and adds the given URL to the download queue. By default the download starts immediately; use --queue-only to only add it to the queue.",
+      "description": "youwee - GUI for yt-dlp. Pass a video URL to queue or download it.",
+      "longDescription": "youwee opens the desktop app and adds the given URL to the download queue. By default the download starts immediately; use --queue-only to only add it to the queue.",
       "args": [
         {
           "name": "source",

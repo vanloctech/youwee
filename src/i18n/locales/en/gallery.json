@@ -28,7 +28,7 @@
     "more": "More",
     "parallelDownloads": "Parallel downloads",
     "atATime": "{{count}} at a time",
-    "systemManagedHint": "weeb uses the system gallery-dl binary only for this screen.",
+    "systemManagedHint": "youwee uses the system gallery-dl binary only for this screen.",
     "range": "Page range",
     "rangeHint": "e.g. 1-20 or 1:24:3",
     "filenameTemplate": "Filename template",

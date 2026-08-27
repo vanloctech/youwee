@@ -355,7 +355,7 @@ export function HistoryItem({ entry }: HistoryItemProps) {
                 )}
               </div>
               <span className="rounded bg-background/35 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground/80">
-                weeb
+                youwee
               </span>
             </div>
           </div>

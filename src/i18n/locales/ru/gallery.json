@@ -24,7 +24,7 @@
     "more": "More",
     "parallelDownloads": "Parallel downloads",
     "atATime": "{{count}} at a time",
-    "systemManagedHint": "weeb uses the system gallery-dl binary only for this screen."
+    "systemManagedHint": "youwee uses the system gallery-dl binary only for this screen."
   },
   "queue": {
     "title": "Queue",

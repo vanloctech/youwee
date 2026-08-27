@@ -25,7 +25,7 @@
     "guideFfmpegTitle": "Video ve ses ayrı olarak indirilir",
     "guideFfmpegText": "FFmpeg'nun video ve sesi tek bir çıkış dosyasında birleştirebilmesi için Ayarlar > Bağımlılıklar bölümüne FFmpeg yükleyin.",
     "guidePreferredFpsTitle": "Kare hızı kaliteyi değiştirebilir",
-    "guidePreferredFpsText": "30 FPS yerden tasarruf sağlayabilir ancak weeb yalnızca mevcut akışları seçer. Bazı videolar 720p veya 480p gibi daha düşük kalitelerde yalnızca 30 FPS sağlar, dolayısıyla indirilen kalite seçtiğiniz kaliteden daha düşük olabilir.",
+    "guidePreferredFpsText": "30 FPS yerden tasarruf sağlayabilir ancak youwee yalnızca mevcut akışları seçer. Bazı videolar 720p veya 480p gibi daha düşük kalitelerde yalnızca 30 FPS sağlar, dolayısıyla indirilen kalite seçtiğiniz kaliteden daha düşük olabilir.",
     "guideOpenSettings": "Ayarları Aç",
     "guideGotIt": "Anladım",
     "detectedMultiple": "{{count}} URL'ler algılandı",
