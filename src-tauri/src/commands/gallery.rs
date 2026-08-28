@@ -1,6 +1,8 @@
-use std::collections::VecDeque;
+use std::collections::{HashSet, VecDeque};
 use std::path::PathBuf;
 use std::process::Stdio;
+use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::{LazyLock, Mutex};
 
 use tauri::{AppHandle, Manager};
 use tokio::io::{AsyncBufReadExt, AsyncReadExt, BufReader};
@@ -13,6 +15,12 @@ use crate::types::BackendError;
 use crate::utils::{normalize_url, sanitize_output_path, validate_url, CommandExt};
 
 const RECENT_OUTPUT_LIMIT: usize = 30;
+
+/// PIDs of gallery-dl processes spawned by THIS app, so a stop request
+/// only kills our own children instead of every gallery-dl on the machine.
+static GALLERY_CHILD_PIDS: LazyLock<Mutex<HashSet<u32>>> =
+    LazyLock::new(|| Mutex::new(HashSet::new()));
+static GALLERY_STOP_FLAG: AtomicBool = AtomicBool::new(false);
 
 #[derive(serde::Serialize)]
 pub struct GalleryDownloadResult {
@@ -63,22 +71,33 @@ fn push_recent_output(buffer: &mut VecDeque<String>, line: &str) {
     buffer.push_back(trimmed.to_string());
 }
 
-fn kill_gallery_processes() {
-    #[cfg(unix)]
-    {
-        use std::process::Command as StdCommand;
-        StdCommand::new("pkill")
-            .args(["-9", "-f", "gallery-dl"])
-            .spawn()
-            .ok();
-    }
-    #[cfg(windows)]
-    {
-        use std::process::Command as StdCommand;
-        let mut cmd = StdCommand::new("taskkill");
-        cmd.args(["/F", "/IM", "gallery-dl.exe"]);
-        cmd.hide_window();
-        cmd.spawn().ok();
+/// Kill only the gallery-dl process trees spawned by THIS app (tracked by PID).
+fn kill_tracked_gallery_processes() {
+    let pids: Vec<u32> = {
+        let mut set = GALLERY_CHILD_PIDS.lock().unwrap_or_else(|e| e.into_inner());
+        set.drain().collect()
+    };
+    for pid in pids {
+        #[cfg(windows)]
+        {
+            use std::process::Command as StdCommand;
+            let mut cmd = StdCommand::new("taskkill");
+            cmd.args(["/F", "/T", "/PID", &pid.to_string()]);
+            cmd.hide_window();
+            cmd.spawn().ok();
+        }
+        #[cfg(unix)]
+        {
+            use std::process::Command as StdCommand;
+            StdCommand::new("pkill")
+                .args(["-9", "-P", &pid.to_string()])
+                .spawn()
+                .ok();
+            StdCommand::new("kill")
+                .args(["-9", &pid.to_string()])
+                .spawn()
+                .ok();
+        }
     }
 }
 
@@ -199,7 +218,8 @@ fn first_meta_string(
 
 #[tauri::command]
 pub async fn stop_gallery_download() -> Result<(), String> {
-    kill_gallery_processes();
+    GALLERY_STOP_FLAG.store(true, Ordering::SeqCst);
+    kill_tracked_gallery_processes();
     Ok(())
 }
 
@@ -252,11 +272,22 @@ pub async fn download_gallery(
         extractors_dir.to_string_lossy().to_string(),
     ];
 
-    // Hardening defaults (still overridable via options below).
+    // Hardening defaults. Per-item options below override these, and each
+    // flag is emitted exactly once (the resolved value wins — no duplicates).
+    let retries = options
+        .as_ref()
+        .and_then(|o| o.retries)
+        .filter(|v| *v > 0)
+        .unwrap_or(8);
     args.push("--retries".to_string());
-    args.push("8".to_string());
+    args.push(retries.to_string());
+    let http_timeout = options
+        .as_ref()
+        .and_then(|o| o.timeout)
+        .filter(|v| *v > 0)
+        .unwrap_or(60);
     args.push("--http-timeout".to_string());
-    args.push("60".to_string());
+    args.push(http_timeout.to_string());
     args.push("--sleep-429".to_string());
     args.push("30".to_string());
     args.push("--user-agent".to_string());
@@ -279,18 +310,6 @@ pub async fn download_gallery(
     }
 
     if let Some(opts) = options {
-        if let Some(value) = opts.retries {
-            if value > 0 {
-                args.push("--retries".to_string());
-                args.push(value.to_string());
-            }
-        }
-        if let Some(value) = opts.timeout {
-            if value > 0 {
-                args.push("--http-timeout".to_string());
-                args.push(value.to_string());
-            }
-        }
         push_opt(&mut args, "--range", opts.range.as_deref());
         push_opt(&mut args, "--filename", opts.filename.as_deref());
         if opts.flat_output == Some(true) {
@@ -322,9 +341,16 @@ pub async fn download_gallery(
         .stderr(Stdio::piped());
     cmd.hide_window();
 
+    GALLERY_STOP_FLAG.store(false, Ordering::SeqCst);
     let mut child = cmd.spawn().map_err(|e| {
         BackendError::from_message(format!("Failed to start gallery-dl: {}", e)).to_wire_string()
     })?;
+    if let Some(pid) = child.id() {
+        GALLERY_CHILD_PIDS
+            .lock()
+            .unwrap_or_else(|e| e.into_inner())
+            .insert(pid);
+    }
 
     let stdout = child.stdout.take();
     let stderr = child.stderr.take();
@@ -356,9 +382,17 @@ pub async fn download_gallery(
         recent
     });
 
+    let child_pid = child.id();
     let status = child.wait().await.map_err(|e| {
         BackendError::from_message(format!("gallery-dl process error: {}", e)).to_wire_string()
     })?;
+    if let Some(pid) = child_pid {
+        GALLERY_CHILD_PIDS
+            .lock()
+            .unwrap_or_else(|e| e.into_inner())
+            .remove(&pid);
+    }
+    let was_stopped = GALLERY_STOP_FLAG.swap(false, Ordering::SeqCst);
 
     let mut recent_lines: Vec<String> = stdout_task.await.unwrap_or_default().into_iter().collect();
     recent_lines.extend(stderr_task.await.unwrap_or_default().into_iter());
@@ -379,6 +413,11 @@ pub async fn download_gallery(
             .or_else(|| recent_lines.last().cloned())
             .unwrap_or_else(|| "Unknown error".to_string());
 
+        if was_stopped {
+            return Err(BackendError::from_message("Gallery download stopped".to_string())
+                .with_param("exitCode", status.code().unwrap_or(-1))
+                .to_wire_string());
+        }
         return Err(BackendError::from_message(format!(
             "Gallery download failed (exit code {}): {}",
             status.code().unwrap_or(-1),
