@@ -166,7 +166,7 @@ export function usePluginExecutionToasts() {
         pluginNotificationRef.current.set(notificationKey, { status, at: now });
         const statusMessage =
           normalizedMessage || `Plugin ${normalizedPluginName ?? pluginId} is running`;
-        void notify('weeb Plugin', statusMessage);
+        void notify('Youwee Plugin', statusMessage);
         pushPluginToast(
           pluginId,
           status,
@@ -189,7 +189,7 @@ export function usePluginExecutionToasts() {
           !errorKind && (resolvedProvider || resolvedSource)
             ? `${statusMessage}\n${resolvedProvider || ''} ${resolvedSource || ''}`.trim()
             : statusMessage;
-        void notify('weeb Plugin', statusMessage);
+        void notify('Youwee Plugin', statusMessage);
         pushPluginToast(
           pluginId,
           status,
@@ -209,7 +209,7 @@ export function usePluginExecutionToasts() {
         pluginNotificationRef.current.set(notificationKey, { status, at: now });
         const statusMessage =
           normalizedMessage || `Plugin ${normalizedPluginName ?? pluginId} finished successfully`;
-        void notify('weeb Plugin', statusMessage);
+        void notify('Youwee Plugin', statusMessage);
         pushPluginToast(
           pluginId,
           status,

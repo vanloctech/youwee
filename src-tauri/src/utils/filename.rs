@@ -39,7 +39,7 @@ mod tests {
 
     #[test]
     fn calc_trim_filenames_respects_long_output_paths() {
-        let long_path = "G:\\weeb\\Downloads\\very-long-folder-name";
+        let long_path = "G:\\youwee\\Downloads\\very-long-folder-name";
         assert!(calc_trim_filenames_bytes(long_path) < DEFAULT_TRIM_FILENAMES);
     }
 
@@ -50,7 +50,7 @@ mod tests {
 
     #[test]
     fn calc_trim_filenames_uses_byte_length_for_non_ascii_paths() {
-        let path = "G:\\下载\\weeb\\very-long-non-ascii-output-directory-name";
+        let path = "G:\\下载\\youwee\\very-long-non-ascii-output-directory-name";
         assert!(path.as_bytes().len() > path.chars().count());
 
         let expected = (WINDOWS_MAX_PATH
@@ -64,7 +64,7 @@ mod tests {
     #[test]
     fn add_safe_filename_args_uses_path_aware_trim() {
         let mut args = Vec::new();
-        add_safe_filename_args(&mut args, Some("G:\\weeb"));
+        add_safe_filename_args(&mut args, Some("G:\\youwee"));
 
         assert!(args.contains(&"--trim-filenames".to_string()));
         let trim_index = args

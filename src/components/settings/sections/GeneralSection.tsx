@@ -87,12 +87,12 @@ export function GeneralSection({ highlightId }: GeneralSectionProps) {
     useState<LibraryDeleteFileBehavior>(() => loadLibraryDeleteFileBehavior());
 
   const [hideDockOnClose, setHideDockOnClose] = useState(() => {
-    return localStorage.getItem('weeb_hide_dock_on_close') === 'true';
+    return localStorage.getItem('youwee_hide_dock_on_close') === 'true';
   });
 
   const handleToggleHideDock = useCallback((checked: boolean) => {
     setHideDockOnClose(checked);
-    localStorage.setItem('weeb_hide_dock_on_close', String(checked));
+    localStorage.setItem('youwee_hide_dock_on_close', String(checked));
     invoke('set_hide_dock_on_close', { hide: checked }).catch(() => {});
   }, []);
 
@@ -555,7 +555,7 @@ export function GeneralSection({ highlightId }: GeneralSectionProps) {
 
               <div className="rounded-lg border border-border/60 bg-background/70 px-3 py-2">
                 <code className="block truncate font-mono text-xs text-muted-foreground">
-                  youwee &lt;url&gt; --quality 720 --skip-live
+                  Youwee &lt;url&gt; --quality 720 --skip-live
                 </code>
               </div>
 

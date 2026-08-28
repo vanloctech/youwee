@@ -147,7 +147,7 @@ export function Sidebar({ currentPage, onPageChange }: SidebarProps) {
                 isCollapsed ? 'w-9 h-9' : 'w-10 h-10',
               )}
             >
-              <img src="/logo-128.png" alt="youwee" className="w-full h-full object-cover" />
+              <img src="/logo-128.png" alt="Youwee" className="w-full h-full object-cover" />
             </div>
             <span
               className={cn(

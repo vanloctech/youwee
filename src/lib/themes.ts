@@ -38,7 +38,6 @@ export interface Theme {
 }
 
 export const CUSTOM_THEME_KEY = 'youwee-custom-theme';
-export const LEGACY_CUSTOM_THEME_KEY = 'weeb-custom-theme';
 
 export const themes: Theme[] = [
   {
@@ -289,15 +288,6 @@ export function getCustomPalette(): CustomPalette | null {
   if (typeof window === 'undefined') return null;
   try {
     let raw = window.localStorage.getItem(CUSTOM_THEME_KEY);
-    if (!raw) {
-      // Migrate the pre-rebrand key if present
-      const legacyRaw = window.localStorage.getItem(LEGACY_CUSTOM_THEME_KEY);
-      if (legacyRaw) {
-        window.localStorage.setItem(CUSTOM_THEME_KEY, legacyRaw);
-        window.localStorage.removeItem(LEGACY_CUSTOM_THEME_KEY);
-        raw = legacyRaw;
-      }
-    }
     if (!raw) return null;
     return JSON.parse(raw) as CustomPalette;
   } catch {

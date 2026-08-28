@@ -323,11 +323,11 @@ function AboutSettingsContent({
             <div className="flex items-start justify-between gap-4">
               <div className="flex items-center gap-4">
                 <div className="w-16 h-16 flex-shrink-0 rounded-2xl overflow-hidden">
-                  <img src="/logo-128.png" alt="weeb" className="w-full h-full object-cover" />
+                  <img src="/logo-128.png" alt="Youwee" className="w-full h-full object-cover" />
                 </div>
                 <div>
                   <div className="flex items-center gap-2.5">
-                    <span className="text-xl font-bold tracking-tight gradient-text">weeb</span>
+                    <span className="text-xl font-bold tracking-tight gradient-text">Youwee</span>
                     <Badge
                       variant="secondary"
                       className="font-mono text-xs bg-primary/10 text-primary border-0"

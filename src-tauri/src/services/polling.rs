@@ -434,7 +434,7 @@ async fn check_channel_for_new_videos(
 fn send_notification(app: &AppHandle, channel_name: &str, new_count: usize) {
     use tauri_plugin_notification::NotificationExt;
 
-    let title = "weeb";
+    let title = "Youwee";
     let body = if new_count == 1 {
         format!("{}: 1 new video", channel_name)
     } else {

@@ -30,7 +30,7 @@ use serde_json::Value;
 /// older versions should be migrated here (or rejected with a clear error).
 pub const BACKUP_SCHEMA_VERSION: u32 = 1;
 
-const BACKUP_PREFIX: &str = "weeb-backup";
+const BACKUP_PREFIX: &str = "youwee-backup";
 const PREVIEW_ROW_LIMIT: usize = 10;
 const REDACTED_PLACEHOLDER: &str = "[redacted]";
 
@@ -238,7 +238,7 @@ fn validate_backup(backup: &BackupFile) -> Vec<String> {
     if backup.schema_version != BACKUP_SCHEMA_VERSION {
         if backup.schema_version > BACKUP_SCHEMA_VERSION {
             errors.push(format!(
-                "Backup schema version {} is newer than the version this app supports ({}). Update weeb and try again.",
+                "Backup schema version {} is newer than the version this app supports ({}). Update youwee and try again.",
                 backup.schema_version, BACKUP_SCHEMA_VERSION
             ));
         } else {
