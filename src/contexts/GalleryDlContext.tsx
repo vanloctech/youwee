@@ -472,12 +472,12 @@ const startDownloadRef = useRef<() => Promise<void>>(async () => {});
   }, []);
 
   // P0-7: cancel = soft detach (marks item skipped and ignores late backend events)
-  // + real per-item process cancellation for active downloads via the id-keyed
-  // backend registry (cancel_download_item).
+  // + real per-item process cancellation: gallery downloads are killed through
+  // the id-addressable stop_gallery_download (tracks this item's own PID only).
   const cancelItem = useCallback((id: string) => {
     const current = itemsRef.current.find((item) => item.id === id);
     if (current && (current.status === 'downloading' || current.status === 'fetching')) {
-      void invoke('cancel_download_item', { id }).catch((error) => {
+      void invoke('stop_gallery_download', { id }).catch((error) => {
         console.error('Failed to cancel download item:', error);
       });
     }
@@ -618,6 +618,7 @@ const startDownloadRef = useRef<() => Promise<void>>(async () => {});
 
         try {
           const result = await invoke<GalleryDownloadResult>('download_gallery', {
+            id: item.id,
             url: item.url,
             outputPath: settingsRef.current.outputPath,
             logStderr,

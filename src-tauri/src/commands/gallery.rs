@@ -1,4 +1,4 @@
-use std::collections::{HashSet, VecDeque};
+use std::collections::{HashMap, HashSet, VecDeque};
 use std::path::PathBuf;
 use std::process::Stdio;
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -16,11 +16,13 @@ use crate::utils::{normalize_url, sanitize_output_path, validate_url, CommandExt
 
 const RECENT_OUTPUT_LIMIT: usize = 30;
 
-/// PIDs of gallery-dl processes spawned by THIS app, so a stop request
-/// only kills our own children instead of every gallery-dl on the machine.
-static GALLERY_CHILD_PIDS: LazyLock<Mutex<HashSet<u32>>> =
+/// Child PIDs of gallery-dl processes spawned by THIS app, keyed by download
+/// id — a stop request only kills the process trees that belong to it.
+static GALLERY_CHILD_PIDS: LazyLock<Mutex<HashMap<String, u32>>> =
+    LazyLock::new(|| Mutex::new(HashMap::new()));
+/// Download ids that a stop request has targeted (cleared when the run ends).
+static GALLERY_STOP_IDS: LazyLock<Mutex<HashSet<String>>> =
     LazyLock::new(|| Mutex::new(HashSet::new()));
-static GALLERY_STOP_FLAG: AtomicBool = AtomicBool::new(false);
 
 #[derive(serde::Serialize)]
 pub struct GalleryDownloadResult {
@@ -71,33 +73,27 @@ fn push_recent_output(buffer: &mut VecDeque<String>, line: &str) {
     buffer.push_back(trimmed.to_string());
 }
 
-/// Kill only the gallery-dl process trees spawned by THIS app (tracked by PID).
-fn kill_tracked_gallery_processes() {
-    let pids: Vec<u32> = {
-        let mut set = GALLERY_CHILD_PIDS.lock().unwrap_or_else(|e| e.into_inner());
-        set.drain().collect()
-    };
-    for pid in pids {
-        #[cfg(windows)]
-        {
-            use std::process::Command as StdCommand;
-            let mut cmd = StdCommand::new("taskkill");
-            cmd.args(["/F", "/T", "/PID", &pid.to_string()]);
-            cmd.hide_window();
-            cmd.spawn().ok();
-        }
-        #[cfg(unix)]
-        {
-            use std::process::Command as StdCommand;
-            StdCommand::new("pkill")
-                .args(["-9", "-P", &pid.to_string()])
-                .spawn()
-                .ok();
-            StdCommand::new("kill")
-                .args(["-9", &pid.to_string()])
-                .spawn()
-                .ok();
-        }
+/// Kill one gallery-dl process tree by PID (the app's own child only).
+fn kill_process_tree_pid(pid: u32) {
+    #[cfg(windows)]
+    {
+        use std::process::Command as StdCommand;
+        let mut cmd = StdCommand::new("taskkill");
+        cmd.args(["/F", "/T", "/PID", &pid.to_string()]);
+        cmd.hide_window();
+        cmd.spawn().ok();
+    }
+    #[cfg(unix)]
+    {
+        use std::process::Command as StdCommand;
+        StdCommand::new("pkill")
+            .args(["-9", "-P", &pid.to_string()])
+            .spawn()
+            .ok();
+        StdCommand::new("kill")
+            .args(["-9", &pid.to_string()])
+            .spawn()
+            .ok();
     }
 }
 
@@ -217,9 +213,29 @@ fn first_meta_string(
 }
 
 #[tauri::command]
-pub async fn stop_gallery_download() -> Result<(), String> {
-    GALLERY_STOP_FLAG.store(true, Ordering::SeqCst);
-    kill_tracked_gallery_processes();
+pub async fn stop_gallery_download(id: Option<String>) -> Result<(), String> {
+    {
+        let mut stop_ids = GALLERY_STOP_IDS.lock().unwrap_or_else(|e| e.into_inner());
+        let mut pids = GALLERY_CHILD_PIDS.lock().unwrap_or_else(|e| e.into_inner());
+        match id {
+            Some(target) => {
+                stop_ids.insert(target.clone());
+                if let Some(pid) = pids.remove(&target) {
+                    kill_process_tree_pid(pid);
+                }
+            }
+            None => {
+                // Stop-everything: mark every tracked download and kill each tree.
+                for key in pids.keys() {
+                    stop_ids.insert(key.clone());
+                }
+                for pid in pids.values() {
+                    kill_process_tree_pid(*pid);
+                }
+                pids.clear();
+            }
+        }
+    }
     Ok(())
 }
 
@@ -239,6 +255,7 @@ pub async fn download_gallery(
     thumbnail: Option<String>,
     options: Option<GalleryDownloadOptions>,
     incognito: Option<bool>,
+    id: Option<String>,
 ) -> Result<GalleryDownloadResult, String> {
     validate_url(&url).map_err(|e| BackendError::from_message(e).to_wire_string())?;
     let url = normalize_url(&url);
@@ -341,7 +358,7 @@ pub async fn download_gallery(
         .stderr(Stdio::piped());
     cmd.hide_window();
 
-    GALLERY_STOP_FLAG.store(false, Ordering::SeqCst);
+    let stop_key = id.unwrap_or_else(|| url.clone());
     let mut child = cmd.spawn().map_err(|e| {
         BackendError::from_message(format!("Failed to start gallery-dl: {}", e)).to_wire_string()
     })?;
@@ -349,8 +366,9 @@ pub async fn download_gallery(
         GALLERY_CHILD_PIDS
             .lock()
             .unwrap_or_else(|e| e.into_inner())
-            .insert(pid);
+            .insert(stop_key.clone(), pid);
     }
+    GALLERY_STOP_IDS.lock().unwrap_or_else(|e| e.into_inner()).remove(&stop_key);
 
     let stdout = child.stdout.take();
     let stderr = child.stderr.take();
@@ -386,13 +404,14 @@ pub async fn download_gallery(
     let status = child.wait().await.map_err(|e| {
         BackendError::from_message(format!("gallery-dl process error: {}", e)).to_wire_string()
     })?;
-    if let Some(pid) = child_pid {
-        GALLERY_CHILD_PIDS
-            .lock()
-            .unwrap_or_else(|e| e.into_inner())
-            .remove(&pid);
-    }
-    let was_stopped = GALLERY_STOP_FLAG.swap(false, Ordering::SeqCst);
+    GALLERY_CHILD_PIDS
+        .lock()
+        .unwrap_or_else(|e| e.into_inner())
+        .remove(&stop_key);
+    let was_stopped = GALLERY_STOP_IDS
+        .lock()
+        .unwrap_or_else(|e| e.into_inner())
+        .remove(&stop_key);
 
     let mut recent_lines: Vec<String> = stdout_task.await.unwrap_or_default().into_iter().collect();
     recent_lines.extend(stderr_task.await.unwrap_or_default().into_iter());
