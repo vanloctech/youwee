@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { CustomPaletteEditor } from '@/components/settings/CustomPaletteEditor';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
@@ -36,7 +37,6 @@ import {
 } from '@/lib/library-delete-behavior';
 import type { ThemeName } from '@/lib/themes';
 import { getAllThemes } from '@/lib/themes';
-import { CustomPaletteEditor } from '@/components/settings/CustomPaletteEditor';
 import { cn } from '@/lib/utils';
 import { SettingsCard, SettingsDivider, SettingsRow, SettingsSection } from '../SettingsSection';
 

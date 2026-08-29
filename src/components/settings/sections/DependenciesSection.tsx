@@ -7,9 +7,9 @@ import {
   Download,
   ExternalLink,
   Film,
+  History,
   Images,
   Loader2,
-  History,
   Package,
   RefreshCw,
   RotateCcw,
@@ -33,9 +33,9 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { useToast } from '@/components/ui/toast';
-import { useDependencies, type DownloadProgress } from '@/contexts/DependenciesContext';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { type DownloadProgress, useDependencies } from '@/contexts/DependenciesContext';
 import { useDownload } from '@/contexts/download-context';
 import { extractBackendError } from '@/lib/backend-error';
 import type { DependencySource, YtdlpChannel } from '@/lib/types';
@@ -55,13 +55,7 @@ const ENGINE_LABELS: Record<string, string> = {
   gallerydl: 'gallery-dl',
 };
 
-type EngineBackupKey =
-  | 'ytdlp'
-  | 'ytdlp_stable'
-  | 'ytdlp_nightly'
-  | 'ffmpeg'
-  | 'deno'
-  | 'gallerydl';
+type EngineBackupKey = 'ytdlp' | 'ytdlp_stable' | 'ytdlp_nightly' | 'ffmpeg' | 'deno' | 'gallerydl';
 
 const ROLLBACK_ENGINES: { key: EngineBackupKey; label: string }[] = [
   { key: 'ytdlp', label: 'yt-dlp' },
@@ -128,16 +122,13 @@ function EngineErrorNotice({ message }: { message: string }) {
             </p>
           )}
           {kind === 'version' && (
-            <p className="text-muted-foreground/80 mt-1">
-              {t('dependencies.versionRestoredHint')}
-            </p>
+            <p className="text-muted-foreground/80 mt-1">{t('dependencies.versionRestoredHint')}</p>
           )}
         </div>
       </div>
     </div>
   );
 }
-
 
 export function DependenciesSection({ highlightId }: DependenciesSectionProps) {
   const { t } = useTranslation('settings');
@@ -664,7 +655,12 @@ export function DependenciesSection({ highlightId }: DependenciesSectionProps) {
                     </Button>
                   )}
                 {ytdlpChannel === 'bundled' && isUpdateAvailable && (
-                  <Button size="sm" className="w-full" onClick={() => void handleYtdlpUpdated()} disabled={isUpdating}>
+                  <Button
+                    size="sm"
+                    className="w-full"
+                    onClick={() => void handleYtdlpUpdated()}
+                    disabled={isUpdating}
+                  >
                     {isUpdating ? (
                       <Loader2 className="w-4 h-4 animate-spin" />
                     ) : (
@@ -766,7 +762,11 @@ export function DependenciesSection({ highlightId }: DependenciesSectionProps) {
                 {ffmpegUpdateInfo?.has_update &&
                   !ffmpegStatus?.is_system &&
                   !isFfmpegSystemSource && (
-                    <Button size="sm" onClick={() => void handleFfmpegUpdated()} disabled={ffmpegDownloading}>
+                    <Button
+                      size="sm"
+                      onClick={() => void handleFfmpegUpdated()}
+                      disabled={ffmpegDownloading}
+                    >
                       {ffmpegDownloading ? (
                         <Loader2 className="w-4 h-4 animate-spin" />
                       ) : (
@@ -775,7 +775,11 @@ export function DependenciesSection({ highlightId }: DependenciesSectionProps) {
                     </Button>
                   )}
                 {ffmpegStatus?.installed === false && !ffmpegLoading && !isFfmpegSystemSource && (
-                  <Button size="sm" onClick={() => void handleFfmpegUpdated()} disabled={ffmpegDownloading}>
+                  <Button
+                    size="sm"
+                    onClick={() => void handleFfmpegUpdated()}
+                    disabled={ffmpegDownloading}
+                  >
                     {ffmpegDownloading ? (
                       <Loader2 className="w-4 h-4 animate-spin" />
                     ) : (
@@ -913,7 +917,11 @@ export function DependenciesSection({ highlightId }: DependenciesSectionProps) {
               </div>
               <div className="flex items-center gap-2">
                 {denoUpdateInfo?.has_update && !denoStatus?.is_system && (
-                  <Button size="sm" onClick={() => void handleDenoUpdated()} disabled={denoDownloading}>
+                  <Button
+                    size="sm"
+                    onClick={() => void handleDenoUpdated()}
+                    disabled={denoDownloading}
+                  >
                     {denoDownloading ? (
                       <Loader2 className="w-4 h-4 animate-spin" />
                     ) : (
@@ -922,7 +930,11 @@ export function DependenciesSection({ highlightId }: DependenciesSectionProps) {
                   </Button>
                 )}
                 {!denoStatus?.installed && !denoLoading && (
-                  <Button size="sm" onClick={() => void handleDenoUpdated()} disabled={denoDownloading}>
+                  <Button
+                    size="sm"
+                    onClick={() => void handleDenoUpdated()}
+                    disabled={denoDownloading}
+                  >
                     {denoDownloading ? (
                       <Loader2 className="w-4 h-4 animate-spin" />
                     ) : (
@@ -997,9 +1009,11 @@ export function DependenciesSection({ highlightId }: DependenciesSectionProps) {
                     ) : galleryDlError ? (
                       <span className="text-destructive">{galleryDlError}</span>
                     ) : galleryDlStatus?.installed ? (
-                      galleryDlStatus.is_system
-                        ? t('dependencies.systemGallerydl')
-                        : t('dependencies.appManagedGallerydl')
+                      galleryDlStatus.is_system ? (
+                        t('dependencies.systemGallerydl')
+                      ) : (
+                        t('dependencies.appManagedGallerydl')
+                      )
                     ) : (
                       <span className="text-amber-500">
                         {t('dependencies.systemGallerydlNotFound')}
@@ -1081,10 +1095,7 @@ export function DependenciesSection({ highlightId }: DependenciesSectionProps) {
           </SettingsCard>
 
           {/* Engine maintenance */}
-          <SettingsCard
-            id="engine-maintenance"
-            highlight={highlightId === 'engine-maintenance'}
-          >
+          <SettingsCard id="engine-maintenance" highlight={highlightId === 'engine-maintenance'}>
             <div className="flex items-center justify-between">
               <div>
                 <div className="font-medium">{t('dependencies.compatTitle')}</div>
@@ -1113,10 +1124,7 @@ export function DependenciesSection({ highlightId }: DependenciesSectionProps) {
             {compatResults && (
               <div className="mt-3 space-y-1.5">
                 {compatResults.map((r) => (
-                  <div
-                    key={r.engine}
-                    className="flex items-center justify-between text-xs"
-                  >
+                  <div key={r.engine} className="flex items-center justify-between text-xs">
                     <span className="flex items-center gap-1.5">
                       {r.ok ? (
                         <Check className="w-3.5 h-3.5 text-emerald-500" />
@@ -1125,15 +1133,11 @@ export function DependenciesSection({ highlightId }: DependenciesSectionProps) {
                       )}
                       {ENGINE_LABELS[r.engine] || r.engine}
                       {r.version && (
-                        <span className="font-mono text-muted-foreground">
-                          {r.version}
-                        </span>
+                        <span className="font-mono text-muted-foreground">{r.version}</span>
                       )}
                     </span>
                     <span className={r.ok ? 'text-emerald-500' : 'text-destructive'}>
-                      {r.ok
-                        ? t('dependencies.compatOk')
-                        : r.error || t('dependencies.compatFail')}
+                      {r.ok ? t('dependencies.compatOk') : r.error || t('dependencies.compatFail')}
                     </span>
                   </div>
                 ))}
@@ -1147,47 +1151,38 @@ export function DependenciesSection({ highlightId }: DependenciesSectionProps) {
               </p>
               {backupsStatus ? (
                 <div className="mt-3 space-y-1.5">
-                  {ROLLBACK_ENGINES.filter((e) => backupsStatus[e.key].available).map(
-                    (e) => (
-                      <div
-                        key={e.key}
-                        className="flex items-center justify-between text-xs"
+                  {ROLLBACK_ENGINES.filter((e) => backupsStatus[e.key].available).map((e) => (
+                    <div key={e.key} className="flex items-center justify-between text-xs">
+                      <span className="flex items-center gap-1.5">
+                        <History className="w-3.5 h-3.5 text-muted-foreground" />
+                        {e.label}
+                        {backupsStatus[e.key].version && (
+                          <span className="font-mono text-muted-foreground">
+                            {backupsStatus[e.key].version}
+                          </span>
+                        )}
+                      </span>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        disabled={rollbackLoading !== null}
+                        onClick={() => void rollbackEngine(e.key)}
                       >
-                        <span className="flex items-center gap-1.5">
-                          <History className="w-3.5 h-3.5 text-muted-foreground" />
-                          {e.label}
-                          {backupsStatus[e.key].version && (
-                            <span className="font-mono text-muted-foreground">
-                              {backupsStatus[e.key].version}
-                            </span>
-                          )}
-                        </span>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          disabled={rollbackLoading !== null}
-                          onClick={() => void rollbackEngine(e.key)}
-                        >
-                          {rollbackLoading === e.key ? (
-                            <Loader2 className="w-3 h-3 animate-spin" />
-                          ) : (
-                            <RotateCcw className="w-3 h-3" />
-                          )}
-                          {t('dependencies.rollback')}
-                        </Button>
-                      </div>
-                    ),
-                  )}
+                        {rollbackLoading === e.key ? (
+                          <Loader2 className="w-3 h-3 animate-spin" />
+                        ) : (
+                          <RotateCcw className="w-3 h-3" />
+                        )}
+                        {t('dependencies.rollback')}
+                      </Button>
+                    </div>
+                  ))}
                   {ROLLBACK_ENGINES.every((e) => !backupsStatus[e.key].available) && (
-                    <p className="text-xs text-muted-foreground">
-                      {t('dependencies.noBackups')}
-                    </p>
+                    <p className="text-xs text-muted-foreground">{t('dependencies.noBackups')}</p>
                   )}
                 </div>
               ) : (
-                <p className="text-xs text-muted-foreground mt-2">
-                  {t('dependencies.noBackups')}
-                </p>
+                <p className="text-xs text-muted-foreground mt-2">{t('dependencies.noBackups')}</p>
               )}
               {rollbackSuccess && (
                 <p className="mt-2 text-xs text-emerald-500">

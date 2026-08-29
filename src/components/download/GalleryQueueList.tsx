@@ -1,3 +1,4 @@
+import { convertFileSrc } from '@tauri-apps/api/core';
 import {
   ArrowUpToLine,
   Ban,
@@ -26,7 +27,6 @@ import { EmptyStateIllustration } from '@/components/shared/EmptyStateIllustrati
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { convertFileSrc } from '@tauri-apps/api/core';
 import { useGalleryDl } from '@/contexts/gallerydl-context';
 import { openFileLocation } from '@/lib/open-file-location';
 import type { DownloadItem } from '@/lib/types';
@@ -361,8 +361,15 @@ function GalleryGridCard({
 }: GalleryGridCardProps) {
   const { t } = useTranslation('gallery');
   const cardRef = useRef<HTMLDivElement | null>(null);
-  const { retryFailedDownload, pauseItem, resumeItem, cancelItem, duplicateItem, moveItemToTop, toggleItemIncognito } =
-    useGalleryDl();
+  const {
+    retryFailedDownload,
+    pauseItem,
+    resumeItem,
+    cancelItem,
+    duplicateItem,
+    moveItemToTop,
+    toggleItemIncognito,
+  } = useGalleryDl();
   const isActive = item.status === 'downloading' || item.status === 'fetching';
   const isCompleted = item.status === 'completed';
   const isError = item.status === 'error';

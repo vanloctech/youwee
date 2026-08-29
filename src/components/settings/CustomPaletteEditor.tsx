@@ -60,7 +60,9 @@ export function CustomPaletteEditor() {
         </label>
         <div className="ms-auto flex items-center gap-1">
           {isCustomActive && (
-            <span className="text-[10px] text-muted-foreground">{t('general.customPaletteApplied')}</span>
+            <span className="text-[10px] text-muted-foreground">
+              {t('general.customPaletteApplied')}
+            </span>
           )}
           <Button
             type="button"
@@ -73,9 +75,7 @@ export function CustomPaletteEditor() {
           </Button>
         </div>
       </div>
-      <p className="text-[10px] text-muted-foreground">
-        {t('general.customPaletteHint')}
-      </p>
+      <p className="text-[10px] text-muted-foreground">{t('general.customPaletteHint')}</p>
     </div>
   );
 }

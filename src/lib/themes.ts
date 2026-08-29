@@ -287,7 +287,7 @@ export function hslToHex(hsl: string): string {
 export function getCustomPalette(): CustomPalette | null {
   if (typeof window === 'undefined') return null;
   try {
-    let raw = window.localStorage.getItem(CUSTOM_THEME_KEY);
+    const raw = window.localStorage.getItem(CUSTOM_THEME_KEY);
     if (!raw) return null;
     return JSON.parse(raw) as CustomPalette;
   } catch {
@@ -343,8 +343,8 @@ export const getTheme = (name: ThemeName): Theme => {
 };
 
 export const DEFAULT_CUSTOM_PALETTE: CustomPalette = {
-  primary: "221 83% 53%",
-  accent: "26 100% 50%",
+  primary: '221 83% 53%',
+  accent: '26 100% 50%',
 };
 
 export const getAllThemes = (): Theme[] => {

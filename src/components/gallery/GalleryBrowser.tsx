@@ -33,12 +33,37 @@ interface DiscoverSite {
 }
 
 const DISCOVER_SITES: DiscoverSite[] = [
-  { id: 'pixiv', label: 'Pixiv', buildUrl: (kw) => `https://www.pixiv.net/tags/${encodeURIComponent(kw)}/artworks` },
-  { id: 'danbooru', label: 'Danbooru', buildUrl: (kw) => `https://danbooru.donmai.us/posts?tags=${encodeURIComponent(kw)}` },
-  { id: 'gelbooru', label: 'Gelbooru', buildUrl: (kw) => `https://gelbooru.com/index.php?page=post&s=list&tags=${encodeURIComponent(kw)}` },
-  { id: 'nhentai', label: 'nhentai', buildUrl: (kw) => `https://nhentai.net/search/?q=${encodeURIComponent(kw)}` },
-  { id: 'mangadex', label: 'MangaDex', buildUrl: (kw) => `https://mangadex.org/search?q=${encodeURIComponent(kw)}` },
-  { id: 'asura', label: 'AsuraScans', buildUrl: (kw) => `https://www.asurascans.com/?s=${encodeURIComponent(kw)}` },
+  {
+    id: 'pixiv',
+    label: 'Pixiv',
+    buildUrl: (kw) => `https://www.pixiv.net/tags/${encodeURIComponent(kw)}/artworks`,
+  },
+  {
+    id: 'danbooru',
+    label: 'Danbooru',
+    buildUrl: (kw) => `https://danbooru.donmai.us/posts?tags=${encodeURIComponent(kw)}`,
+  },
+  {
+    id: 'gelbooru',
+    label: 'Gelbooru',
+    buildUrl: (kw) =>
+      `https://gelbooru.com/index.php?page=post&s=list&tags=${encodeURIComponent(kw)}`,
+  },
+  {
+    id: 'nhentai',
+    label: 'nhentai',
+    buildUrl: (kw) => `https://nhentai.net/search/?q=${encodeURIComponent(kw)}`,
+  },
+  {
+    id: 'mangadex',
+    label: 'MangaDex',
+    buildUrl: (kw) => `https://mangadex.org/search?q=${encodeURIComponent(kw)}`,
+  },
+  {
+    id: 'asura',
+    label: 'AsuraScans',
+    buildUrl: (kw) => `https://www.asurascans.com/?s=${encodeURIComponent(kw)}`,
+  },
   { id: 'generic', label: 'Paste URL…', buildUrl: null },
 ];
 
@@ -161,7 +186,10 @@ export function GalleryBrowser({ queueItems, onGoToQueue, onAddUrls }: GalleryBr
   );
   const activePercent = useMemo(() => {
     if (activeDownloads.length === 0) return 0;
-    const total = activeDownloads.reduce((sum, i) => sum + Math.min(100, Math.max(0, i.progress || 0)), 0);
+    const total = activeDownloads.reduce(
+      (sum, i) => sum + Math.min(100, Math.max(0, i.progress || 0)),
+      0,
+    );
     return Math.round(total / activeDownloads.length);
   }, [activeDownloads]);
 
@@ -402,7 +430,9 @@ export function GalleryBrowser({ queueItems, onGoToQueue, onAddUrls }: GalleryBr
           <div className="flex h-full min-h-[240px] flex-col items-center justify-center gap-2 text-center">
             <Images className="h-10 w-10 text-muted-foreground/40" />
             <p className="text-sm font-medium">{t('browser.emptyTitle')}</p>
-            <p className="max-w-sm text-xs text-muted-foreground">{t('browser.emptyDescription')}</p>
+            <p className="max-w-sm text-xs text-muted-foreground">
+              {t('browser.emptyDescription')}
+            </p>
             <Button variant="outline" size="sm" className="mt-2" onClick={onGoToQueue}>
               {t('browser.goToQueue')}
             </Button>
@@ -440,7 +470,13 @@ interface LibraryCardProps {
   dateFormatter: Intl.DateTimeFormat;
 }
 
-function LibraryCard({ item, selected, onToggleSelect, onOpenFolder, dateFormatter }: LibraryCardProps) {
+function LibraryCard({
+  item,
+  selected,
+  onToggleSelect,
+  onOpenFolder,
+  dateFormatter,
+}: LibraryCardProps) {
   const { t } = useTranslation('gallery');
   const { url: coverUrl, failed: coverFailed } = useCoverUrl(item.cover_image, item.file_exists);
 
@@ -459,12 +495,7 @@ function LibraryCard({ item, selected, onToggleSelect, onOpenFolder, dateFormatt
     >
       <div className="relative w-full overflow-hidden bg-muted/40">
         {coverUrl ? (
-          <img
-            src={coverUrl}
-            alt={item.title}
-            loading="lazy"
-            className="w-full h-auto"
-          />
+          <img src={coverUrl} alt={item.title} loading="lazy" className="w-full h-auto" />
         ) : (
           <div
             className={cn(

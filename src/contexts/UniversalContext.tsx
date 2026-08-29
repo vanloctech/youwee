@@ -67,8 +67,8 @@ import {
   type UniversalSettings,
 } from '@/lib/universal-settings';
 import { sanitizeYtdlpAdvancedOptions } from '@/lib/ytdlp-advanced-options';
-import { useDownload } from './download-context';
 import { classifyDownloadError } from './DownloadContext';
+import { useDownload } from './download-context';
 import { UniversalContext } from './universal-context';
 
 const STORAGE_KEY = 'youwee-universal-settings';
@@ -254,7 +254,10 @@ export interface UniversalContextType {
   updateItemAdvancedOptions: (
     id: string,
     patch: Partial<
-      Pick<ItemUniversalSettings, 'ytdlpAdvancedOptionsEnabled' | 'ytdlpAdvancedOptions' | 'rawArgs'>
+      Pick<
+        ItemUniversalSettings,
+        'ytdlpAdvancedOptionsEnabled' | 'ytdlpAdvancedOptions' | 'rawArgs'
+      >
     >,
   ) => void;
   // Per-item queue controls (P0-7)
@@ -867,7 +870,10 @@ export function UniversalProvider({ children }: { children: ReactNode }) {
     (
       id: string,
       patch: Partial<
-        Pick<ItemUniversalSettings, 'ytdlpAdvancedOptionsEnabled' | 'ytdlpAdvancedOptions' | 'rawArgs'>
+        Pick<
+          ItemUniversalSettings,
+          'ytdlpAdvancedOptionsEnabled' | 'ytdlpAdvancedOptions' | 'rawArgs'
+        >
       >,
     ) => {
       setItems((items) => {
@@ -923,9 +929,7 @@ export function UniversalProvider({ children }: { children: ReactNode }) {
   const resumeItem = useCallback((id: string) => {
     setItems((items) => {
       const nextItems = items.map((item) =>
-        item.id === id && item.status === 'paused'
-          ? { ...item, status: 'pending' as const }
-          : item,
+        item.id === id && item.status === 'paused' ? { ...item, status: 'pending' as const } : item,
       );
       itemsRef.current = nextItems;
       return nextItems;

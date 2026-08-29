@@ -240,9 +240,7 @@ function UpdaterWrapper({ children }: { children: React.ReactNode }) {
 
 function AppDirectionProvider({ children }: { children: React.ReactNode }) {
   const { i18n } = useTranslation();
-  const baseLanguage = (i18n.resolvedLanguage || i18n.language || 'en')
-    .toLowerCase()
-    .split('-')[0];
+  const baseLanguage = (i18n.resolvedLanguage || i18n.language || 'en').toLowerCase().split('-')[0];
   // Mirrors RTL_LANGUAGES in src/i18n/index.ts (ar, fa).
   const dir = baseLanguage === 'ar' || baseLanguage === 'fa' ? 'rtl' : 'ltr';
   return <DirectionProvider dir={dir}>{children}</DirectionProvider>;

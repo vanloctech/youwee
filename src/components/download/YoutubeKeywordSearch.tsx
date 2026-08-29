@@ -15,7 +15,6 @@ import {
 } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import i18n from '@/i18n';
 import { EmptyStateIllustration } from '@/components/shared/EmptyStateIllustration';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -28,6 +27,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import i18n from '@/i18n';
 import { extractBackendError, localizeBackendError } from '@/lib/backend-error';
 import type {
   YoutubeSearchDurationFilter,

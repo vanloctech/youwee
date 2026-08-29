@@ -46,8 +46,15 @@ export function GalleryQueueItem({
   onRemove,
 }: GalleryQueueItemProps) {
   const { t } = useTranslation('gallery');
-  const { retryFailedDownload, pauseItem, resumeItem, cancelItem, duplicateItem, moveItemToTop, toggleItemIncognito } =
-    useGalleryDl();
+  const {
+    retryFailedDownload,
+    pauseItem,
+    resumeItem,
+    cancelItem,
+    duplicateItem,
+    moveItemToTop,
+    toggleItemIncognito,
+  } = useGalleryDl();
   const isActive = item.status === 'downloading' || item.status === 'fetching';
   const isCompleted = item.status === 'completed';
   const isError = item.status === 'error';

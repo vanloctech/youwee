@@ -838,16 +838,14 @@ html[lang="fa"] button,
 html[lang="fa"] input,
 html[lang="fa"] textarea,
 html[lang="fa"] select {
-  font-family:
-    "Segoe UI", "Tahoma", "Nunito", system-ui, -apple-system, sans-serif;
+  font-family: "Segoe UI", "Tahoma", "Nunito", system-ui, -apple-system, sans-serif;
 }
 html[lang="ar"] body,
 html[lang="ar"] button,
 html[lang="ar"] input,
 html[lang="ar"] textarea,
 html[lang="ar"] select {
-  font-family:
-    "Segoe UI", "Tahoma", "Nunito", system-ui, -apple-system, sans-serif;
+  font-family: "Segoe UI", "Tahoma", "Nunito", system-ui, -apple-system, sans-serif;
 }
 
 /* Indeterminate activity bar for gallery downloads (gallery-dl emits no progress events) */
@@ -856,9 +854,16 @@ html[lang="ar"] select {
   animation: gallery-progress-slide 1.2s ease-in-out infinite;
 }
 @keyframes gallery-progress-slide {
-  0%   { transform: translateX(-100%); }
-  100% { transform: translateX(400%); }
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(400%);
+  }
 }
 @media (prefers-reduced-motion: reduce) {
-  .gallery-progress-indeterminate { animation: none; width: 50%; }
+  .gallery-progress-indeterminate {
+    animation: none;
+    width: 50%;
+  }
 }

@@ -13,8 +13,6 @@ import {
 } from 'lucide-react';
 import { useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { buildDownloadVideoInvokeArgs, buildSponsorBlockArgs } from '@/contexts/DownloadContext';
-import { useDownload } from '@/contexts/download-context';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -38,6 +36,16 @@ import {
 import { Switch } from '@/components/ui/switch';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/components/ui/toast';
+import { buildDownloadVideoInvokeArgs, buildSponsorBlockArgs } from '@/contexts/DownloadContext';
+import { useDownload } from '@/contexts/download-context';
+import type {
+  DownloadItem,
+  ItemDownloadSettings,
+  ItemUniversalSettings,
+  YtdlpAdvancedOption,
+  YtdlpAdvancedOptionId,
+} from '@/lib/types';
+import { cn } from '@/lib/utils';
 import {
   getYtdlpAdvancedOptionDefinition,
   sanitizeYtdlpAdvancedOptions,
@@ -52,14 +60,6 @@ import {
   type YtdlpPreset,
   type YtdlpPresetSettings,
 } from '@/lib/ytdlp-presets';
-import type {
-  DownloadItem,
-  ItemDownloadSettings,
-  ItemUniversalSettings,
-  YtdlpAdvancedOption,
-  YtdlpAdvancedOptionId,
-} from '@/lib/types';
-import { cn } from '@/lib/utils';
 
 /**
  * P0-2: validated key/value editor for per-item yt-dlp advanced options,
@@ -91,7 +91,12 @@ function formatYtdlpOptionName(definition: YtdlpAdvancedOptionDefinition): strin
   return definition.ytDlpFlag;
 }
 
-export function YtDlpOptionsEditor({ item, settings, disabled, onChange }: YtDlpOptionsEditorProps) {
+export function YtDlpOptionsEditor({
+  item,
+  settings,
+  disabled,
+  onChange,
+}: YtDlpOptionsEditorProps) {
   const { t } = useTranslation(['download', 'settings']);
   const toast = useToast();
   // Global settings + network config are needed to reproduce the exact command
@@ -197,9 +202,7 @@ export function YtDlpOptionsEditor({ item, settings, disabled, onChange }: YtDlp
           />
           <Input
             value={option.secondaryValue || ''}
-            onChange={(event) =>
-              updateOption(index, { secondaryValue: event.currentTarget.value })
-            }
+            onChange={(event) => updateOption(index, { secondaryValue: event.currentTarget.value })}
             placeholder={t('download.ytdlpAdvanced.placeholder.headerValue')}
             className="h-7 bg-background text-xs"
           />
@@ -265,7 +268,19 @@ export function YtDlpOptionsEditor({ item, settings, disabled, onChange }: YtDlp
     } finally {
       setIsPreviewing(false);
     }
-  }, [enabled, isPreviewing, item, options, rawArgs, settings, globalSettings, cookieSettings, proxySettings, t, toast]);
+  }, [
+    enabled,
+    isPreviewing,
+    item,
+    options,
+    rawArgs,
+    settings,
+    globalSettings,
+    cookieSettings,
+    proxySettings,
+    t,
+    toast,
+  ]);
 
   const handleCopyPreview = useCallback(async () => {
     if (!preview) return;
@@ -340,7 +355,10 @@ export function YtDlpOptionsEditor({ item, settings, disabled, onChange }: YtDlp
         <>
           {/* Add-option dropdown */}
           <div className="flex items-center gap-2">
-            <Select key={options.length} onValueChange={(value) => addOption(value as YtdlpAdvancedOptionId)}>
+            <Select
+              key={options.length}
+              onValueChange={(value) => addOption(value as YtdlpAdvancedOptionId)}
+            >
               <SelectTrigger className="h-8 w-full bg-background text-xs" disabled={disabled}>
                 <div className="flex items-center gap-2">
                   <Plus className="h-3.5 w-3.5" />
@@ -495,7 +513,11 @@ export function YtDlpOptionsEditor({ item, settings, disabled, onChange }: YtDlp
           <div className="space-y-1.5 border-t border-border/50 pt-2.5">
             <Label className="text-[11px] text-muted-foreground">{t('ytdlpEditor.presets')}</Label>
             <div className="flex items-center gap-1.5">
-              <Select value={selectedPresetId} onValueChange={handleApplyPreset} disabled={disabled}>
+              <Select
+                value={selectedPresetId}
+                onValueChange={handleApplyPreset}
+                disabled={disabled}
+              >
                 <SelectTrigger className="h-7 flex-1 bg-background text-xs">
                   <SelectValue placeholder={t('ytdlpEditor.presetPlaceholder')} />
                 </SelectTrigger>
@@ -553,9 +575,7 @@ export function YtDlpOptionsEditor({ item, settings, disabled, onChange }: YtDlp
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>{t('ytdlpEditor.rawArgsWarningTitle')}</AlertDialogTitle>
-            <AlertDialogDescription>
-              {t('ytdlpEditor.rawArgsWarningBody')}
-            </AlertDialogDescription>
+            <AlertDialogDescription>{t('ytdlpEditor.rawArgsWarningBody')}</AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>{t('ytdlpEditor.rawArgsCancel')}</AlertDialogCancel>

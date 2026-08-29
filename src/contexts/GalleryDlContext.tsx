@@ -18,8 +18,8 @@ import {
 import { buildCookieProxyInvokeOptions, loadNetworkSettings } from '@/lib/network-config';
 import { parseUniversalUrls } from '@/lib/sources';
 import type { DownloadItem } from '@/lib/types';
-import { useDownload } from './download-context';
 import { classifyDownloadError } from './DownloadContext';
+import { useDownload } from './download-context';
 import { GalleryDlContext } from './gallerydl-context';
 
 const STORAGE_KEY = 'youwee-gallerydl-settings';
@@ -191,7 +191,7 @@ export function GalleryDlProvider({ children }: { children: ReactNode }) {
 
   const isDownloadingRef = useRef(false);
   const itemsRef = useRef<DownloadItem[]>([]);
-const startDownloadRef = useRef<() => Promise<void>>(async () => {});
+  const startDownloadRef = useRef<() => Promise<void>>(async () => {});
   const settingsRef = useRef<GalleryDlSettings>(settings);
   const focusClearTimerRef = useRef<number | null>(null);
   const { settings: downloadSettings, filterDownloadedDuplicateCandidates } = useDownload();
@@ -258,48 +258,41 @@ const startDownloadRef = useRef<() => Promise<void>>(async () => {});
     }, 3000);
   }, []);
 
-  const probeItems = useCallback(
-    async (newItems: DownloadItem[]) => {
-      const { cookieSettings, proxySettings } = loadNetworkSettings();
-      const networkOptions = buildCookieProxyInvokeOptions(cookieSettings, proxySettings);
-      for (const item of newItems) {
-        try {
-          setItems((current) =>
-            current.map((entry) =>
-              entry.id === item.id
-                ? { ...entry, status: 'fetching' as const }
-                : entry,
-            ),
-          );
-          const probe = await invoke<GalleryProbe>('probe_gallery', {
-            url: item.url,
-            ...networkOptions,
-          });
-          setItems((current) =>
-            current.map((entry) => {
-              if (entry.id !== item.id) return entry;
-              const next: DownloadItem = { ...entry, status: 'pending' as const };
-              if (probe.thumbnail) next.thumbnail = probe.thumbnail;
-              if (probe.title) next.title = probe.title;
-              if (probe.count) next.fileCount = probe.count;
-              if (probe.error) console.warn('gallery probe:', probe.error);
-              return next;
-            }),
-          );
-        } catch (invokeError) {
-          console.error('Failed to probe gallery URL:', invokeError);
-          setItems((current) =>
-            current.map((entry) =>
-              entry.id === item.id
-                ? { ...entry, status: 'pending' as const }
-                : entry,
-            ),
-          );
-        }
+  const probeItems = useCallback(async (newItems: DownloadItem[]) => {
+    const { cookieSettings, proxySettings } = loadNetworkSettings();
+    const networkOptions = buildCookieProxyInvokeOptions(cookieSettings, proxySettings);
+    for (const item of newItems) {
+      try {
+        setItems((current) =>
+          current.map((entry) =>
+            entry.id === item.id ? { ...entry, status: 'fetching' as const } : entry,
+          ),
+        );
+        const probe = await invoke<GalleryProbe>('probe_gallery', {
+          url: item.url,
+          ...networkOptions,
+        });
+        setItems((current) =>
+          current.map((entry) => {
+            if (entry.id !== item.id) return entry;
+            const next: DownloadItem = { ...entry, status: 'pending' as const };
+            if (probe.thumbnail) next.thumbnail = probe.thumbnail;
+            if (probe.title) next.title = probe.title;
+            if (probe.count) next.fileCount = probe.count;
+            if (probe.error) console.warn('gallery probe:', probe.error);
+            return next;
+          }),
+        );
+      } catch (invokeError) {
+        console.error('Failed to probe gallery URL:', invokeError);
+        setItems((current) =>
+          current.map((entry) =>
+            entry.id === item.id ? { ...entry, status: 'pending' as const } : entry,
+          ),
+        );
       }
-    },
-    [],
-  );
+    }
+  }, []);
 
   const addFromText = useCallback(
     async (text: string): Promise<number> => {
@@ -462,9 +455,7 @@ const startDownloadRef = useRef<() => Promise<void>>(async () => {});
   const resumeItem = useCallback((id: string) => {
     setItems((current) => {
       const nextItems = current.map((item) =>
-        item.id === id && item.status === 'paused'
-          ? { ...item, status: 'pending' as const }
-          : item,
+        item.id === id && item.status === 'paused' ? { ...item, status: 'pending' as const } : item,
       );
       itemsRef.current = nextItems;
       return nextItems;
@@ -546,30 +537,27 @@ const startDownloadRef = useRef<() => Promise<void>>(async () => {});
   }, []);
 
   // P0-7: retry a failed download (reset item and restart the queue).
-  const retryFailedDownload = useCallback(
-    (itemId: string) => {
-      setItems((current) =>
-        current.map((item) =>
-          item.id === itemId
-            ? {
-                ...item,
-                status: 'pending',
-                progress: 0,
-                error: undefined,
-                errorCode: undefined,
-                errorClass: undefined,
-                retryState: undefined,
-              }
-            : item,
-        ),
-      );
-      // Use a short delay to ensure state update before starting download.
-      setTimeout(() => {
-        void startDownloadRef.current();
-      }, 100);
-    },
-    [],
-  );
+  const retryFailedDownload = useCallback((itemId: string) => {
+    setItems((current) =>
+      current.map((item) =>
+        item.id === itemId
+          ? {
+              ...item,
+              status: 'pending',
+              progress: 0,
+              error: undefined,
+              errorCode: undefined,
+              errorClass: undefined,
+              retryState: undefined,
+            }
+          : item,
+      ),
+    );
+    // Use a short delay to ensure state update before starting download.
+    setTimeout(() => {
+      void startDownloadRef.current();
+    }, 100);
+  }, []);
 
   const startDownload = useCallback(async () => {
     const hasPendingItems = () =>
@@ -651,8 +639,7 @@ const startDownloadRef = useRef<() => Promise<void>>(async () => {});
           if (
             itemsRef.current.some(
               (entry) =>
-                entry.id === item.id &&
-                (entry.status === 'paused' || entry.status === 'skipped'),
+                entry.id === item.id && (entry.status === 'paused' || entry.status === 'skipped'),
             )
           ) {
             return;

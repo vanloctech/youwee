@@ -149,9 +149,7 @@ export function SettingsPage({
                   <DependenciesSection highlightId={highlightId} />
                 )}
 
-                {activeSection === 'engines' && (
-                  <DependenciesSection highlightId={highlightId} />
-                )}
+                {activeSection === 'engines' && <DependenciesSection highlightId={highlightId} />}
 
                 {activeSection === 'download' && <DownloadSection highlightId={highlightId} />}
 
@@ -172,7 +170,7 @@ export function SettingsPage({
                 {activeSection === 'network' && <NetworkSection highlightId={highlightId} />}
 
                 {activeSection === 'backup' && <BackupSection highlightId={highlightId} />}
-  {activeSection === 'about' && (
+                {activeSection === 'about' && (
                   <AboutSettingsContent
                     appVersion={appVersion}
                     updater={updater}

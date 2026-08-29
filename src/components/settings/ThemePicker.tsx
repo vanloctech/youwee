@@ -1,8 +1,8 @@
 import { Check, Palette } from 'lucide-react';
+import { CustomPaletteEditor } from '@/components/settings/CustomPaletteEditor';
 import { Button } from '@/components/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { useTheme } from '@/contexts/ThemeContext';
-import { CustomPaletteEditor } from '@/components/settings/CustomPaletteEditor';
 import type { Theme, ThemeName } from '@/lib/themes';
 import { getAllThemes } from '@/lib/themes';
 import { cn } from '@/lib/utils';

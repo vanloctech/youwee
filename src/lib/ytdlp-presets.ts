@@ -91,7 +91,12 @@ export function saveYtdlpPreset(name: string, settings: YtdlpPresetSettings): Yt
   const presets = loadYtdlpPresets();
   const existing = presets.find((preset) => preset.name.toLowerCase() === presetName.toLowerCase());
   if (existing) {
-    const updated: YtdlpPreset = { ...existing, name: presetName, updatedAt: now, settings: sanitized };
+    const updated: YtdlpPreset = {
+      ...existing,
+      name: presetName,
+      updatedAt: now,
+      settings: sanitized,
+    };
     persistPresets(presets.map((preset) => (preset.id === existing.id ? updated : preset)));
     return updated;
   }
@@ -122,4 +127,7 @@ export function getYtdlpPresetById(id: string): YtdlpPreset | null {
   return loadYtdlpPresets().find((preset) => preset.id === id) ?? null;
 }
 
-export const YTDLP_PRESET_LIMITS = { max: MAX_PRESETS, maxRawArgsLength: MAX_RAW_ARGS_LENGTH } as const;
+export const YTDLP_PRESET_LIMITS = {
+  max: MAX_PRESETS,
+  maxRawArgsLength: MAX_RAW_ARGS_LENGTH,
+} as const;

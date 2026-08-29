@@ -4,7 +4,6 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Switch } from '@/components/ui/switch';
 import {
   Select,
   SelectContent,
@@ -12,6 +11,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { Switch } from '@/components/ui/switch';
 
 export interface GallerySettingsPanelSettings {
   outputPath: string;
@@ -101,9 +101,7 @@ export function GallerySettingsPanel({
             </div>
 
             <div className="space-y-1.5">
-              <Label className="text-[11px] text-muted-foreground">
-                {t('settings.range')}
-              </Label>
+              <Label className="text-[11px] text-muted-foreground">{t('settings.range')}</Label>
               <Input
                 value={settings.range}
                 onChange={(e) => onSettingsChange({ range: e.target.value })}
@@ -190,9 +188,7 @@ export function GallerySettingsPanel({
                 />
               </div>
               <div className="space-y-1.5">
-                <Label className="text-[11px] text-muted-foreground">
-                  {t('settings.sleep')}
-                </Label>
+                <Label className="text-[11px] text-muted-foreground">{t('settings.sleep')}</Label>
                 <Input
                   value={settings.sleep}
                   onChange={(e) => onSettingsChange({ sleep: e.target.value })}
@@ -205,9 +201,7 @@ export function GallerySettingsPanel({
 
             <div className="grid grid-cols-2 gap-2">
               <div className="space-y-1.5">
-                <Label className="text-[11px] text-muted-foreground">
-                  {t('settings.retries')}
-                </Label>
+                <Label className="text-[11px] text-muted-foreground">{t('settings.retries')}</Label>
                 <Input
                   type="number"
                   min={0}
@@ -218,9 +212,7 @@ export function GallerySettingsPanel({
                 />
               </div>
               <div className="space-y-1.5">
-                <Label className="text-[11px] text-muted-foreground">
-                  {t('settings.timeout')}
-                </Label>
+                <Label className="text-[11px] text-muted-foreground">{t('settings.timeout')}</Label>
                 <Input
                   type="number"
                   min={0}

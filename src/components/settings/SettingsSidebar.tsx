@@ -1,10 +1,10 @@
 import {
+  Archive,
   ArrowDownToLine,
   Atom,
   Globe,
   Info,
   MessageCircleCode,
-  Archive,
   Package,
   Palette,
   Puzzle,

@@ -55,7 +55,6 @@ import {
   refreshPostDownloadWorkflowSteps,
 } from '@/lib/post-download-plugins';
 import { extractUrls } from '@/lib/sources';
-import { sanitizeYtdlpAdvancedOptions } from '@/lib/ytdlp-advanced-options';
 import type {
   AudioBitrate,
   CookieSettings,
@@ -88,6 +87,7 @@ import type {
   YoutubeSearchVideo,
 } from '@/lib/types';
 import { extractYouTubeVideoId } from '@/lib/youtube-url';
+import { sanitizeYtdlpAdvancedOptions } from '@/lib/ytdlp-advanced-options';
 import { DownloadContext } from './download-context';
 
 const STORAGE_KEY = 'youwee-settings';
@@ -131,7 +131,10 @@ const ERROR_CLASS_PATTERNS: Array<[RegExp, DownloadErrorClass]> = [
     /timed?s*out|timeout|connection (reset|aborted|closed|refused)|network(?:s+is)?s+unreachable|temporar(?:ily|y)s+unavailable|try again|too many requests|\b429\b|\b5\d{2}\b|http error 5\d{2}/i,
     'transient',
   ],
-  [/sign in|login required|cookie|members-only|member only|join this channel|dpapi|app.bound/i, 'auth'],
+  [
+    /sign in|login required|cookie|members-only|member only|join this channel|dpapi|app.bound/i,
+    'auth',
+  ],
   [/geo(?:-|\s)?restricted|not available in your country/i, 'geo'],
   [/private video|video unavailable|not available|premiere|upcoming|live event/i, 'unavailable'],
   [
@@ -141,7 +144,10 @@ const ERROR_CLASS_PATTERNS: Array<[RegExp, DownloadErrorClass]> = [
   [/invalid|unsupported|managed externally/i, 'config'],
 ];
 
-export function classifyDownloadError(message: string | undefined, code?: string): DownloadErrorClass {
+export function classifyDownloadError(
+  message: string | undefined,
+  code?: string,
+): DownloadErrorClass {
   if (code) {
     const byCode = ERROR_CLASS_CODE_MAP[code];
     if (byCode) return byCode;
@@ -314,7 +320,9 @@ export function buildDownloadVideoInvokeArgs(
       itemSettings?.ytdlpAdvancedOptionsEnabled ??
       settings.ytdlpAdvancedOptionsEnabled,
     ytdlpAdvancedOptions:
-      override?.ytdlpAdvancedOptions ?? itemSettings?.ytdlpAdvancedOptions ?? settings.ytdlpAdvancedOptions,
+      override?.ytdlpAdvancedOptions ??
+      itemSettings?.ytdlpAdvancedOptions ??
+      settings.ytdlpAdvancedOptions,
     // Expert raw yt-dlp arguments (backend validates against a safe allowlist)
     ytdlpRawArgs: override?.rawArgs ?? itemSettings?.rawArgs ?? '',
     // Incognito (P0-5): backend should skip history/log URL writes for this item
@@ -335,8 +343,7 @@ export function buildDownloadVideoInvokeArgs(
     thumbnail: item.thumbnail || null,
     // Source/extractor from video info fetch
     source: item.extractor || null,
-    pluginWorkflowSnapshots:
-      itemSettings?.pluginWorkflowSnapshots ?? loadPluginWorkflowSnapshots(),
+    pluginWorkflowSnapshots: itemSettings?.pluginWorkflowSnapshots ?? loadPluginWorkflowSnapshots(),
     postDownloadWorkflowSteps:
       itemSettings?.postDownloadWorkflowSteps ?? loadPostDownloadWorkflowSteps(),
     emitFailedWorkflow: false,
@@ -1434,7 +1441,10 @@ export function DownloadProvider({ children }: { children: ReactNode }) {
     (
       id: string,
       patch: Partial<
-        Pick<ItemDownloadSettings, 'ytdlpAdvancedOptionsEnabled' | 'ytdlpAdvancedOptions' | 'rawArgs'>
+        Pick<
+          ItemDownloadSettings,
+          'ytdlpAdvancedOptionsEnabled' | 'ytdlpAdvancedOptions' | 'rawArgs'
+        >
       >,
     ) => {
       setItems((items) => {
@@ -1490,9 +1500,7 @@ export function DownloadProvider({ children }: { children: ReactNode }) {
   const resumeItem = useCallback((id: string) => {
     setItems((items) => {
       const nextItems = items.map((item) =>
-        item.id === id && item.status === 'paused'
-          ? { ...item, status: 'pending' as const }
-          : item,
+        item.id === id && item.status === 'paused' ? { ...item, status: 'pending' as const } : item,
       );
       itemsRef.current = nextItems;
       return nextItems;

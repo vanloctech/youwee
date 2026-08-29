@@ -81,7 +81,11 @@ interface BackupExportResult {
 
 const POLICY_OPTIONS: { value: ConflictPolicy; labelKey: string; descriptionKey: string }[] = [
   { value: 'skip', labelKey: 'backup.policySkip', descriptionKey: 'backup.policySkipDesc' },
-  { value: 'replace', labelKey: 'backup.policyReplace', descriptionKey: 'backup.policyReplaceDesc' },
+  {
+    value: 'replace',
+    labelKey: 'backup.policyReplace',
+    descriptionKey: 'backup.policyReplaceDesc',
+  },
   { value: 'merge', labelKey: 'backup.policyMerge', descriptionKey: 'backup.policyMergeDesc' },
   {
     value: 'duplicate',
@@ -426,7 +430,8 @@ export function BackupSection({ highlightId }: { highlightId?: string | null }) 
                   variant="secondary"
                   className={cn(
                     'rounded-md font-mono text-[11px]',
-                    preview.additions > 0 && 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400',
+                    preview.additions > 0 &&
+                      'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400',
                   )}
                 >
                   {t('backup.additions')}: {preview.additions}
@@ -465,7 +470,10 @@ export function BackupSection({ highlightId }: { highlightId?: string | null }) 
                 <div className="min-w-0">
                   <p className="text-sm font-medium">{t('backup.policy')}</p>
                   <p className="text-xs text-muted-foreground">
-                    {t(POLICY_OPTIONS.find((option) => option.value === policy)?.descriptionKey ?? 'backup.policySkipDesc')}
+                    {t(
+                      POLICY_OPTIONS.find((option) => option.value === policy)?.descriptionKey ??
+                        'backup.policySkipDesc',
+                    )}
                   </p>
                 </div>
                 <Select value={policy} onValueChange={handlePolicyChange}>
@@ -525,7 +533,9 @@ export function BackupSection({ highlightId }: { highlightId?: string | null }) 
                 <div className="flex items-center justify-between gap-3 rounded-lg border border-border/60 bg-muted/20 px-3 py-2.5">
                   <div className="min-w-0">
                     <p className="text-sm font-medium">{t('backup.restoreSettings')}</p>
-                    <p className="text-xs text-muted-foreground">{t('backup.restoreSettingsDesc')}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {t('backup.restoreSettingsDesc')}
+                    </p>
                   </div>
                   <Switch checked={restoreSettings} onCheckedChange={setRestoreSettings} />
                 </div>

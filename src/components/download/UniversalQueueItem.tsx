@@ -32,8 +32,8 @@ import { type ChangeEvent, useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { SchedulePopover } from '@/components/download/SchedulePopover';
 import { YtDlpOptionsEditor } from '@/components/download/YtDlpOptionsEditor';
-import { SimpleMarkdown } from '@/components/ui/simple-markdown';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { SimpleMarkdown } from '@/components/ui/simple-markdown';
 import { useAI } from '@/contexts/AIContext';
 import { useUniversal } from '@/contexts/universal-context';
 import type { ScheduleConfig } from '@/hooks/useSchedule';
@@ -577,8 +577,7 @@ export function UniversalQueueItem({
             <span
               className={cn(
                 'inline-flex items-center gap-1 text-[10px] px-1.5 py-0.5 rounded font-medium',
-                ERROR_CLASS_BADGE_STYLES[item.errorClass] ??
-                  'bg-muted/50 text-muted-foreground',
+                ERROR_CLASS_BADGE_STYLES[item.errorClass] ?? 'bg-muted/50 text-muted-foreground',
               )}
             >
               {t(`download:queue.errorClass.${item.errorClass}`)}

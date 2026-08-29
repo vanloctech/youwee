@@ -195,9 +195,7 @@ export function UpdateDialog({
 
           {status === 'error' && (
             <div className="bg-destructive/10 rounded-2xl p-6 border border-destructive/20 text-center animate-in fade-in duration-500">
-              <p className="text-sm text-destructive font-semibold">
-                {t('update.errorGeneric')}
-              </p>
+              <p className="text-sm text-destructive font-semibold">{t('update.errorGeneric')}</p>
               {error && error !== t('update.errorGeneric') && (
                 <p className="mt-2 text-xs text-destructive/70" dir="ltr">
                   {error}
