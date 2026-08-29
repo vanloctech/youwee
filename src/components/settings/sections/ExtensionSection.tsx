@@ -120,7 +120,7 @@ export function ExtensionSection({ highlightId }: ExtensionSectionProps) {
           <div className="mt-3 grid gap-4 lg:grid-cols-2">
             <div className="rounded-xl bg-background/60 p-3">
               <p className="text-sm font-medium text-foreground">{t('extension.chromiumSteps')}</p>
-              <ol className="mt-2 list-decimal space-y-1 pl-4 text-xs text-muted-foreground">
+              <ol className="mt-2 list-decimal space-y-1 ps-4 text-xs text-muted-foreground">
                 <li>{t('extension.chromiumStep1')}</li>
                 <li>{t('extension.chromiumStep2')}</li>
                 <li>{t('extension.chromiumStep3')}</li>
@@ -130,7 +130,7 @@ export function ExtensionSection({ highlightId }: ExtensionSectionProps) {
 
             <div className="rounded-xl bg-background/60 p-3">
               <p className="text-sm font-medium text-foreground">{t('extension.firefoxSteps')}</p>
-              <ol className="mt-2 list-decimal space-y-1 pl-4 text-xs text-muted-foreground">
+              <ol className="mt-2 list-decimal space-y-1 ps-4 text-xs text-muted-foreground">
                 <li>{t('extension.firefoxStep1')}</li>
                 <li>{t('extension.firefoxStep2')}</li>
                 <li>{t('extension.firefoxStep3')}</li>

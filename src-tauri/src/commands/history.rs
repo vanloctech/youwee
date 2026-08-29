@@ -5,12 +5,14 @@ use crate::database::{
     assign_history_tags_in_db, clear_history_from_db, create_collection_in_db,
     delete_collection_from_db, delete_history_from_db, find_duplicate_downloads_in_history_db,
     get_collections_from_db, get_history_count_from_db, get_history_entries_by_ids_from_db,
-    get_history_from_db, get_tags_from_db, remove_history_from_collection_in_db,
+    get_history_from_db, get_tags_from_db, list_gallery_items_from_db,
+    remove_history_from_collection_in_db,
     remove_history_tag_from_db, rename_collection_in_db, update_history_filepath_and_title,
     update_history_filepath_and_title_by_id, update_history_summary,
 };
 use crate::types::{
     DownloadDuplicateIdentity, DownloadDuplicateMatch, HistoryAdvancedFilters, HistoryCollection,
+    GalleryLibraryItem,
     HistoryEntry, HistorySort, HistoryTag,
 };
 
@@ -59,6 +61,44 @@ pub fn get_history(
     sort: Option<HistorySort>,
 ) -> Result<Vec<HistoryEntry>, String> {
     get_history_from_db(limit, offset, source, search, filters, sort)
+}
+
+/// List completed gallery downloads for the Gallery library browser.
+#[tauri::command]
+pub fn list_gallery_items() -> Result<Vec<GalleryLibraryItem>, String> {
+    list_gallery_items_from_db()
+}
+
+/// Generate (or return the cached) 420px thumbnail for a gallery cover image.
+#[tauri::command]
+pub fn get_gallery_thumbnail(app: tauri::AppHandle, filepath: String) -> Result<String, String> {
+    use std::collections::hash_map::DefaultHasher;
+    use std::hash::{Hash, Hasher};
+    use tauri::Manager;
+
+    let mut hasher = DefaultHasher::new();
+    filepath.hash(&mut hasher);
+    let key = hasher.finish();
+
+    let cache_dir = app
+        .path()
+        .app_cache_dir()
+        .map_err(|e| format!("Failed to resolve cache dir: {}", e))?
+        .join("gallery-thumbs");
+    std::fs::create_dir_all(&cache_dir)
+        .map_err(|e| format!("Failed to create thumbnail dir: {}", e))?;
+
+    let thumb_path = cache_dir.join(format!("{}.jpg", key));
+    if thumb_path.exists() {
+        return Ok(thumb_path.to_string_lossy().into_owned());
+    }
+
+    let img = image::open(&filepath).map_err(|e| format!("Failed to open image: {}", e))?;
+    let thumb = img.thumbnail(420, 420);
+    thumb
+        .save(&thumb_path)
+        .map_err(|e| format!("Failed to save thumbnail: {}", e))?;
+    Ok(thumb_path.to_string_lossy().into_owned())
 }
 
 #[tauri::command]

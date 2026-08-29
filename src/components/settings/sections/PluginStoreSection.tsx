@@ -222,12 +222,12 @@ export function PluginStoreSection({ onOpenPlugins }: PluginStoreSectionProps) {
         <div className="space-y-4">
           <div className="flex flex-col gap-3 lg:flex-row lg:items-center">
             <div className="relative flex-1">
-              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <Search className="pointer-events-none absolute start-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <Input
                 value={query}
                 onChange={(event) => setQuery(event.target.value)}
                 placeholder={t('pluginStore.searchPlaceholder')}
-                className="pl-9"
+                className="ps-9"
               />
             </div>
             <div className="flex flex-wrap gap-2">
@@ -263,9 +263,9 @@ export function PluginStoreSection({ onOpenPlugins }: PluginStoreSectionProps) {
                 disabled={loading}
               >
                 {loading ? (
-                  <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />
+                  <Loader2 className="me-1.5 h-4 w-4 animate-spin" />
                 ) : (
-                  <RefreshCw className="mr-1.5 h-4 w-4" />
+                  <RefreshCw className="me-1.5 h-4 w-4" />
                 )}
                 {t('pluginStore.refresh')}
               </Button>
@@ -327,7 +327,7 @@ export function PluginStoreSection({ onOpenPlugins }: PluginStoreSectionProps) {
                             {entry.publisher.name}
                           </span>
                         </div>
-                        <p className="mt-1 line-clamp-2 text-xs text-muted-foreground">
+                        <p className="mt-1 line-clamp-2 text-xs text-muted-foreground" dir="auto">
                           {entry.description}
                         </p>
                       </div>
@@ -367,7 +367,7 @@ export function PluginStoreSection({ onOpenPlugins }: PluginStoreSectionProps) {
                         className="h-8 px-2 text-xs text-muted-foreground"
                         onClick={() => openUrl(entry.repository)}
                       >
-                        <ExternalLink className="mr-1.5 h-3.5 w-3.5" />
+                        <ExternalLink className="me-1.5 h-3.5 w-3.5" />
                         {t('pluginStore.repository')}
                       </Button>
                       {isInstalled ? (
@@ -394,9 +394,9 @@ export function PluginStoreSection({ onOpenPlugins }: PluginStoreSectionProps) {
                           disabled={isInstalling}
                         >
                           {isInstalling ? (
-                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            <Loader2 className="me-2 h-4 w-4 animate-spin" />
                           ) : (
-                            <Download className="mr-2 h-4 w-4" />
+                            <Download className="me-2 h-4 w-4" />
                           )}
                           {isInstalling ? t('pluginStore.installing') : t('pluginStore.install')}
                         </Button>
@@ -436,7 +436,7 @@ export function PluginStoreSection({ onOpenPlugins }: PluginStoreSectionProps) {
               onClick={() => reviewPackage && installPreparedPackage(reviewPackage)}
               disabled={!!installingId}
             >
-              {installingId && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              {installingId && <Loader2 className="me-2 h-4 w-4 animate-spin" />}
               {t('pluginStore.confirmInstall')}
             </Button>
           </DialogFooter>

@@ -670,7 +670,7 @@ export function SettingsPanel({
                   type="button"
                   onClick={onSelectFolder}
                   disabled={disabled}
-                  className="w-full h-7 px-2.5 rounded-md border bg-background text-[11px] flex items-center gap-2 text-left hover:bg-muted/50 transition-colors"
+                  className="w-full h-7 px-2.5 rounded-md border bg-background text-[11px] flex items-center gap-2 text-start hover:bg-muted/50 transition-colors"
                 >
                   <FolderOpen className="w-3 h-3 text-muted-foreground flex-shrink-0" />
                   <span className="truncate flex-1 text-muted-foreground">

@@ -81,7 +81,7 @@ export function UpdateDialog({
           <button
             type="button"
             onClick={onDismiss}
-            className="absolute top-5 right-5 p-2 rounded-full bg-black/5 hover:bg-black/10 dark:bg-white/5 dark:hover:bg-white/10 transition-colors text-muted-foreground z-20"
+            className="absolute top-5 end-5 p-2 rounded-full bg-black/5 hover:bg-black/10 dark:bg-white/5 dark:hover:bg-white/10 transition-colors text-muted-foreground z-20"
           >
             <X className="w-4 h-4" />
           </button>
@@ -111,7 +111,7 @@ export function UpdateDialog({
             </div>
           </div>
 
-          <div className="flex-1 text-left">
+          <div className="flex-1 text-start">
             <h2 className="text-xl sm:text-2xl font-extrabold tracking-tight text-foreground mb-1.5">
               {status === 'error'
                 ? t('update.error')
@@ -146,7 +146,7 @@ export function UpdateDialog({
                       {t('update.description')}
                     </h3>
                   </div>
-                  <div className="pr-2">
+                  <div className="pe-2">
                     <SimpleMarkdown
                       content={localizedBody}
                       className={cn(
@@ -154,9 +154,9 @@ export function UpdateDialog({
                         '[&_h1]:text-lg [&_h1]:font-bold [&_h1]:text-foreground',
                         '[&_h2]:text-base [&_h2]:font-semibold [&_h2]:text-foreground',
                         '[&_h3]:text-sm [&_h3]:font-medium',
-                        '[&_ul]:list-none [&_ul]:pl-0 [&_ul]:space-y-1.5',
-                        '[&_li]:relative [&_li]:pl-5',
-                        "[&_li::before]:content-[''] [&_li::before]:absolute [&_li::before]:left-1.5 [&_li::before]:top-2 [&_li::before]:w-1.5 [&_li::before]:h-1.5 [&_li::before]:bg-primary/60 [&_li::before]:rounded-full",
+                        '[&_ul]:list-none [&_ul]:ps-0 [&_ul]:space-y-1.5',
+                        '[&_li]:relative [&_li]:ps-5',
+                        "[&_li::before]:content-[''] [&_li::before]:absolute [&_li::before]:start-1.5 [&_li::before]:top-2 [&_li::before]:w-1.5 [&_li::before]:h-1.5 [&_li::before]:bg-primary/60 [&_li::before]:rounded-full",
                       )}
                     />
                   </div>
@@ -195,9 +195,12 @@ export function UpdateDialog({
 
           {status === 'error' && (
             <div className="bg-destructive/10 rounded-2xl p-6 border border-destructive/20 text-center animate-in fade-in duration-500">
-              <p className="text-sm text-destructive font-semibold">
-                {error || t('update.errorGeneric')}
-              </p>
+              <p className="text-sm text-destructive font-semibold">{t('update.errorGeneric')}</p>
+              {error && error !== t('update.errorGeneric') && (
+                <p className="mt-2 text-xs text-destructive/70" dir="ltr">
+                  {error}
+                </p>
+              )}
             </div>
           )}
         </div>
@@ -218,7 +221,7 @@ export function UpdateDialog({
                 className="sm:w-2/3 h-12 rounded-xl font-bold bg-foreground text-background hover:bg-foreground/90 shadow-xl shadow-foreground/10"
               >
                 {t('update.updateNow')}
-                <Download className="w-4 h-4 ml-2" />
+                <Download className="w-4 h-4 ms-2" />
               </Button>
             </>
           )}
@@ -229,7 +232,7 @@ export function UpdateDialog({
               className="w-full h-12 rounded-xl font-semibold opacity-80"
               disabled
             >
-              <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+              <RefreshCw className="w-4 h-4 me-2 animate-spin" />
               {t('update.downloading')}
             </Button>
           )}
@@ -240,7 +243,7 @@ export function UpdateDialog({
               className="w-full h-12 rounded-xl font-bold bg-green-500 text-white hover:bg-green-600 shadow-xl shadow-green-500/20"
             >
               {t('update.restartNow')}
-              <RotateCcw className="w-4 h-4 ml-2" />
+              <RotateCcw className="w-4 h-4 ms-2" />
             </Button>
           )}
 
@@ -257,7 +260,7 @@ export function UpdateDialog({
                 onClick={onRetry}
                 className="sm:w-2/3 h-12 rounded-xl font-bold bg-foreground text-background hover:bg-foreground/90"
               >
-                <RefreshCw className="w-4 h-4 mr-2" />
+                <RefreshCw className="w-4 h-4 me-2" />
                 {t('update.retry')}
               </Button>
             </>

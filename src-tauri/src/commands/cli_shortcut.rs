@@ -323,7 +323,7 @@ fn create_symlink(exe: &Path, link: &Path) -> Result<(), String> {
     if let Ok(metadata) = std::fs::symlink_metadata(link) {
         if !metadata.file_type().is_symlink() {
             return Err(format!(
-                "{} already exists and is not a Youwee symlink. Remove it manually before reinstalling.",
+                "{} already exists and is not a youwee symlink. Remove it manually before reinstalling.",
                 link.display()
             ));
         }

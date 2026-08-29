@@ -24,7 +24,7 @@
     "more": "その他",
     "parallelDownloads": "同時ダウンロード数",
     "atATime": "同時 {{count}} 件",
-    "systemManagedHint": "Youwee はこの画面でのみシステムの gallery-dl バイナリを使用します。"
+    "systemManagedHint": "youwee はこの画面でのみシステムの gallery-dl バイナリを使用します。"
   },
   "queue": {
     "title": "キュー",

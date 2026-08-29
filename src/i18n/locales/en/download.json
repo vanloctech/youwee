@@ -1,5 +1,7 @@
 {
   "title": "YouTube",
+  "upTo": "Up to {{height}}p",
+  "views": "views",
   "urlInput": {
     "single": "Single",
     "multiple": "Multiple",
@@ -23,9 +25,9 @@
     "guideHighResTitle": "2K/4K/8K with H.264",
     "guideHighResText": "Many sources only provide H.264 up to Full HD. For 2K/4K/8K, use Auto (or VP9/AV1 when available) to get higher resolution.",
     "guideFfmpegTitle": "Video and audio downloaded separately",
-    "guideFfmpegText": "Install FFmpeg in Settings > Dependencies so Youwee can merge video and audio into one output file.",
+    "guideFfmpegText": "Install FFmpeg in Settings > Dependencies so youwee can merge video and audio into one output file.",
     "guidePreferredFpsTitle": "Frame rate can change quality",
-    "guidePreferredFpsText": "30 FPS can save space, but Youwee only selects existing streams. Some videos only provide 30 FPS at lower qualities such as 720p or 480p, so the downloaded quality may be lower than the quality you selected.",
+    "guidePreferredFpsText": "30 FPS can save space, but youwee only selects existing streams. Some videos only provide 30 FPS at lower qualities such as 720p or 480p, so the downloaded quality may be lower than the quality you selected.",
     "guideOpenSettings": "Open Settings",
     "guideGotIt": "Got it",
     "detectedMultiple": "{{count}} URLs detected",
@@ -202,8 +204,9 @@
       "completed": "Completed",
       "failed": "Failed",
       "skipped": "Skipped",
-      "failedHint": "View Logs page for details",
-      "retrying": "Retry {{current}}/{{total}} in {{seconds}}s"
+      "failedHint": "Failed — check the logs for details",
+      "retrying": "Retry {{current}}/{{total}} in {{seconds}}s",
+      "paused": "Paused"
     },
     "summarize": "Summarize",
     "openFolder": "Show in folder",
@@ -225,6 +228,34 @@
     "upcomingLive": {
       "hint": "Live has not started yet",
       "schedule": "Schedule"
+    },
+    "advancedBadge": "Advanced",
+    "advancedOptions": "Advanced options",
+    "cancel": "Cancel",
+    "duplicate": "Duplicate",
+    "incognito": "Incognito",
+    "incognitoToggle": "Toggle incognito (skips history)",
+    "moveToTop": "Move to top",
+    "pause": "Pause",
+    "resume": "Resume",
+    "retry": "Retry",
+    "errorClass": {
+      "transient": "Transient",
+      "auth": "Auth error",
+      "geo": "Geo-restricted",
+      "unavailable": "Unavailable",
+      "disk": "Disk error",
+      "config": "Config error",
+      "unknown": "Unknown"
+    },
+    "errorClassAction": {
+      "transient": "Retry later",
+      "auth": "Re-authenticate",
+      "geo": "Use a proxy/VPN",
+      "unavailable": "Check source",
+      "disk": "Free disk space",
+      "config": "Fix settings",
+      "unknown": "View logs"
     }
   },
   "actions": {
@@ -283,5 +314,39 @@
     "cancel": "Cancel",
     "skippedToastTitle": "Already downloaded videos skipped",
     "skippedToastMessage": "Skipped {{count}} video(s) already found in Library."
+  },
+  "ytdlpAdvanced": {
+    "advancedBadge": "Advanced",
+    "placeholder": {
+      "headerName": "Option",
+      "headerValue": "Value"
+    }
+  },
+  "ytdlpEditor": {
+    "addOption": "Add option",
+    "copied": "Copied",
+    "copy": "Copy",
+    "description": "Extra yt-dlp options for this download only.",
+    "enableToggle": "Enable custom options",
+    "presetApplied": "Preset applied",
+    "presetDeleted": "Preset deleted",
+    "presetEmpty": "No presets yet",
+    "presetMax": "Preset limit reached (20)",
+    "presetPlaceholder": "Preset name…",
+    "presets": "Presets",
+    "presetSave": "Save as preset",
+    "presetSaved": "Preset saved",
+    "presetSavePlaceholder": "Name this preset…",
+    "preview": "Preview command",
+    "previewFailed": "Preview failed",
+    "previewTitle": "Generated command",
+    "previewUnavailable": "Command preview is not available in this build",
+    "rawArgsActive": "Expert raw arguments are active",
+    "rawArgsCancel": "Cancel",
+    "rawArgsConfirm": "Enable expert mode",
+    "rawArgsHint": "Free-form yt-dlp flags. Dangerous flags are blocked.",
+    "rawArgsTitle": "Expert raw arguments",
+    "rawArgsWarningBody": "Raw arguments bypass validation and can break downloads. Use only if you know yt-dlp flags. Dangerous flags (--exec, --config-location, …) are blocked.",
+    "rawArgsWarningTitle": "Careful — expert mode"
   }
 }

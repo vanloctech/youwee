@@ -17,6 +17,23 @@ pub struct HistoryCollection {
     pub item_count: Option<i64>,
 }
 
+/// Gallery library item (a completed gallery-dl download stored in history)
+#[derive(Clone, Serialize, Deserialize, Debug, Default)]
+#[serde(rename_all = "camelCase")]
+pub struct GalleryLibraryItem {
+    pub id: String,
+    pub url: String,
+    pub title: String,
+    pub thumbnail: Option<String>,
+    pub filepath: String,
+    pub source: Option<String>,
+    pub downloaded_at: String,
+    pub file_exists: bool,
+    pub folder_name: String,
+    pub file_size: Option<u64>,
+    pub cover_image: Option<String>,
+}
+
 /// History entry structure
 #[derive(Clone, Serialize, Deserialize, Debug, Default)]
 pub struct HistoryEntry {

@@ -1,5 +1,9 @@
 {
   "title": "Gallery",
+  "tabs": {
+    "queue": "Queue",
+    "library": "Library"
+  },
   "page": {
     "systemManagedOnly": "System managed only"
   },
@@ -24,7 +28,52 @@
     "more": "More",
     "parallelDownloads": "Parallel downloads",
     "atATime": "{{count}} at a time",
-    "systemManagedHint": "Youwee uses the system gallery-dl binary only for this screen."
+    "systemManagedHint": "youwee uses the system gallery-dl binary only for this screen.",
+    "range": "Page range",
+    "rangeHint": "e.g. 1-20 or 1:24:3",
+    "filenameTemplate": "Filename template",
+    "filenameHint": "e.g. {manga}_c{chapter}_{num:>03}.{extension}",
+    "flatOutput": "Flat output (no subfolders)",
+    "cbzOutput": "Save as CBZ (comic)",
+    "rateLimit": "Max speed",
+    "minFileSize": "Min file size",
+    "maxFileSize": "Max file size",
+    "sleep": "Delay between files (s)",
+    "retries": "Retries",
+    "timeout": "Timeout (s)"
+  },
+  "browser": {
+    "searchPlaceholder": "Search by title or source…",
+    "selectAll": "Select all",
+    "selectNone": "Select none",
+    "selectedCount": "{{count}} selected",
+    "deleteSelected": "Delete selected",
+    "noResults": "No items match your search",
+    "noResultsHint": "Try a different title or source name.",
+    "openFolder": "Open folder",
+    "deleteTitle": "Delete selected galleries?",
+    "deleteConfirm": "Remove {{count}} gallery item(s) from Library? The downloaded files will stay on your device.",
+    "delete": "Delete",
+    "deleted": "Removed {{count}} item(s) from Library",
+    "cancel": "Cancel",
+    "refresh": "Refresh",
+    "emptyTitle": "No galleries yet",
+    "emptyDescription": "Download a gallery to see it here. Add and download galleries from the Queue tab.",
+    "fileMissing": "File missing",
+    "downloading": "Downloading {{count}} item(s)…",
+    "viewQueue": "View Queue",
+    "viewLibrary": "View Library",
+    "finished": "{{count}} download(s) finished",
+    "goToQueue": "Go to Queue",
+    "discoverTitle": "Find new galleries",
+    "discoverHint": "Search comic & manhwa sites by keyword. Results are added to your download queue.",
+    "discoverKeyword": "Keyword… (e.g. series name)",
+    "discoverSearch": "Search & add to queue",
+    "discoverGeneric": "Paste any gallery URL…",
+    "discoverAdded": "Added to queue",
+    "discoverEmpty": "Enter a keyword or URL first",
+    "items": "{{count}} item(s)",
+    "selectItem": "Select item"
   },
   "queue": {
     "title": "Queue",
@@ -36,13 +85,42 @@
       "pending": "Pending",
       "downloading": "Downloading",
       "completed": "Completed",
-      "failed": "Failed"
+      "failed": "Failed",
+      "paused": "Paused",
+      "failedHint": "Failed — check the logs for details"
     },
     "empty": {
       "title": "Drop a gallery URL to begin",
       "description": "Use this screen for image galleries, artist feeds, manga chapters, and other collection-style sources that fit gallery-dl better than Universal.",
       "moreCount": "and many more",
       "viewFullList": "View supported sites"
+    },
+    "countFiles": "{{count}} files",
+    "pause": "Pause",
+    "resume": "Resume",
+    "retry": "Retry",
+    "cancel": "Cancel",
+    "duplicate": "Duplicate",
+    "moveToTop": "Move to top",
+    "incognito": "Incognito",
+    "incognitoToggle": "Toggle incognito (skips history)",
+    "errorClass": {
+      "transient": "Transient",
+      "auth": "Auth error",
+      "geo": "Geo-restricted",
+      "unavailable": "Unavailable",
+      "disk": "Disk error",
+      "config": "Config error",
+      "unknown": "Unknown"
+    },
+    "errorClassAction": {
+      "transient": "Retry later",
+      "auth": "Re-authenticate",
+      "geo": "Use a proxy/VPN",
+      "unavailable": "Check source",
+      "disk": "Free disk space",
+      "config": "Fix settings",
+      "unknown": "View logs"
     }
   },
   "urlInput": {

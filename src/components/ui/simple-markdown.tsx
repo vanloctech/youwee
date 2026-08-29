@@ -104,7 +104,7 @@ export function SimpleMarkdown({ content, className }: SimpleMarkdownProps) {
 
       elements.push(
         <div key={`table-${tableKey++}`} className="my-3 w-full max-w-full overflow-x-auto">
-          <table className="min-w-full border-separate border-spacing-0 overflow-hidden rounded-xl border border-border/70 bg-background/40 text-left text-sm">
+          <table className="min-w-full border-separate border-spacing-0 overflow-hidden rounded-xl border border-border/70 bg-background/40 text-start text-sm">
             <thead className="bg-muted/50">
               <tr>
                 {headerCells.map((cell) => (
@@ -307,7 +307,7 @@ function renderListNodes(nodes: MarkdownListNode[]): React.ReactNode {
   return nodes.map((node, nodeIndex) => {
     const ListTag = node.kind;
     const listClassName =
-      node.kind === 'ol' ? 'list-decimal space-y-1 pl-5' : 'list-disc space-y-1 pl-5';
+      node.kind === 'ol' ? 'list-decimal space-y-1 ps-5' : 'list-disc space-y-1 ps-5';
 
     return (
       <ListTag

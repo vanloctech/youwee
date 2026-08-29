@@ -388,7 +388,7 @@ export function SubtitleWaveformTimeline() {
   return (
     <div className="border-b border-border/50 bg-background/40">
       <div className="flex items-center justify-between gap-3 px-3 py-2 flex-wrap">
-        <div className="ml-1 flex items-center gap-2">
+        <div className="ms-1 flex items-center gap-2">
           <button
             type="button"
             onClick={() => setViewMode('waveform')}
@@ -450,7 +450,7 @@ export function SubtitleWaveformTimeline() {
           )}
 
           <div className="relative h-[132px]" style={{ width: timelineWidth }}>
-            <canvas ref={canvasRef} className="absolute top-0 left-0" />
+            <canvas ref={canvasRef} className="absolute top-0 start-0" />
             <button
               type="button"
               aria-label={t('waveform.seekTimeline')}
@@ -458,7 +458,7 @@ export function SubtitleWaveformTimeline() {
               onClick={onTimelineClick}
             />
 
-            <div className="absolute left-0 right-0 top-[102px] h-[20px]">
+            <div className="absolute inset-x-0 top-[102px] h-[20px]">
               {subtitle.entries.map((entry) => {
                 const range = getRange(entry.id, entry.startTime, entry.endTime);
                 const left = timeToPercent(range.start);
@@ -498,8 +498,8 @@ export function SubtitleWaveformTimeline() {
                       subtitle.selectEntry(entry.id);
                     }}
                   >
-                    <span className="absolute left-0 top-0 bottom-0 w-[5px] bg-black/15 pointer-events-none" />
-                    <span className="absolute right-0 top-0 bottom-0 w-[5px] bg-black/15 pointer-events-none" />
+                    <span className="absolute start-0 top-0 bottom-0 w-[5px] bg-black/15 pointer-events-none" />
+                    <span className="absolute end-0 top-0 bottom-0 w-[5px] bg-black/15 pointer-events-none" />
                   </button>
                 );
               })}

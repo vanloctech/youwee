@@ -183,7 +183,7 @@ export function UniversalPage({ onNavigateToSettings }: UniversalPageProps) {
                     <Play className="w-5 h-5" />
                     <span>{t('actions.startDownload')}</span>
                     {pendingCount > 0 && (
-                      <span className="ml-1 px-2 py-0.5 rounded-full bg-white/20 text-xs">
+                      <span className="ms-1 px-2 py-0.5 rounded-full bg-white/20 text-xs">
                         {pendingCount}
                       </span>
                     )}
@@ -217,7 +217,7 @@ export function UniversalPage({ onNavigateToSettings }: UniversalPageProps) {
                   onClick={stopDownload}
                   title={t('actions.stopDownload')}
                 >
-                  <Square className="w-5 h-5 mr-2" />
+                  <Square className="w-5 h-5 me-2" />
                   {t('actions.stopDownload')}
                 </Button>
               )}

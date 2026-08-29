@@ -289,7 +289,7 @@ export function DataExportTab() {
             className="min-h-[92px] resize-none bg-background/50 border-border/50 font-mono text-sm"
           />
           {inputCount > 0 && (
-            <span className="absolute bottom-2 right-2 rounded bg-background/85 px-2 py-1 text-xs text-muted-foreground">
+            <span className="absolute bottom-2 end-2 rounded bg-background/85 px-2 py-1 text-xs text-muted-foreground">
               {t('data.inputCount', { count: inputCount })}
             </span>
           )}
@@ -366,7 +366,7 @@ export function DataExportTab() {
             </button>
           ) : (
             <Button variant="destructive" size="sm" onClick={cancelExtract} className="h-9">
-              <Square className="w-4 h-4 mr-2" />
+              <Square className="w-4 h-4 me-2" />
               {t('stop')}
             </Button>
           )}
@@ -404,7 +404,7 @@ export function DataExportTab() {
             <EmptyStateIllustration className="mb-5" icon={DatabaseZap} isActive={isExtracting} />
             <h3 className="text-lg font-medium mb-2">{t('data.emptyTitle')}</h3>
             {isExtracting ? (
-              <div className="mt-1 w-full max-w-sm rounded-xl border border-primary/15 bg-primary/5 p-3 text-left shadow-sm">
+              <div className="mt-1 w-full max-w-sm rounded-xl border border-primary/15 bg-primary/5 p-3 text-start shadow-sm">
                 <div className="flex items-center justify-between gap-3">
                   <div className="flex items-center gap-2 text-xs font-medium text-primary">
                     <span className="relative flex h-2 w-2">
@@ -451,12 +451,12 @@ export function DataExportTab() {
 
               <div className="flex flex-wrap items-center gap-2">
                 <div className="relative">
-                  <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
+                  <Search className="absolute start-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
                   <Input
                     value={search}
                     onChange={(event) => setSearch(event.target.value)}
                     placeholder={t('data.search')}
-                    className="h-9 w-48 pl-8 bg-background/50"
+                    className="h-9 w-48 ps-8 bg-background/50"
                   />
                 </div>
 
@@ -491,7 +491,7 @@ export function DataExportTab() {
             </div>
 
             <div className="min-h-0 overflow-auto overscroll-contain rounded-xl border border-border/50 bg-background/30">
-              <table className="min-w-full border-separate border-spacing-0 text-left text-sm">
+              <table className="min-w-full border-separate border-spacing-0 text-start text-sm">
                 <thead className="sticky top-0 z-10 bg-background/95 backdrop-blur">
                   <tr>
                     <th className="w-10 border-b border-border/60 px-3 py-2">

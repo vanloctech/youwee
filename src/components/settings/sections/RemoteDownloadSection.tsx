@@ -472,7 +472,7 @@ export function RemoteDownloadSection({ highlightId }: RemoteDownloadSectionProp
                   <DialogDescription>{t('remoteDownload.telegramGuideIntro')}</DialogDescription>
                 </DialogHeader>
 
-                <div className="space-y-2 max-h-[60vh] overflow-y-auto pr-1">
+                <div className="space-y-2 max-h-[60vh] overflow-y-auto pe-1">
                   {TELEGRAM_COMMANDS.map(({ key, commandName }) => {
                     return (
                       <div

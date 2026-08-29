@@ -1,6 +1,7 @@
 export type SettingsSectionId =
   | 'general'
   | 'dependencies'
+  | 'engines'
   | 'download'
   | 'remote-download'
   | 'plugin-store'
@@ -8,6 +9,7 @@ export type SettingsSectionId =
   | 'extension'
   | 'ai'
   | 'network'
+  | 'backup'
   | 'about';
 
 export interface SearchableSetting {
@@ -37,6 +39,8 @@ export const SEARCHABLE_SETTINGS: SearchableSetting[] = [
       'color',
       'appearance',
       'theme',
+      'custom',
+      'palette',
       'midnight',
       'aurora',
       'sunset',
@@ -240,34 +244,78 @@ export const SEARCHABLE_SETTINGS: SearchableSetting[] = [
     section: 'download',
   },
 
+  // Backup Section
+  {
+    id: 'backup-export',
+    labelKey: 'backup.exportSectionTitle',
+    descriptionKey: 'backup.exportSectionDesc',
+    keywords: ['backup', 'export', 'history', 'save', 'backup-file'],
+    section: 'backup',
+  },
+  {
+    id: 'backup-import',
+    labelKey: 'backup.importSectionTitle',
+    descriptionKey: 'backup.importSectionDesc',
+    keywords: ['backup', 'import', 'restore', 'recover', 'conflict'],
+    section: 'backup',
+  },
+
   // Dependencies Section
   {
     id: 'ytdlp',
     labelKey: 'dependencies.ytdlp',
     descriptionKey: 'dependencies.videoDownloadEngine',
     keywords: ['ytdlp', 'yt-dlp', 'download', 'engine', 'update', 'version'],
-    section: 'dependencies',
+    section: 'engines',
   },
   {
     id: 'ffmpeg',
     labelKey: 'dependencies.ffmpeg',
     descriptionKey: 'dependencies.audioVideoProcessing',
     keywords: ['ffmpeg', 'video', 'audio', 'processing', 'convert', '4k', '8k'],
-    section: 'dependencies',
+    section: 'engines',
   },
   {
     id: 'bun',
     labelKey: 'dependencies.denoRuntime',
     descriptionKey: 'dependencies.jsRuntimeForYoutube',
     keywords: ['deno', 'runtime', 'javascript', 'node', 'speed'],
-    section: 'dependencies',
+    section: 'engines',
   },
   {
     id: 'youtube-troubleshooting',
     labelKey: 'dependencies.youtubeTroubleshooting',
     descriptionKey: 'dependencies.optionsToFixIssues',
     keywords: ['youtube', 'troubleshoot', 'fix', 'error', 'player', 'nsig'],
-    section: 'dependencies',
+    section: 'engines',
+  },
+  {
+    id: 'gallerydl',
+    labelKey: 'dependencies.gallerydl',
+    descriptionKey: 'dependencies.galleryCollectionsEngine',
+    keywords: ['gallery-dl', 'gallery', 'images', 'update', 'install', 'engine'],
+    section: 'engines',
+  },
+  {
+    id: 'engine-rollback',
+    labelKey: 'dependencies.previousVersions',
+    descriptionKey: 'dependencies.previousVersionsDesc',
+    keywords: ['rollback', 'previous', 'restore', 'backup', 'version', 'revert'],
+    section: 'engines',
+  },
+  {
+    id: 'engine-compat',
+    labelKey: 'dependencies.compatTitle',
+    descriptionKey: 'dependencies.compatDesc',
+    keywords: ['compatibility', 'health', 'test', 'check', 'verify', 'runs'],
+    section: 'engines',
+  },
+  {
+    id: 'backup-engine-versions',
+    labelKey: 'sections.backup',
+    descriptionKey: 'backup.exportSectionDesc',
+    keywords: ['backup', 'restore', 'engine', 'version', 'settings', 'export', 'import'],
+    section: 'backup',
   },
 
   // AI Section
@@ -464,6 +512,8 @@ export function searchSettings(query: string, t: (key: string) => string): Searc
 export const SECTION_INFO: Record<SettingsSectionId, { label: string; icon: string }> = {
   general: { label: 'General', icon: 'Palette' },
   dependencies: { label: 'Dependencies', icon: 'Package' },
+  engines: { label: 'Engines', icon: 'Package' },
+  backup: { label: 'Backup', icon: 'Archive' },
   download: { label: 'Download', icon: 'ArrowDownToLine' },
   'remote-download': { label: 'Remote Download', icon: 'MessageCircleCode' },
   'plugin-store': { label: 'Plugin Store', icon: 'ShoppingBag' },

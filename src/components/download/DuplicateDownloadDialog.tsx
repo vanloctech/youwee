@@ -117,7 +117,7 @@ export function DuplicateDownloadDialog({ review, onResolve }: DuplicateDownload
       }}
     >
       <DialogContent className="max-h-[86vh] max-w-3xl gap-0 overflow-hidden border-white/10 bg-card/95 p-0 shadow-2xl backdrop-blur-xl">
-        <DialogHeader className="border-b border-border/40 bg-background/20 px-5 py-3 pr-12 sm:px-6 sm:py-3.5 sm:pr-12">
+        <DialogHeader className="border-b border-border/40 bg-background/20 px-5 py-3 pe-12 sm:px-6 sm:py-3.5 sm:pe-12">
           <div className="flex items-start gap-2.5">
             <span className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-muted/60 text-amber-500/85 ring-1 ring-border/60 dark:text-amber-400/80">
               <AlertTriangle className="h-4 w-4" />
@@ -209,12 +209,12 @@ export function DuplicateDownloadDialog({ review, onResolve }: DuplicateDownload
           </div>
         </div>
 
-        <DialogFooter className="flex-col-reverse gap-2 border-t border-border/50 bg-background/25 px-5 py-4 sm:flex-row sm:justify-end sm:space-x-0">
+        <DialogFooter className="flex-col-reverse gap-2 border-t border-border/50 bg-background/25 px-5 py-4 sm:flex-row sm:justify-end">
           <Button variant="outline" onClick={() => onResolve('cancel', true)}>
             {t('duplicates.cancel')}
           </Button>
           <Button variant="outline" onClick={() => onResolve('add', true)}>
-            <RotateCcw className="mr-2 h-4 w-4" />
+            <RotateCcw className="me-2 h-4 w-4" />
             {t('duplicates.addAgain')}
           </Button>
           <Button onClick={() => onResolve('skip', true)}>{t('duplicates.skip')}</Button>

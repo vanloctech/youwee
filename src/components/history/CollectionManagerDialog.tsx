@@ -103,7 +103,7 @@ export function CollectionManagerDialog({ open, onOpenChange }: CollectionManage
 
           {error && <p className="text-sm text-destructive">{error}</p>}
 
-          <div className="max-h-[360px] overflow-y-auto space-y-2 pr-1">
+          <div className="max-h-[360px] overflow-y-auto space-y-2 pe-1">
             {collections.length === 0 ? (
               <div className="rounded-lg border border-dashed border-border/60 p-6 text-center text-sm text-muted-foreground">
                 {t('library.collections.empty')}

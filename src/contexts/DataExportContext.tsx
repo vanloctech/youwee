@@ -1,5 +1,6 @@
 import { invoke } from '@tauri-apps/api/core';
 import { type ReactNode, useCallback, useMemo, useState } from 'react';
+import i18n from '@/i18n';
 import { localizeUnknownError } from '@/lib/backend-error';
 import type { ExportRow, ExportSource, ExtractDataRowsOutput } from '@/lib/types';
 import { DataExportContext } from './data-export-context';
@@ -89,6 +90,7 @@ export function DataExportProvider({ children }: { children: ReactNode }) {
           source: settings.source,
           text: inputText,
           limit: settings.limit,
+          lang: i18n.language || 'en',
           detailMode: settings.detailMode,
           cookieMode: cookieSettings.mode,
           cookieBrowser: cookieSettings.browser || null,

@@ -1,4 +1,5 @@
 export { AISection } from './AISection';
+export { BackupSection } from './BackupSection';
 export { DependenciesSection } from './DependenciesSection';
 export { DownloadSection } from './DownloadSection';
 export { ExtensionSection } from './ExtensionSection';

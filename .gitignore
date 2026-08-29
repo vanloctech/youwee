@@ -37,6 +37,7 @@ flatpak/*.flatpak
 
 # Python (old version)
 *.py
+!src-tauri/extractors/*.py
 __pycache__/
 *.pyc
 venv/

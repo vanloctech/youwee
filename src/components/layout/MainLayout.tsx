@@ -116,7 +116,7 @@ export function MainLayout({ children, currentPage, onPageChange }: MainLayoutPr
 
       {/* Windows: custom title bar replacing native decorations */}
       {isWindows && (
-        <div className="absolute top-0 left-0 right-0 z-30 h-8 flex">
+        <div className="absolute top-0 left-0 right-0 z-30 h-8 flex" dir="ltr">
           {/* Drag area — fills remaining space, separate from buttons */}
           <div
             role="toolbar"

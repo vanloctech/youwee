@@ -53,7 +53,7 @@ export function FFmpegRequiredDialog({
             <button
               type="button"
               onClick={onDismiss}
-              className="absolute top-4 right-4 p-1 rounded-md hover:bg-black/10 transition-colors"
+              className="absolute top-4 end-4 p-1 rounded-md hover:bg-black/10 transition-colors"
             >
               <X className="w-4 h-4 text-muted-foreground" />
             </button>
@@ -115,14 +115,14 @@ export function FFmpegRequiredDialog({
           {ffmpegDownloading ? (
             <div className="flex justify-end">
               <Button variant="outline" size="sm" disabled>
-                <Loader2 className="w-4 h-4 mr-1 animate-spin" />
+                <Loader2 className="w-4 h-4 me-1 animate-spin" />
                 Installing...
               </Button>
             </div>
           ) : ffmpegSuccess ? (
             <div className="flex justify-end">
               <Button size="sm" onClick={onContinue}>
-                <CheckCircle2 className="w-4 h-4 mr-1" />
+                <CheckCircle2 className="w-4 h-4 me-1" />
                 Continue
               </Button>
             </div>
@@ -139,14 +139,14 @@ export function FFmpegRequiredDialog({
             <div className="flex flex-col gap-3">
               {/* Primary action */}
               <Button className="w-full" onClick={handleInstall}>
-                <Download className="w-4 h-4 mr-2" />
+                <Download className="w-4 h-4 me-2" />
                 Install FFmpeg
               </Button>
 
               {/* Secondary actions */}
               <div className="flex gap-2">
                 <Button variant="outline" size="sm" className="flex-1" onClick={handleGoToSettings}>
-                  <Settings className="w-4 h-4 mr-1" />
+                  <Settings className="w-4 h-4 me-1" />
                   Go to Settings
                 </Button>
                 <Button

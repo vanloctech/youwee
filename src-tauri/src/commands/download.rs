@@ -12,6 +12,7 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
 
 use crate::utils::{normalize_url, validate_url};
+use serde::{Deserialize, Serialize};
 use tauri::{AppHandle, Emitter};
 use tauri_plugin_shell::process::CommandEvent;
 use tauri_plugin_shell::ShellExt;
@@ -25,9 +26,11 @@ use crate::database::ensure_collection_for_download_in_db;
 use crate::database::update_history_download;
 use crate::services::{
     add_safe_filename_args, build_cookie_args, build_proxy_args, build_site_header_args,
-    build_youtube_extractor_args, build_ytdlp_advanced_args, enqueue_post_download_workflow,
+    build_youtube_extractor_args, build_ytdlp_advanced_args, build_ytdlp_raw_args,
+    enqueue_post_download_workflow,
     get_deno_path, get_ffmpeg_path, get_ytdlp_path, get_ytdlp_source, is_upcoming_live_error,
-    redact_ytdlp_advanced_args, resolve_download_workflow_snapshot, run_ytdlp_with_stderr,
+    redact_download_args_for_log, resolve_download_workflow_snapshot,
+    run_ytdlp_with_stderr,
     system_ytdlp_not_found_message, YtdlpAdvancedOption,
 };
 use crate::types::{
@@ -39,6 +42,19 @@ use crate::utils::{
 };
 
 pub static CANCEL_FLAG: AtomicBool = AtomicBool::new(false);
+
+/// Per-item cancellation registry (P0-7). An id inserted here is treated as
+/// cancelled by the poll loops, which kill only that item's process instead of
+/// every active download.
+pub static CANCEL_ITEM_IDS: Mutex<Vec<String>> = Mutex::new(Vec::new());
+
+fn is_item_cancelled(id: &str) -> bool {
+    CANCEL_FLAG.load(Ordering::SeqCst)
+        || CANCEL_ITEM_IDS
+            .lock()
+            .map(|ids| ids.iter().any(|existing| existing == id))
+            .unwrap_or(false)
+}
 
 const RECENT_OUTPUT_LIMIT: usize = 30;
 
@@ -854,6 +870,32 @@ fn kill_all_download_processes() {
         cmd2.spawn().ok();
     }
 }
+/// Kill only one download's process tree (yt-dlp + its ffmpeg children) by PID,
+/// without touching other concurrent downloads.
+fn kill_process_tree_pid(pid: u32) {
+    #[cfg(windows)]
+    {
+        use crate::utils::CommandExt as _;
+        use std::process::Command as StdCommand;
+        let mut cmd = StdCommand::new("taskkill");
+        cmd.args(["/F", "/T", "/PID", &pid.to_string()]);
+        cmd.hide_window();
+        cmd.spawn().ok();
+    }
+    #[cfg(unix)]
+    {
+        use std::process::Command as StdCommand;
+        StdCommand::new("pkill")
+            .args(["-9", "-P", &pid.to_string()])
+            .spawn()
+            .ok();
+        StdCommand::new("kill")
+            .args(["-9", &pid.to_string()])
+            .spawn()
+            .ok();
+    }
+}
+
 
 fn push_recent_output(buffer: &mut VecDeque<String>, line: &str) {
     let trimmed = line.trim();
@@ -966,6 +1008,344 @@ fn build_download_error_message(exit_code: Option<i32>, recent_lines: &[String])
     }
 }
 
+/// Inputs for the pure yt-dlp argument builder. Mirrors the `download_video`
+/// parameters that affect the command line. `deno_path`, `ffmpeg_path` and
+/// `filepath_tmp` are optional: when omitted they are resolved/computed by the
+/// caller (or by `preview_download_command` via the app handle).
+#[derive(Clone, Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct DownloadArgsRequest {
+    pub id: String,
+    pub url: String,
+    pub output_path: String,
+    pub quality: String,
+    pub format: String,
+    pub download_playlist: bool,
+    pub playlist_index: Option<u32>,
+    pub playlist_total: Option<u32>,
+    pub number_playlist_items: bool,
+    pub queue_index: Option<u32>,
+    pub queue_total: Option<u32>,
+    pub number_queue_items: bool,
+    pub filename_metadata_enabled: bool,
+    pub filename_metadata_fields: Vec<String>,
+    pub split_embedded_chapters: bool,
+    pub number_chapter_files: bool,
+    pub video_codec: String,
+    pub preferred_fps: Option<String>,
+    pub audio_bitrate: String,
+    pub playlist_limit: Option<u32>,
+    pub subtitle_mode: String,
+    pub subtitle_langs: String,
+    pub subtitle_embed: bool,
+    pub subtitle_format: String,
+    pub use_actual_player_js: bool,
+    pub cookie_mode: Option<String>,
+    pub cookie_browser: Option<String>,
+    pub cookie_browser_profile: Option<String>,
+    pub cookie_file_path: Option<String>,
+    pub cookie_skip_patterns: Vec<String>,
+    pub embed_metadata: bool,
+    pub embed_thumbnail: bool,
+    pub proxy_url: Option<String>,
+    pub live_from_start: bool,
+    pub speed_limit: Option<String>,
+    pub use_aria2: bool,
+    pub aria2_args: Option<String>,
+    pub ytdlp_advanced_options_enabled: bool,
+    pub ytdlp_advanced_options: Vec<YtdlpAdvancedOption>,
+    pub ytdlp_raw_args: Option<String>,
+    pub sponsorblock_remove: Option<String>,
+    pub sponsorblock_mark: Option<String>,
+    pub download_sections: Option<String>,
+    #[serde(default)]
+    pub filepath_tmp: Option<std::path::PathBuf>,
+    #[serde(default)]
+    pub deno_path: Option<std::path::PathBuf>,
+    #[serde(default)]
+    pub ffmpeg_path: Option<std::path::PathBuf>,
+}
+
+/// Result of building a download command line.
+pub struct BuiltDownloadArgs {
+    pub args: Vec<String>,
+    pub skipped_options: Vec<String>,
+    pub youtube_player_client: Option<String>,
+}
+
+/// Pure yt-dlp argument builder shared by `download_video` and
+/// `preview_download_command`. Everything is assembled into an argv array —
+/// never a shell string. Expert raw arguments are tokenized and allowlisted
+/// here, so invalid options fail BEFORE the download starts.
+pub fn build_download_args(req: &DownloadArgsRequest) -> Result<BuiltDownloadArgs, BackendError> {
+    let sanitized_path =
+        sanitize_output_path(&req.output_path).map_err(BackendError::from_message)?;
+    let format_string = build_format_string(
+        &req.quality,
+        &req.format,
+        &req.video_codec,
+        req.preferred_fps.as_deref(),
+    );
+    let has_filename_metadata =
+        build_filename_metadata_prefix(req.filename_metadata_enabled, &req.filename_metadata_fields)
+            .is_some();
+    let output_template = build_output_template(
+        &sanitized_path,
+        req.number_playlist_items,
+        req.playlist_index,
+        req.playlist_total,
+        req.number_queue_items,
+        req.queue_index,
+        req.queue_total,
+        req.filename_metadata_enabled,
+        &req.filename_metadata_fields,
+    );
+    let filepath_tmp = req
+        .filepath_tmp
+        .clone()
+        .unwrap_or_else(|| std::env::temp_dir().join(format!("youwee-fp-{}.txt", req.id)));
+
+    let mut args = vec![
+        "--newline".to_string(),
+        "--progress".to_string(),
+        "--no-warnings".to_string(),
+        "-f".to_string(),
+        format_string,
+        "-o".to_string(),
+        output_template,
+        "--print-to-file".to_string(),
+        "after_move:filepath".to_string(),
+        filepath_tmp.to_string_lossy().to_string(),
+        "--no-keep-video".to_string(),
+        "--no-keep-fragments".to_string(),
+        "--retries".to_string(),
+        "3".to_string(),
+        "--fragment-retries".to_string(),
+        "3".to_string(),
+        "--extractor-retries".to_string(),
+        "2".to_string(),
+        "--file-access-retries".to_string(),
+        "2".to_string(),
+    ];
+    add_safe_filename_args(&mut args, Some(&sanitized_path));
+    if has_filename_metadata {
+        args.push("--output-na-placeholder".to_string());
+        args.push("unknown".to_string());
+    }
+
+    if req.split_embedded_chapters {
+        args.push("--split-chapters".to_string());
+        args.push("-o".to_string());
+        args.push(format!(
+            "chapter:{}",
+            build_chapter_output_template(
+                &sanitized_path,
+                req.number_playlist_items,
+                req.playlist_index,
+                req.playlist_total,
+                req.number_queue_items,
+                req.queue_index,
+                req.queue_total,
+                req.number_chapter_files,
+            )
+        ));
+    }
+
+    // Auto use Deno runtime for YouTube (required for JS extractor)
+    // Use --js-runtimes instead of --extractor-args (handles spaces in path correctly)
+    if req.url.contains("youtube.com") || req.url.contains("youtu.be") {
+        if let Some(deno_path) = req.deno_path.as_ref() {
+            args.push("--js-runtimes".to_string());
+            args.push(format!("deno:{}", deno_path.to_string_lossy()));
+        }
+    }
+
+    // Add FFmpeg location if available
+    if let Some(ffmpeg_path) = req.ffmpeg_path.as_ref() {
+        if let Some(parent) = ffmpeg_path.parent() {
+            args.push("--ffmpeg-location".to_string());
+            args.push(parent.to_string_lossy().to_string());
+        }
+    }
+
+    // Subtitle settings
+    if req.subtitle_mode != "off" {
+        args.push("--write-subs".to_string());
+        if req.subtitle_mode == "auto" {
+            args.push("--write-auto-subs".to_string());
+            args.push("--sub-langs".to_string());
+            args.push("all".to_string());
+        } else {
+            args.push("--sub-langs".to_string());
+            args.push(req.subtitle_langs.clone());
+        }
+        args.push("--sub-format".to_string());
+        args.push(req.subtitle_format.clone());
+        if req.subtitle_embed {
+            args.push("--embed-subs".to_string());
+        }
+    }
+
+    args.extend(build_site_header_args(&req.url));
+
+    args.extend(build_cookie_args(
+        &req.url,
+        req.cookie_mode.as_deref(),
+        req.cookie_browser.as_deref(),
+        req.cookie_browser_profile.as_deref(),
+        req.cookie_file_path.as_deref(),
+        Some(req.cookie_skip_patterns.as_slice()),
+    ));
+
+    // Proxy settings
+    if let Some(proxy) = req.proxy_url.as_ref() {
+        if !proxy.is_empty() {
+            args.push("--proxy".to_string());
+            args.push(proxy.clone());
+        }
+    }
+
+    let advanced_args = build_ytdlp_advanced_args(
+        &req.url,
+        req.ytdlp_advanced_options_enabled,
+        &req.ytdlp_advanced_options,
+    )?;
+    let skipped_options = advanced_args.skipped_options.clone();
+    let youtube_player_client = advanced_args.youtube_player_client.clone();
+    args.extend(advanced_args.args);
+
+    // Merge YouTube extractor settings into a single --extractor-args value.
+    // See: https://github.com/yt-dlp/yt-dlp/issues/14680
+    let is_youtube_url = req.url.contains("youtube.com") || req.url.contains("youtu.be");
+    if is_youtube_url {
+        if let Some(extractor_args) = build_youtube_extractor_args(
+            req.use_actual_player_js,
+            advanced_args.youtube_player_client.as_deref(),
+        ) {
+            args.push("--extractor-args".to_string());
+            args.push(extractor_args);
+        }
+    }
+
+    // Live stream settings
+    if req.live_from_start {
+        args.push("--live-from-start".to_string());
+        args.push("--no-part".to_string());
+    }
+
+    // Speed limit settings
+    if let Some(limit) = req.speed_limit.as_ref() {
+        if !limit.is_empty() {
+            args.push("--limit-rate".to_string());
+            args.push(limit.clone());
+        }
+    }
+
+    // External downloader settings (aria2c)
+    if req.use_aria2 {
+        args.push("--downloader".to_string());
+        args.push("aria2c".to_string());
+        if let Some(raw_args) = req.aria2_args.as_ref() {
+            if let Some(normalized_args) = normalize_aria2_args(raw_args) {
+                args.push("--downloader-args".to_string());
+                args.push(normalized_args);
+            }
+        }
+    }
+
+    // Force overwrite to avoid HTTP 416 errors from stale .part files
+    args.push("--force-overwrites".to_string());
+
+    // Playlist handling
+    if !req.download_playlist {
+        args.push("--no-playlist".to_string());
+    } else if let Some(limit) = req.playlist_limit {
+        if limit > 0 {
+            args.push("--playlist-end".to_string());
+            args.push(limit.to_string());
+        }
+    }
+
+    // Audio formats
+    let is_audio_format =
+        req.format == "mp3" || req.format == "m4a" || req.format == "opus" || req.quality == "audio";
+
+    if is_audio_format {
+        args.push("-x".to_string());
+        args.push("--audio-format".to_string());
+        match req.format.as_str() {
+            "mp3" => args.push("mp3".to_string()),
+            "m4a" => args.push("m4a".to_string()),
+            "opus" => args.push("opus".to_string()),
+            _ => args.push("mp3".to_string()),
+        }
+        args.push("--audio-quality".to_string());
+        match req.audio_bitrate.as_str() {
+            "128" => args.push("128K".to_string()),
+            _ => args.push("0".to_string()),
+        }
+    } else {
+        args.push("--merge-output-format".to_string());
+        args.push(req.format.clone());
+    }
+
+    // Embed metadata and thumbnail
+    if req.embed_metadata {
+        args.push("--embed-metadata".to_string());
+    }
+    if req.embed_thumbnail {
+        args.push("--embed-thumbnail".to_string());
+        // Convert thumbnail to jpg for better compatibility with MP4 container
+        args.push("--convert-thumbnails".to_string());
+        args.push("jpg".to_string());
+    }
+
+    // SponsorBlock settings
+    if let Some(ref remove_cats) = req.sponsorblock_remove {
+        if !remove_cats.is_empty() {
+            args.push("--sponsorblock-remove".to_string());
+            args.push(remove_cats.clone());
+        }
+    }
+    if let Some(ref mark_cats) = req.sponsorblock_mark {
+        if !mark_cats.is_empty() {
+            args.push("--sponsorblock-mark".to_string());
+            args.push(mark_cats.clone());
+        }
+    }
+
+    // Download sections (time range)
+    if let Some(ref sections) = req.download_sections {
+        if !sections.is_empty() {
+            args.push("--download-sections".to_string());
+            args.push(sections.clone());
+        }
+    }
+
+    // Expert raw arguments (tokenized + allowlisted). Appended last so they can
+    // override app-managed retry/rate defaults, but never the URL position.
+    if let Some(raw) = req.ytdlp_raw_args.as_deref() {
+        args.extend(build_ytdlp_raw_args(raw)?);
+    }
+
+    args.push("--".to_string());
+    args.push(req.url.clone());
+
+    Ok(BuiltDownloadArgs {
+        args,
+        skipped_options,
+        youtube_player_client,
+    })
+}
+
+/// Serialized result of `preview_download_command`.
+#[derive(Clone, Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PreviewDownloadCommandResult {
+    pub args: Vec<String>,
+    pub display: String,
+}
+
 #[tauri::command]
 pub async fn download_video(
     app: AppHandle,
@@ -1021,6 +1401,8 @@ pub async fn download_video(
     // Vetted yt-dlp advanced options
     ytdlp_advanced_options_enabled: Option<bool>,
     ytdlp_advanced_options: Option<Vec<YtdlpAdvancedOption>>,
+    // Expert raw yt-dlp arguments (tokenized + allowlisted server-side)
+    ytdlp_raw_args: Option<String>,
     // SponsorBlock settings
     sponsorblock_remove: Option<String>, // comma-separated categories to remove
     sponsorblock_mark: Option<String>,   // comma-separated categories to mark as chapters
@@ -1042,8 +1424,14 @@ pub async fn download_video(
     emit_failed_workflow: Option<bool>,
     // Caller context used in plugin payload
     download_kind: Option<String>,
+    // Incognito: skip history writes and redact logs for this download (P0-5)
+    incognito: Option<bool>,
 ) -> Result<(), String> {
     CANCEL_FLAG.store(false, Ordering::SeqCst);
+    CANCEL_ITEM_IDS
+        .lock()
+        .unwrap()
+        .retain(|existing| existing != &id);
     validate_url(&url).map_err(|e| BackendError::from_message(e).to_wire_string())?;
     let url = normalize_url(&url);
     let post_download_plugins = post_download_plugins.unwrap_or_default();
@@ -1096,29 +1484,12 @@ pub async fn download_video(
     let should_log_stderr = log_stderr.unwrap_or(true);
     let sanitized_path = sanitize_output_path(&output_path)
         .map_err(|e| BackendError::from_message(e).to_wire_string())?;
-    let format_string =
-        build_format_string(&quality, &format, &video_codec, preferred_fps.as_deref());
     let number_playlist_items = number_playlist_items.unwrap_or(false);
     let number_queue_items = number_queue_items.unwrap_or(false);
     let filename_metadata_enabled = filename_metadata_enabled.unwrap_or(false);
     let filename_metadata_fields = filename_metadata_fields.unwrap_or_default();
     let split_embedded_chapters = split_embedded_chapters.unwrap_or(false);
     let number_chapter_files = number_chapter_files.unwrap_or(true);
-    let has_filename_metadata =
-        build_filename_metadata_prefix(filename_metadata_enabled, &filename_metadata_fields)
-            .is_some();
-    let output_template = build_output_template(
-        &sanitized_path,
-        number_playlist_items,
-        playlist_index,
-        playlist_total,
-        number_queue_items,
-        queue_index,
-        queue_total,
-        filename_metadata_enabled,
-        &filename_metadata_fields,
-    );
-
     // Use a temp file to capture the final filepath from yt-dlp.
     // On Windows with non-UTF-8 locales (e.g. Chinese/GBK), stdout is encoded
     // in the system ANSI code page which cannot represent all Unicode characters
@@ -1126,245 +1497,91 @@ pub async fn download_video(
     // --print-to-file always writes UTF-8, so we get the exact filepath.
     let filepath_tmp = std::env::temp_dir().join(format!("youwee-fp-{}.txt", id));
 
-    let mut args = vec![
-        "--newline".to_string(),
-        "--progress".to_string(),
-        "--no-warnings".to_string(),
-        "-f".to_string(),
-        format_string,
-        "-o".to_string(),
-        output_template,
-        "--print-to-file".to_string(),
-        "after_move:filepath".to_string(),
-        filepath_tmp.to_string_lossy().to_string(),
-        "--no-keep-video".to_string(),
-        "--no-keep-fragments".to_string(),
-        "--retries".to_string(),
-        "3".to_string(),
-        "--fragment-retries".to_string(),
-        "3".to_string(),
-        "--extractor-retries".to_string(),
-        "2".to_string(),
-        "--file-access-retries".to_string(),
-        "2".to_string(),
-    ];
-    add_safe_filename_args(&mut args, Some(&sanitized_path));
-    if has_filename_metadata {
-        args.push("--output-na-placeholder".to_string());
-        args.push("unknown".to_string());
-    }
+    // Resolve runtime paths that the pure arg builder cannot (async, app-scoped).
+    let deno_path = if url.contains("youtube.com") || url.contains("youtu.be") {
+        get_deno_path(&app).await
+    } else {
+        None
+    };
+    let ffmpeg_path = get_ffmpeg_path(&app).await;
 
-    if split_embedded_chapters {
-        args.push("--split-chapters".to_string());
-        args.push("-o".to_string());
-        args.push(format!(
-            "chapter:{}",
-            build_chapter_output_template(
-                &sanitized_path,
-                number_playlist_items,
-                playlist_index,
-                playlist_total,
-                number_queue_items,
-                queue_index,
-                queue_total,
-                number_chapter_files,
-            )
-        ));
-    }
+    let args_request = DownloadArgsRequest {
+        id: id.clone(),
+        url: url.clone(),
+        output_path,
+        quality: quality.clone(),
+        format: format.clone(),
+        download_playlist,
+        playlist_index,
+        playlist_total,
+        number_playlist_items,
+        queue_index,
+        queue_total,
+        number_queue_items,
+        filename_metadata_enabled,
+        filename_metadata_fields,
+        split_embedded_chapters,
+        number_chapter_files,
+        video_codec,
+        preferred_fps,
+        audio_bitrate,
+        playlist_limit,
+        subtitle_mode,
+        subtitle_langs,
+        subtitle_embed,
+        subtitle_format,
+        use_actual_player_js: use_actual_player_js.unwrap_or(false),
+        cookie_mode,
+        cookie_browser,
+        cookie_browser_profile,
+        cookie_file_path,
+        cookie_skip_patterns: cookie_skip_patterns.unwrap_or_default(),
+        embed_metadata: embed_metadata.unwrap_or(false),
+        embed_thumbnail: embed_thumbnail.unwrap_or(false),
+        proxy_url,
+        live_from_start: live_from_start.unwrap_or(false),
+        speed_limit,
+        use_aria2: use_aria2.unwrap_or(false),
+        aria2_args,
+        ytdlp_advanced_options_enabled: ytdlp_advanced_options_enabled.unwrap_or(false),
+        ytdlp_advanced_options: ytdlp_advanced_options.unwrap_or_default(),
+        ytdlp_raw_args,
+        sponsorblock_remove,
+        sponsorblock_mark,
+        download_sections: download_sections.clone(),
+        filepath_tmp: Some(filepath_tmp.clone()),
+        deno_path,
+        ffmpeg_path,
+    };
 
-    // Auto use Deno runtime for YouTube (required for JS extractor)
-    // Use --js-runtimes instead of --extractor-args (handles spaces in path correctly)
-    if url.contains("youtube.com") || url.contains("youtu.be") {
-        if let Some(deno_path) = get_deno_path(&app).await {
-            args.push("--js-runtimes".to_string());
-            args.push(format!("deno:{}", deno_path.to_string_lossy()));
-        }
-    }
+    let incognito_enabled = incognito.unwrap_or(false);
+    let built_args = build_download_args(&args_request).map_err(|e| e.to_wire_string())?;
 
-    // Add FFmpeg location if available
-    if let Some(ffmpeg_path) = get_ffmpeg_path(&app).await {
-        if let Some(parent) = ffmpeg_path.parent() {
-            args.push("--ffmpeg-location".to_string());
-            args.push(parent.to_string_lossy().to_string());
-        }
-    }
-
-    // Subtitle settings
-    if subtitle_mode != "off" {
-        args.push("--write-subs".to_string());
-        if subtitle_mode == "auto" {
-            args.push("--write-auto-subs".to_string());
-            args.push("--sub-langs".to_string());
-            args.push("all".to_string());
-        } else {
-            args.push("--sub-langs".to_string());
-            args.push(subtitle_langs.clone());
-        }
-        args.push("--sub-format".to_string());
-        args.push(subtitle_format.clone());
-        if subtitle_embed {
-            args.push("--embed-subs".to_string());
-        }
-    }
-
-    args.extend(build_site_header_args(&url));
-
-    args.extend(build_cookie_args(
-        &url,
-        cookie_mode.as_deref(),
-        cookie_browser.as_deref(),
-        cookie_browser_profile.as_deref(),
-        cookie_file_path.as_deref(),
-        cookie_skip_patterns.as_deref(),
-    ));
-
-    // Proxy settings
-    if let Some(proxy) = proxy_url.as_ref() {
-        if !proxy.is_empty() {
-            args.push("--proxy".to_string());
-            args.push(proxy.clone());
-        }
-    }
-
-    let ytdlp_advanced_options = ytdlp_advanced_options.unwrap_or_default();
-    let advanced_args = build_ytdlp_advanced_args(
-        &url,
-        ytdlp_advanced_options_enabled.unwrap_or(false),
-        &ytdlp_advanced_options,
-    )
-    .map_err(|e| e.to_wire_string())?;
-    if !advanced_args.skipped_options.is_empty() {
+    if !built_args.skipped_options.is_empty() {
         add_log_internal(
             "info",
             &format!(
                 "Skipped yt-dlp advanced option(s) for Bilibili because Youwee uses app-managed headers: {}",
-                advanced_args.skipped_options.join(", ")
+                built_args.skipped_options.join(", ")
             ),
             None,
-            Some(&url),
+            if incognito_enabled { None } else { Some(&url) },
         )
         .ok();
     }
-    args.extend(advanced_args.args);
 
-    // Merge YouTube extractor settings into a single --extractor-args value.
-    // See: https://github.com/yt-dlp/yt-dlp/issues/14680
     let is_youtube_url = url.contains("youtube.com") || url.contains("youtu.be");
-    if is_youtube_url {
-        if let Some(extractor_args) = build_youtube_extractor_args(
-            use_actual_player_js.unwrap_or(false),
-            advanced_args.youtube_player_client.as_deref(),
-        ) {
-            args.push("--extractor-args".to_string());
-            args.push(extractor_args);
-        }
-    } else if advanced_args.youtube_player_client.is_some() {
+    if built_args.youtube_player_client.is_some() && !is_youtube_url {
         add_log_internal(
             "info",
             "Skipped YouTube player client preset because the download URL is not YouTube.",
             None,
-            Some(&url),
+            if incognito_enabled { None } else { Some(&url) },
         )
         .ok();
     }
 
-    // Live stream settings
-    if live_from_start.unwrap_or(false) {
-        args.push("--live-from-start".to_string());
-        args.push("--no-part".to_string());
-    }
-
-    // Speed limit settings
-    if let Some(limit) = speed_limit.as_ref() {
-        if !limit.is_empty() {
-            args.push("--limit-rate".to_string());
-            args.push(limit.clone());
-        }
-    }
-
-    // External downloader settings (aria2c)
-    if use_aria2.unwrap_or(false) {
-        args.push("--downloader".to_string());
-        args.push("aria2c".to_string());
-        if let Some(raw_args) = aria2_args.as_ref() {
-            if let Some(normalized_args) = normalize_aria2_args(raw_args) {
-                args.push("--downloader-args".to_string());
-                args.push(normalized_args);
-            }
-        }
-    }
-
-    // Force overwrite to avoid HTTP 416 errors from stale .part files
-    args.push("--force-overwrites".to_string());
-
-    // Playlist handling
-    if !download_playlist {
-        args.push("--no-playlist".to_string());
-    } else if let Some(limit) = playlist_limit {
-        if limit > 0 {
-            args.push("--playlist-end".to_string());
-            args.push(limit.to_string());
-        }
-    }
-
-    // Audio formats
-    let is_audio_format =
-        format == "mp3" || format == "m4a" || format == "opus" || quality == "audio";
-
-    if is_audio_format {
-        args.push("-x".to_string());
-        args.push("--audio-format".to_string());
-        match format.as_str() {
-            "mp3" => args.push("mp3".to_string()),
-            "m4a" => args.push("m4a".to_string()),
-            "opus" => args.push("opus".to_string()),
-            _ => args.push("mp3".to_string()),
-        }
-        args.push("--audio-quality".to_string());
-        match audio_bitrate.as_str() {
-            "128" => args.push("128K".to_string()),
-            _ => args.push("0".to_string()),
-        }
-    } else {
-        args.push("--merge-output-format".to_string());
-        args.push(format.clone());
-    }
-
-    // Embed metadata and thumbnail
-    if embed_metadata.unwrap_or(false) {
-        args.push("--embed-metadata".to_string());
-    }
-    if embed_thumbnail.unwrap_or(false) {
-        args.push("--embed-thumbnail".to_string());
-        // Convert thumbnail to jpg for better compatibility with MP4 container
-        args.push("--convert-thumbnails".to_string());
-        args.push("jpg".to_string());
-    }
-
-    // SponsorBlock settings
-    if let Some(ref remove_cats) = sponsorblock_remove {
-        if !remove_cats.is_empty() {
-            args.push("--sponsorblock-remove".to_string());
-            args.push(remove_cats.clone());
-        }
-    }
-    if let Some(ref mark_cats) = sponsorblock_mark {
-        if !mark_cats.is_empty() {
-            args.push("--sponsorblock-mark".to_string());
-            args.push(mark_cats.clone());
-        }
-    }
-
-    // Download sections (time range)
-    if let Some(ref sections) = download_sections {
-        if !sections.is_empty() {
-            args.push("--download-sections".to_string());
-            args.push(sections.clone());
-        }
-    }
-
-    args.push("--".to_string());
-    args.push(url.clone());
+    let args = built_args.args;
 
     // Get binary info for logging
     let binary_info = get_ytdlp_path(&app).await;
@@ -1373,14 +1590,21 @@ pub async fn download_video(
         .map(|(p, is_bundled)| format!("{} (bundled: {})", p.display(), is_bundled))
         .unwrap_or_else(|| "sidecar".to_string());
 
-    // Log command with binary path
-    let command_args_for_log = redact_ytdlp_advanced_args(&args);
+    // Log command with binary path. Incognito downloads never write the URL
+    // column and their URL argument is masked in the command string (P0-5).
+    let command_args_for_log = redact_download_args_for_log(&args, incognito_enabled);
     let command_str = format!(
         "[{}] yt-dlp {}",
         binary_path_str,
         command_args_for_log.join(" ")
     );
-    add_log_internal("command", &command_str, None, Some(&url)).ok();
+    add_log_internal(
+        "command",
+        &command_str,
+        None,
+        if incognito_enabled { None } else { Some(&url) },
+    )
+    .ok();
 
     let trigger_source = source.clone().or_else(|| detect_source(&url));
     let trigger_time_range = extract_time_range(&download_sections);
@@ -1481,6 +1705,7 @@ pub async fn download_video(
             auto_organize_collections.unwrap_or(false),
             playlist_collection_name.clone(),
             split_embedded_chapters,
+            incognito_enabled,
         )
         .await;
     }
@@ -1585,10 +1810,10 @@ pub async fn download_video(
             };
 
             while let Some(event) = rx.recv().await {
-                if CANCEL_FLAG.load(Ordering::SeqCst) {
+                if is_item_cancelled(&id) {
+                    kill_process_tree_pid(child.pid());
                     child.kill().ok();
-                    kill_all_download_processes();
-                    return Err(BackendError::from_message("Download cancelled").to_wire_string());
+                    return Err(download_cancelled_error().to_wire_string());
                 }
 
                 match event {
@@ -1776,7 +2001,7 @@ pub async fn download_video(
                         return Err(error.to_wire_string());
                     }
                     CommandEvent::Terminated(status) => {
-                        if CANCEL_FLAG.load(Ordering::SeqCst) {
+                        if is_item_cancelled(&id) {
                             add_log_internal(
                                 "info",
                                 "Download cancelled by user",
@@ -1784,9 +2009,7 @@ pub async fn download_video(
                                 Some(&url),
                             )
                             .ok();
-                            return Err(
-                                BackendError::from_message("Download cancelled").to_wire_string()
-                            );
+                            return Err(download_cancelled_error().to_wire_string());
                         }
 
                         // Primary filepath source: read from --print-to-file temp file (UTF-8)
@@ -1844,11 +2067,17 @@ pub async fn download_video(
                                 quality_display.clone().unwrap_or_else(|| quality.clone()),
                                 format.clone()
                             );
-                            add_log_internal("success", &success_msg, Some(&details), Some(&url))
-                                .ok();
+                            add_log_internal(
+                                "success",
+                                &success_msg,
+                                Some(&details),
+                                if incognito_enabled { None } else { Some(&url) },
+                            )
+                            .ok();
 
                             // Save each emitted output to history. The first file remains the
                             // queue representative; split chapters are extra history rows.
+                            // Incognito downloads are excluded from history entirely (P0-5).
                             let mut progress_history_id = None;
                             for (index, filepath) in output_paths.iter().enumerate() {
                                 let time_range = extract_time_range(&download_sections);
@@ -1868,45 +2097,49 @@ pub async fn download_video(
 
                                 if index == 0 {
                                     if let Some(ref hist_id) = history_id {
-                                        update_history_download(
-                                            hist_id.clone(),
-                                            filepath.clone(),
-                                            file_filesize,
-                                            quality_display.clone(),
-                                            Some(format.clone()),
-                                            time_range,
-                                        )
-                                        .ok();
+                                        if !incognito_enabled {
+                                            update_history_download(
+                                                hist_id.clone(),
+                                                filepath.clone(),
+                                                file_filesize,
+                                                quality_display.clone(),
+                                                Some(format.clone()),
+                                                time_range,
+                                            )
+                                            .ok();
+                                            assign_history_auto_collections(
+                                                hist_id,
+                                                &auto_collection_names,
+                                            );
+                                            progress_history_id = Some(hist_id.clone());
+                                            continue;
+                                        }
+                                    }
+                                }
+
+                                if !incognito_enabled {
+                                    let history_row_id = add_history_internal(
+                                        url.clone(),
+                                        entry_title,
+                                        thumbnail.clone().or_else(|| generate_thumbnail_url(&url)),
+                                        filepath.clone(),
+                                        file_filesize,
+                                        None,
+                                        quality_display.clone(),
+                                        Some(format.clone()),
+                                        source.clone().or_else(|| detect_source(&url)),
+                                        time_range,
+                                    )
+                                    .ok();
+                                    if let Some(ref hist_id) = history_row_id {
                                         assign_history_auto_collections(
                                             hist_id,
                                             &auto_collection_names,
                                         );
-                                        progress_history_id = Some(hist_id.clone());
-                                        continue;
                                     }
-                                }
-
-                                let history_row_id = add_history_internal(
-                                    url.clone(),
-                                    entry_title,
-                                    thumbnail.clone().or_else(|| generate_thumbnail_url(&url)),
-                                    filepath.clone(),
-                                    file_filesize,
-                                    None,
-                                    quality_display.clone(),
-                                    Some(format.clone()),
-                                    source.clone().or_else(|| detect_source(&url)),
-                                    time_range,
-                                )
-                                .ok();
-                                if let Some(ref hist_id) = history_row_id {
-                                    assign_history_auto_collections(
-                                        hist_id,
-                                        &auto_collection_names,
-                                    );
-                                }
-                                if index == 0 {
-                                    progress_history_id = history_row_id;
+                                    if index == 0 {
+                                        progress_history_id = history_row_id;
+                                    }
                                 }
                             }
 
@@ -1965,7 +2198,7 @@ pub async fn download_video(
                             }
                             return Ok(());
                         } else {
-                            if CANCEL_FLAG.load(Ordering::SeqCst) {
+                            if is_item_cancelled(&id) {
                                 let error = download_cancelled_error();
                                 add_log_internal("info", error.message(), None, Some(&url)).ok();
                                 return Err(error.to_wire_string());
@@ -2129,6 +2362,7 @@ pub async fn download_video(
                 auto_organize_collections.unwrap_or(false),
                 playlist_collection_name,
                 split_embedded_chapters,
+                incognito_enabled,
             )
             .await
         }
@@ -2157,6 +2391,7 @@ async fn handle_tokio_download(
     auto_organize_collections: bool,
     playlist_collection_name: Option<String>,
     split_embedded_chapters: bool,
+    incognito: bool,
 ) -> Result<(), String> {
     let stdout = process
         .stdout
@@ -2212,7 +2447,7 @@ async fn handle_tokio_download(
                 }
                 let line = decode_process_output(&line_buf);
 
-                if CANCEL_FLAG.load(Ordering::SeqCst) {
+                if is_item_cancelled(&stderr_id) {
                     break;
                 }
                 push_recent_output_shared(&stderr_recent_output, &line);
@@ -2276,9 +2511,15 @@ async fn handle_tokio_download(
                     stderr_app.emit("download-progress", progress).ok();
                 }
 
-                // Log stderr if enabled
+                // Log stderr if enabled (URL column skipped for incognito, P0-5)
                 if should_log_stderr && !line.trim().is_empty() {
-                    add_log_internal("stderr", line.trim(), None, Some(&stderr_url)).ok();
+                    add_log_internal(
+                        "stderr",
+                        line.trim(),
+                        None,
+                        if incognito { None } else { Some(&stderr_url) },
+                    )
+                    .ok();
                 }
             }
         }))
@@ -2304,10 +2545,12 @@ async fn handle_tokio_download(
         }
         let line = decode_process_output(&stdout_line_buf);
 
-        if CANCEL_FLAG.load(Ordering::SeqCst) {
+        if is_item_cancelled(&id) {
+            if let Some(pid) = process.id() {
+                kill_process_tree_pid(pid);
+            }
             process.kill().await.ok();
-            kill_all_download_processes();
-            return Err(BackendError::from_message("Download cancelled").to_wire_string());
+            return Err(download_cancelled_error().to_wire_string());
         }
         push_recent_output_shared(&recent_output, &line);
 
@@ -2508,7 +2751,13 @@ async fn handle_tokio_download(
             quality_display.clone().unwrap_or_else(|| quality.clone()),
             format.clone()
         );
-        add_log_internal("success", &success_msg, Some(&details), Some(&url)).ok();
+        add_log_internal(
+            "success",
+            &success_msg,
+            Some(&details),
+            if incognito { None } else { Some(&url) },
+        )
+        .ok();
 
         let mut progress_history_id = None;
         for (index, filepath) in output_paths.iter().enumerate() {
@@ -2529,39 +2778,43 @@ async fn handle_tokio_download(
 
             if index == 0 {
                 if let Some(ref hist_id) = history_id {
-                    update_history_download(
-                        hist_id.clone(),
-                        filepath.clone(),
-                        file_filesize,
-                        quality_display.clone(),
-                        Some(format.clone()),
-                        time_range,
-                    )
-                    .ok();
-                    assign_history_auto_collections(hist_id, &auto_collection_names);
-                    progress_history_id = Some(hist_id.clone());
-                    continue;
+                    if !incognito {
+                        update_history_download(
+                            hist_id.clone(),
+                            filepath.clone(),
+                            file_filesize,
+                            quality_display.clone(),
+                            Some(format.clone()),
+                            time_range,
+                        )
+                        .ok();
+                        assign_history_auto_collections(hist_id, &auto_collection_names);
+                        progress_history_id = Some(hist_id.clone());
+                        continue;
+                    }
                 }
             }
 
-            let history_row_id = add_history_internal(
-                url.clone(),
-                entry_title,
-                thumbnail.clone().or_else(|| generate_thumbnail_url(&url)),
-                filepath.clone(),
-                file_filesize,
-                None,
-                quality_display.clone(),
-                Some(format.clone()),
-                source.clone().or_else(|| detect_source(&url)),
-                time_range,
-            )
-            .ok();
-            if let Some(ref hist_id) = history_row_id {
-                assign_history_auto_collections(hist_id, &auto_collection_names);
-            }
-            if index == 0 {
-                progress_history_id = history_row_id;
+            if !incognito {
+                let history_row_id = add_history_internal(
+                    url.clone(),
+                    entry_title,
+                    thumbnail.clone().or_else(|| generate_thumbnail_url(&url)),
+                    filepath.clone(),
+                    file_filesize,
+                    None,
+                    quality_display.clone(),
+                    Some(format.clone()),
+                    source.clone().or_else(|| detect_source(&url)),
+                    time_range,
+                )
+                .ok();
+                if let Some(ref hist_id) = history_row_id {
+                    assign_history_auto_collections(hist_id, &auto_collection_names);
+                }
+                if index == 0 {
+                    progress_history_id = history_row_id;
+                }
             }
         }
 
@@ -2620,7 +2873,7 @@ async fn handle_tokio_download(
         }
         Ok(())
     } else {
-        if CANCEL_FLAG.load(Ordering::SeqCst) {
+        if is_item_cancelled(&id) {
             let error = download_cancelled_error();
             add_log_internal("info", error.message(), None, Some(&url)).ok();
             return Err(error.to_wire_string());
@@ -2719,5 +2972,46 @@ fn generate_thumbnail_url(url: &str) -> Option<String> {
         video_id.map(|id| format!("https://i.ytimg.com/vi/{}/mqdefault.jpg", id))
     } else {
         None
+    }
+}
+// ---------------------------------------------------------------------------
+// Command preview: reproduce the exact yt-dlp invocation for one item without
+// starting it (P0-2 diagnostics). Returns the full arg vector plus a redacted
+// display string. Registered by the mainline handler list in lib.rs.
+// ---------------------------------------------------------------------------
+#[tauri::command]
+pub async fn preview_download_command(
+    app: AppHandle,
+    mut request: DownloadArgsRequest,
+) -> Result<PreviewDownloadCommandResult, String> {
+    if request.deno_path.is_none() {
+        request.deno_path = if request.url.contains("youtube.com") || request.url.contains("youtu.be")
+        {
+            get_deno_path(&app).await
+        } else {
+            None
+        };
+    }
+    if request.ffmpeg_path.is_none() {
+        request.ffmpeg_path = get_ffmpeg_path(&app).await;
+    }
+
+    let built = build_download_args(&request).map_err(|e| e.to_wire_string())?;
+    let redacted = redact_download_args_for_log(&built.args, true);
+    let display = format!("yt-dlp {}", redacted.join(" "));
+    Ok(PreviewDownloadCommandResult {
+        args: redacted,
+        display,
+    })
+}
+
+/// Requests cancellation of a single download by id (P0-7). The poll loops pick
+/// up the id and kill only that item's process. NOTE: registered by the
+/// mainline handler list in lib.rs, not by this module.
+#[tauri::command]
+pub fn cancel_download_item(id: String) {
+    let mut ids = CANCEL_ITEM_IDS.lock().unwrap();
+    if !ids.iter().any(|existing| existing == &id) {
+        ids.push(id);
     }
 }

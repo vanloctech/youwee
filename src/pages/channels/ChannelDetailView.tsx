@@ -722,9 +722,9 @@ export function ChannelDetailView({ channel, onBack }: ChannelDetailViewProps) {
               className="h-9 px-4 rounded-full text-sm font-medium bg-background/80 hover:bg-background/90 backdrop-blur-2xl supports-[backdrop-filter]:bg-background/60 border border-border/50 shadow-[0_8px_30px_rgb(0,0,0,0.12)] dark:shadow-[0_8px_30px_rgb(0,0,0,0.3)] ring-1 ring-white/10 pointer-events-auto"
             >
               {browseLoadingMore ? (
-                <Loader2 className="w-4 h-4 sm:mr-1.5 animate-spin" />
+                <Loader2 className="w-4 h-4 sm:me-1.5 animate-spin" />
               ) : (
-                <ListPlus className="w-4 h-4 sm:mr-1.5" />
+                <ListPlus className="w-4 h-4 sm:me-1.5" />
               )}
               <span>{t('loadMore')}</span>
             </Button>
@@ -754,7 +754,7 @@ export function ChannelDetailView({ channel, onBack }: ChannelDetailViewProps) {
                   <Download className="w-5 h-5" />
                   <span>{t('downloadSelected')}</span>
                   {pendingCount > 0 && (
-                    <span className="ml-1 px-2 py-0.5 rounded-full bg-white/20 text-xs">
+                    <span className="ms-1 px-2 py-0.5 rounded-full bg-white/20 text-xs">
                       {pendingCount}
                     </span>
                   )}
@@ -765,7 +765,7 @@ export function ChannelDetailView({ channel, onBack }: ChannelDetailViewProps) {
                   variant="destructive"
                   onClick={stopDownload}
                 >
-                  <Square className="w-5 h-5 mr-2" />
+                  <Square className="w-5 h-5 me-2" />
                   Stop Download
                 </Button>
               )}

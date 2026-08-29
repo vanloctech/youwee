@@ -51,14 +51,14 @@ export function SubtitlesUsageGuide({ compact = false, className }: SubtitlesUsa
       </div>
 
       <p className="mt-3 text-xs font-medium text-foreground/90">{t('hints.workflowTitle')}</p>
-      <ul className="mt-1.5 space-y-1.5 text-xs text-muted-foreground list-disc pl-4">
+      <ul className="mt-1.5 space-y-1.5 text-xs text-muted-foreground list-disc ps-4">
         {steps.map((step) => (
           <li key={step}>{step}</li>
         ))}
       </ul>
 
       <p className="mt-4 text-xs font-medium text-foreground/90">{t('hints.featuresTitle')}</p>
-      <ul className="mt-1.5 grid gap-1.5 text-xs text-muted-foreground list-disc pl-4 sm:grid-cols-2">
+      <ul className="mt-1.5 grid gap-1.5 text-xs text-muted-foreground list-disc ps-4 sm:grid-cols-2">
         {features.map((feature) => (
           <li key={feature}>{feature}</li>
         ))}

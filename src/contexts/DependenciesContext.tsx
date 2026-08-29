@@ -136,9 +136,52 @@ interface DependenciesContextType {
   galleryDlLoading: boolean;
   galleryDlError: string | null;
   checkGalleryDl: () => Promise<GalleryDlStatus | null>;
+
+  // Engine maintenance (P0-1)
+  runCompatTest: () => Promise<void>;
+  compatResults: EngineCompatResult[] | null;
+  compatLoading: boolean;
+  backupsStatus: EngineBackupsStatus | null;
+  backupsLoading: boolean;
+  rollbackEngine: (engine: string) => Promise<void>;
+  rollbackLoading: string | null;
+  rollbackSuccess: string | null;
+  checkGalleryDlUpdate: () => Promise<void>;
+  galleryDlUpdateInfo: GalleryDlUpdateInfo | null;
+  downloadGalleryDl: () => Promise<void>;
+  galleryDlUpdating: boolean;
+  galleryDlUpdated: string | null;
 }
 
 const DependenciesContext = createContext<DependenciesContextType | null>(null);
+
+interface EngineCompatResult {
+  engine: string;
+  ok: boolean;
+  version: string | null;
+  error: string | null;
+}
+
+interface EngineBackupInfo {
+  available: boolean;
+  version: string | null;
+}
+
+interface EngineBackupsStatus {
+  ytdlp: EngineBackupInfo;
+  ytdlp_stable: EngineBackupInfo;
+  ytdlp_nightly: EngineBackupInfo;
+  ffmpeg: EngineBackupInfo;
+  deno: EngineBackupInfo;
+  gallerydl: EngineBackupInfo;
+}
+
+interface GalleryDlUpdateInfo {
+  has_update: boolean;
+  current_version: string | null;
+  latest_version: string | null;
+  release_url: string | null;
+}
 
 export function DependenciesProvider({ children }: { children: ReactNode }) {
   const [ytdlpSource, setYtdlpSourceState] = useState<DependencySource>('auto');
@@ -189,6 +232,17 @@ export function DependenciesProvider({ children }: { children: ReactNode }) {
   const [galleryDlStatus, setGalleryDlStatus] = useState<GalleryDlStatus | null>(null);
   const [galleryDlLoading, setGalleryDlLoading] = useState(false);
   const [galleryDlError, setGalleryDlError] = useState<string | null>(null);
+
+  // Engine maintenance (compat test, previous-version rollback, gallery-dl update)
+  const [compatResults, setCompatResults] = useState<EngineCompatResult[] | null>(null);
+  const [compatLoading, setCompatLoading] = useState(false);
+  const [backupsStatus, setBackupsStatus] = useState<EngineBackupsStatus | null>(null);
+  const [backupsLoading, setBackupsLoading] = useState(false);
+  const [rollbackLoading, setRollbackLoading] = useState<string | null>(null);
+  const [rollbackSuccess, setRollbackSuccess] = useState<string | null>(null);
+  const [galleryDlUpdateInfo, setGalleryDlUpdateInfo] = useState<GalleryDlUpdateInfo | null>(null);
+  const [galleryDlUpdating, setGalleryDlUpdating] = useState(false);
+  const [galleryDlUpdated, setGalleryDlUpdated] = useState<string | null>(null);
 
   // Load yt-dlp version (only once on first mount)
   const refreshYtdlpVersion = useCallback(async () => {
@@ -635,6 +689,78 @@ export function DependenciesProvider({ children }: { children: ReactNode }) {
     }
   }, [refreshYtdlpVersion]);
 
+  // Run compatibility test + refresh backup availability
+  const runCompatTest = useCallback(async () => {
+    setCompatLoading(true);
+    setBackupsLoading(true);
+    try {
+      const [compat, backups] = await Promise.all([
+        invoke<EngineCompatResult[]>('check_engine_compat'),
+        invoke<EngineBackupsStatus>('check_engine_backups'),
+      ]);
+      setCompatResults(compat);
+      setBackupsStatus(backups);
+    } catch (err) {
+      setError(localizeUnknownError(err));
+    } finally {
+      setCompatLoading(false);
+      setBackupsLoading(false);
+    }
+  }, []);
+
+  // One-click rollback to the last working binary for an engine
+  const rollbackEngine = useCallback(
+    async (engine: string) => {
+      setRollbackLoading(engine);
+      setRollbackSuccess(null);
+      try {
+        const version = await invoke<string>('rollback_' + engine);
+        setRollbackSuccess(version);
+        setTimeout(() => setRollbackSuccess(null), 5000);
+        await runCompatTest();
+        if (engine === 'ytdlp') {
+          await refreshYtdlpVersion();
+        } else if (engine === 'ffmpeg') {
+          await checkFfmpeg();
+        } else if (engine === 'gallerydl') {
+          await checkGalleryDl();
+        } else if (engine === 'deno') {
+          await checkDeno();
+        }
+      } catch (err) {
+        setError(localizeUnknownError(err));
+      } finally {
+        setRollbackLoading(null);
+      }
+    },
+    [runCompatTest, refreshYtdlpVersion, checkFfmpeg, checkGalleryDl, checkDeno],
+  );
+
+  // gallery-dl update support
+  const checkGalleryDlUpdate = useCallback(async () => {
+    try {
+      const info = await invoke<GalleryDlUpdateInfo>('check_gallerydl_update');
+      setGalleryDlUpdateInfo(info);
+    } catch {
+      setGalleryDlUpdateInfo(null);
+    }
+  }, []);
+
+  const downloadGalleryDl = useCallback(async () => {
+    setGalleryDlUpdating(true);
+    try {
+      const version = await invoke<string>('download_gallerydl');
+      setGalleryDlUpdateInfo(null);
+      setGalleryDlUpdated(version);
+      setTimeout(() => setGalleryDlUpdated(null), 5000);
+      await checkGalleryDl();
+    } catch (err) {
+      setError(localizeUnknownError(err));
+    } finally {
+      setGalleryDlUpdating(false);
+    }
+  }, [checkGalleryDl]);
+
   return (
     <DependenciesContext.Provider
       value={{
@@ -695,6 +821,19 @@ export function DependenciesProvider({ children }: { children: ReactNode }) {
         galleryDlLoading,
         galleryDlError,
         checkGalleryDl,
+        runCompatTest,
+        compatResults,
+        compatLoading,
+        backupsStatus,
+        backupsLoading,
+        rollbackEngine,
+        rollbackLoading,
+        rollbackSuccess,
+        checkGalleryDlUpdate,
+        galleryDlUpdateInfo,
+        downloadGalleryDl,
+        galleryDlUpdating,
+        galleryDlUpdated,
       }}
     >
       {children}

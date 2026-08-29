@@ -283,25 +283,25 @@ export function SubtitleToolbar({
               onClick={() => {}}
               hasDropdown
             />
-            <div className="absolute top-full left-0 mt-1 py-1 bg-popover border border-border rounded-lg shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50 min-w-[160px]">
+            <div className="absolute top-full start-0 mt-1 py-1 bg-popover border border-border rounded-lg shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50 min-w-[160px]">
               <button
                 type="button"
                 onClick={() => handleSaveAs('srt')}
-                className="w-full px-3 py-1.5 text-left text-sm hover:bg-accent transition-colors"
+                className="w-full px-3 py-1.5 text-start text-sm hover:bg-accent transition-colors"
               >
                 {t('formats.srt')}
               </button>
               <button
                 type="button"
                 onClick={() => handleSaveAs('vtt')}
-                className="w-full px-3 py-1.5 text-left text-sm hover:bg-accent transition-colors"
+                className="w-full px-3 py-1.5 text-start text-sm hover:bg-accent transition-colors"
               >
                 {t('formats.vtt')}
               </button>
               <button
                 type="button"
                 onClick={() => handleSaveAs('ass')}
-                className="w-full px-3 py-1.5 text-left text-sm hover:bg-accent transition-colors"
+                className="w-full px-3 py-1.5 text-start text-sm hover:bg-accent transition-colors"
               >
                 {t('formats.ass')}
               </button>

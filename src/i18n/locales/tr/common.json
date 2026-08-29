@@ -33,7 +33,8 @@
     "select": "Dil seçin",
     "tr": "Türkçe",
     "uz": "O‘zbekcha",
-    "ro": "Română"
+    "ro": "Română",
+    "fa": "فارسی"
   },
   "actions": {
     "cancel": "İptal"
@@ -46,7 +47,7 @@
   "update": {
     "available": "Güncelleme Mevcut",
     "error": "Güncelleme Hatası",
-    "description": "Youwee için yeni bir sürüm mevcut. Şimdi güncellemek ister misiniz?",
+    "description": "youwee için yeni bir sürüm mevcut. Şimdi güncellemek ister misiniz?",
     "downloading": "Güncelleme indiriliyor...",
     "ready": "Güncelleme başarıyla indirildi! Değişiklikleri uygulamak için yeniden başlatın.",
     "errorGeneric": "Güncelleme sırasında bir hata oluştu.",
@@ -58,9 +59,9 @@
   },
   "legalDisclaimer": {
     "title": "Sorumlu kullanım bildirimi",
-    "description": "Youwee, sağladığınız URL'lerden medyayı indirmek ve işlemek için kullanılan yerel bir araçtır. YouTube veya başka herhangi bir medya platformuna bağlı değildir.",
+    "description": "youwee, sağladığınız URL'lerden medyayı indirmek ve işlemek için kullanılan yerel bir araçtır. YouTube veya başka herhangi bir medya platformuna bağlı değildir.",
     "notice": "Yalnızca sahip olduğunuz, kullanma izniniz olan veya yasal olarak erişme ve saklama izniniz olan içeriği indirin.",
-    "responsibility": "Devam ederek geçerli yasalara, platform şartlarına, telif hakkı kurallarına ve indirdiğiniz içerik için gereken tüm izinlere uymaktan sorumlu olduğunuzu onaylamış olursunuz. Youwee projesi ve bakımcıları kötüye kullanımdan sorumlu değildir.",
+    "responsibility": "Devam ederek geçerli yasalara, platform şartlarına, telif hakkı kurallarına ve indirdiğiniz içerik için gereken tüm izinlere uymaktan sorumlu olduğunuzu onaylamış olursunuz. youwee projesi ve bakımcıları kötüye kullanımdan sorumlu değildir.",
     "accept": "Anlıyorum / Katılıyorum"
   },
   "backendErrors": {

@@ -64,7 +64,7 @@ export function HistorySummaryDialog({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-h-[86vh] max-w-3xl gap-0 overflow-hidden border-white/[0.08] bg-background/95 p-0 backdrop-blur-xl dark:border-white/[0.05]">
-        <DialogHeader className="border-b border-border/50 p-4 pr-12 sm:p-5 sm:pr-12">
+        <DialogHeader className="border-b border-border/50 p-4 pe-12 sm:p-5 sm:pe-12">
           <div className="flex items-start gap-3">
             {entry.thumbnail && (
               <img

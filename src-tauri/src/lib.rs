@@ -1,4 +1,4 @@
-//! Youwee - Modern YouTube Video Downloader
+//! youwee - Modern YouTube Video Downloader
 //!
 //! This is the main entry point for the Tauri application.
 //! The codebase is organized into the following modules:
@@ -323,8 +323,11 @@ pub fn run() {
             // Download commands
             commands::download_video,
             commands::stop_download,
+            commands::cancel_download_item,
             commands::download_gallery,
             commands::stop_gallery_download,
+            commands::probe_gallery,
+            commands::preview_download_command,
             // Video info commands
             commands::get_video_basic_info,
             commands::get_video_info,
@@ -350,6 +353,18 @@ pub fn run() {
             commands::set_ffmpeg_source_cmd,
             commands::check_ffmpeg_update,
             commands::download_ffmpeg,
+            commands::check_engine_compat,
+            commands::check_engine_backups,
+            commands::rollback_ytdlp,
+            commands::rollback_ffmpeg,
+            commands::rollback_deno,
+            commands::rollback_gallerydl,
+            commands::check_gallerydl_update,
+            commands::download_gallerydl,
+            commands::export_backup,
+            commands::export_backup_with_settings,
+            commands::preview_backup,
+            commands::import_backup,
             commands::get_ffmpeg_path_for_ytdlp,
             // Deno commands
             commands::check_deno,
@@ -369,6 +384,8 @@ pub fn run() {
             // History commands
             commands::add_history,
             commands::get_history,
+            commands::list_gallery_items,
+            commands::get_gallery_thumbnail,
             commands::get_history_entries_by_ids,
             commands::find_duplicate_downloads,
             commands::delete_history,
@@ -542,7 +559,7 @@ fn setup_tray(app: &tauri::App) -> Result<(), Box<dyn std::error::Error>> {
 
     let tray_builder = TrayIconBuilder::with_id("main-tray")
         .icon(icon)
-        .tooltip("Youwee")
+        .tooltip("youwee")
         .menu(&menu)
         .on_menu_event(move |_tray, event| {
             let id = event.id().as_ref();
@@ -689,7 +706,7 @@ fn tray_text(key: &str) -> &'static str {
         ("fr", "check_all") => "Verifier les chaines suivies maintenant",
         ("fr", "settings") => "Parametres",
         ("fr", "check_update") => "Verifier les mises a jour...",
-        ("fr", "open") => "Ouvrir Youwee",
+        ("fr", "open") => "Ouvrir youwee",
         ("fr", "browser_extension") => "Extension navigateur",
         ("fr", "quit") => "Quitter",
         // Japanese

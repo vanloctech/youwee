@@ -33,7 +33,8 @@
     "select": "Selecione o idioma",
     "tr": "Türkçe",
     "uz": "O‘zbekcha",
-    "ro": "Română"
+    "ro": "Română",
+    "fa": "فارسی"
   },
   "actions": {
     "cancel": "Cancelar"
@@ -46,7 +47,7 @@
   "update": {
     "available": "Atualização Disponível",
     "error": "Erro de Atualização",
-    "description": "Uma nova versão do Youwee está disponível. Deseja atualizar agora?",
+    "description": "Uma nova versão do youwee está disponível. Deseja atualizar agora?",
     "downloading": "Baixando atualização...",
     "ready": "Atualização baixada com sucesso! Reinicie para aplicar as alterações.",
     "errorGeneric": "Ocorreu um erro ao atualizar.",
@@ -58,9 +59,9 @@
   },
   "legalDisclaimer": {
     "title": "Aviso de uso responsável",
-    "description": "Youwee é uma ferramenta local para baixar e processar mídia a partir das URLs que você fornece. Youwee não é afiliado ao YouTube nem a qualquer outra plataforma de mídia.",
+    "description": "youwee é uma ferramenta local para baixar e processar mídia a partir das URLs que você fornece. youwee não é afiliado ao YouTube nem a qualquer outra plataforma de mídia.",
     "notice": "Baixe apenas conteúdo que você possui, tem permissão para usar ou que a lei permite acessar e armazenar.",
-    "responsibility": "Ao continuar, você confirma que é responsável por cumprir as leis aplicáveis, os termos das plataformas, as regras de direitos autorais e quaisquer permissões necessárias para o conteúdo baixado. O projeto Youwee e seus mantenedores não são responsáveis por uso indevido.",
+    "responsibility": "Ao continuar, você confirma que é responsável por cumprir as leis aplicáveis, os termos das plataformas, as regras de direitos autorais e quaisquer permissões necessárias para o conteúdo baixado. O projeto youwee e seus mantenedores não são responsáveis por uso indevido.",
     "accept": "Eu entendo / Concordo"
   },
   "backendErrors": {

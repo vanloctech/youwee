@@ -197,14 +197,14 @@ export function HistoryToolbar() {
       {/* Search - styled like URL input */}
       <div className="grid gap-2 lg:grid-cols-[1fr_auto]">
         <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+          <Search className="absolute start-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
           <Input
             type="text"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder={t('library.toolbar.searchPlaceholder')}
             className={cn(
-              'pl-10 pr-4 h-11 text-sm',
+              'ps-10 pe-4 h-11 text-sm',
               'bg-background/50 border-border/50',
               'focus:bg-background transition-colors',
               'placeholder:text-muted-foreground/50',

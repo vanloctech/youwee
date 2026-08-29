@@ -1,12 +1,13 @@
 use crate::services::{
     check_deno_internal, check_deno_update_internal, check_ffmpeg_internal,
     check_ffmpeg_update_internal, check_gallerydl_internal, get_all_ytdlp_versions,
-    get_channel_api_url, get_deno_download_url, get_ffmpeg_download_info, get_ffmpeg_path,
-    get_ffmpeg_source, get_latest_ffmpeg_release_info, get_ytdlp_channel,
-    get_ytdlp_channel_download_url, get_ytdlp_download_info, get_ytdlp_source,
-    get_ytdlp_version_internal, parse_ffmpeg_version, set_ffmpeg_source, set_ytdlp_channel,
-    set_ytdlp_source, system_ffmpeg_upgrade_message, system_ytdlp_upgrade_message, verify_sha256,
-    write_app_ffmpeg_release_version, DenoUpdateInfo, FfmpegUpdateInfo,
+    get_channel_api_url, get_deno_download_url, get_deno_path, get_ffmpeg_download_info,
+    get_ffmpeg_path, get_ffmpeg_source, get_gallerydl_path, get_latest_ffmpeg_release_info,
+    get_ytdlp_channel, get_ytdlp_channel_download_url, get_ytdlp_download_info, get_ytdlp_path,
+    get_ytdlp_source, get_ytdlp_version_internal, parse_ffmpeg_version, set_ffmpeg_source,
+    set_ytdlp_channel, set_ytdlp_source, system_ffmpeg_upgrade_message,
+    system_ytdlp_upgrade_message, verify_sha256, write_app_ffmpeg_release_version,
+    DenoUpdateInfo, FfmpegUpdateInfo,
 };
 use crate::types::{
     BackendError, DenoStatus, DependencySource, FfmpegStatus, GalleryDlStatus, YtdlpAllVersions,
@@ -47,6 +48,42 @@ pub struct DetectedBrowser {
 pub struct BrowserProfile {
     pub folder_name: String,  // Used for yt-dlp: "Profile 1"
     pub display_name: String, // Shown to user: "Loc Nguyen" or fallback to folder_name
+}
+
+/// Per-engine startup/upgrade compatibility test result (binary runs: --version probe)
+#[derive(Clone, Serialize)]
+pub struct EngineCompatResult {
+    pub engine: String,
+    pub ok: bool,
+    pub version: Option<String>,
+    pub error: Option<String>,
+}
+
+/// gallery-dl update info for app-managed installs
+#[derive(Clone, Serialize)]
+pub struct GalleryDlUpdateInfo {
+    pub has_update: bool,
+    pub current_version: Option<String>,
+    pub latest_version: Option<String>,
+    pub release_url: Option<String>,
+}
+
+/// Whether a previous working version backup exists for an engine
+#[derive(Clone, Serialize)]
+pub struct EngineBackupInfo {
+    pub available: bool,
+    pub version: Option<String>,
+}
+
+/// Aggregate previous-version backup availability for all engines
+#[derive(Clone, Serialize)]
+pub struct EngineBackupsStatus {
+    pub ytdlp: EngineBackupInfo,
+    pub ytdlp_stable: EngineBackupInfo,
+    pub ytdlp_nightly: EngineBackupInfo,
+    pub ffmpeg: EngineBackupInfo,
+    pub deno: EngineBackupInfo,
+    pub gallerydl: EngineBackupInfo,
 }
 
 #[tauri::command]
@@ -120,6 +157,7 @@ pub async fn update_ytdlp(app: AppHandle) -> Result<String, String> {
         .map_err(|e| format!("Failed to create bin directory: {}", e))?;
 
     let binary_path = bin_dir.join(filename);
+    let engine_key = "ytdlp";
 
     let client = reqwest::Client::builder()
         .user_agent("Youwee/0.4.0")
@@ -180,7 +218,11 @@ pub async fn update_ytdlp(app: AppHandle) -> Result<String, String> {
 
     // Verify checksum
     if !verify_sha256(&bytes, &expected_hash) {
-        return Err("Security error: SHA256 checksum verification failed.".to_string());
+        return Err(BackendError::new(
+            "CHECKSUM_VERIFICATION_FAILED",
+            "Security error: SHA256 checksum verification failed.",
+        )
+        .to_wire_string());
     }
 
     // Write binary
@@ -202,20 +244,17 @@ pub async fn update_ytdlp(app: AppHandle) -> Result<String, String> {
             .map_err(|e| format!("Failed to set permissions: {}", e))?;
     }
 
+    // Preserve the last working version before replacing it
+    backup_engine_binary(&app, engine_key).await?;
+
     tokio::fs::rename(&temp_path, &binary_path)
         .await
         .map_err(|e| format!("Failed to rename binary: {}", e))?;
 
-    // Get version
-    let mut cmd = Command::new(&binary_path);
-    cmd.args(["--version"]);
-    cmd.hide_window();
-    let output = cmd
-        .output()
-        .await
-        .map_err(|e| format!("Failed to verify update: {}", e))?;
+    // Verify the installed binary runs; on failure the previous version is restored
+    let version = verify_installed_engine(&app, engine_key).await?;
 
-    Ok(String::from_utf8_lossy(&output.stdout).trim().to_string())
+    Ok(version)
 }
 
 // ============ yt-dlp Channel Commands ============
@@ -364,6 +403,13 @@ pub async fn download_ytdlp_channel(app: AppHandle, channel: String) -> Result<S
 
     let channel_enum = YtdlpChannel::from_str(&channel);
 
+    // Engine key used for previous-version backup/rollback
+    let engine_key = match channel_enum {
+        YtdlpChannel::Bundled => "ytdlp",
+        YtdlpChannel::Stable => "ytdlp_stable",
+        YtdlpChannel::Nightly => "ytdlp_nightly",
+    };
+
     // Get download URL for the channel
     let (download_url, checksum_filename) =
         get_ytdlp_channel_download_url(&channel_enum).ok_or("Cannot download bundled channel")?;
@@ -464,7 +510,11 @@ pub async fn download_ytdlp_channel(app: AppHandle, channel: String) -> Result<S
 
     // Verify checksum
     if !verify_sha256(&bytes, &expected_hash) {
-        return Err("Security error: SHA256 checksum verification failed.".to_string());
+        return Err(BackendError::new(
+            "CHECKSUM_VERIFICATION_FAILED",
+            "Security error: SHA256 checksum verification failed.",
+        )
+        .to_wire_string());
     }
 
     // Write binary
@@ -486,20 +536,17 @@ pub async fn download_ytdlp_channel(app: AppHandle, channel: String) -> Result<S
             .map_err(|e| format!("Failed to set permissions: {}", e))?;
     }
 
+    // Preserve the last working version before replacing it
+    backup_engine_binary(&app, engine_key).await?;
+
     tokio::fs::rename(&temp_path, &binary_path)
         .await
         .map_err(|e| format!("Failed to rename binary: {}", e))?;
 
-    // Get version
-    let mut cmd = Command::new(&binary_path);
-    cmd.args(["--version"]);
-    cmd.hide_window();
-    let output = cmd
-        .output()
-        .await
-        .map_err(|e| format!("Failed to verify installation: {}", e))?;
+    // Verify the installed binary runs; on failure the previous version is restored
+    let version = verify_installed_engine(&app, engine_key).await?;
 
-    Ok(String::from_utf8_lossy(&output.stdout).trim().to_string())
+    Ok(version)
 }
 
 #[tauri::command]
@@ -693,7 +740,11 @@ pub async fn download_ffmpeg(app: AppHandle) -> Result<String, String> {
     // Verify checksum
     if !verify_sha256(&bytes, &expected_hash) {
         let _ = tokio::fs::remove_file(&temp_path).await;
-        return Err("Security error: SHA256 checksum verification failed.".to_string());
+        return Err(BackendError::new(
+            "CHECKSUM_VERIFICATION_FAILED",
+            "Security error: SHA256 checksum verification failed.",
+        )
+        .to_wire_string());
     }
 
     // Emit: Extracting
@@ -712,12 +763,30 @@ pub async fn download_ffmpeg(app: AppHandle) -> Result<String, String> {
     #[cfg(not(windows))]
     let ffmpeg_binary = "ffmpeg";
 
-    let ffmpeg_path = bin_dir.join(ffmpeg_binary);
+    let _ffmpeg_path = bin_dir.join(ffmpeg_binary);
+
+    // Preserve the last working version before replacing it
+    backup_engine_binary(&app, "ffmpeg").await?;
 
     match info.archive_type {
-        "tar.gz" => extract_tar_gz(&bytes, &bin_dir, ffmpeg_binary).await?,
-        "tar.xz" => extract_tar_xz(&bytes, &bin_dir, ffmpeg_binary).await?,
-        "zip" => extract_zip(&bytes, &bin_dir, ffmpeg_binary).await?,
+        "tar.gz" => {
+            if let Err(e) = extract_tar_gz(&bytes, &bin_dir, ffmpeg_binary).await {
+                let _ = rollback_engine_binary(&app, "ffmpeg").await;
+                return Err(format!("Failed to extract FFmpeg archive: {}", e));
+            }
+        }
+        "tar.xz" => {
+            if let Err(e) = extract_tar_xz(&bytes, &bin_dir, ffmpeg_binary).await {
+                let _ = rollback_engine_binary(&app, "ffmpeg").await;
+                return Err(format!("Failed to extract FFmpeg archive: {}", e));
+            }
+        }
+        "zip" => {
+            if let Err(e) = extract_zip(&bytes, &bin_dir, ffmpeg_binary).await {
+                let _ = rollback_engine_binary(&app, "ffmpeg").await;
+                return Err(format!("Failed to extract FFmpeg archive: {}", e));
+            }
+        }
         _ => return Err("Unsupported archive type".to_string()),
     }
 
@@ -727,7 +796,7 @@ pub async fn download_ffmpeg(app: AppHandle) -> Result<String, String> {
     #[cfg(unix)]
     {
         use std::os::unix::fs::PermissionsExt;
-        let mut perms = tokio::fs::metadata(&ffmpeg_path)
+        let mut perms = tokio::fs::metadata(&_ffmpeg_path)
             .await
             .map_err(|e| format!("Failed to get file metadata: {}", e))?
             .permissions();
@@ -748,31 +817,9 @@ pub async fn download_ffmpeg(app: AppHandle) -> Result<String, String> {
         },
     );
 
-    let mut cmd = Command::new(&ffmpeg_path);
-    cmd.args(["-version"])
-        .stdout(Stdio::piped())
-        .stderr(Stdio::piped());
-    cmd.hide_window();
-    let output = cmd
-        .output()
-        .await
-        .map_err(|e| format!("Failed to verify FFmpeg installation: {}", e))?;
-
-    if !output.status.success() {
-        let stderr = String::from_utf8_lossy(&output.stderr).trim().to_string();
-        let stdout = String::from_utf8_lossy(&output.stdout).trim().to_string();
-        let details = if !stderr.is_empty() {
-            stderr
-        } else if !stdout.is_empty() {
-            stdout
-        } else {
-            format!("exit code {}", output.status)
-        };
-
-        return Err(format!("Failed to verify FFmpeg installation: {}", details));
-    }
-
-    let binary_version = parse_ffmpeg_version(&String::from_utf8_lossy(&output.stdout));
+    // Verify the installed binary runs; on failure the previous version is restored
+    let verified_output = verify_installed_engine(&app, "ffmpeg").await?;
+    let binary_version = parse_ffmpeg_version(&verified_output);
     let latest_release = get_latest_ffmpeg_release_info().await.ok();
 
     if let Some(release) = latest_release {
@@ -920,10 +967,16 @@ pub async fn download_deno(app: AppHandle) -> Result<String, String> {
     #[cfg(not(windows))]
     let deno_binary = "deno";
 
-    let deno_path = bin_dir.join(deno_binary);
+    let _deno_path = bin_dir.join(deno_binary);
+
+    // Preserve the last working version before replacing it
+    backup_engine_binary(&app, "deno").await?;
 
     // Extract deno from zip (deno zip contains just the binary directly)
-    extract_deno_zip(&bytes, &bin_dir, deno_binary).await?;
+    if let Err(e) = extract_deno_zip(&bytes, &bin_dir, deno_binary).await {
+        let _ = rollback_engine_binary(&app, "deno").await;
+        return Err(format!("Failed to extract Deno archive: {}", e));
+    }
 
     // Clean up temp file
     let _ = tokio::fs::remove_file(&temp_path).await;
@@ -931,7 +984,7 @@ pub async fn download_deno(app: AppHandle) -> Result<String, String> {
     #[cfg(unix)]
     {
         use std::os::unix::fs::PermissionsExt;
-        let mut perms = tokio::fs::metadata(&deno_path)
+        let mut perms = tokio::fs::metadata(&_deno_path)
             .await
             .map_err(|e| format!("Failed to get file metadata: {}", e))?
             .permissions();
@@ -952,19 +1005,11 @@ pub async fn download_deno(app: AppHandle) -> Result<String, String> {
         },
     );
 
-    let mut cmd = Command::new(&deno_path);
-    cmd.args(["--version"])
-        .stdout(Stdio::piped())
-        .stderr(Stdio::piped());
-    cmd.hide_window();
-    let output = cmd
-        .output()
-        .await
-        .map_err(|e| format!("Failed to verify Deno installation: {}", e))?;
+    // Verify the installed binary runs; on failure the previous version is restored
+    let verified_output = verify_installed_engine(&app, "deno").await?;
 
     // Parse version from "deno 2.1.2 (...)" format
-    let version_output = String::from_utf8_lossy(&output.stdout);
-    let version = version_output
+    let version = verified_output
         .lines()
         .next()
         .map(|l| {
@@ -1363,4 +1408,608 @@ pub async fn get_browser_profiles(browser: String) -> Result<Vec<BrowserProfile>
     }
 
     Ok(profiles)
+}
+
+
+// ============ Engine Backup, Rollback, Compatibility & gallery-dl Manager ============
+
+const ENGINE_BACKUP_DIR: &str = ".previous";
+
+/// Map an engine key to its app-managed binary file name (bin/<file>)
+fn engine_file_name(engine: &str) -> Option<&'static str> {
+    #[cfg(windows)]
+    let name = match engine {
+        "ytdlp" => "yt-dlp.exe",
+        "ytdlp_stable" => "yt-dlp-stable.exe",
+        "ytdlp_nightly" => "yt-dlp-nightly.exe",
+        "ffmpeg" => "ffmpeg.exe",
+        "deno" => "deno.exe",
+        "gallerydl" => "gallery-dl.exe",
+        _ => return None,
+    };
+    #[cfg(not(windows))]
+    let name = match engine {
+        "ytdlp" => "yt-dlp",
+        "ytdlp_stable" => "yt-dlp-stable",
+        "ytdlp_nightly" => "yt-dlp-nightly",
+        "ffmpeg" => "ffmpeg",
+        "deno" => "deno",
+        "gallerydl" => "gallery-dl",
+        _ => return None,
+    };
+    Some(name)
+}
+
+fn engine_version_args(engine: &str) -> &'static [&'static str] {
+    if engine == "ffmpeg" {
+        &["-version"]
+    } else {
+        &["--version"]
+    }
+}
+
+/// Run `<binary> --version` (or `-version` for FFmpeg) and return the raw output.
+async fn probe_binary_version(path: &std::path::Path, engine: &str) -> Result<String, String> {
+    let mut cmd = Command::new(path);
+    cmd.args(engine_version_args(engine))
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped());
+    cmd.hide_window();
+
+    let output = cmd
+        .output()
+        .await
+        .map_err(|e| format!("Failed to run {}: {}", engine, e))?;
+
+    let stdout = String::from_utf8_lossy(&output.stdout).trim().to_string();
+    let stderr = String::from_utf8_lossy(&output.stderr).trim().to_string();
+
+    if !output.status.success() {
+        let detail = if !stderr.is_empty() {
+            stderr
+        } else if !stdout.is_empty() {
+            stdout
+        } else {
+            format!("exit code {}", output.status)
+        };
+        return Err(detail);
+    }
+    if stdout.is_empty() {
+        return Err("binary produced no version output".to_string());
+    }
+    Ok(stdout)
+}
+
+async fn app_bin_dir(app: &AppHandle) -> Result<std::path::PathBuf, String> {
+    let app_data_dir = app
+        .path()
+        .app_data_dir()
+        .map_err(|e| format!("Failed to get app data directory: {}", e))?;
+    let bin_dir = app_data_dir.join("bin");
+    tokio::fs::create_dir_all(&bin_dir)
+        .await
+        .map_err(|e| format!("Failed to create bin directory: {}", e))?;
+    Ok(bin_dir)
+}
+
+/// Copy the current binary to `bin/.previous/<name>` before it is replaced, so a failed
+/// update can always be undone. A failure here aborts the update (never delete the last
+/// working version). The captured version is stored next to the backup for the UI.
+async fn backup_engine_binary(app: &AppHandle, engine: &str) -> Result<(), String> {
+    let Some(file_name) = engine_file_name(engine) else {
+        return Err(format!("Unknown engine: {}", engine));
+    };
+
+    let bin_dir = app_bin_dir(app).await?;
+    let binary_path = bin_dir.join(file_name);
+    if !binary_path.exists() {
+        return Ok(()); // First install - nothing to preserve
+    }
+
+    let previous_dir = bin_dir.join(ENGINE_BACKUP_DIR);
+    tokio::fs::create_dir_all(&previous_dir)
+        .await
+        .map_err(|e| format!("Failed to create previous-version directory: {}", e))?;
+
+    let backup_path = previous_dir.join(file_name);
+    tokio::fs::copy(&binary_path, &backup_path)
+        .await
+        .map_err(|e| format!("Failed to back up previous {}: {}", engine, e))?;
+
+    // Best-effort version capture for the UI
+    let version = probe_binary_version(&binary_path, engine).await.unwrap_or_default();
+    let _ = tokio::fs::write(previous_dir.join(format!("{}.version", file_name)), version).await;
+
+    Ok(())
+}
+
+/// Restore the last working version from `bin/.previous/<name>`.
+async fn rollback_engine_binary(app: &AppHandle, engine: &str) -> Result<String, String> {
+    let Some(file_name) = engine_file_name(engine) else {
+        return Err(format!("Unknown engine: {}", engine));
+    };
+
+    let bin_dir = app_bin_dir(app).await?;
+    let previous_dir = bin_dir.join(ENGINE_BACKUP_DIR);
+    let backup_path = previous_dir.join(file_name);
+
+    if !backup_path.exists() {
+        return Err(BackendError::new(
+            "ENGINE_ROLLBACK_NOT_AVAILABLE",
+            format!("No previous version is available for {}.", engine),
+        )
+        .to_wire_string());
+    }
+
+    // Preserve the currently-installed binary before restoring (swap semantics)
+    // so a manual rollback never destroys a working newer version.
+    let binary_path = bin_dir.join(file_name);
+    if binary_path.exists() {
+        let current_backup = previous_dir.join(format!("current.{}", file_name));
+        tokio::fs::copy(&binary_path, &current_backup).await.ok();
+        let _ = tokio::fs::write(
+            previous_dir.join(format!("current.{}.version", file_name)),
+            probe_binary_version(&binary_path, engine).await.unwrap_or_default(),
+        )
+        .await;
+    }
+
+    // The backup must run before it is allowed to replace the working binary
+    let version = probe_binary_version(&backup_path, engine).await.map_err(|detail| {
+        BackendError::new(
+            "ENGINE_ROLLBACK_VERIFY_FAILED",
+            format!("The previous version is not runnable: {}", detail),
+        )
+        .to_wire_string()
+    })?;
+
+    let temp_path = bin_dir.join(format!("{}.rollback.tmp", file_name));
+    tokio::fs::copy(&backup_path, &temp_path)
+        .await
+        .map_err(|e| format!("Failed to stage previous version: {}", e))?;
+
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        let mut perms = tokio::fs::metadata(&temp_path)
+            .await
+            .map_err(|e| format!("Failed to get file metadata: {}", e))?
+            .permissions();
+        perms.set_mode(0o755);
+        tokio::fs::set_permissions(&temp_path, perms)
+            .await
+            .map_err(|e| format!("Failed to set permissions: {}", e))?;
+    }
+
+    tokio::fs::rename(&temp_path, &binary_path)
+        .await
+        .map_err(|e| format!("Failed to restore previous version: {}", e))?;
+
+    Ok(version)
+}
+
+/// Verify a freshly installed binary runs; on failure restore the previous version so an
+/// update can never leave the user without a working engine.
+async fn verify_installed_engine(app: &AppHandle, engine: &str) -> Result<String, String> {
+    let Some(file_name) = engine_file_name(engine) else {
+        return Err(format!("Unknown engine: {}", engine));
+    };
+    let bin_dir = app_bin_dir(app).await?;
+    let binary_path = bin_dir.join(file_name);
+
+    match probe_binary_version(&binary_path, engine).await {
+        Ok(version) => Ok(version),
+        Err(detail) => {
+            let restored = rollback_engine_binary(app, engine).await;
+            let message = match restored {
+                Ok(previous_version) => format!(
+                    "Update failed: the installed binary did not run ({}) and the previous version {} was restored.",
+                    detail, previous_version
+                ),
+                Err(rollback_error) => format!(
+                    "Update failed: the installed binary did not run ({}) and restoring the previous version also failed ({}).",
+                    detail, rollback_error
+                ),
+            };
+            Err(BackendError::new("ENGINE_VERSION_CHECK_FAILED", message).to_wire_string())
+        }
+    }
+}
+
+/// Startup/upgrade compatibility test: run --version for every engine's resolved binary.
+#[tauri::command]
+pub async fn check_engine_compat(app: AppHandle) -> Result<Vec<EngineCompatResult>, String> {
+    let ytdlp_path = get_ytdlp_path(&app).await.map(|(path, _)| path);
+    let entries = [
+        ("ytdlp", ytdlp_path),
+        ("ffmpeg", get_ffmpeg_path(&app).await),
+        ("deno", get_deno_path(&app).await),
+        ("gallerydl", get_gallerydl_path(&app)),
+    ];
+
+    let mut results = Vec::new();
+    for (engine, path) in entries {
+        let result = match path {
+            Some(path) if path.exists() => match probe_binary_version(&path, engine).await {
+                Ok(version) => EngineCompatResult {
+                    engine: engine.to_string(),
+                    ok: true,
+                    version: Some(version),
+                    error: None,
+                },
+                Err(error) => EngineCompatResult {
+                    engine: engine.to_string(),
+                    ok: false,
+                    version: None,
+                    error: Some(error),
+                },
+            },
+            _ => EngineCompatResult {
+                engine: engine.to_string(),
+                ok: false,
+                version: None,
+                error: Some("binary not found".to_string()),
+            },
+        };
+        results.push(result);
+    }
+
+    Ok(results)
+}
+
+/// Report whether a previous working version backup exists for each engine.
+#[tauri::command]
+pub async fn check_engine_backups(app: AppHandle) -> Result<EngineBackupsStatus, String> {
+    let Ok(app_data_dir) = app.path().app_data_dir() else {
+        return Ok(EngineBackupsStatus {
+            ytdlp: EngineBackupInfo { available: false, version: None },
+            ytdlp_stable: EngineBackupInfo { available: false, version: None },
+            ytdlp_nightly: EngineBackupInfo { available: false, version: None },
+            ffmpeg: EngineBackupInfo { available: false, version: None },
+            deno: EngineBackupInfo { available: false, version: None },
+            gallerydl: EngineBackupInfo { available: false, version: None },
+        });
+    };
+    let previous_dir = app_data_dir.join("bin").join(ENGINE_BACKUP_DIR);
+
+    let read_backup = |engine: &str| -> EngineBackupInfo {
+        let Some(file_name) = engine_file_name(engine) else {
+            return EngineBackupInfo { available: false, version: None };
+        };
+        let backup_path = previous_dir.join(file_name);
+        if !backup_path.exists() {
+            return EngineBackupInfo { available: false, version: None };
+        }
+        let version = std::fs::read_to_string(previous_dir.join(format!("{}.version", file_name)))
+            .ok()
+            .map(|v| v.trim().to_string())
+            .filter(|v| !v.is_empty());
+        EngineBackupInfo {
+            available: true,
+            version,
+        }
+    };
+
+    Ok(EngineBackupsStatus {
+        ytdlp: read_backup("ytdlp"),
+        ytdlp_stable: read_backup("ytdlp_stable"),
+        ytdlp_nightly: read_backup("ytdlp_nightly"),
+        ffmpeg: read_backup("ffmpeg"),
+        deno: read_backup("deno"),
+        gallerydl: read_backup("gallerydl"),
+    })
+}
+
+/// One-click rollback for yt-dlp (channel: bundled | stable | nightly).
+/// The channel is optional: when omitted, the currently configured channel is used.
+#[tauri::command]
+pub async fn rollback_ytdlp(app: AppHandle, channel: Option<String>) -> Result<String, String> {
+    let channel = match channel {
+        Some(channel) => channel,
+        None => get_ytdlp_channel(&app).await.as_str().to_string(),
+    };
+    let engine = match channel.to_lowercase().as_str() {
+        "stable" => "ytdlp_stable",
+        "nightly" => "ytdlp_nightly",
+        _ => "ytdlp",
+    };
+    rollback_engine_binary(&app, engine).await
+}
+
+/// One-click rollback for FFmpeg.
+#[tauri::command]
+pub async fn rollback_ffmpeg(app: AppHandle) -> Result<String, String> {
+    rollback_engine_binary(&app, "ffmpeg").await
+}
+
+/// One-click rollback for Deno.
+#[tauri::command]
+pub async fn rollback_deno(app: AppHandle) -> Result<String, String> {
+    rollback_engine_binary(&app, "deno").await
+}
+
+/// One-click rollback for gallery-dl.
+#[tauri::command]
+pub async fn rollback_gallerydl(app: AppHandle) -> Result<String, String> {
+    rollback_engine_binary(&app, "gallerydl").await
+}
+
+/// Check the latest gallery-dl release (app-managed installs only).
+#[tauri::command]
+pub async fn check_gallerydl_update(app: AppHandle) -> Result<GalleryDlUpdateInfo, String> {
+    let current_status = check_gallerydl_internal(&app).await?;
+
+    if !current_status.installed {
+        return Ok(GalleryDlUpdateInfo {
+            has_update: false,
+            current_version: None,
+            latest_version: None,
+            release_url: None,
+        });
+    }
+
+    let current_version = current_status.version.clone();
+
+    // System gallery-dl is managed outside the app
+    if current_status.is_system {
+        return Ok(GalleryDlUpdateInfo {
+            has_update: false,
+            current_version,
+            latest_version: None,
+            release_url: Some(
+                "System gallery-dl - update via package manager".to_string(),
+            ),
+        });
+    }
+
+    let client = reqwest::Client::builder()
+        .user_agent("Youwee/0.6.0")
+        .timeout(std::time::Duration::from_secs(10))
+        .build()
+        .map_err(|e| format!("Failed to create HTTP client: {}", e))?;
+
+    let response = client
+        .get("https://api.github.com/repos/mikf/gallery-dl/releases/latest")
+        .send()
+        .await
+        .map_err(|e| {
+            if e.is_timeout() {
+                "Request timed out. Please try again later.".to_string()
+            } else if e.is_connect() {
+                "Unable to connect. Please check your internet connection.".to_string()
+            } else {
+                format!("Failed to check for updates: {}", e)
+            }
+        })?;
+
+    let status = response.status();
+    if status == reqwest::StatusCode::FORBIDDEN || status == reqwest::StatusCode::TOO_MANY_REQUESTS
+    {
+        return Err("GitHub API rate limit exceeded. Please try again later.".to_string());
+    }
+    if !status.is_success() {
+        return Err(format!("GitHub API error: {}", status));
+    }
+
+    let release: GitHubRelease = response
+        .json()
+        .await
+        .map_err(|e| format!("Failed to parse release info: {}", e))?;
+
+    let latest_version = release.tag_name;
+    let normalize_version = |v: &str| {
+        v.trim()
+            .trim_start_matches('v')
+            .trim_start_matches("gallery-dl ")
+            .to_string()
+    };
+    let has_update = current_version
+        .as_ref()
+        .map(|cv| normalize_version(cv) != normalize_version(&latest_version))
+        .unwrap_or(false);
+
+    Ok(GalleryDlUpdateInfo {
+        has_update,
+        current_version,
+        latest_version: Some(latest_version.clone()),
+        release_url: Some(format!(
+            "https://github.com/mikf/gallery-dl/releases/tag/{}",
+            latest_version
+        )),
+    })
+}
+
+/// Download/update the app-managed gallery-dl binary from the official GitHub release,
+/// verifying the SHA-256 checksum before replacing the executable.
+#[tauri::command]
+pub async fn download_gallerydl(app: AppHandle) -> Result<String, String> {
+    #[cfg(windows)]
+    let (download_url, checksum_filename) = (
+        "https://github.com/mikf/gallery-dl/releases/latest/download/gallery-dl.exe",
+        "gallery-dl.exe",
+    );
+    #[cfg(not(windows))]
+    let (download_url, checksum_filename) = (
+        "https://github.com/mikf/gallery-dl/releases/latest/download/gallery-dl.bin",
+        "gallery-dl.bin",
+    );
+
+    // Emit: Starting (checksum fetch)
+    let _ = app.emit(
+        "gallerydl-download-progress",
+        DownloadProgress {
+            stage: "checksum".to_string(),
+            percent: 0,
+            downloaded: 0,
+            total: 0,
+        },
+    );
+
+    let bin_dir = app_bin_dir(&app).await?;
+
+    let client = reqwest::Client::builder()
+        .user_agent("Youwee/0.6.0")
+        .timeout(std::time::Duration::from_secs(300))
+        .build()
+        .map_err(|e| format!("Failed to create HTTP client: {}", e))?;
+
+    // Download checksums
+    let checksums_response = client
+        .get("https://github.com/mikf/gallery-dl/releases/latest/download/SHA2-256SUMS")
+        .send()
+        .await
+        .map_err(|e| format!("Failed to download checksums: {}", e))?;
+
+    if !checksums_response.status().is_success() {
+        return Err(format!(
+            "Failed to download checksums: HTTP {}",
+            checksums_response.status()
+        ));
+    }
+
+    let checksums_text = checksums_response
+        .text()
+        .await
+        .map_err(|e| format!("Failed to read checksums: {}", e))?;
+
+    let expected_hash = checksums_text
+        .lines()
+        .find_map(|line| {
+            let parts: Vec<&str> = line.split_whitespace().collect();
+            if parts.len() >= 2 && parts[1] == checksum_filename {
+                Some(parts[0].to_string())
+            } else {
+                None
+            }
+        })
+        .ok_or_else(|| format!("Checksum not found for {}", checksum_filename))?;
+
+    // Emit: Downloading
+    let _ = app.emit(
+        "gallerydl-download-progress",
+        DownloadProgress {
+            stage: "downloading".to_string(),
+            percent: 0,
+            downloaded: 0,
+            total: 0,
+        },
+    );
+
+    let response = client
+        .get(download_url)
+        .send()
+        .await
+        .map_err(|e| format!("Failed to download gallery-dl: {}", e))?;
+
+    if !response.status().is_success() {
+        return Err(format!("Download failed with status: {}", response.status()));
+    }
+
+    let total_size = response.content_length().unwrap_or(0);
+    let mut downloaded: u64 = 0;
+    let mut last_percent: u8 = 0;
+
+    let temp_path = bin_dir.join("gallerydl_download.tmp");
+    let mut file = tokio::fs::File::create(&temp_path)
+        .await
+        .map_err(|e| format!("Failed to create temp file: {}", e))?;
+
+    let mut stream = response.bytes_stream();
+    while let Some(chunk) = stream.next().await {
+        let chunk = chunk.map_err(|e| format!("Download error: {}", e))?;
+        file.write_all(&chunk)
+            .await
+            .map_err(|e| format!("Failed to write chunk: {}", e))?;
+
+        downloaded += chunk.len() as u64;
+        let percent = if total_size > 0 {
+            ((downloaded as f64 / total_size as f64) * 100.0) as u8
+        } else {
+            0
+        };
+
+        // Only emit every 5% to avoid spamming
+        if percent >= last_percent + 5 || percent == 100 {
+            last_percent = percent;
+            let _ = app.emit(
+                "gallerydl-download-progress",
+                DownloadProgress {
+                    stage: "downloading".to_string(),
+                    percent,
+                    downloaded,
+                    total: total_size,
+                },
+            );
+        }
+    }
+
+    file.flush()
+        .await
+        .map_err(|e| format!("Failed to flush file: {}", e))?;
+    drop(file);
+
+    let bytes = tokio::fs::read(&temp_path)
+        .await
+        .map_err(|e| format!("Failed to read downloaded file: {}", e))?;
+
+    // Emit: Verifying checksum
+    let _ = app.emit(
+        "gallerydl-download-progress",
+        DownloadProgress {
+            stage: "verifying".to_string(),
+            percent: 100,
+            downloaded,
+            total: total_size,
+        },
+    );
+
+    if !verify_sha256(&bytes, &expected_hash) {
+        let _ = tokio::fs::remove_file(&temp_path).await;
+        return Err(BackendError::new(
+            "CHECKSUM_VERIFICATION_FAILED",
+            "Security error: SHA256 checksum verification failed.",
+        )
+        .to_wire_string());
+    }
+
+    // Preserve the last working version before replacing it
+    backup_engine_binary(&app, "gallerydl").await?;
+
+    #[cfg(windows)]
+    let binary_name = "gallery-dl.exe";
+    #[cfg(not(windows))]
+    let binary_name = "gallery-dl";
+    let binary_path = bin_dir.join(binary_name);
+
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        let mut perms = tokio::fs::metadata(&temp_path)
+            .await
+            .map_err(|e| format!("Failed to get file metadata: {}", e))?
+            .permissions();
+        perms.set_mode(0o755);
+        tokio::fs::set_permissions(&temp_path, perms)
+            .await
+            .map_err(|e| format!("Failed to set permissions: {}", e))?;
+    }
+
+    tokio::fs::rename(&temp_path, &binary_path)
+        .await
+        .map_err(|e| format!("Failed to install gallery-dl: {}", e))?;
+
+    // Emit: Complete
+    let _ = app.emit(
+        "gallerydl-download-progress",
+        DownloadProgress {
+            stage: "complete".to_string(),
+            percent: 100,
+            downloaded,
+            total: total_size,
+        },
+    );
+
+    // Verify the installed binary runs; on failure the previous version is restored
+    let version = verify_installed_engine(&app, "gallerydl").await?;
+    Ok(version)
 }

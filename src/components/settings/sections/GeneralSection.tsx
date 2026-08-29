@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { CustomPaletteEditor } from '@/components/settings/CustomPaletteEditor';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
@@ -35,7 +36,7 @@ import {
   saveLibraryDeleteFileBehavior,
 } from '@/lib/library-delete-behavior';
 import type { ThemeName } from '@/lib/themes';
-import { themes } from '@/lib/themes';
+import { getAllThemes } from '@/lib/themes';
 import { cn } from '@/lib/utils';
 import { SettingsCard, SettingsDivider, SettingsRow, SettingsSection } from '../SettingsSection';
 
@@ -56,12 +57,15 @@ interface CliShortcutStatus {
 
 // Gradient backgrounds for theme preview
 const themeGradients: Record<ThemeName, string> = {
-  midnight: 'bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500',
+  midnight: 'bg-gradient-to-br from-blue-500 via-indigo-500 to-orange-500',
+  sunny: 'bg-gradient-to-br from-amber-400 via-yellow-400 to-orange-500',
+  rain: 'bg-gradient-to-br from-slate-500 via-sky-600 to-indigo-500',
   aurora: 'bg-gradient-to-br from-emerald-400 via-cyan-500 to-blue-500',
-  sunset: 'bg-gradient-to-br from-orange-500 via-amber-500 to-yellow-500',
   ocean: 'bg-gradient-to-br from-sky-500 via-blue-500 to-indigo-500',
   forest: 'bg-gradient-to-br from-green-500 via-emerald-500 to-teal-500',
+  sunset: 'bg-gradient-to-br from-orange-500 via-amber-500 to-yellow-500',
   candy: 'bg-gradient-to-br from-pink-500 via-rose-500 to-red-500',
+  custom: 'bg-gradient-to-br from-fuchsia-500 via-purple-500 to-pink-500',
 };
 
 interface GeneralSectionProps {
@@ -281,7 +285,7 @@ export function GeneralSection({ highlightId }: GeneralSectionProps) {
                             type="button"
                             onClick={() => handleLanguageChange(lang.code)}
                             className={cn(
-                              'w-full rounded-md px-2 py-2 text-left text-sm transition-colors',
+                              'w-full rounded-md px-2 py-2 text-start text-sm transition-colors',
                               'flex items-center justify-between gap-2',
                               selected
                                 ? 'bg-primary/10 text-primary'
@@ -336,7 +340,7 @@ export function GeneralSection({ highlightId }: GeneralSectionProps) {
           >
             <p className="text-sm font-medium mb-3">{t('general.colorTheme')}</p>
             <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 xl:grid-cols-3">
-              {themes.map((themeItem) => (
+              {getAllThemes().map((themeItem) => (
                 <button
                   type="button"
                   key={themeItem.name}
@@ -362,6 +366,9 @@ export function GeneralSection({ highlightId }: GeneralSectionProps) {
                   <span className="text-sm font-medium">{themeItem.label}</span>
                 </button>
               ))}
+            </div>
+            <div className="mt-4 rounded-lg border border-border/60 bg-background/60 p-3">
+              <CustomPaletteEditor />
             </div>
           </div>
         </SettingsCard>
@@ -548,14 +555,14 @@ export function GeneralSection({ highlightId }: GeneralSectionProps) {
 
               <div className="rounded-lg border border-border/60 bg-background/70 px-3 py-2">
                 <code className="block truncate font-mono text-xs text-muted-foreground">
-                  youwee &lt;url&gt; --quality 720 --skip-live
+                  Youwee &lt;url&gt; --quality 720 --skip-live
                 </code>
               </div>
 
               {cliStatus && (cliStatus.target_path || cliStatusNote) && (
                 <div className="space-y-2 text-xs text-muted-foreground">
                   {cliStatus.target_path && (
-                    <div className="flex flex-col gap-1.5 rounded-lg border border-emerald-500/20 bg-emerald-500/10 px-3 py-2 text-left sm:flex-row sm:items-center">
+                    <div className="flex flex-col gap-1.5 rounded-lg border border-emerald-500/20 bg-emerald-500/10 px-3 py-2 text-start sm:flex-row sm:items-center">
                       <span className="font-medium text-emerald-700 dark:text-emerald-300">
                         {t('extension.cliInstalledAtLabel')}
                       </span>
@@ -564,7 +571,7 @@ export function GeneralSection({ highlightId }: GeneralSectionProps) {
                       </code>
                     </div>
                   )}
-                  {cliStatusNote && <p className="md:text-right">{cliStatusNote}</p>}
+                  {cliStatusNote && <p className="md:text-end">{cliStatusNote}</p>}
                 </div>
               )}
             </div>

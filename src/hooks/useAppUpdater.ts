@@ -41,42 +41,51 @@ export function useAppUpdater() {
     }
   }, []);
 
-  const checkForUpdate = useCallback(async () => {
-    setStatus('checking');
-    setError(null);
+  const checkForUpdate = useCallback(
+    async (silent = false) => {
+      setStatus('checking');
+      setError(null);
 
-    try {
-      if (await isExternalUpdateManaged()) {
-        setUpdateInfo(null);
-        setStatus('external');
+      try {
+        if (await isExternalUpdateManaged()) {
+          setUpdateInfo(null);
+          setStatus('external');
+          return false;
+        }
+
+        const update = await check();
+
+        if (update) {
+          const raw = update.rawJson as Record<string, unknown>;
+          setUpdateInfo({
+            version: update.version,
+            currentVersion: update.currentVersion,
+            body: update.body ?? undefined,
+            bodyVi: (raw.notes_vi as string) || undefined,
+            bodyZhCN: (raw['notes_zh-CN'] as string) || undefined,
+            date: update.date ?? undefined,
+          });
+          setStatus('available');
+          return true;
+        } else {
+          setStatus('up-to-date');
+          return false;
+        }
+      } catch (err) {
+        const message = err instanceof Error ? err.message : 'Failed to check for updates';
+        // Background auto-checks must never block the UI with an error dialog —
+        // especially when no update endpoint is configured (endpoints: []).
+        if (silent) {
+          setStatus('up-to-date');
+          return false;
+        }
+        setError(message);
+        setStatus('error');
         return false;
       }
-
-      const update = await check();
-
-      if (update) {
-        const raw = update.rawJson as Record<string, unknown>;
-        setUpdateInfo({
-          version: update.version,
-          currentVersion: update.currentVersion,
-          body: update.body ?? undefined,
-          bodyVi: (raw.notes_vi as string) || undefined,
-          bodyZhCN: (raw['notes_zh-CN'] as string) || undefined,
-          date: update.date ?? undefined,
-        });
-        setStatus('available');
-        return true;
-      } else {
-        setStatus('up-to-date');
-        return false;
-      }
-    } catch (err) {
-      const message = err instanceof Error ? err.message : 'Failed to check for updates';
-      setError(message);
-      setStatus('error');
-      return false;
-    }
-  }, [isExternalUpdateManaged]);
+    },
+    [isExternalUpdateManaged],
+  );
 
   const downloadAndInstall = useCallback(async () => {
     setStatus('downloading');

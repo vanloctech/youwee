@@ -24,7 +24,7 @@
     "more": "เพิ่มเติม",
     "parallelDownloads": "ดาวน์โหลดพร้อมกัน",
     "atATime": "ครั้งละ {{count}}",
-    "systemManagedHint": "หน้าจอนี้ของ Youwee ใช้เฉพาะ binary gallery-dl ของระบบเท่านั้น"
+    "systemManagedHint": "หน้าจอนี้ของ youwee ใช้เฉพาะ binary gallery-dl ของระบบเท่านั้น"
   },
   "queue": {
     "title": "คิว",

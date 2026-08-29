@@ -18,23 +18,57 @@ import {
 import { buildCookieProxyInvokeOptions, loadNetworkSettings } from '@/lib/network-config';
 import { parseUniversalUrls } from '@/lib/sources';
 import type { DownloadItem } from '@/lib/types';
+import { classifyDownloadError } from './DownloadContext';
 import { useDownload } from './download-context';
 import { GalleryDlContext } from './gallerydl-context';
 
 const STORAGE_KEY = 'youwee-gallerydl-settings';
 const DOWNLOAD_QUEUE_IDLE_GRACE_MS = 1000;
 
-interface GalleryDlSettings {
+export interface GalleryDlSettings {
   outputPath: string;
   concurrentDownloads: number;
   autoRetryEnabled: boolean;
   autoRetryMaxAttempts: number;
   autoRetryDelaySeconds: number;
+  // Advanced gallery-dl options (round 4)
+  range: string;
+  filenameTemplate: string;
+  flatOutput: boolean;
+  cbzOutput: boolean;
+  rateLimit: string;
+  minFileSize: string;
+  maxFileSize: string;
+  sleep: string;
+  retries: number;
+  timeout: number;
 }
 
 interface GalleryDownloadResult {
   filepath: string;
   history_id?: string | null;
+}
+
+interface GalleryProbe {
+  title?: string | null;
+  thumbnail?: string | null;
+  count?: number | null;
+  category?: string | null;
+  subcategory?: string | null;
+  error?: string | null;
+}
+
+interface GalleryDownloadOptions {
+  retries?: number;
+  timeout?: number;
+  range?: string;
+  filename?: string;
+  flatOutput?: boolean;
+  cbz?: boolean;
+  rateLimit?: string;
+  filesizeMin?: string;
+  filesizeMax?: string;
+  sleep?: number;
 }
 
 export interface GalleryDlContextType {
@@ -52,7 +86,15 @@ export interface GalleryDlContextType {
   clearCompleted: () => void;
   startDownload: () => Promise<void>;
   stopDownload: () => Promise<void>;
+  retryFailedDownload: (itemId: string) => void;
+  toggleItemIncognito: (id: string) => void;
+  pauseItem: (id: string) => void;
+  resumeItem: (id: string) => void;
+  cancelItem: (id: string) => void;
+  duplicateItem: (id: string) => void;
+  moveItemToTop: (id: string) => void;
   updateConcurrentDownloads: (concurrent: number) => void;
+  updateSettings: (patch: Partial<GalleryDlSettings>) => void;
 }
 
 function isAbsolutePath(path: string): boolean {
@@ -93,6 +135,22 @@ function buildItemTitle(url: string): string {
   }
 }
 
+function buildGalleryOptions(settings: GalleryDlSettings): GalleryDownloadOptions {
+  const sleep = Number(settings.sleep);
+  return {
+    retries: settings.retries > 0 ? settings.retries : undefined,
+    timeout: settings.timeout > 0 ? settings.timeout : undefined,
+    range: settings.range.trim() || undefined,
+    filename: settings.filenameTemplate.trim() || undefined,
+    flatOutput: settings.flatOutput || undefined,
+    cbz: settings.cbzOutput || undefined,
+    rateLimit: settings.rateLimit.trim() || undefined,
+    filesizeMin: settings.minFileSize.trim() || undefined,
+    filesizeMax: settings.maxFileSize.trim() || undefined,
+    sleep: Number.isFinite(sleep) && sleep > 0 ? sleep : undefined,
+  };
+}
+
 function buildExtractor(url: string): string | undefined {
   try {
     return new URL(url).hostname.replace(/^www\./, '');
@@ -118,11 +176,22 @@ export function GalleryDlProvider({ children }: { children: ReactNode }) {
       autoRetryDelaySeconds: clampAutoRetryDelaySeconds(
         saved.autoRetryDelaySeconds || AUTO_RETRY_LIMITS.delaySeconds.default,
       ),
+      range: saved.range ?? '',
+      filenameTemplate: saved.filenameTemplate ?? '',
+      flatOutput: saved.flatOutput === true,
+      cbzOutput: saved.cbzOutput === true,
+      rateLimit: saved.rateLimit ?? '',
+      minFileSize: saved.minFileSize ?? '',
+      maxFileSize: saved.maxFileSize ?? '',
+      sleep: saved.sleep ?? '',
+      retries: saved.retries ?? 8,
+      timeout: saved.timeout ?? 60,
     };
   });
 
   const isDownloadingRef = useRef(false);
   const itemsRef = useRef<DownloadItem[]>([]);
+  const startDownloadRef = useRef<() => Promise<void>>(async () => {});
   const settingsRef = useRef<GalleryDlSettings>(settings);
   const focusClearTimerRef = useRef<number | null>(null);
   const { settings: downloadSettings, filterDownloadedDuplicateCandidates } = useDownload();
@@ -189,6 +258,42 @@ export function GalleryDlProvider({ children }: { children: ReactNode }) {
     }, 3000);
   }, []);
 
+  const probeItems = useCallback(async (newItems: DownloadItem[]) => {
+    const { cookieSettings, proxySettings } = loadNetworkSettings();
+    const networkOptions = buildCookieProxyInvokeOptions(cookieSettings, proxySettings);
+    for (const item of newItems) {
+      try {
+        setItems((current) =>
+          current.map((entry) =>
+            entry.id === item.id ? { ...entry, status: 'fetching' as const } : entry,
+          ),
+        );
+        const probe = await invoke<GalleryProbe>('probe_gallery', {
+          url: item.url,
+          ...networkOptions,
+        });
+        setItems((current) =>
+          current.map((entry) => {
+            if (entry.id !== item.id) return entry;
+            const next: DownloadItem = { ...entry, status: 'pending' as const };
+            if (probe.thumbnail) next.thumbnail = probe.thumbnail;
+            if (probe.title) next.title = probe.title;
+            if (probe.count) next.fileCount = probe.count;
+            if (probe.error) console.warn('gallery probe:', probe.error);
+            return next;
+          }),
+        );
+      } catch (invokeError) {
+        console.error('Failed to probe gallery URL:', invokeError);
+        setItems((current) =>
+          current.map((entry) =>
+            entry.id === item.id ? { ...entry, status: 'pending' as const } : entry,
+          ),
+        );
+      }
+    }
+  }, []);
+
   const addFromText = useCallback(
     async (text: string): Promise<number> => {
       const urls = parseUniversalUrls(text);
@@ -226,11 +331,12 @@ export function GalleryDlProvider({ children }: { children: ReactNode }) {
           return nextItems;
         });
         focusItem(newItems[newItems.length - 1].id);
+        void probeItems(newItems);
       }
 
       return newItems.length;
     },
-    [filterDownloadedDuplicateCandidates, focusItem],
+    [filterDownloadedDuplicateCandidates, focusItem, probeItems],
   );
 
   const importFromFile = useCallback(async (): Promise<number> => {
@@ -313,6 +419,146 @@ export function GalleryDlProvider({ children }: { children: ReactNode }) {
     });
   }, []);
 
+  const updateSettings = useCallback((patch: Partial<GalleryDlSettings>) => {
+    setSettings((current) => {
+      const next = { ...current, ...patch };
+      saveSettings(next);
+      return next;
+    });
+  }, []);
+
+  // P0-5: per-item incognito flag (backend history gate is a mainline follow-up).
+  const toggleItemIncognito = useCallback((id: string) => {
+    setItems((current) => {
+      const nextItems = current.map((item) =>
+        item.id === id ? { ...item, incognito: !item.incognito } : item,
+      );
+      itemsRef.current = nextItems;
+      return nextItems;
+    });
+  }, []);
+
+  // P0-7: pause (queued/failed items only; active items are soft-cancelled instead).
+  const pauseItem = useCallback((id: string) => {
+    setItems((current) => {
+      const nextItems = current.map((item) =>
+        item.id === id && (item.status === 'pending' || item.status === 'error')
+          ? { ...item, status: 'paused' as const, retryState: undefined }
+          : item,
+      );
+      itemsRef.current = nextItems;
+      return nextItems;
+    });
+  }, []);
+
+  // P0-7: resume a paused item; running workers pick it up automatically.
+  const resumeItem = useCallback((id: string) => {
+    setItems((current) => {
+      const nextItems = current.map((item) =>
+        item.id === id && item.status === 'paused' ? { ...item, status: 'pending' as const } : item,
+      );
+      itemsRef.current = nextItems;
+      return nextItems;
+    });
+  }, []);
+
+  // P0-7: cancel = soft detach (marks item skipped and ignores late backend events)
+  // + real per-item process cancellation: gallery downloads are killed through
+  // the id-addressable stop_gallery_download (tracks this item's own PID only).
+  const cancelItem = useCallback((id: string) => {
+    const current = itemsRef.current.find((item) => item.id === id);
+    if (current && (current.status === 'downloading' || current.status === 'fetching')) {
+      void invoke('stop_gallery_download', { id }).catch((error) => {
+        console.error('Failed to cancel download item:', error);
+      });
+    }
+    setItems((current) => {
+      const nextItems = current.map((item) =>
+        item.id === id && item.status !== 'completed' && item.status !== 'skipped'
+          ? {
+              ...item,
+              status: 'skipped' as const,
+              progress: 0,
+              speed: '',
+              eta: '',
+              error: undefined,
+              errorCode: undefined,
+              errorClass: undefined,
+              retryState: undefined,
+            }
+          : item,
+      );
+      itemsRef.current = nextItems;
+      return nextItems;
+    });
+  }, []);
+
+  // P0-7: clone an item with a fresh id, reset to pending.
+  const duplicateItem = useCallback((id: string) => {
+    const source = itemsRef.current.find((item) => item.id === id);
+    if (!source) return;
+    const copy: DownloadItem = {
+      ...source,
+      id: createClientId(),
+      status: 'pending' as const,
+      progress: 0,
+      speed: '',
+      eta: '',
+      error: undefined,
+      errorCode: undefined,
+      errorClass: undefined,
+      retryState: undefined,
+      completedFilepath: undefined,
+      completedHistoryId: undefined,
+      completedFilesize: undefined,
+      completedResolution: undefined,
+      completedFormat: undefined,
+    };
+    setItems((current) => {
+      const index = current.findIndex((item) => item.id === id);
+      const nextItems = [...current];
+      nextItems.splice(index < 0 ? nextItems.length : index + 1, 0, copy);
+      itemsRef.current = nextItems;
+      return nextItems;
+    });
+  }, []);
+
+  // P0-7: move an item to the front of the queue (claim order = array order).
+  const moveItemToTop = useCallback((id: string) => {
+    setItems((current) => {
+      const index = current.findIndex((item) => item.id === id);
+      if (index <= 0) return current;
+      const nextItems = [...current];
+      const [moved] = nextItems.splice(index, 1);
+      nextItems.unshift(moved);
+      itemsRef.current = nextItems;
+      return nextItems;
+    });
+  }, []);
+
+  // P0-7: retry a failed download (reset item and restart the queue).
+  const retryFailedDownload = useCallback((itemId: string) => {
+    setItems((current) =>
+      current.map((item) =>
+        item.id === itemId
+          ? {
+              ...item,
+              status: 'pending',
+              progress: 0,
+              error: undefined,
+              errorCode: undefined,
+              errorClass: undefined,
+              retryState: undefined,
+            }
+          : item,
+      ),
+    );
+    // Use a short delay to ensure state update before starting download.
+    setTimeout(() => {
+      void startDownloadRef.current();
+    }, 100);
+  }, []);
+
   const startDownload = useCallback(async () => {
     const hasPendingItems = () =>
       itemsRef.current.some((item) => item.status === 'pending' || item.status === 'error');
@@ -360,29 +606,44 @@ export function GalleryDlProvider({ children }: { children: ReactNode }) {
 
         try {
           const result = await invoke<GalleryDownloadResult>('download_gallery', {
+            id: item.id,
             url: item.url,
             outputPath: settingsRef.current.outputPath,
             logStderr,
             ...networkOptions,
             source: item.extractor || null,
+            thumbnail: item.thumbnail || null,
+            // Incognito (P0-5): backend should skip history/log URL writes for this item
+            incognito: item.incognito === true,
+            options: buildGalleryOptions(settingsRef.current),
           });
 
           setItems((current) =>
             current.map((entry) =>
               entry.id === item.id
-                ? {
-                    ...entry,
-                    status: 'completed',
-                    progress: 100,
-                    completedFilepath: result.filepath,
-                    completedHistoryId: result.history_id ?? undefined,
-                    retryState: undefined,
-                  }
+                ? entry.status === 'paused' || entry.status === 'skipped'
+                  ? entry
+                  : {
+                      ...entry,
+                      status: 'completed',
+                      progress: 100,
+                      completedFilepath: result.filepath,
+                      completedHistoryId: result.history_id ?? undefined,
+                      retryState: undefined,
+                    }
                 : entry,
             ),
           );
           return;
         } catch (invokeError) {
+          if (
+            itemsRef.current.some(
+              (entry) =>
+                entry.id === item.id && (entry.status === 'paused' || entry.status === 'skipped'),
+            )
+          ) {
+            return;
+          }
           const parsedError = extractBackendError(invokeError);
           const errorMessage = localizeBackendError(parsedError);
           setError(errorMessage);
@@ -398,7 +659,13 @@ export function GalleryDlProvider({ children }: { children: ReactNode }) {
             setItems((current) =>
               current.map((entry) =>
                 entry.id === item.id
-                  ? { ...entry, status: 'error', error: errorMessage, retryState: undefined }
+                  ? {
+                      ...entry,
+                      status: 'error',
+                      error: errorMessage,
+                      errorClass: classifyDownloadError(parsedError.message, parsedError.code),
+                      retryState: undefined,
+                    }
                   : entry,
               ),
             );
@@ -414,6 +681,7 @@ export function GalleryDlProvider({ children }: { children: ReactNode }) {
                     ...entry,
                     status: 'pending',
                     error: errorMessage,
+                    errorClass: classifyDownloadError(parsedError.message, parsedError.code),
                     retryState: {
                       retryIndex,
                       maxRetries: settingsRef.current.autoRetryMaxAttempts,
@@ -514,6 +782,7 @@ export function GalleryDlProvider({ children }: { children: ReactNode }) {
       isDownloadingRef.current = false;
     }
   }, [settings.concurrentDownloads]);
+  startDownloadRef.current = startDownload;
 
   const value: GalleryDlContextType = useMemo(
     () => ({
@@ -531,7 +800,15 @@ export function GalleryDlProvider({ children }: { children: ReactNode }) {
       clearCompleted,
       startDownload,
       stopDownload,
+      retryFailedDownload,
+      toggleItemIncognito,
+      pauseItem,
+      resumeItem,
+      cancelItem,
+      duplicateItem,
+      moveItemToTop,
       updateConcurrentDownloads,
+      updateSettings,
     }),
     [
       items,
@@ -548,7 +825,15 @@ export function GalleryDlProvider({ children }: { children: ReactNode }) {
       clearCompleted,
       startDownload,
       stopDownload,
+      retryFailedDownload,
+      toggleItemIncognito,
+      pauseItem,
+      resumeItem,
+      cancelItem,
+      duplicateItem,
+      moveItemToTop,
       updateConcurrentDownloads,
+      updateSettings,
     ],
   );
 

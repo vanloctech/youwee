@@ -33,7 +33,7 @@ export function FFmpegDialog({ onDismiss }: FFmpegDialogProps) {
             <button
               type="button"
               onClick={onDismiss}
-              className="absolute top-4 right-4 p-1 rounded-md hover:bg-black/10 transition-colors"
+              className="absolute top-4 end-4 p-1 rounded-md hover:bg-black/10 transition-colors"
             >
               <X className="w-4 h-4 text-muted-foreground" />
             </button>
@@ -89,7 +89,7 @@ export function FFmpegDialog({ onDismiss }: FFmpegDialogProps) {
         <div className="px-6 py-4 bg-muted/30 border-t border-border flex gap-3 justify-end">
           {ffmpegDownloading ? (
             <Button variant="outline" size="sm" disabled>
-              <Loader2 className="w-4 h-4 mr-1 animate-spin" />
+              <Loader2 className="w-4 h-4 me-1 animate-spin" />
               Installing...
             </Button>
           ) : ffmpegSuccess ? (
@@ -111,7 +111,7 @@ export function FFmpegDialog({ onDismiss }: FFmpegDialogProps) {
                 Skip for Now
               </Button>
               <Button size="sm" onClick={downloadFfmpeg}>
-                <Download className="w-4 h-4 mr-1" />
+                <Download className="w-4 h-4 me-1" />
                 Install FFmpeg
               </Button>
             </>

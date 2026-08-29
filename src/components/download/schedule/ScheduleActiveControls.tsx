@@ -22,7 +22,7 @@ export function ScheduleActiveControls({
   const { t } = useTranslation(ns);
 
   return (
-    <div className="flex-1 flex items-center justify-between h-11 sm:h-[3.25rem] bg-zinc-950 text-white rounded-full pl-2 sm:pl-3 pr-1.5 sm:pr-2 ring-1 ring-white/10 shadow-lg shadow-black/20 transition-colors duration-300 overflow-hidden relative group">
+    <div className="flex-1 flex items-center justify-between h-11 sm:h-[3.25rem] bg-zinc-950 text-white rounded-full ps-2 sm:ps-3 pe-1.5 sm:pe-2 ring-1 ring-white/10 shadow-lg shadow-black/20 transition-colors duration-300 overflow-hidden relative group">
       <div className="absolute top-1/2 left-10 -translate-y-1/2 w-36 h-36 bg-primary/20 blur-[28px] rounded-full opacity-45 group-hover:opacity-65 transition-opacity duration-500 pointer-events-none" />
 
       <div className="flex items-center gap-2.5 sm:gap-3 relative z-10 min-w-0">

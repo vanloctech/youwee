@@ -47,7 +47,7 @@ export function PreviewConfirmDialog({ info, onConfirm }: PreviewConfirmDialogPr
                 className="justify-start gap-3 h-auto py-3 px-4"
               >
                 <Film className="w-5 h-5 shrink-0" />
-                <div className="text-left min-w-0">
+                <div className="text-start min-w-0">
                   <p className="text-sm font-medium">
                     {t('processing.previewConfirm.createPreview')}
                   </p>
@@ -63,7 +63,7 @@ export function PreviewConfirmDialog({ info, onConfirm }: PreviewConfirmDialogPr
                 className="justify-start gap-3 h-auto py-3 px-4"
               >
                 <Image className="w-5 h-5 shrink-0" />
-                <div className="text-left min-w-0">
+                <div className="text-start min-w-0">
                   <p className="text-sm font-medium">
                     {t('processing.previewConfirm.thumbnailOnly')}
                   </p>

@@ -97,7 +97,7 @@ export function QueueList({
                 disabled={isDownloading}
                 className="h-7 text-xs px-2 text-muted-foreground hover:text-foreground"
               >
-                <Trash2 className="w-3 h-3 mr-1.5" />
+                <Trash2 className="w-3 h-3 me-1.5" />
                 {t('queue.clearDone')}
               </Button>
             )}

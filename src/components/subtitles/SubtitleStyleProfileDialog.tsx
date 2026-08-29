@@ -206,7 +206,7 @@ export function SubtitleStyleProfileDialog({ open, onClose }: SubtitleStyleProfi
                   type="button"
                   onClick={() => setSelectedProfileId(profile.id)}
                   className={cn(
-                    'text-left rounded-xl border px-3 py-2.5 transition-colors',
+                    'text-start rounded-xl border px-3 py-2.5 transition-colors',
                     isActive
                       ? 'border-primary/50 bg-primary/10'
                       : 'border-border/60 hover:bg-accent/40',

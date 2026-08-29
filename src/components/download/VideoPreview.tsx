@@ -11,6 +11,7 @@ import {
   X,
 } from 'lucide-react';
 import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { localizeUnknownError } from '@/lib/backend-error';
@@ -108,6 +109,7 @@ function formatFilesize(bytes: number | null | undefined): string {
 }
 
 export function VideoPreview({ url, onClose, onFormatSelect, className }: VideoPreviewProps) {
+  const { t } = useTranslation('download');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [data, setData] = useState<VideoInfoResponse | null>(null);
@@ -235,7 +237,7 @@ export function VideoPreview({ url, onClose, onFormatSelect, className }: VideoP
               referrerPolicy="no-referrer"
             />
             {info.duration && (
-              <div className="absolute bottom-1 right-1 rounded bg-black/80 px-1.5 py-0.5 text-xs font-medium text-white">
+              <div className="absolute bottom-1 end-1 rounded bg-black/80 px-1.5 py-0.5 text-xs font-medium text-white">
                 {formatDuration(info.duration)}
               </div>
             )}
@@ -267,12 +269,12 @@ export function VideoPreview({ url, onClose, onFormatSelect, className }: VideoP
             {info.view_count && (
               <span className="inline-flex items-center gap-1 rounded bg-muted/60 px-1.5 py-0.5">
                 <Eye className="h-3 w-3" />
-                {formatViewCount(info.view_count)} views
+                {formatViewCount(info.view_count)} {t('views')}
               </span>
             )}
             {videoFormats.length > 0 && (
               <Badge variant="secondary" className="h-5 rounded px-1.5 text-[11px]">
-                Up to {videoFormats[0].height}p
+                {t('upTo', { height: videoFormats[0].height })}
               </Badge>
             )}
             {info.is_playlist && info.playlist_count && (
@@ -280,7 +282,7 @@ export function VideoPreview({ url, onClose, onFormatSelect, className }: VideoP
                 variant="outline"
                 className="h-5 rounded border-primary/20 bg-primary/10 px-1.5 text-[11px] text-primary"
               >
-                <ListVideo className="mr-1 h-3 w-3" />
+                <ListVideo className="me-1 h-3 w-3" />
                 {info.playlist_count} videos
               </Badge>
             )}
@@ -344,9 +346,9 @@ export function VideoPreview({ url, onClose, onFormatSelect, className }: VideoP
                 className="rounded-lg border bg-background/50 px-2.5 py-1.5 text-xs transition-colors hover:bg-accent"
               >
                 <span className="font-medium">{f.height}p</span>
-                <span className="ml-1 text-muted-foreground">{f.ext}</span>
+                <span className="ms-1 text-muted-foreground">{f.ext}</span>
                 {(f.filesize || f.filesize_approx) && (
-                  <span className="ml-1 text-muted-foreground">
+                  <span className="ms-1 text-muted-foreground">
                     ({formatFilesize(f.filesize || f.filesize_approx)})
                   </span>
                 )}
@@ -360,9 +362,9 @@ export function VideoPreview({ url, onClose, onFormatSelect, className }: VideoP
                 className="rounded-lg border bg-background/50 px-2.5 py-1.5 text-xs transition-colors hover:bg-accent"
               >
                 <span className="font-medium">Audio</span>
-                <span className="ml-1 text-muted-foreground">{f.ext}</span>
+                <span className="ms-1 text-muted-foreground">{f.ext}</span>
                 {f.tbr && (
-                  <span className="ml-1 text-muted-foreground">({Math.round(f.tbr)}kbps)</span>
+                  <span className="ms-1 text-muted-foreground">({Math.round(f.tbr)}kbps)</span>
                 )}
               </button>
             ))}

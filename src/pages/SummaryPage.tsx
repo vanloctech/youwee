@@ -74,7 +74,7 @@ function SummaryLoadingState({ loadingText }: { loadingText: string }) {
   return (
     <div className="flex-1 flex flex-col items-center justify-center text-center py-12">
       <EmptyStateIllustration className="mb-5" icon={Sparkles} isActive />
-      <div className="w-full max-w-sm rounded-xl border border-primary/15 bg-primary/5 p-3 text-left shadow-sm">
+      <div className="w-full max-w-sm rounded-xl border border-primary/15 bg-primary/5 p-3 text-start shadow-sm">
         <div className="flex items-center gap-2 text-xs font-medium text-primary">
           <span className="relative flex h-2 w-2">
             <span className="absolute inline-flex h-full w-full rounded-full bg-primary opacity-75 animate-ping" />
@@ -335,7 +335,7 @@ export function SummaryPage({
         {/* URL Input Row */}
         <div className="flex items-center gap-2">
           <div className="relative flex-1">
-            <Link className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+            <Link className="absolute start-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
             <Input
               placeholder={t('summary.placeholder')}
               value={url}
@@ -343,7 +343,7 @@ export function SummaryPage({
               onKeyDown={handleKeyDown}
               disabled={isLoading}
               className={cn(
-                'pl-10 pr-4 h-11 text-sm',
+                'ps-10 pe-4 h-11 text-sm',
                 'bg-background/50 border-border/50',
                 'focus:bg-background transition-colors',
                 'placeholder:text-muted-foreground/50',
@@ -529,7 +529,7 @@ export function SummaryPage({
                     >
                       <span className="text-xs text-muted-foreground font-mono">{index + 1}.</span>
                       <span>{lang?.name || code}</span>
-                      <div className="flex items-center gap-0.5 ml-1 border-l border-border/50 pl-1.5">
+                      <div className="flex items-center gap-0.5 ms-1 border-s border-border/50 ps-1.5">
                         {index > 0 && (
                           <button
                             type="button"
@@ -554,7 +554,7 @@ export function SummaryPage({
                           <button
                             type="button"
                             onClick={() => handleRemoveLanguage(code)}
-                            className="p-0.5 hover:text-destructive rounded transition-colors ml-0.5"
+                            className="p-0.5 hover:text-destructive rounded transition-colors ms-0.5"
                             title={t('summary.remove')}
                           >
                             <X className="w-3.5 h-3.5" />

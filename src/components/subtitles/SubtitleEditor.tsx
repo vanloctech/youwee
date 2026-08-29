@@ -326,7 +326,7 @@ export function SubtitleEditor() {
                   className={cn(
                     'flex items-center px-2 border-b border-border/20 cursor-pointer',
                     'transition-colors duration-75',
-                    isActive && 'bg-primary/10 border-l-2 border-l-primary',
+                    isActive && 'bg-primary/10 border-s-2 border-s-primary',
                     isSelected && !isActive && 'bg-accent/50',
                     !isSelected && !isActive && 'hover:bg-accent/30',
                     isAtCurrentTime && !isActive && 'bg-amber-500/10',
@@ -351,7 +351,7 @@ export function SubtitleEditor() {
                     ) : (
                       <button
                         type="button"
-                        className="text-xs tabular-nums cursor-text hover:text-primary bg-transparent border-none p-0 text-left"
+                        className="text-xs tabular-nums cursor-text hover:text-primary bg-transparent border-none p-0 text-start"
                         onDoubleClick={(e) => {
                           e.stopPropagation();
                           handleCellDoubleClick(entry.id, 'startTime');
@@ -373,7 +373,7 @@ export function SubtitleEditor() {
                     ) : (
                       <button
                         type="button"
-                        className="text-xs tabular-nums cursor-text hover:text-primary bg-transparent border-none p-0 text-left"
+                        className="text-xs tabular-nums cursor-text hover:text-primary bg-transparent border-none p-0 text-start"
                         onDoubleClick={(e) => {
                           e.stopPropagation();
                           handleCellDoubleClick(entry.id, 'endTime');

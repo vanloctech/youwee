@@ -100,6 +100,8 @@ export interface ItemDownloadSettings {
   aria2Args: string;
   ytdlpAdvancedOptionsEnabled: boolean;
   ytdlpAdvancedOptions: YtdlpAdvancedOption[];
+  /** Expert raw yt-dlp arguments (backend-validated allowlist, never a shell string). */
+  rawArgs?: string;
   subtitleMode: SubtitleMode;
   subtitleLangs: string[];
   subtitleEmbed: boolean;
@@ -135,6 +137,8 @@ export interface ItemUniversalSettings {
   aria2Args: string;
   ytdlpAdvancedOptionsEnabled: boolean;
   ytdlpAdvancedOptions: YtdlpAdvancedOption[];
+  /** Expert raw yt-dlp arguments (backend-validated allowlist, never a shell string). */
+  rawArgs?: string;
   timeRangeStart?: string;
   timeRangeEnd?: string;
   liveFromStart?: boolean;
@@ -159,16 +163,29 @@ export interface DownloadRetryState {
   remainingSeconds: number;
 }
 
+export type DownloadErrorClass =
+  | 'transient'
+  | 'auth'
+  | 'geo'
+  | 'unavailable'
+  | 'disk'
+  | 'config'
+  | 'unknown';
+
 export interface DownloadItem {
   id: string;
   url: string;
   title: string;
-  status: 'pending' | 'fetching' | 'downloading' | 'completed' | 'error' | 'skipped';
+  status: 'pending' | 'fetching' | 'downloading' | 'paused' | 'completed' | 'error' | 'skipped';
   progress: number;
   speed: string;
   eta: string;
   error?: string;
   errorCode?: string;
+  /** P0-7: machine-classified failure cause: transient | auth | geo | unavailable | disk | config | unknown. */
+  errorClass?: DownloadErrorClass;
+  /** P0-5: privacy mode — item must not be written to normal history or persisted. */
+  incognito?: boolean;
   isPlaylist?: boolean;
   isLive?: boolean; // true if video is currently live streaming
   downloadedSize?: string; // For live streams: "2.87 MiB"
@@ -178,6 +195,7 @@ export interface DownloadItem {
   queueIndex?: number;
   queueTotal?: number;
   thumbnail?: string;
+  fileCount?: number;
   duration?: string;
   channel?: string;
   filesize?: number; // File size in bytes from video info
@@ -965,6 +983,29 @@ export interface HistoryEntry {
   time_range?: string; // Time range cut (e.g. "00:10-01:00")
   tags: HistoryTag[];
   collections: HistoryCollection[];
+}
+
+export interface GalleryProbe {
+  title?: string | null;
+  thumbnail?: string | null;
+  count?: number | null;
+  category?: string | null;
+  subcategory?: string | null;
+  error?: string | null;
+}
+
+export interface GalleryLibraryItem {
+  id: string;
+  url: string;
+  title: string;
+  thumbnail?: string;
+  filepath: string;
+  source?: string;
+  downloaded_at: string; // ISO 8601
+  file_exists: boolean;
+  folder_name: string;
+  file_size?: number;
+  cover_image?: string;
 }
 
 export type HistoryFilter =

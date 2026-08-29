@@ -29,6 +29,15 @@ import esPages from './locales/es/pages.json';
 import esSettings from './locales/es/settings.json';
 import esSubtitles from './locales/es/subtitles.json';
 import esUniversal from './locales/es/universal.json';
+import faChannels from './locales/fa/channels.json';
+import faCommon from './locales/fa/common.json';
+import faDownload from './locales/fa/download.json';
+import faGallery from './locales/fa/gallery.json';
+import faMetadata from './locales/fa/metadata.json';
+import faPages from './locales/fa/pages.json';
+import faSettings from './locales/fa/settings.json';
+import faSubtitles from './locales/fa/subtitles.json';
+import faUniversal from './locales/fa/universal.json';
 import frChannels from './locales/fr/channels.json';
 import frCommon from './locales/fr/common.json';
 import frDownload from './locales/fr/download.json';
@@ -132,6 +141,17 @@ const resources = {
     pages: arPages,
     settings: arSettings,
     subtitles: arSubtitles,
+  },
+  fa: {
+    common: faCommon,
+    channels: faChannels,
+    download: faDownload,
+    gallery: faGallery,
+    metadata: faMetadata,
+    universal: faUniversal,
+    pages: faPages,
+    settings: faSettings,
+    subtitles: faSubtitles,
   },
   en: {
     common: enCommon,
@@ -267,7 +287,7 @@ const resources = {
   },
 };
 
-const RTL_LANGUAGES = new Set(['ar']);
+const RTL_LANGUAGES = new Set(['ar', 'fa']);
 
 function applyDocumentLanguage(language: string) {
   if (typeof document === 'undefined') return;

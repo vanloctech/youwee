@@ -31,6 +31,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   AISection,
+  BackupSection,
   DependenciesSection,
   DownloadSection,
   ExtensionSection,
@@ -148,6 +149,8 @@ export function SettingsPage({
                   <DependenciesSection highlightId={highlightId} />
                 )}
 
+                {activeSection === 'engines' && <DependenciesSection highlightId={highlightId} />}
+
                 {activeSection === 'download' && <DownloadSection highlightId={highlightId} />}
 
                 {activeSection === 'remote-download' && (
@@ -166,6 +169,7 @@ export function SettingsPage({
 
                 {activeSection === 'network' && <NetworkSection highlightId={highlightId} />}
 
+                {activeSection === 'backup' && <BackupSection highlightId={highlightId} />}
                 {activeSection === 'about' && (
                   <AboutSettingsContent
                     appVersion={appVersion}
@@ -385,7 +389,7 @@ function AboutSettingsContent({
                 <Button
                   variant="ghost"
                   size="icon"
-                  onClick={updater.checkForUpdate}
+                  onClick={() => void updater.checkForUpdate()}
                   disabled={isAppChecking}
                   title={t('about.checkForUpdates')}
                   className="h-9 w-9"
@@ -450,9 +454,9 @@ function AboutSettingsContent({
             </div>
 
             <div className="space-y-3.5 text-[13px] leading-relaxed text-muted-foreground mt-1">
-              <p>{tCommon('legalDisclaimer.description')}</p>
+              <p className="text-start leading-relaxed">{tCommon('legalDisclaimer.description')}</p>
               <div className="relative overflow-hidden rounded-xl bg-background/60 p-4 shadow-sm backdrop-blur-sm">
-                <div className="absolute left-0 top-0 bottom-0 w-1 bg-gradient-to-b from-amber-400 to-orange-500" />
+                <div className="absolute start-0 top-0 bottom-0 w-1 bg-gradient-to-b from-amber-400 to-orange-500" />
                 <p className="font-medium text-foreground/90">
                   {tCommon('legalDisclaimer.notice')}
                 </p>

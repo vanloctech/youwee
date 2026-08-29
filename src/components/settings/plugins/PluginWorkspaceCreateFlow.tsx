@@ -200,7 +200,7 @@ export const PluginWorkspaceCreateFlow = memo(function PluginWorkspaceCreateFlow
             <DialogTitle>{t('download.pluginCreateDialogTitle')}</DialogTitle>
           </DialogHeader>
 
-          <div className="max-h-[80vh] space-y-4 overflow-y-auto pr-1">
+          <div className="max-h-[80vh] space-y-4 overflow-y-auto pe-1">
             <p className="text-sm text-muted-foreground">{t('download.pluginCreateDialogDesc')}</p>
 
             <div className="space-y-4 rounded-xl border border-border/60 bg-muted/20 p-4">
@@ -461,7 +461,7 @@ export const PluginWorkspaceCreateFlow = memo(function PluginWorkspaceCreateFlow
                           controller.toggleCreatePluginFilesystemPermission(permission)
                         }
                         className={cn(
-                          'flex items-center justify-between rounded-lg border px-3 py-2 text-left text-sm transition-colors',
+                          'flex items-center justify-between rounded-lg border px-3 py-2 text-start text-sm transition-colors',
                           selected
                             ? 'border-emerald-500/40 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300'
                             : 'border-border/60 bg-background/70 text-muted-foreground hover:bg-muted/60',
@@ -502,7 +502,7 @@ export const PluginWorkspaceCreateFlow = memo(function PluginWorkspaceCreateFlow
                         type="button"
                         onClick={() => controller.toggleCreatePluginToolPermission(permission)}
                         className={cn(
-                          'flex items-center justify-between rounded-lg border px-3 py-2 text-left text-sm transition-colors',
+                          'flex items-center justify-between rounded-lg border px-3 py-2 text-start text-sm transition-colors',
                           selected
                             ? 'border-emerald-500/40 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300'
                             : 'border-border/60 bg-background/70 text-muted-foreground hover:bg-muted/60',

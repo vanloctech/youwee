@@ -24,7 +24,7 @@
     "more": "Daha",
     "parallelDownloads": "Paralel indirmeler",
     "atATime": "Bir seferde {{count}}",
-    "systemManagedHint": "Youwee, yalnızca bu ekran için gallery-dl ikili sistemini kullanır."
+    "systemManagedHint": "youwee, yalnızca bu ekran için gallery-dl ikili sistemini kullanır."
   },
   "queue": {
     "title": "Sıra",

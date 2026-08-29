@@ -278,7 +278,7 @@ export function ChannelsPage() {
         {/* URL Input */}
         <div className="relative flex items-center gap-2">
           <div className="relative flex-1">
-            <Link className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+            <Link className="absolute start-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
             <Input
               type="url"
               value={urlInput}
@@ -293,7 +293,7 @@ export function ChannelsPage() {
               placeholder={t('urlPlaceholder')}
               disabled={browseLoading}
               className={cn(
-                'pl-10 pr-10 h-11 text-sm',
+                'ps-10 pe-10 h-11 text-sm',
                 'bg-background/50 border-border/50',
                 'focus:bg-background transition-colors',
                 'placeholder:text-muted-foreground/50',
@@ -307,7 +307,7 @@ export function ChannelsPage() {
                   setYoutubeContentType('videos');
                   clearBrowse();
                 }}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                className="absolute end-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
               >
                 <X className="w-4 h-4" />
               </button>
@@ -546,9 +546,9 @@ export function ChannelsPage() {
                   className="h-9 px-4 rounded-full text-sm font-medium bg-background/80 hover:bg-background/90 backdrop-blur-2xl supports-[backdrop-filter]:bg-background/60 border border-border/50 shadow-[0_8px_30px_rgb(0,0,0,0.12)] dark:shadow-[0_8px_30px_rgb(0,0,0,0.3)] ring-1 ring-white/10 pointer-events-auto"
                 >
                   {browseLoadingMore ? (
-                    <Loader2 className="w-4 h-4 sm:mr-1.5 animate-spin" />
+                    <Loader2 className="w-4 h-4 sm:me-1.5 animate-spin" />
                   ) : (
-                    <ListPlus className="w-4 h-4 sm:mr-1.5" />
+                    <ListPlus className="w-4 h-4 sm:me-1.5" />
                   )}
                   <span>{t('loadMore')}</span>
                 </Button>
@@ -561,7 +561,7 @@ export function ChannelsPage() {
         {followedChannels.length > 0 && (
           <div
             className={cn(
-              'flex-shrink-0 border-l border-border/50 flex flex-col overflow-hidden transition-all duration-300',
+              'flex-shrink-0 border-s border-border/50 flex flex-col overflow-hidden transition-all duration-300',
               channelsCollapsed ? 'w-10' : 'w-64',
             )}
           >
@@ -640,7 +640,7 @@ export function ChannelsPage() {
                             }}
                             className={cn(
                               'w-full flex items-center gap-2.5 p-2.5 rounded-xl transition-all duration-200',
-                              'hover:bg-accent/50 cursor-pointer text-left',
+                              'hover:bg-accent/50 cursor-pointer text-start',
                               'border border-transparent',
                             )}
                           >
@@ -684,7 +684,7 @@ export function ChannelsPage() {
                               e.stopPropagation();
                               setConfirmPanelUnfollowId(channel.id);
                             }}
-                            className="absolute top-1.5 right-1.5 w-5 h-5 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-muted/80 hover:bg-destructive/20 hover:text-destructive"
+                            className="absolute top-1.5 end-1.5 w-5 h-5 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-muted/80 hover:bg-destructive/20 hover:text-destructive"
                             title={t('unfollow')}
                           >
                             <X className="w-3 h-3" />
@@ -723,7 +723,7 @@ export function ChannelsPage() {
                   <Download className="w-5 h-5" />
                   <span>{t('downloadSelected')}</span>
                   {pendingCount > 0 && (
-                    <span className="ml-1 px-2 py-0.5 rounded-full bg-white/20 text-xs">
+                    <span className="ms-1 px-2 py-0.5 rounded-full bg-white/20 text-xs">
                       {pendingCount}
                     </span>
                   )}
@@ -734,7 +734,7 @@ export function ChannelsPage() {
                   variant="destructive"
                   onClick={stopDownload}
                 >
-                  <Square className="w-5 h-5 mr-2" />
+                  <Square className="w-5 h-5 me-2" />
                   Stop Download
                 </Button>
               )}

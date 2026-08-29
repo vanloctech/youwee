@@ -159,7 +159,7 @@ export function SubtitlesPage() {
             <div className="flex-1 min-w-0 min-h-0">
               <SubtitleEditor />
             </div>
-            <div className="lg:w-[380px] lg:max-w-[42%] min-h-[280px] lg:min-h-0 border-t lg:border-t-0 lg:border-l border-border/50">
+            <div className="lg:w-[380px] lg:max-w-[42%] min-h-[280px] lg:min-h-0 border-t lg:border-t-0 lg:border-s border-border/50">
               <SubtitleVideoPreview />
             </div>
           </div>

@@ -141,17 +141,17 @@ export function AssetsExportTab() {
         {!isExpanded ? (
           <div className="flex items-center gap-2">
             <div className="relative flex-1">
-              <Link className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              <Link className="absolute start-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
               <Input
                 placeholder={t('assetsInputPlaceholder')}
                 value={inputText}
                 onChange={(event) => setInputText(event.target.value)}
                 onKeyDown={handleKeyDown}
                 disabled={isFetching}
-                className="pl-10 pr-20 h-11 text-sm bg-background/50 border-border/50"
+                className="ps-10 pe-20 h-11 text-sm bg-background/50 border-border/50"
               />
               {urlCount > 0 && (
-                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground bg-muted px-2 py-0.5 rounded">
+                <span className="absolute end-3 top-1/2 -translate-y-1/2 text-xs text-muted-foreground bg-muted px-2 py-0.5 rounded">
                   {urlCount} URL{urlCount !== 1 ? 's' : ''}
                 </span>
               )}
@@ -178,7 +178,7 @@ export function AssetsExportTab() {
                 className="min-h-[100px] resize-none font-mono text-sm bg-background/50 border-border/50"
               />
               {urlCount > 0 && (
-                <div className="absolute bottom-2 right-2">
+                <div className="absolute bottom-2 end-2">
                   <span className="text-xs text-muted-foreground bg-background/80 px-2 py-1 rounded">
                     {urlCount} URL{urlCount !== 1 ? 's' : ''}
                   </span>
@@ -372,7 +372,7 @@ export function AssetsExportTab() {
             </div>
 
             <ScrollArea className="flex-1">
-              <div className="space-y-2 pr-4 pb-4">
+              <div className="space-y-2 pe-4 pb-4">
                 {items.map((item) => (
                   <div
                     key={item.id}
@@ -438,7 +438,7 @@ export function AssetsExportTab() {
                   <Play className="w-5 h-5" />
                   <span>{t('fetchMetadata')}</span>
                   {pendingCount > 0 && (
-                    <span className="ml-1 px-2 py-0.5 rounded-full bg-white/20 text-xs">
+                    <span className="ms-1 px-2 py-0.5 rounded-full bg-white/20 text-xs">
                       {pendingCount}
                     </span>
                   )}
@@ -449,7 +449,7 @@ export function AssetsExportTab() {
                   variant="destructive"
                   onClick={stopFetch}
                 >
-                  <Square className="w-5 h-5 mr-2" />
+                  <Square className="w-5 h-5 me-2" />
                   {t('stop')}
                 </Button>
               )}

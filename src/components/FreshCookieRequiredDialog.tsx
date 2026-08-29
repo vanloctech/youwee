@@ -28,7 +28,7 @@ export function FreshCookieRequiredDialog({
           <button
             type="button"
             onClick={onDismiss}
-            className="absolute top-4 right-4 p-1 rounded-md hover:bg-black/10 transition-colors"
+            className="absolute top-4 end-4 p-1 rounded-md hover:bg-black/10 transition-colors"
           >
             <X className="w-4 h-4 text-muted-foreground" />
           </button>
