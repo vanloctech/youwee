@@ -90,6 +90,7 @@ jobs:
             libwebkit2gtk-4.1-dev \
             librsvg2-dev \
             patchelf \
+            squashfs-tools \
             libssl-dev \
             libgtk-3-dev \
             libayatana-appindicator3-dev
@@ -128,6 +129,19 @@ jobs:
         run: |
           bash scripts/fix-deb-deep-link-desktop-entry.sh \
             "src-tauri/target/${{ matrix.target }}/release/bundle/deb"
+
+      - name: Repair AppImage desktop runtime compatibility
+        if: matrix.os_name == 'linux'
+        run: |
+          APPIMAGE_DIR="src-tauri/target/${{ matrix.target }}/release/bundle/appimage"
+          APPIMAGE=$(find "$APPIMAGE_DIR" -maxdepth 1 -type f -name "*.AppImage" | head -n 1)
+          test -n "$APPIMAGE"
+          bash scripts/repair-appimage-runtime.sh "$APPIMAGE" "Youwee"
+
+          # The AppImage payload changed after Tauri produced updater artifacts.
+          # Regenerate its signature so latest.json always matches the release file.
+          rm -f "$APPIMAGE.sig"
+          bun run tauri signer sign "$APPIMAGE"
 
       - name: Rename artifacts with friendly names (macOS)
         if: matrix.os_name == 'macos'
