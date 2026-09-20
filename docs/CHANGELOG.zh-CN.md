@@ -7,6 +7,12 @@ Youwee 的所有重要更改都将记录在此文件中。
 
 ## [Unreleased]
 
+### 修复
+- **AppImage 运行时兼容性** - 重新打包 Linux AppImage，不再捆绑可能与新版 Mesa 和 WebKitGTK 冲突的 Wayland、GLib 与 GStreamer 运行时库，避免现代 Linux 发行版启动时出现白色窗口
+
+### 变更
+- **AppImage 发布验证** - 在 Linux CI 中验证重新打包后的 AppImage 运行时布局，并重新签名最终产物以确保更新完整性
+
 ## [0.20.3] - 2026-08-23
 
 ### 修复

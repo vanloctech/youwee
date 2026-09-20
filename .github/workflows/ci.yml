@@ -43,6 +43,7 @@ jobs:
             libwebkit2gtk-4.1-dev \
             librsvg2-dev \
             patchelf \
+            squashfs-tools \
             libssl-dev \
             libgtk-3-dev \
             libayatana-appindicator3-dev
@@ -138,14 +139,14 @@ jobs:
           tauriScript: bun run tauri
           args: --target ${{ matrix.target }} --no-bundle
 
-      - name: Build Linux deb bundle (unsigned)
+      - name: Build Linux deb and AppImage bundles (unsigned)
         if: matrix.platform == 'ubuntu-22.04'
         uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           tauriScript: bun run tauri
-          args: --target ${{ matrix.target }} --bundles deb --no-sign --ci
+          args: --target ${{ matrix.target }} --bundles deb,appimage --no-sign --ci
 
       - name: Validate Linux deep-link desktop entry
         if: matrix.platform == 'ubuntu-22.04'
@@ -163,6 +164,34 @@ jobs:
           DESKTOP_FILE="$PACKAGE_DIR/usr/share/applications/Youwee.desktop"
           grep -Fx 'Exec=youwee %U' "$DESKTOP_FILE"
           grep -Fqx 'MimeType=x-scheme-handler/youwee;' "$DESKTOP_FILE"
+
+      - name: Validate repaired Linux AppImage runtime
+        if: matrix.platform == 'ubuntu-22.04'
+        run: |
+          set -eu
+          APPIMAGE_DIR="src-tauri/target/${{ matrix.target }}/release/bundle/appimage"
+          APPIMAGE="$(find "$APPIMAGE_DIR" -maxdepth 1 -type f -name '*.AppImage' | sort | head -n 1)"
+          test -n "$APPIMAGE"
+          APPIMAGE="$(cd "$(dirname "$APPIMAGE")" && pwd)/$(basename "$APPIMAGE")"
+          bash scripts/repair-appimage-runtime.sh "$APPIMAGE" "Youwee"
+
+          INSPECT_DIR="$(mktemp -d)"
+          trap 'rm -rf "$INSPECT_DIR"' EXIT
+          (
+            cd "$INSPECT_DIR"
+            APPIMAGE_EXTRACT_AND_RUN=1 "$APPIMAGE" --appimage-extract >/dev/null
+          )
+
+          test -x "$INSPECT_DIR/squashfs-root/AppRun"
+          grep -Fqx 'unset GST_PLUGIN_SYSTEM_PATH GST_PLUGIN_SYSTEM_PATH_1_0 GST_PLUGIN_PATH_1_0' \
+            "$INSPECT_DIR/squashfs-root/AppRun"
+          ! find "$INSPECT_DIR/squashfs-root/usr/lib" -maxdepth 1 \( -type f -o -type l \) \( \
+            -name 'libwayland-*.so*' -o \
+            -name 'libglib-2.0.so*' -o \
+            -name 'libgio-2.0.so*' -o \
+            -name 'libgobject-2.0.so*' -o \
+            -name 'libgmodule-2.0.so*' \
+          \) -print -quit | grep -q .
 
       - name: Skip artifact upload
         run: echo "build-test validates build artifacts but does not upload them."

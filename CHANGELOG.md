@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- **AppImage runtime compatibility** - Rebuild Linux AppImages without bundled Wayland, GLib, and GStreamer runtime libraries that can conflict with newer Mesa and WebKitGTK, preventing blank startup windows on modern Linux distributions
+
+### Changed
+- **AppImage release validation** - Validate the rebuilt AppImage runtime layout in Linux CI and re-sign the finalized artifact for updater integrity
+
 ## [0.20.3] - 2026-08-23
 
 ### Fixed

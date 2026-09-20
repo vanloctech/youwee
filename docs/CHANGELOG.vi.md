@@ -7,6 +7,12 @@ và dự án tuân theo [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+### Sửa lỗi
+- **Tương thích runtime AppImage** - Đóng gói lại AppImage Linux không kèm các thư viện runtime Wayland, GLib và GStreamer có thể xung đột với Mesa và WebKitGTK mới hơn, tránh cửa sổ trắng khi khởi động trên các bản Linux hiện đại
+
+### Thay đổi
+- **Kiểm tra release AppImage** - Kiểm tra layout runtime AppImage sau khi đóng gói lại trong CI Linux và ký lại artifact hoàn chỉnh để đảm bảo tính toàn vẹn khi cập nhật
+
 ## [0.20.3] - 2026-08-23
 
 ### Sửa lỗi
