@@ -112,6 +112,7 @@ fn playlist_entry_from_json(
     let duration = json.get("duration").and_then(|v| v.as_f64());
     let channel = json_string(json, &["channel", "uploader"]);
     let upload_date = json_string(json, &["upload_date"]);
+    let view_count = json.get("view_count").and_then(|value| value.as_u64());
     let playlist_title = playlist_title_from_entry_json(json)
         .or_else(|| fallback_playlist_title.map(ToString::to_string));
 
@@ -124,6 +125,7 @@ fn playlist_entry_from_json(
         channel,
         upload_date,
         playlist_title,
+        view_count,
     })
 }
 

@@ -454,10 +454,7 @@ pub struct PluginRuntimeLocaleInput {
 }
 
 pub fn plugins_root(app: &AppHandle) -> Result<PathBuf, String> {
-    let app_data_dir = app
-        .path()
-        .app_data_dir()
-        .map_err(|e| format!("Failed to resolve app data directory: {}", e))?;
+    let app_data_dir = crate::utils::app_data_dir(app)?;
     Ok(app_data_dir.join(PLUGINS_DIR_NAME))
 }
 

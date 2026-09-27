@@ -7,6 +7,56 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.20.10] - 2026-09-27
+
+### Fixed
+- **Realtime YouTube delivery** - Subscribe to YouTube's live `/xml/feeds/videos.xml` WebSub topic and require synchronous callback verification, preventing the UI from reporting subscriptions that could only fall back to delayed polling.
+
+## [0.20.9] - 2026-09-27
+
+### Fixed
+- **Windows startup hang** - Release the SQLite lock before restoring the saved Telegram configuration and stop synchronously copying the WebView2 browser profile, preventing invisible Youwee processes from waiting forever after installation.
+
+## [0.20.8] - 2026-09-26
+
+### Added
+- **Realtime YouTube notifications** - Receive YouTube WebSub upload events through an automatically managed zero-config HTTPS tunnel, then reuse the existing Telegram, auto-download, and per-channel edit pipeline within seconds.
+- **Realtime connection status** - Show connecting, connected channel count, or polling fallback state on the followed-channel manager.
+
+### Changed
+- **Polling is now fallback** - Keep the scheduled channel scan for recovery and downtime catch-up instead of using the per-channel interval as the primary YouTube notification path.
+
+## [0.20.7] - 2026-09-26
+
+### Added
+- **Followed channel manager** - Browse followed channels on a dedicated page with last-check, last-download, download-count, automation, and per-channel download history details.
+- **Telegram media actions** - Download/edit completion alerts include an action that focuses the matching channel and opens the rendered file location on the Youwee machine.
+
+### Fixed
+- **Telegram startup notification race** - Persist Telegram configuration in the portable SQLite database and restore it before the first channel scan, preventing newly discovered videos from being recorded before notifications are ready.
+- **Channel media locations** - Persist original and edited output paths per channel video so history actions resolve the actual render instead of guessing a folder.
+
+## [0.20.6] - 2026-09-26
+
+### Added
+- **Per-channel creator processing** - Store an independent edit mode and parameters for every followed channel, with bulk application to selected channels.
+
+### Fixed
+- **Channel auto-edit routing** - New-video auto-downloads now use the channel's saved edit snapshot instead of one global mode, while bulk edit updates preserve polling and download settings.
+
+## [0.20.5] - 2026-09-25
+
+### Added
+- **Bulk channel CRUD** - Follow or unfollow large channel lists in one transaction while preserving download history.
+- **Telegram connection test** - Send a diagnostic message to every configured chat before relying on notifications.
+- **Portable migration package** - Ship a database snapshot and restore helper so followed channels and download history can move to another machine.
+- **Channel batch downloads** - Select Shorts or long videos and prepare all or the newest requested number of videos not already stored in Library.
+- **Creator processing** - Automatically duet downloaded channel videos with a random RIGHT-folder video or split long videos into titled 9:16 parts.
+
+### Fixed
+- **New-video notifications** - Only notify for videos inserted during the current channel scan, avoiding repeated Telegram alerts.
+- **Channel locations** - Resolve channel and video folders from persisted history paths instead of guessing from the current view.
+
 ## [0.20.4] - 2026-09-20
 
 ### Fixed

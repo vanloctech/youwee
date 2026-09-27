@@ -1,7 +1,7 @@
 use rusqlite::{params, Connection};
 use std::path::{Path, PathBuf};
 use std::sync::Mutex;
-use tauri::{AppHandle, Manager};
+use tauri::AppHandle;
 
 // Global database connection wrapped in Mutex for thread safety
 pub static DB_CONNECTION: std::sync::OnceLock<Mutex<Connection>> = std::sync::OnceLock::new();
@@ -166,10 +166,7 @@ pub fn init_database(app: &AppHandle) -> Result<(), String> {
         return Ok(());
     }
 
-    let app_data_dir = app
-        .path()
-        .app_data_dir()
-        .map_err(|e| format!("Failed to get app data directory: {}", e))?;
+    let app_data_dir = crate::utils::app_data_dir(app)?;
 
     std::fs::create_dir_all(&app_data_dir)
         .map_err(|e| format!("Failed to create app data directory: {}", e))?;
@@ -352,6 +349,53 @@ pub fn init_database(app: &AppHandle) -> Result<(), String> {
 
     // Create processing_jobs table
     conn.execute(
+        "CREATE TABLE IF NOT EXISTS channel_batch_items (
+            channel_url TEXT NOT NULL,
+            video_id TEXT NOT NULL,
+            channel_name TEXT,
+            content_type TEXT NOT NULL,
+            video_json TEXT NOT NULL,
+            status TEXT NOT NULL DEFAULT 'pending',
+            created_at TEXT NOT NULL,
+            PRIMARY KEY(channel_url, video_id)
+        )",
+        [],
+    )
+    .map_err(|e| format!("Failed to create channel_batch_items: {e}"))?;
+    conn.execute(
+        "ALTER TABLE channel_batch_items ADD COLUMN status TEXT NOT NULL DEFAULT 'pending'",
+        [],
+    )
+    .ok();
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_channel_batch_status ON channel_batch_items(status, created_at)",
+        [],
+    )
+    .map_err(|e| format!("Failed to index channel_batch_items: {e}"))?;
+    conn.execute(
+        "CREATE TABLE IF NOT EXISTS creator_jobs (
+            id TEXT PRIMARY KEY,
+            input_path TEXT NOT NULL,
+            mode TEXT NOT NULL,
+            config_key TEXT,
+            payload_json TEXT NOT NULL,
+            status TEXT NOT NULL DEFAULT 'pending',
+            error_message TEXT,
+            created_at TEXT NOT NULL,
+            updated_at TEXT NOT NULL
+        )",
+        [],
+    )
+    .map_err(|e| format!("Failed to create creator_jobs table: {e}"))?;
+    conn.execute("ALTER TABLE creator_jobs ADD COLUMN config_key TEXT", [])
+        .ok();
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_creator_jobs_status ON creator_jobs(status, created_at)",
+        [],
+    )
+    .map_err(|e| format!("Failed to index creator_jobs: {e}"))?;
+
+    conn.execute(
         "CREATE TABLE IF NOT EXISTS processing_jobs (
             id TEXT PRIMARY KEY,
             input_path TEXT NOT NULL,
@@ -411,11 +455,12 @@ pub fn init_database(app: &AppHandle) -> Result<(), String> {
             filter_include_keywords TEXT,
             filter_exclude_keywords TEXT,
             filter_max_videos INTEGER,
-            download_threads INTEGER NOT NULL DEFAULT 1,
+                download_threads INTEGER NOT NULL DEFAULT 3,
             download_video_codec TEXT NOT NULL DEFAULT 'h264',
             download_audio_bitrate TEXT NOT NULL DEFAULT '192',
             download_preferred_fps TEXT NOT NULL DEFAULT 'original',
-            youtube_content_type TEXT NOT NULL DEFAULT 'videos'
+            youtube_content_type TEXT NOT NULL DEFAULT 'videos',
+            creator_processing_json TEXT NOT NULL DEFAULT '{}'
         )",
         [],
     )
@@ -434,6 +479,9 @@ pub fn init_database(app: &AppHandle) -> Result<(), String> {
             upload_date TEXT,
             status TEXT NOT NULL DEFAULT 'new',
             created_at TEXT NOT NULL,
+            downloaded_at INTEGER,
+            output_path TEXT,
+            edited_output_paths_json TEXT NOT NULL DEFAULT '[]',
             FOREIGN KEY (channel_id) REFERENCES followed_channels(id) ON DELETE CASCADE
         )",
         [],
@@ -472,7 +520,15 @@ pub fn init_database(app: &AppHandle) -> Result<(), String> {
 
     // Migration: Add download_threads column if it doesn't exist
     conn.execute(
-        "ALTER TABLE followed_channels ADD COLUMN download_threads INTEGER NOT NULL DEFAULT 1",
+        "ALTER TABLE followed_channels ADD COLUMN download_threads INTEGER NOT NULL DEFAULT 3",
+        [],
+    )
+    .ok();
+    // Channels created before the per-channel concurrency setting existed were
+    // stored with the old single-worker default. Promote those legacy rows so
+    // channel downloads use the new multi-worker behavior immediately.
+    conn.execute(
+        "UPDATE followed_channels SET download_threads = 3 WHERE download_threads = 1",
         [],
     )
     .ok();
@@ -501,6 +557,49 @@ pub fn init_database(app: &AppHandle) -> Result<(), String> {
     // Migration: Add YouTube content type column if it doesn't exist
     conn.execute(
         "ALTER TABLE followed_channels ADD COLUMN youtube_content_type TEXT NOT NULL DEFAULT 'videos'",
+        [],
+    )
+    .ok();
+
+    conn.execute(
+        "ALTER TABLE channel_videos ADD COLUMN downloaded_at INTEGER",
+        [],
+    )
+    .ok();
+    conn.execute("ALTER TABLE channel_videos ADD COLUMN output_path TEXT", [])
+        .ok();
+    conn.execute(
+        "ALTER TABLE channel_videos ADD COLUMN edited_output_paths_json TEXT NOT NULL DEFAULT '[]'",
+        [],
+    )
+    .ok();
+
+    conn.execute(
+        "CREATE TABLE IF NOT EXISTS app_settings (
+            key TEXT PRIMARY KEY,
+            value_json TEXT NOT NULL,
+            updated_at TEXT NOT NULL
+        )",
+        [],
+    )
+    .map_err(|e| format!("Failed to create app settings table: {e}"))?;
+
+    conn.execute(
+        "CREATE TABLE IF NOT EXISTS telegram_media_actions (
+            id TEXT PRIMARY KEY,
+            channel_id TEXT NOT NULL,
+            video_id TEXT NOT NULL,
+            filepath TEXT NOT NULL,
+            created_at INTEGER NOT NULL
+        )",
+        [],
+    )
+    .map_err(|e| format!("Failed to create Telegram media actions table: {e}"))?;
+
+    // Migration: Add per-channel creator/edit settings. Existing channels
+    // default to no editing so an upgrade never starts editing unexpectedly.
+    conn.execute(
+        "ALTER TABLE followed_channels ADD COLUMN creator_processing_json TEXT NOT NULL DEFAULT '{}'",
         [],
     )
     .ok();

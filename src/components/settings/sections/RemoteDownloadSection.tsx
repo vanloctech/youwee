@@ -9,6 +9,8 @@ import {
   ExternalLink,
   Info,
   Key,
+  Loader2,
+  Send,
   Settings2,
   Shield,
 } from 'lucide-react';
@@ -65,10 +67,15 @@ const REMOTE_DOWNLOAD_DOCS_URL = 'https://youwee.app/docs/remote-download';
 
 export function RemoteDownloadSection({ highlightId }: RemoteDownloadSectionProps) {
   const { t } = useTranslation('settings');
-  const { settings, updateTelegramSettings, refreshTelegramStatus } = useDownload();
+  const { settings, updateTelegramSettings, refreshTelegramStatus, testTelegramConnection } =
+    useDownload();
   const [telegramStatus, setTelegramStatus] = useState<TelegramStatus | null>(null);
   const [showConfig, setShowConfig] = useState(false);
   const [copiedCommand, setCopiedCommand] = useState<string | null>(null);
+  const [telegramTestState, setTelegramTestState] = useState<
+    'idle' | 'testing' | 'success' | 'error'
+  >('idle');
+  const [telegramTestError, setTelegramTestError] = useState<string | null>(null);
   const copyResetTimerRef = useRef<number | null>(null);
   const hasTelegramToken = settings.telegramBotToken.trim().length > 0;
   const hasTelegramChatIds = settings.telegramAllowedChatIds.trim().length > 0;
@@ -168,6 +175,18 @@ export function RemoteDownloadSection({ highlightId }: RemoteDownloadSectionProp
       copyResetTimerRef.current = null;
     }, 1500);
   }, []);
+
+  const handleTelegramTest = useCallback(async () => {
+    setTelegramTestState('testing');
+    setTelegramTestError(null);
+    try {
+      await testTelegramConnection();
+      setTelegramTestState('success');
+    } catch (error) {
+      setTelegramTestState('error');
+      setTelegramTestError(error instanceof Error ? error.message : String(error));
+    }
+  }, [testTelegramConnection]);
 
   const displayTelegramStatus: TelegramStatus =
     telegramStatus ??
@@ -432,6 +451,38 @@ export function RemoteDownloadSection({ highlightId }: RemoteDownloadSectionProp
                 <p className="text-[11px] text-muted-foreground/70">
                   {t('remoteDownload.telegramAllowedChatIdsDesc')}
                 </p>
+              </div>
+
+              <SettingsDivider />
+
+              <div className="flex flex-wrap items-center gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="h-8 gap-1.5 text-xs"
+                  onClick={() => void handleTelegramTest()}
+                  disabled={
+                    !hasTelegramToken || !hasTelegramChatIds || telegramTestState === 'testing'
+                  }
+                >
+                  {telegramTestState === 'testing' ? (
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  ) : (
+                    <Send className="h-3.5 w-3.5" />
+                  )}
+                  {t('remoteDownload.telegramTest')}
+                </Button>
+                {telegramTestState === 'success' && (
+                  <span className="text-xs text-emerald-600 dark:text-emerald-400">
+                    {t('remoteDownload.telegramStatusRunning')}
+                  </span>
+                )}
+                {telegramTestState === 'error' && telegramTestError && (
+                  <span className="max-w-full text-xs text-red-600 dark:text-red-400">
+                    {telegramTestError}
+                  </span>
+                )}
               </div>
             </div>
           </SettingsCard>

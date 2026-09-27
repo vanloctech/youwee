@@ -2,7 +2,7 @@ use crate::types::{DependencySource, FfmpegStatus};
 use crate::utils::{find_system_binary, unix_system_binary_dirs, CommandExt};
 use std::path::PathBuf;
 use std::process::Stdio;
-use tauri::{AppHandle, Manager};
+use tauri::AppHandle;
 use tokio::process::Command;
 
 const SOURCE_CONFIG_FILE: &str = "ffmpeg-source.txt";
@@ -28,15 +28,13 @@ pub fn system_ffmpeg_upgrade_message() -> String {
 }
 
 fn get_ffmpeg_source_config_path(app: &AppHandle) -> Option<PathBuf> {
-    app.path()
-        .app_data_dir()
+    crate::utils::app_data_dir(app)
         .ok()
         .map(|p| p.join("bin").join(SOURCE_CONFIG_FILE))
 }
 
 fn get_ffmpeg_release_version_path(app: &AppHandle) -> Option<PathBuf> {
-    app.path()
-        .app_data_dir()
+    crate::utils::app_data_dir(app)
         .ok()
         .map(|p| p.join("bin").join(RELEASE_VERSION_FILE))
 }
@@ -99,7 +97,7 @@ pub async fn set_ffmpeg_source(app: &AppHandle, source: &DependencySource) -> Re
 }
 
 fn get_app_ffmpeg_path(app: &AppHandle) -> Option<PathBuf> {
-    let app_data_dir = app.path().app_data_dir().ok()?;
+    let app_data_dir = crate::utils::app_data_dir(app).ok()?;
     let bin_dir = app_data_dir.join("bin");
     #[cfg(windows)]
     let ffmpeg_path = bin_dir.join("ffmpeg.exe");

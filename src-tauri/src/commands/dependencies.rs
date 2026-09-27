@@ -19,7 +19,7 @@ use crate::utils::{
 use futures_util::StreamExt;
 use serde::{Deserialize, Serialize};
 use std::process::Stdio;
-use tauri::{AppHandle, Emitter, Manager};
+use tauri::{AppHandle, Emitter};
 use tokio::io::AsyncWriteExt;
 use tokio::process::Command;
 
@@ -108,10 +108,7 @@ pub async fn update_ytdlp(app: AppHandle) -> Result<String, String> {
 
     let (download_url, filename, checksum_filename) = get_ytdlp_download_info();
 
-    let app_data_dir = app
-        .path()
-        .app_data_dir()
-        .map_err(|e| format!("Failed to get app data directory: {}", e))?;
+    let app_data_dir = crate::utils::app_data_dir(&app)?;
 
     let bin_dir = app_data_dir.join("bin");
 
@@ -254,7 +251,7 @@ async fn get_installed_channel_version(app: &AppHandle, channel: &YtdlpChannel) 
         return None;
     }
 
-    let app_data_dir = app.path().app_data_dir().ok()?;
+    let app_data_dir = crate::utils::app_data_dir(app).ok()?;
 
     #[cfg(windows)]
     let binary_name = match channel {
@@ -368,10 +365,7 @@ pub async fn download_ytdlp_channel(app: AppHandle, channel: String) -> Result<S
     let (download_url, checksum_filename) =
         get_ytdlp_channel_download_url(&channel_enum).ok_or("Cannot download bundled channel")?;
 
-    let app_data_dir = app
-        .path()
-        .app_data_dir()
-        .map_err(|e| format!("Failed to get app data directory: {}", e))?;
+    let app_data_dir = crate::utils::app_data_dir(&app)?;
 
     let bin_dir = app_data_dir.join("bin");
 
@@ -552,10 +546,7 @@ pub async fn download_ffmpeg(app: AppHandle) -> Result<String, String> {
         },
     );
 
-    let app_data_dir = app
-        .path()
-        .app_data_dir()
-        .map_err(|e| format!("Failed to get app data directory: {}", e))?;
+    let app_data_dir = crate::utils::app_data_dir(&app)?;
 
     let bin_dir = app_data_dir.join("bin");
 
@@ -824,10 +815,7 @@ pub async fn download_deno(app: AppHandle) -> Result<String, String> {
         },
     );
 
-    let app_data_dir = app
-        .path()
-        .app_data_dir()
-        .map_err(|e| format!("Failed to get app data directory: {}", e))?;
+    let app_data_dir = crate::utils::app_data_dir(&app)?;
 
     let bin_dir = app_data_dir.join("bin");
 

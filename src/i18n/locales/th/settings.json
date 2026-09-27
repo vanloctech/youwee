@@ -46,6 +46,14 @@
     "libraryDeleteKeepFile": "ไม่ลบไฟล์สื่อ"
   },
   "download": {
+    "queuePersistence": "Download Queue",
+    "queuePersistenceDesc": "Keep queued downloads after closing Youwee",
+    "persistDownloadQueue": "Save download queue",
+    "persistDownloadQueueDesc": "Restore YouTube, Universal, and Gallery queue items when the app opens again",
+    "globalOutputFolder": "Global output folder",
+    "globalOutputFolderDesc": "All downloads use this folder. Channel downloads create one subfolder per channel, and edited videos are saved under Edited.",
+    "selectOutputFolder": "Choose folder",
+    "noOutputFolder": "No folder selected",
     "postProcessing": "หลังการประมวลผล",
     "postProcessingDesc": "ฝัง metadata และภาพปกลงในไฟล์ที่ดาวน์โหลด",
     "embedMetadata": "ฝัง Metadata",
@@ -827,6 +835,7 @@
     "telegramStatusError": "ข้อผิดพลาด",
     "telegramStatusDisabled": "ปิดใช้งาน",
     "telegramStatusUnavailable": "ไม่สามารถอ่านสถานะ Telegram ได้",
+    "telegramTest": "ส่งข้อความทดสอบ",
     "telegramErrorTokenRequired": "ต้องระบุ token ของบอต Telegram",
     "telegramErrorChatRequired": "ต้องมี chat ID ที่อนุญาตอย่างน้อยหนึ่งรายการ",
     "telegramBotToken": "Token ของบอต",

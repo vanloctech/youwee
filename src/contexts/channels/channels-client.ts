@@ -1,8 +1,11 @@
 import { invoke } from '@tauri-apps/api/core';
 import { listen, type UnlistenFn } from '@tauri-apps/api/event';
 import { open } from '@tauri-apps/plugin-dialog';
+import { invokeDownloadVideo } from '@/lib/download-command';
 import type {
+  ChannelScanOrder,
   ChannelVideo,
+  CreatorProcessingSettings,
   DownloadProgress,
   FollowedChannel,
   PlaylistVideoEntry,
@@ -30,7 +33,51 @@ export type ChannelAutoDownloadEvent = {
   preferred_fps: string;
   audio_bitrate: string;
   download_threads: number;
+  creator_processing: CreatorProcessingSettings;
 };
+
+export type BulkChannelMutationResult = {
+  requested: number;
+  changed: number;
+  skipped: number;
+  errors: string[];
+};
+
+export interface PendingChannelBatch {
+  channelUrl: string;
+  channelName: string | null;
+  contentType: YoutubeChannelContentType;
+  videos: PlaylistVideoEntry[];
+}
+
+export async function listPendingChannelBatch(): Promise<PendingChannelBatch | null> {
+  return invoke<PendingChannelBatch | null>('list_pending_channel_batch');
+}
+
+export async function saveChannelBatchItems(batch: PendingChannelBatch): Promise<void> {
+  await invoke('save_channel_batch_items', {
+    channelUrl: batch.channelUrl,
+    channelName: batch.channelName,
+    contentType: batch.contentType,
+    videos: batch.videos,
+  });
+}
+
+export async function completeChannelBatchItem(channelUrl: string, videoId: string): Promise<void> {
+  await invoke('complete_channel_batch_item', { channelUrl, videoId });
+}
+
+export async function discardChannelBatch(channelUrl?: string): Promise<number> {
+  return invoke<number>('discard_channel_batch', { channelUrl: channelUrl || null });
+}
+
+export async function setChannelBatchItemStatus(
+  channelUrl: string,
+  videoId: string,
+  status: 'pending' | 'running' | 'failed',
+): Promise<void> {
+  await invoke('set_channel_batch_item_status', { channelUrl, videoId, status });
+}
 
 export async function pickChannelsOutputFolder(defaultPath?: string): Promise<string | null> {
   const folder = await open({
@@ -61,12 +108,55 @@ export async function followChannelCommand(input: {
   downloadPreferredFps: string;
   downloadAudioBitrate: string;
   youtubeContentType: YoutubeChannelContentType;
+  creatorProcessing: CreatorProcessingSettings;
 }): Promise<string> {
   return invoke<string>('follow_channel', input);
 }
 
 export async function unfollowChannelCommand(id: string): Promise<void> {
   await invoke('unfollow_channel', { id });
+}
+
+export async function bulkFollowChannelsCommand(input: {
+  urls: string[];
+  downloadQuality?: string;
+  downloadFormat?: string;
+  downloadVideoCodec?: string;
+  downloadPreferredFps?: string;
+  downloadAudioBitrate?: string;
+  youtubeContentType?: YoutubeChannelContentType;
+  creatorProcessing?: CreatorProcessingSettings;
+}): Promise<BulkChannelMutationResult> {
+  return invoke<BulkChannelMutationResult>('bulk_follow_channels', input);
+}
+
+export async function bulkUnfollowChannelsCommand(
+  ids: string[],
+): Promise<BulkChannelMutationResult> {
+  return invoke<BulkChannelMutationResult>('bulk_unfollow_channels', { ids });
+}
+
+export async function bulkUpdateChannelSettingsCommand(input: {
+  ids: string[];
+  checkInterval: number;
+  autoDownload: boolean;
+  downloadQuality: string;
+  downloadFormat: string;
+  downloadVideoCodec: string;
+  downloadPreferredFps?: string;
+  downloadAudioBitrate: string;
+  downloadThreads: number;
+  youtubeContentType?: YoutubeChannelContentType;
+  creatorProcessing?: CreatorProcessingSettings;
+}): Promise<BulkChannelMutationResult> {
+  return invoke<BulkChannelMutationResult>('bulk_update_channel_settings', input);
+}
+
+export async function bulkUpdateChannelCreatorProcessingCommand(input: {
+  ids: string[];
+  creatorProcessing: CreatorProcessingSettings;
+}): Promise<BulkChannelMutationResult> {
+  return invoke<BulkChannelMutationResult>('bulk_update_channel_creator_processing', input);
 }
 
 export async function rebuildTrayMenu(): Promise<void> {
@@ -89,6 +179,7 @@ export async function updateChannelSettingsCommand(input: {
   filterMaxVideos: number | null;
   downloadThreads: number;
   youtubeContentType: YoutubeChannelContentType;
+  creatorProcessing: CreatorProcessingSettings;
 }): Promise<void> {
   await invoke('update_channel_settings', input);
 }
@@ -112,6 +203,7 @@ export async function getChannelVideos(input: {
   cookieFilePath?: string | null;
   proxyUrl?: string | null;
   youtubeContentType?: YoutubeChannelContentType;
+  scanOrder?: ChannelScanOrder;
 }): Promise<PlaylistVideoEntry[]> {
   return invoke<PlaylistVideoEntry[]>('get_channel_videos', input);
 }
@@ -148,7 +240,7 @@ export async function getSavedChannelVideosByVideoIds(input: {
 }
 
 export async function downloadVideoCommand(input: Record<string, unknown>): Promise<void> {
-  await invoke('download_video', input);
+  await invokeDownloadVideo({ ...input, emitFailedWorkflow: false });
 }
 
 export async function stopDownloadCommand(): Promise<void> {
@@ -159,8 +251,17 @@ export async function updateChannelVideoStatusByVideoId(input: {
   channelUrl: string;
   videoId: string;
   status: string;
+  filepath?: string | null;
 }): Promise<void> {
   await invoke('update_channel_video_status_by_video_id', input);
+}
+
+export async function completeChannelCreatorProcessing(input: {
+  channelUrl: string;
+  videoId: string;
+  outputPaths: string[];
+}): Promise<void> {
+  await invoke('complete_channel_creator_processing', input);
 }
 
 export async function updateChannelInfoCommand(input: {

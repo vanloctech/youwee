@@ -75,6 +75,7 @@ type ChannelSettingsBarProps = {
   youtubeContentType?: YoutubeChannelContentType;
   onYoutubeContentTypeChange?: (value: YoutubeChannelContentType) => void;
   showYoutubeContentType?: boolean;
+  showTikTokContentType?: boolean;
   disabled?: boolean;
 };
 
@@ -94,6 +95,7 @@ export function ChannelSettingsBar({
   youtubeContentType,
   onYoutubeContentTypeChange,
   showYoutubeContentType,
+  showTikTokContentType,
   disabled,
 }: ChannelSettingsBarProps) {
   const { t } = useTranslation('channels');
@@ -237,13 +239,16 @@ export function ChannelSettingsBar({
         </div>
       )}
 
-      {showYoutubeContentType && youtubeContentType && onYoutubeContentTypeChange && (
-        <YoutubeContentTypeSelect
-          value={youtubeContentType}
-          onChange={onYoutubeContentTypeChange}
-          disabled={disabled}
-        />
-      )}
+      {(showYoutubeContentType || showTikTokContentType) &&
+        youtubeContentType &&
+        onYoutubeContentTypeChange && (
+          <YoutubeContentTypeSelect
+            value={youtubeContentType}
+            onChange={onYoutubeContentTypeChange}
+            platform={showTikTokContentType ? 'tiktok' : 'youtube'}
+            disabled={disabled}
+          />
+        )}
 
       <div className="flex-1" />
 
@@ -264,12 +269,14 @@ export function ChannelSettingsBar({
 type YoutubeContentTypeSelectProps = {
   value: YoutubeChannelContentType;
   onChange: (value: YoutubeChannelContentType) => void;
+  platform?: 'youtube' | 'tiktok';
   disabled?: boolean;
 };
 
 export function YoutubeContentTypeSelect({
   value,
   onChange,
+  platform = 'youtube',
   disabled,
 }: YoutubeContentTypeSelectProps) {
   const { t } = useTranslation('channels');
@@ -284,9 +291,12 @@ export function YoutubeContentTypeSelect({
         <SelectValue />
       </SelectTrigger>
       <SelectContent>
-        {youtubeContentTypeOptions.map((option) => (
+        {(platform === 'tiktok'
+          ? (['shorts', 'videos', 'videos_shorts'] as const)
+          : youtubeContentTypeOptions
+        ).map((option) => (
           <SelectItem key={option} value={option} className="text-xs">
-            {t(`youtubeContentTypes.${option}`)}
+            {t(`${platform === 'tiktok' ? 'tiktokContentTypes' : 'youtubeContentTypes'}.${option}`)}
           </SelectItem>
         ))}
       </SelectContent>

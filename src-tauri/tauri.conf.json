@@ -1,7 +1,7 @@
 {
   "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
   "productName": "Youwee",
-  "version": "0.20.4",
+  "version": "0.20.10",
   "identifier": "com.vanloctech.youwee",
   "build": {
     "frontendDist": "../dist",
@@ -38,6 +38,12 @@
   "bundle": {
     "active": true,
     "targets": ["app", "dmg", "deb", "appimage", "msi", "nsis"],
+    "resources": [
+      "resources/fonts/Oswald-Variable.ttf",
+      "resources/fonts/OFL.txt",
+      "resources/fonts/NotoSansCJKjp-Regular.otf",
+      "resources/fonts/Noto-OFL.txt"
+    ],
     "externalBin": ["bin/youwee-yt-dlp"],
     "icon": [
       "icons/32x32.png",

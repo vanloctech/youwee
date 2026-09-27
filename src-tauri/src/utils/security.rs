@@ -82,6 +82,33 @@ pub fn normalize_channel_content_urls(
     }
 }
 
+pub fn is_tiktok_url(url: &str) -> bool {
+    reqwest::Url::parse(url)
+        .ok()
+        .and_then(|parsed| parsed.host_str().map(|host| host.to_ascii_lowercase()))
+        .is_some_and(|host| host == "tiktok.com" || host.ends_with(".tiktok.com"))
+}
+
+pub fn channel_content_type_matches(
+    url: &str,
+    content_type: &str,
+    duration_seconds: Option<f64>,
+) -> bool {
+    if !is_tiktok_url(url) || matches!(content_type, "videos_shorts" | "streams") {
+        return true;
+    }
+
+    let Some(duration_seconds) = duration_seconds.filter(|duration| duration.is_finite()) else {
+        return false;
+    };
+
+    match content_type {
+        "shorts" => duration_seconds <= 60.0,
+        "videos" => duration_seconds > 60.0,
+        _ => true,
+    }
+}
+
 /// Normalize YouTube channel URLs to a specific content tab.
 /// yt-dlp extracts fewer entries from a channel home tab than from a direct tab.
 fn normalize_youtube_channel_root_tab_url(url: &str, tab: &str) -> Option<String> {
@@ -356,6 +383,28 @@ pub fn args_to_display_command(args: &[String]) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn tiktok_channel_types_filter_by_duration() {
+        let url = "https://www.tiktok.com/@creator";
+        assert!(is_tiktok_url(url));
+        assert!(channel_content_type_matches(url, "shorts", Some(60.0)));
+        assert!(!channel_content_type_matches(url, "shorts", Some(61.0)));
+        assert!(channel_content_type_matches(url, "videos", Some(61.0)));
+        assert!(!channel_content_type_matches(url, "videos", Some(60.0)));
+        assert!(channel_content_type_matches(url, "videos_shorts", None));
+        assert!(!channel_content_type_matches(url, "shorts", None));
+        assert!(!is_tiktok_url("https://tiktok.com.example.org/@creator"));
+    }
+
+    #[test]
+    fn tiktok_channel_content_urls_are_unchanged() {
+        let input = "https://www.tiktok.com/@creator?lang=en";
+        assert_eq!(
+            normalize_channel_content_urls(input, Some("shorts")),
+            vec![input.to_string()]
+        );
+    }
 
     // — Douyin: various pages with modal_id —
 

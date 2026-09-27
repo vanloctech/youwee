@@ -1,4 +1,14 @@
-import { Check, CheckCircle2, Clock, Loader2, Play, Tv, XCircle } from 'lucide-react';
+import {
+  Check,
+  CheckCircle2,
+  Clock,
+  ExternalLink,
+  FolderOpen,
+  Loader2,
+  Play,
+  Tv,
+  XCircle,
+} from 'lucide-react';
 import {
   ThumbnailCompletedBadge,
   ThumbnailFailedBadge,
@@ -32,6 +42,10 @@ type ChannelVideoListItemProps = {
   isSelected: boolean;
   videoState?: VideoDownloadState;
   onToggle: () => void;
+  onOpenFolder?: () => void;
+  onOpenUrl?: () => void;
+  openFolderLabel?: string;
+  openUrlLabel?: string;
 };
 
 export function ChannelVideoListItem({
@@ -39,6 +53,10 @@ export function ChannelVideoListItem({
   isSelected,
   videoState,
   onToggle,
+  onOpenFolder,
+  onOpenUrl,
+  openFolderLabel = 'Open downloaded file location',
+  openUrlLabel = 'Open video on web',
 }: ChannelVideoListItemProps) {
   const isActive = videoState?.status === 'downloading';
   const isCompleted = videoState?.status === 'completed';
@@ -46,9 +64,15 @@ export function ChannelVideoListItem({
   const isPending = videoState?.status === 'pending';
 
   return (
-    <button
-      type="button"
+    // biome-ignore lint/a11y/noStaticElementInteractions: The row is a selectable media item.
+    <div
       onClick={onToggle}
+      onKeyDown={(event) => {
+        if (event.key === 'Enter' || event.key === ' ') {
+          event.preventDefault();
+          onToggle();
+        }
+      }}
       className={cn(
         'group w-full flex gap-3 p-2 rounded-xl transition-all duration-200 text-left',
         'bg-card/50 hover:bg-card/80',
@@ -184,6 +208,36 @@ export function ChannelVideoListItem({
           )}
         </div>
       </div>
-    </button>
+      {(onOpenFolder || onOpenUrl) && (
+        <div className="flex shrink-0 items-center gap-1 self-center">
+          {onOpenFolder && (
+            <button
+              type="button"
+              className="rounded-md p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground"
+              title={openFolderLabel}
+              onClick={(event) => {
+                event.stopPropagation();
+                onOpenFolder();
+              }}
+            >
+              <FolderOpen className="h-4 w-4" />
+            </button>
+          )}
+          {onOpenUrl && (
+            <button
+              type="button"
+              className="rounded-md p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground"
+              title={openUrlLabel}
+              onClick={(event) => {
+                event.stopPropagation();
+                onOpenUrl();
+              }}
+            >
+              <ExternalLink className="h-4 w-4" />
+            </button>
+          )}
+        </div>
+      )}
+    </div>
   );
 }

@@ -47,6 +47,10 @@
     "libraryDeleteKeepFile": "No eliminar nunca el archivo multimedia"
   },
   "download": {
+    "globalOutputFolder": "Global output folder",
+    "globalOutputFolderDesc": "All downloads use this folder. Channel downloads create one subfolder per channel, and edited videos are saved under Edited.",
+    "selectOutputFolder": "Choose folder",
+    "noOutputFolder": "No folder selected",
     "postProcessing": "Postprocesamiento",
     "postProcessingDesc": "Incrusta metadatos y miniaturas en los archivos descargados",
     "embedMetadata": "Incrustar metadatos",
@@ -537,6 +541,7 @@
     "telegramStatusError": "Error",
     "telegramStatusDisabled": "Deshabilitado",
     "telegramStatusUnavailable": "El estado de Telegram no está disponible.",
+    "telegramTest": "Enviar mensaje de prueba",
     "telegramErrorTokenRequired": "Se requiere el token del bot de Telegram.",
     "telegramErrorChatRequired": "Se requiere al menos un ID de chat permitido.",
     "telegramBotToken": "Token del bot",

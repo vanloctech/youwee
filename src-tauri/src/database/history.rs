@@ -7,7 +7,7 @@ use crate::types::{
     HistoryTag,
 };
 use chrono::Utc;
-use rusqlite::{params, params_from_iter, types::Value, Connection};
+use rusqlite::{params, params_from_iter, types::Value, Connection, OptionalExtension};
 
 fn sqlite_i64_to_u64(value: Option<i64>) -> Option<u64> {
     value.and_then(|v| u64::try_from(v).ok())
@@ -204,12 +204,55 @@ fn duplicate_match_from_values(
         history_id,
         title,
         thumbnail,
-        file_exists: std::path::Path::new(&filepath).exists(),
+        file_exists: std::path::Path::new(&filepath).is_file(),
         filepath,
         downloaded_at,
         media_id,
         canonical_url,
     }
+}
+
+/// A title based output template can make multiple history rows point to the
+/// same path after an overwrite. Only the history row that most recently owns
+/// that path should participate in duplicate detection; older rows describe
+/// media that is no longer represented by the file on disk.
+fn filepath_is_latest_history_owner(
+    conn: &Connection,
+    filepath: &str,
+    expected_media_id: Option<&str>,
+    expected_canonical_url: Option<&str>,
+) -> Result<bool, String> {
+    let latest = conn
+        .query_row(
+            "SELECT url, source, media_id, canonical_url
+             FROM history
+             WHERE filepath = ?1
+             ORDER BY downloaded_at DESC, rowid DESC
+             LIMIT 1",
+            params![filepath],
+            |row| {
+                Ok((
+                    row.get::<_, String>(0)?,
+                    row.get::<_, Option<String>>(1)?,
+                    row.get::<_, Option<String>>(2)?,
+                    row.get::<_, Option<String>>(3)?,
+                ))
+            },
+        )
+        .optional()
+        .map_err(|error| format!("Failed to inspect history filepath owner: {error}"))?;
+
+    let Some((url, source, media_id, canonical_url)) = latest else {
+        return Ok(false);
+    };
+    let (derived_media_id, derived_canonical_url) = build_history_identity(&url, source.as_deref());
+    let latest_media_id = media_id.or(derived_media_id);
+    let latest_canonical_url = canonical_url.unwrap_or(derived_canonical_url);
+
+    Ok(expected_media_id
+        .zip(latest_media_id.as_deref())
+        .is_some_and(|(expected, actual)| expected == actual)
+        || expected_canonical_url.is_some_and(|expected| expected == latest_canonical_url))
 }
 
 fn find_legacy_duplicate_download(
@@ -248,6 +291,15 @@ fn find_legacy_duplicate_download(
             canonical_url.is_some_and(|expected| expected == row_canonical_url);
 
         if media_id_matches || canonical_url_matches {
+            if !filepath_is_latest_history_owner(
+                conn,
+                &row.get::<_, String>(3)
+                    .map_err(|e| format!("Failed to read legacy duplicate filepath: {e}"))?,
+                row_media_id.as_deref(),
+                Some(row_canonical_url.as_str()),
+            )? {
+                continue;
+            }
             return Ok(Some(duplicate_match_from_values(
                 row.get(0)
                     .map_err(|e| format!("Failed to read legacy duplicate id: {}", e))?,
@@ -812,7 +864,16 @@ pub fn find_duplicate_downloads_in_history_db(
         });
 
         match row {
-            Ok(item) => matches.push(item),
+            Ok(item) => {
+                if filepath_is_latest_history_owner(
+                    &conn,
+                    &item.filepath,
+                    media_id,
+                    canonical_url.as_deref(),
+                )? {
+                    matches.push(item);
+                }
+            }
             Err(rusqlite::Error::QueryReturnedNoRows) => {
                 if let Some(item) =
                     find_legacy_duplicate_download(&conn, media_id, canonical_url.as_deref())?
@@ -966,6 +1027,45 @@ pub fn get_history_from_db(
     hydrate_history_metadata(&conn, &mut entries)?;
 
     Ok(entries)
+}
+
+/// Resolve the most recent downloaded file for a source URL.
+///
+/// Channel video rows intentionally stay lightweight and do not duplicate
+/// the history filepath. Looking it up here keeps the channel UI pointed at
+/// the actual file even after the output folder or channel name changes.
+pub fn find_history_filepath_by_url_db(url: String) -> Result<Option<String>, String> {
+    let conn = get_db()?;
+    let trimmed = url.trim();
+    if trimmed.is_empty() {
+        return Ok(None);
+    }
+
+    let canonical_url = canonicalize_download_url(trimmed);
+    let media_id = build_download_media_id(trimmed, None);
+
+    let filepath = if let Some(media_id) = media_id {
+        conn.query_row(
+            "SELECT filepath FROM history
+             WHERE filepath <> '' AND (media_id = ?1 OR canonical_url = ?2 OR url = ?3)
+             ORDER BY downloaded_at DESC LIMIT 1",
+            params![media_id, canonical_url, trimmed],
+            |row| row.get(0),
+        )
+        .optional()
+    } else {
+        conn.query_row(
+            "SELECT filepath FROM history
+             WHERE filepath <> '' AND (canonical_url = ?1 OR url = ?2)
+             ORDER BY downloaded_at DESC LIMIT 1",
+            params![canonical_url, trimmed],
+            |row| row.get(0),
+        )
+        .optional()
+    }
+    .map_err(|e| format!("Failed to resolve history filepath: {}", e))?;
+
+    Ok(filepath)
 }
 
 pub fn get_history_entries_by_ids_from_db(ids: Vec<String>) -> Result<Vec<HistoryEntry>, String> {
@@ -1734,6 +1834,62 @@ mod tests {
             matches[2].canonical_url.as_deref(),
             Some("https://www.youtube.com/watch?v=legacy123")
         );
+    }
+
+    #[test]
+    fn duplicate_lookup_ignores_older_row_reusing_an_existing_filepath() {
+        let _guard = db_test_guard();
+        ensure_test_history_tables();
+        let filepath = make_temp_file("collision.mp4");
+        let filepath = filepath.to_string_lossy().to_string();
+        let old_id = uuid::Uuid::new_v4().to_string();
+        let new_id = uuid::Uuid::new_v4().to_string();
+
+        let conn = get_db().expect("get db");
+        conn.execute(
+            "INSERT INTO history (id, url, title, filepath, source, downloaded_at, media_id, canonical_url)
+             VALUES (?1, ?2, ?3, ?4, 'youtube', 10, ?5, ?6)",
+            params![
+                old_id,
+                "https://www.youtube.com/watch?v=oldvideo",
+                "Same title",
+                filepath,
+                "youtube:oldvideo",
+                "https://www.youtube.com/watch?v=oldvideo"
+            ],
+        )
+        .expect("insert old history row");
+        conn.execute(
+            "INSERT INTO history (id, url, title, filepath, source, downloaded_at, media_id, canonical_url)
+             VALUES (?1, ?2, ?3, ?4, 'youtube', 20, ?5, ?6)",
+            params![
+                new_id,
+                "https://www.youtube.com/watch?v=newvideo",
+                "Same title",
+                filepath,
+                "youtube:newvideo",
+                "https://www.youtube.com/watch?v=newvideo"
+            ],
+        )
+        .expect("insert new history row");
+        drop(conn);
+
+        let old_matches = find_duplicate_downloads_in_history_db(vec![DownloadDuplicateIdentity {
+            media_id: Some("youtube:oldvideo".to_string()),
+            canonical_url: Some("https://www.youtube.com/watch?v=oldvideo".to_string()),
+        }])
+        .expect("find old duplicate");
+        assert!(old_matches.is_empty());
+
+        let new_matches = find_duplicate_downloads_in_history_db(vec![DownloadDuplicateIdentity {
+            media_id: Some("youtube:newvideo".to_string()),
+            canonical_url: Some("https://www.youtube.com/watch?v=newvideo".to_string()),
+        }])
+        .expect("find new duplicate");
+        assert_eq!(new_matches.len(), 1);
+        assert_eq!(new_matches[0].history_id, new_id);
+
+        std::fs::remove_file(filepath).ok();
     }
 
     #[test]

@@ -46,6 +46,14 @@
     "libraryDeleteKeepFile": "Никогда не удалять медиафайл"
   },
   "download": {
+    "queuePersistence": "Download Queue",
+    "queuePersistenceDesc": "Keep queued downloads after closing Youwee",
+    "persistDownloadQueue": "Save download queue",
+    "persistDownloadQueueDesc": "Restore YouTube, Universal, and Gallery queue items when the app opens again",
+    "globalOutputFolder": "Global output folder",
+    "globalOutputFolderDesc": "All downloads use this folder. Channel downloads create one subfolder per channel, and edited videos are saved under Edited.",
+    "selectOutputFolder": "Choose folder",
+    "noOutputFolder": "No folder selected",
     "postProcessing": "Постобработка",
     "postProcessingDesc": "Встраивать метаданные и превью в загруженные файлы",
     "embedMetadata": "Встроить метаданные",
@@ -827,6 +835,7 @@
     "telegramStatusError": "Ошибка",
     "telegramStatusDisabled": "Отключено",
     "telegramStatusUnavailable": "Не удалось прочитать статус Telegram.",
+    "telegramTest": "Отправить тестовое сообщение",
     "telegramErrorTokenRequired": "Требуется token Telegram-бота.",
     "telegramErrorChatRequired": "Требуется хотя бы один разрешенный chat ID.",
     "telegramBotToken": "Token бота",

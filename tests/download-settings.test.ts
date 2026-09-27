@@ -4,6 +4,7 @@ import {
   buildItemDownloadSettingsSnapshot,
   createDefaultDownloadSettings,
   refreshItemPluginWorkflowSnapshots,
+  resolveExternalDownloaderSettings,
   sanitizeFilenameMetadataFields,
   serializeDownloadSettings,
 } from '../src/lib/download-settings';
@@ -255,5 +256,34 @@ describe('download settings preferred fps', () => {
     const snapshot = buildItemDownloadSettingsSnapshot(settings);
 
     expect(snapshot.preferredFps).toBe('30');
+  });
+});
+
+describe('download settings external downloader', () => {
+  test('global Aria2 disable overrides an older queued snapshot', () => {
+    expect(
+      resolveExternalDownloaderSettings(
+        { useAria2: false, aria2Args: '-x 16' },
+        { useAria2: true, aria2Args: '-x 32' },
+      ),
+    ).toEqual({ useAria2: false, aria2Args: '' });
+  });
+
+  test('keeps an item-level disable when global Aria2 is enabled', () => {
+    expect(
+      resolveExternalDownloaderSettings(
+        { useAria2: true, aria2Args: '-x 16' },
+        { useAria2: false, aria2Args: '' },
+      ),
+    ).toEqual({ useAria2: false, aria2Args: '' });
+  });
+
+  test('uses the queued Aria2 arguments when both scopes are enabled', () => {
+    expect(
+      resolveExternalDownloaderSettings(
+        { useAria2: true, aria2Args: '-x 16' },
+        { useAria2: true, aria2Args: '-x 32' },
+      ),
+    ).toEqual({ useAria2: true, aria2Args: '-x 32' });
   });
 });

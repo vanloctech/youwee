@@ -213,10 +213,12 @@ export function DuplicateDownloadDialog({ review, onResolve }: DuplicateDownload
           <Button variant="outline" onClick={() => onResolve('cancel', true)}>
             {t('duplicates.cancel')}
           </Button>
-          <Button variant="outline" onClick={() => onResolve('add', true)}>
-            <RotateCcw className="mr-2 h-4 w-4" />
-            {t('duplicates.addAgain')}
-          </Button>
+          {review?.allowRedownload && (
+            <Button variant="outline" onClick={() => onResolve('redownload', true)}>
+              <RotateCcw className="mr-2 h-4 w-4" />
+              {t('duplicates.addAgain')}
+            </Button>
+          )}
           <Button onClick={() => onResolve('skip', true)}>{t('duplicates.skip')}</Button>
         </DialogFooter>
       </DialogContent>

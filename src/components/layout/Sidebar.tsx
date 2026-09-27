@@ -4,6 +4,7 @@ import {
   FolderDown,
   Globe,
   Images,
+  ListVideo,
   MonitorPlay,
   Moon,
   ScrollText,
@@ -26,6 +27,7 @@ export type Page =
   | 'universal'
   | 'gallery'
   | 'channels'
+  | 'followed-channels'
   | 'summary'
   | 'processing'
   | 'subtitles'
@@ -67,6 +69,11 @@ const navItems: NavItem[] = [
     icon: <Tv className="w-5 h-5" />,
   },
   {
+    id: 'followed-channels',
+    labelKey: 'sidebar.followedChannels',
+    icon: <ListVideo className="w-5 h-5" />,
+  },
+  {
     id: 'summary',
     labelKey: 'sidebar.summary',
     icon: <Sparkles className="w-5 h-5" />,
@@ -105,7 +112,9 @@ const navItems: NavItem[] = [
 
 export function Sidebar({ currentPage, onPageChange }: SidebarProps) {
   const { t } = useTranslation('common');
-  const [isCollapsed, setIsCollapsed] = useState(true);
+  // Keep the navigation expanded by default so Library/History is discoverable.
+  // Users can still collapse it with the existing toggle button.
+  const [isCollapsed, setIsCollapsed] = useState(false);
   const { mode, toggleMode } = useTheme();
 
   return (

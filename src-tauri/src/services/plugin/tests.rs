@@ -100,14 +100,15 @@ fn classify_plugin_runtime_error_formats_run_error_for_users() {
 
 #[test]
 fn plugin_security_policy_blocks_dangerous_output_extensions() {
-    assert!(validate_plugin_output_path(Path::new("/tmp/youwee-output/video.mov")).is_ok());
-    assert!(validate_plugin_output_path(Path::new("/tmp/youwee-output/payload.sh")).is_err());
-    assert!(validate_plugin_output_path(Path::new("/tmp/youwee-output/agent.plist")).is_err());
+    let output_dir = std::env::temp_dir().join("youwee-output");
+    assert!(validate_plugin_output_path(&output_dir.join("video.mov")).is_ok());
+    assert!(validate_plugin_output_path(&output_dir.join("payload.sh")).is_err());
+    assert!(validate_plugin_output_path(&output_dir.join("agent.plist")).is_err());
 }
 
 #[test]
 fn plugin_security_policy_blocks_sensitive_write_scopes() {
-    assert!(validate_plugin_write_scope(Path::new("/tmp/youwee-output")).is_ok());
+    assert!(validate_plugin_write_scope(&std::env::temp_dir().join("youwee-output")).is_ok());
     assert!(validate_plugin_write_scope(Path::new("/")).is_err());
 
     if let Some(home) = std::env::var_os("HOME") {

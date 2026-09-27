@@ -1,7 +1,7 @@
 use std::path::PathBuf;
 use std::process::Stdio;
 
-use tauri::{AppHandle, Manager};
+use tauri::AppHandle;
 use tokio::process::Command;
 
 use crate::types::{BackendError, GalleryDlStatus};
@@ -37,7 +37,7 @@ pub fn get_system_gallerydl_path() -> Option<PathBuf> {
 }
 
 fn get_app_gallerydl_path(app: &AppHandle) -> Option<PathBuf> {
-    let app_data_dir = app.path().app_data_dir().ok()?;
+    let app_data_dir = crate::utils::app_data_dir(app).ok()?;
     #[cfg(windows)]
     let binary_name = "gallery-dl.exe";
     #[cfg(not(windows))]

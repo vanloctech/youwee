@@ -135,6 +135,10 @@ fn update_tray_download_status(app: tauri::AppHandle, status: TrayDownloadStatus
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
+    if let Err(error) = utils::configure_portable_data_environment() {
+        eprintln!("Failed to configure portable data directory: {error}");
+    }
+
     #[cfg(target_os = "linux")]
     configure_linux_webkit_env();
 
@@ -292,8 +296,36 @@ pub fn run() {
                 log::error!("Failed to initialize database: {}", e);
             }
 
-            // Start background channel polling
-            services::polling::start_polling(app.handle().clone());
+            // Restore Telegram before the first channel scan. Previously the
+            // immediate scan could discover and persist new videos while the
+            // frontend had not supplied its localStorage config yet, causing
+            // the corresponding Telegram notification to be lost forever.
+            let telegram_config_restored =
+                match services::telegram::load_persisted_config(app.handle().clone()) {
+                    Ok(restored) => restored,
+                    Err(error) => {
+                        log::warn!("Failed to restore Telegram config: {error}");
+                        false
+                    }
+                };
+
+            // On the first upgrade from localStorage-only Telegram settings,
+            // give the frontend a brief chance to persist them before scanning.
+            // Subsequent starts restore the DB snapshot and begin immediately.
+            if telegram_config_restored {
+                services::polling::start_polling(app.handle().clone());
+            } else {
+                let polling_app = app.handle().clone();
+                tauri::async_runtime::spawn(async move {
+                    tokio::time::sleep(std::time::Duration::from_secs(2)).await;
+                    services::polling::start_polling(polling_app);
+                });
+            }
+
+            // YouTube WebSub delivers uploads within seconds. A local callback
+            // server is exposed through a zero-config HTTPS quick tunnel;
+            // regular polling above remains the outage/downtime fallback.
+            services::youtube_websub::start(app.handle().clone());
 
             if should_setup_system_tray() {
                 setup_tray(app)?;
@@ -382,6 +414,7 @@ pub fn run() {
             commands::add_history,
             commands::get_history,
             commands::get_history_entries_by_ids,
+            commands::find_history_filepath_by_url,
             commands::find_duplicate_downloads,
             commands::delete_history,
             commands::clear_history,
@@ -396,6 +429,7 @@ pub fn run() {
             commands::remove_history_tag,
             commands::remove_history_from_collection,
             commands::open_file_location,
+            commands::open_folder_location,
             commands::check_file_exists,
             // Asset scope & history helpers
             commands::allow_asset_file,
@@ -424,6 +458,21 @@ pub fn run() {
             commands::generate_processing_command,
             commands::generate_quick_action_command,
             commands::execute_ffmpeg_command,
+            commands::process_creator_video,
+            commands::save_channel_batch_items,
+            commands::complete_channel_batch_item,
+            commands::discard_channel_batch,
+            commands::set_channel_batch_item_status,
+            commands::list_pending_channel_batch,
+            commands::enqueue_creator_job,
+            commands::list_creator_jobs,
+            commands::next_creator_job,
+            commands::retry_failed_creator_jobs,
+            commands::delete_creator_jobs,
+            commands::start_creator_processing_queue,
+            commands::stop_creator_processing_queue,
+            commands::pause_creator_processing_queue,
+            commands::set_creator_job_status,
             commands::cancel_ffmpeg,
             commands::get_processing_history,
             commands::save_processing_job,
@@ -477,6 +526,10 @@ pub fn run() {
             commands::stop_channel_fetch,
             commands::follow_channel,
             commands::unfollow_channel,
+            commands::bulk_follow_channels,
+            commands::bulk_unfollow_channels,
+            commands::bulk_update_channel_settings,
+            commands::bulk_update_channel_creator_processing,
             commands::get_followed_channels,
             commands::update_channel_settings,
             commands::save_channel_videos,
@@ -484,13 +537,18 @@ pub fn run() {
             commands::get_saved_channel_videos_by_video_ids,
             commands::update_channel_video_status,
             commands::update_channel_video_status_by_video_id,
+            commands::complete_channel_creator_processing,
             commands::get_new_videos_count,
             commands::update_channel_last_checked,
             commands::update_channel_info,
             commands::set_polling_network_config,
+            commands::check_followed_channels_now,
+            commands::get_youtube_realtime_status,
             commands::set_telegram_config,
+            commands::get_telegram_config,
             commands::get_telegram_status,
             commands::send_telegram_reply,
+            commands::test_telegram_connection,
             commands::load_download_queue,
             commands::save_download_queue,
             commands::clear_download_queue,
@@ -525,6 +583,7 @@ pub fn run() {
                 tauri::RunEvent::ExitRequested { .. } => {
                     // Stop polling on exit
                     services::polling::stop_polling();
+                    services::youtube_websub::stop();
                 }
                 _ => {}
             }
@@ -566,7 +625,7 @@ fn setup_tray(app: &tauri::App) -> Result<(), Box<dyn std::error::Error>> {
                 match id {
                     "check_now" => {
                         services::polling::stop_polling();
-                        services::polling::start_polling(app_handle_menu.clone());
+                        services::polling::start_polling_now(app_handle_menu.clone());
                     }
                     "settings" => {
                         show_main_window(&app_handle_menu);

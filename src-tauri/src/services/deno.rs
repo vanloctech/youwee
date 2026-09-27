@@ -4,7 +4,7 @@ use crate::utils::unix_system_binary_dirs;
 use crate::utils::{find_system_binary, CommandExt};
 use std::path::PathBuf;
 use std::process::Stdio;
-use tauri::{AppHandle, Manager};
+use tauri::AppHandle;
 use tokio::process::Command;
 
 fn get_system_deno_path() -> Option<PathBuf> {
@@ -34,7 +34,7 @@ fn get_system_deno_path() -> Option<PathBuf> {
 /// Get the Deno binary path (app data or system)
 pub async fn get_deno_path(app: &AppHandle) -> Option<PathBuf> {
     // First check app data directory
-    if let Ok(app_data_dir) = app.path().app_data_dir() {
+    if let Ok(app_data_dir) = crate::utils::app_data_dir(app) {
         let bin_dir = app_data_dir.join("bin");
         #[cfg(windows)]
         let deno_path = bin_dir.join("deno.exe");
@@ -52,7 +52,7 @@ pub async fn get_deno_path(app: &AppHandle) -> Option<PathBuf> {
 /// Check Deno runtime status
 pub async fn check_deno_internal(app: &AppHandle) -> Result<DenoStatus, String> {
     // First check app data directory
-    if let Ok(app_data_dir) = app.path().app_data_dir() {
+    if let Ok(app_data_dir) = crate::utils::app_data_dir(app) {
         let bin_dir = app_data_dir.join("bin");
         #[cfg(windows)]
         let deno_path = bin_dir.join("deno.exe");

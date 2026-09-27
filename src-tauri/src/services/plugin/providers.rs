@@ -1,6 +1,6 @@
 use std::path::PathBuf;
 
-use tauri::{AppHandle, Manager};
+use tauri::AppHandle;
 use tokio::process::Command;
 
 use crate::types::{PluginProvider, RuntimeProviderStatus};
@@ -39,7 +39,7 @@ pub async fn get_runtime_provider_status_internal(
         PluginProvider::Deno => {
             let path = crate::services::get_deno_path(app).await;
             let (resolved_path, resolved_source) = if let Some(path) = path.clone() {
-                let source = match app.path().app_data_dir() {
+                let source = match crate::utils::app_data_dir(app) {
                     Ok(app_data) if path.starts_with(app_data.join("bin")) => "app-managed",
                     _ => "system",
                 };
@@ -92,7 +92,7 @@ pub(super) async fn resolve_provider_command(
             let path = crate::services::get_deno_path(app)
                 .await
                 .ok_or_else(|| "Deno runtime is not available".to_string())?;
-            let source = match app.path().app_data_dir() {
+            let source = match crate::utils::app_data_dir(app) {
                 Ok(app_data) if path.starts_with(app_data.join("bin")) => "app-managed",
                 _ => "system",
             };

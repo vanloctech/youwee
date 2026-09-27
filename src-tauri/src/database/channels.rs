@@ -1,7 +1,46 @@
 use super::get_db;
-use crate::types::{ChannelVideo, FollowedChannel};
+use crate::types::{ChannelVideo, CreatorProcessingSettings, FollowedChannel};
 use chrono::Utc;
 use rusqlite::{params, params_from_iter, types::Value};
+use serde::Serialize;
+
+#[derive(Debug, Clone)]
+pub struct BulkFollowChannelRecord {
+    pub url: String,
+    pub name: String,
+    pub thumbnail: Option<String>,
+    pub platform: String,
+    pub download_quality: String,
+    pub download_format: String,
+    pub download_video_codec: String,
+    pub download_audio_bitrate: String,
+    pub download_preferred_fps: String,
+    pub youtube_content_type: String,
+    pub creator_processing: CreatorProcessingSettings,
+}
+
+#[derive(Debug, Clone, Default, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct BulkChannelMutationResult {
+    pub requested: usize,
+    pub changed: usize,
+    pub skipped: usize,
+    pub errors: Vec<String>,
+}
+
+fn parse_creator_processing(value: String) -> CreatorProcessingSettings {
+    serde_json::from_str(&value).unwrap_or_default()
+}
+
+fn epoch_to_rfc3339(value: Option<i64>) -> Option<String> {
+    value
+        .and_then(|timestamp| chrono::DateTime::from_timestamp(timestamp, 0))
+        .map(|value| value.to_rfc3339())
+}
+
+fn parse_edited_output_paths(value: String) -> Vec<String> {
+    serde_json::from_str(&value).unwrap_or_default()
+}
 
 /// Follow a channel
 pub fn follow_channel_db(
@@ -15,15 +54,18 @@ pub fn follow_channel_db(
     download_audio_bitrate: String,
     download_preferred_fps: String,
     youtube_content_type: String,
+    creator_processing: CreatorProcessingSettings,
 ) -> Result<String, String> {
     let conn = get_db()?;
     let id = uuid::Uuid::new_v4().to_string();
     let now = Utc::now().to_rfc3339();
 
+    let creator_processing_json = serde_json::to_string(&creator_processing)
+        .map_err(|e| format!("Failed to serialize creator settings: {}", e))?;
     let rows = conn.execute(
-        "INSERT OR IGNORE INTO followed_channels (id, url, name, thumbnail, platform, download_quality, download_format, download_video_codec, download_audio_bitrate, download_preferred_fps, youtube_content_type, created_at)
-         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12)",
-        params![id, url, name, thumbnail, platform, download_quality, download_format, download_video_codec, download_audio_bitrate, download_preferred_fps, youtube_content_type, now],
+        "INSERT OR IGNORE INTO followed_channels (id, url, name, thumbnail, platform, download_quality, download_format, download_video_codec, download_audio_bitrate, download_preferred_fps, youtube_content_type, creator_processing_json, download_threads, created_at)
+         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, 3, ?13)",
+        params![id, url, name, thumbnail, platform, download_quality, download_format, download_video_codec, download_audio_bitrate, download_preferred_fps, youtube_content_type, creator_processing_json, now],
     )
     .map_err(|e| format!("Failed to follow channel: {}", e))?;
 
@@ -63,7 +105,9 @@ pub fn get_followed_channels_db() -> Result<Vec<FollowedChannel>, String> {
                     filter_min_duration, filter_max_duration, filter_include_keywords,
                     filter_exclude_keywords, filter_max_videos, download_threads,
                     download_video_codec, download_audio_bitrate, download_preferred_fps,
-                    youtube_content_type
+                    youtube_content_type, creator_processing_json,
+                    (SELECT MAX(downloaded_at) FROM channel_videos WHERE channel_id = followed_channels.id),
+                    (SELECT COUNT(*) FROM channel_videos WHERE channel_id = followed_channels.id AND status = 'downloaded')
              FROM followed_channels ORDER BY created_at DESC",
         )
         .map_err(|e| format!("Failed to prepare query: {}", e))?;
@@ -78,6 +122,8 @@ pub fn get_followed_channels_db() -> Result<Vec<FollowedChannel>, String> {
                 platform: row.get(4)?,
                 last_checked_at: row.get(5)?,
                 last_video_id: row.get(6)?,
+                last_downloaded_at: epoch_to_rfc3339(row.get(23)?),
+                downloaded_video_count: row.get(24)?,
                 check_interval: row.get(7)?,
                 auto_download: row.get::<_, i64>(8)? != 0,
                 download_quality: row.get(9)?,
@@ -93,6 +139,7 @@ pub fn get_followed_channels_db() -> Result<Vec<FollowedChannel>, String> {
                 download_audio_bitrate: row.get(19)?,
                 download_preferred_fps: row.get(20)?,
                 youtube_content_type: row.get(21)?,
+                creator_processing: parse_creator_processing(row.get::<_, String>(22)?),
             })
         })
         .map_err(|e| format!("Query failed: {}", e))?
@@ -111,7 +158,9 @@ pub fn get_followed_channel_db(id: String) -> Result<FollowedChannel, String> {
                 filter_min_duration, filter_max_duration, filter_include_keywords,
                 filter_exclude_keywords, filter_max_videos, download_threads,
                 download_video_codec, download_audio_bitrate, download_preferred_fps,
-                youtube_content_type
+                youtube_content_type, creator_processing_json,
+                (SELECT MAX(downloaded_at) FROM channel_videos WHERE channel_id = followed_channels.id),
+                (SELECT COUNT(*) FROM channel_videos WHERE channel_id = followed_channels.id AND status = 'downloaded')
          FROM followed_channels WHERE id = ?1",
         params![id],
         |row| {
@@ -123,6 +172,8 @@ pub fn get_followed_channel_db(id: String) -> Result<FollowedChannel, String> {
                 platform: row.get(4)?,
                 last_checked_at: row.get(5)?,
                 last_video_id: row.get(6)?,
+                last_downloaded_at: epoch_to_rfc3339(row.get(23)?),
+                downloaded_video_count: row.get(24)?,
                 check_interval: row.get(7)?,
                 auto_download: row.get::<_, i64>(8)? != 0,
                 download_quality: row.get(9)?,
@@ -138,6 +189,7 @@ pub fn get_followed_channel_db(id: String) -> Result<FollowedChannel, String> {
                 download_audio_bitrate: row.get(19)?,
                 download_preferred_fps: row.get(20)?,
                 youtube_content_type: row.get(21)?,
+                creator_processing: parse_creator_processing(row.get::<_, String>(22)?),
             })
         },
     )
@@ -161,16 +213,19 @@ pub fn update_channel_settings_db(
     filter_max_videos: Option<i64>,
     download_threads: i64,
     youtube_content_type: String,
+    creator_processing: CreatorProcessingSettings,
 ) -> Result<(), String> {
     let conn = get_db()?;
+    let creator_processing_json = serde_json::to_string(&creator_processing)
+        .map_err(|e| format!("Failed to serialize creator settings: {}", e))?;
     conn.execute(
         "UPDATE followed_channels SET
             check_interval = ?1, auto_download = ?2, download_quality = ?3,
             download_format = ?4, download_video_codec = ?5, download_audio_bitrate = ?6,
             download_preferred_fps = ?7, filter_min_duration = ?8, filter_max_duration = ?9,
             filter_include_keywords = ?10, filter_exclude_keywords = ?11, filter_max_videos = ?12,
-            download_threads = ?13, youtube_content_type = ?14
-         WHERE id = ?15",
+            download_threads = ?13, youtube_content_type = ?14, creator_processing_json = ?15
+         WHERE id = ?16",
         params![
             check_interval,
             auto_download as i64,
@@ -186,6 +241,7 @@ pub fn update_channel_settings_db(
             filter_max_videos,
             download_threads,
             youtube_content_type,
+            creator_processing_json,
             id,
         ],
     )
@@ -213,11 +269,225 @@ pub fn save_channel_videos_db(
     channel_id: String,
     videos: Vec<ChannelVideo>,
 ) -> Result<usize, String> {
+    Ok(save_new_channel_videos_db(channel_id, videos)?.len())
+}
+
+/// Follow many channels in one SQLite transaction. Duplicate URLs are skipped.
+pub fn bulk_follow_channels_db(
+    records: Vec<BulkFollowChannelRecord>,
+) -> Result<BulkChannelMutationResult, String> {
+    let mut conn = get_db()?;
+    let requested = records.len();
+    let transaction = conn
+        .transaction()
+        .map_err(|e| format!("Failed to start bulk follow transaction: {}", e))?;
+    let now = Utc::now().to_rfc3339();
+    let mut result = BulkChannelMutationResult {
+        requested,
+        ..Default::default()
+    };
+
+    for record in records {
+        if record.url.trim().is_empty() || record.name.trim().is_empty() {
+            result.skipped += 1;
+            result
+                .errors
+                .push("Channel URL or name is empty".to_string());
+            continue;
+        }
+        let id = uuid::Uuid::new_v4().to_string();
+        let creator_processing_json = serde_json::to_string(&record.creator_processing)
+            .map_err(|e| format!("Failed to serialize creator settings: {}", e))?;
+        let rows = transaction
+            .execute(
+                "INSERT OR IGNORE INTO followed_channels
+                 (id, url, name, thumbnail, platform, download_quality, download_format,
+                  download_video_codec, download_audio_bitrate, download_preferred_fps,
+                  youtube_content_type, creator_processing_json, download_threads, created_at)
+                 VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, 3, ?13)",
+                params![
+                    id,
+                    record.url,
+                    record.name,
+                    record.thumbnail,
+                    record.platform,
+                    record.download_quality,
+                    record.download_format,
+                    record.download_video_codec,
+                    record.download_audio_bitrate,
+                    record.download_preferred_fps,
+                    record.youtube_content_type,
+                    creator_processing_json,
+                    now,
+                ],
+            )
+            .map_err(|e| format!("Failed to bulk follow channel: {}", e))?;
+        if rows == 0 {
+            result.skipped += 1;
+        } else {
+            result.changed += 1;
+        }
+    }
+
+    transaction
+        .commit()
+        .map_err(|e| format!("Failed to commit bulk follow: {}", e))?;
+    Ok(result)
+}
+
+/// Unfollow many channels in one SQLite transaction. Saved channel videos are
+/// removed just like the single-channel unfollow command; download history is
+/// intentionally preserved for duplicate detection and the Library page.
+pub fn bulk_unfollow_channels_db(ids: Vec<String>) -> Result<BulkChannelMutationResult, String> {
+    let mut conn = get_db()?;
+    let requested = ids.len();
+    let transaction = conn
+        .transaction()
+        .map_err(|e| format!("Failed to start bulk unfollow transaction: {}", e))?;
+    let mut result = BulkChannelMutationResult {
+        requested,
+        ..Default::default()
+    };
+
+    for id in ids {
+        let deleted_videos = transaction
+            .execute(
+                "DELETE FROM channel_videos WHERE channel_id = ?1",
+                params![id],
+            )
+            .map_err(|e| format!("Failed to delete channel videos: {}", e))?;
+        let deleted_channel = transaction
+            .execute("DELETE FROM followed_channels WHERE id = ?1", params![id])
+            .map_err(|e| format!("Failed to bulk unfollow channel: {}", e))?;
+        if deleted_channel == 0 && deleted_videos == 0 {
+            result.skipped += 1;
+        } else {
+            result.changed += 1;
+        }
+    }
+
+    transaction
+        .commit()
+        .map_err(|e| format!("Failed to commit bulk unfollow: {}", e))?;
+    Ok(result)
+}
+
+/// Apply shared download settings to many followed channels in one transaction.
+pub fn bulk_update_channel_settings_db(
+    ids: Vec<String>,
+    check_interval: i64,
+    auto_download: bool,
+    download_quality: String,
+    download_format: String,
+    download_video_codec: String,
+    download_audio_bitrate: String,
+    download_preferred_fps: String,
+    download_threads: i64,
+    youtube_content_type: String,
+    creator_processing: CreatorProcessingSettings,
+) -> Result<BulkChannelMutationResult, String> {
+    let mut conn = get_db()?;
+    let requested = ids.len();
+    let transaction = conn
+        .transaction()
+        .map_err(|e| format!("Failed to start bulk update transaction: {}", e))?;
+    let mut result = BulkChannelMutationResult {
+        requested,
+        ..Default::default()
+    };
+    let creator_processing_json = serde_json::to_string(&creator_processing)
+        .map_err(|e| format!("Failed to serialize creator settings: {}", e))?;
+
+    for id in ids {
+        let rows = transaction
+            .execute(
+                "UPDATE followed_channels SET
+                    check_interval = ?1, auto_download = ?2, download_quality = ?3,
+                    download_format = ?4, download_video_codec = ?5, download_audio_bitrate = ?6,
+                    download_preferred_fps = ?7, download_threads = ?8, youtube_content_type = ?9,
+                    creator_processing_json = ?10
+                 WHERE id = ?11",
+                params![
+                    check_interval,
+                    auto_download as i64,
+                    download_quality,
+                    download_format,
+                    download_video_codec,
+                    download_audio_bitrate,
+                    download_preferred_fps,
+                    download_threads,
+                    youtube_content_type,
+                    creator_processing_json,
+                    id,
+                ],
+            )
+            .map_err(|e| format!("Failed to bulk update channel settings: {}", e))?;
+        if rows == 0 {
+            result.skipped += 1;
+        } else {
+            result.changed += 1;
+        }
+    }
+
+    transaction
+        .commit()
+        .map_err(|e| format!("Failed to commit bulk update: {}", e))?;
+    Ok(result)
+}
+
+/// Apply only the creator/edit snapshot to many channels without changing
+/// their auto-download, quality, filters, or polling settings.
+pub fn bulk_update_channel_creator_processing_db(
+    ids: Vec<String>,
+    creator_processing: CreatorProcessingSettings,
+) -> Result<BulkChannelMutationResult, String> {
+    let mut conn = get_db()?;
+    let requested = ids.len();
+    let transaction = conn
+        .transaction()
+        .map_err(|e| format!("Failed to start bulk creator update transaction: {}", e))?;
+    let creator_processing_json = serde_json::to_string(&creator_processing)
+        .map_err(|e| format!("Failed to serialize creator settings: {}", e))?;
+    let mut result = BulkChannelMutationResult {
+        requested,
+        ..Default::default()
+    };
+
+    for id in ids {
+        let rows = transaction
+            .execute(
+                "UPDATE followed_channels SET creator_processing_json = ?1 WHERE id = ?2",
+                params![creator_processing_json, id],
+            )
+            .map_err(|e| format!("Failed to bulk update channel creator settings: {}", e))?;
+        if rows == 0 {
+            result.skipped += 1;
+        } else {
+            result.changed += 1;
+        }
+    }
+
+    transaction
+        .commit()
+        .map_err(|e| format!("Failed to commit bulk creator update: {}", e))?;
+    Ok(result)
+}
+
+/// Save channel videos and return only rows inserted by this call.
+///
+/// The polling service uses this result for notifications. Returning the
+/// inserted rows prevents a repeated scan from notifying about videos that
+/// were already present in the database.
+pub fn save_new_channel_videos_db(
+    channel_id: String,
+    videos: Vec<ChannelVideo>,
+) -> Result<Vec<ChannelVideo>, String> {
     let conn = get_db()?;
-    let mut inserted = 0;
+    let mut inserted = Vec::new();
 
     for video in &videos {
-        let result = conn.execute(
+        let rows = conn
+            .execute(
             "INSERT OR IGNORE INTO channel_videos
                 (id, channel_id, video_id, title, url, thumbnail, duration, upload_date, status, created_at)
              VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10)",
@@ -233,12 +503,11 @@ pub fn save_channel_videos_db(
                 video.status,
                 video.created_at,
             ],
-        );
+            )
+            .map_err(|e| format!("Failed to save channel video: {}", e))?;
 
-        if let Ok(rows) = result {
-            if rows > 0 {
-                inserted += 1;
-            }
+        if rows > 0 {
+            inserted.push(video.clone());
         }
     }
 
@@ -260,11 +529,13 @@ pub fn get_channel_videos_db(
         .unwrap_or(false);
 
     let query = if has_status {
-        "SELECT id, channel_id, video_id, title, url, thumbnail, duration, upload_date, status, created_at
+        "SELECT id, channel_id, video_id, title, url, thumbnail, duration, upload_date, status, created_at,
+                downloaded_at, output_path, edited_output_paths_json
          FROM channel_videos WHERE channel_id = ?1 AND status = ?2
          ORDER BY created_at DESC LIMIT ?3"
     } else {
-        "SELECT id, channel_id, video_id, title, url, thumbnail, duration, upload_date, status, created_at
+        "SELECT id, channel_id, video_id, title, url, thumbnail, duration, upload_date, status, created_at,
+                downloaded_at, output_path, edited_output_paths_json
          FROM channel_videos WHERE channel_id = ?1
          ORDER BY created_at DESC LIMIT ?2"
     };
@@ -285,6 +556,9 @@ pub fn get_channel_videos_db(
             upload_date: row.get(7)?,
             status: row.get(8)?,
             created_at: row.get(9)?,
+            downloaded_at: epoch_to_rfc3339(row.get(10)?),
+            output_path: row.get(11)?,
+            edited_output_paths: parse_edited_output_paths(row.get(12)?),
         })
     };
 
@@ -321,7 +595,8 @@ pub fn get_channel_videos_by_video_ids_db(
         .collect::<Vec<_>>()
         .join(", ");
     let query = format!(
-        "SELECT id, channel_id, video_id, title, url, thumbnail, duration, upload_date, status, created_at
+        "SELECT id, channel_id, video_id, title, url, thumbnail, duration, upload_date, status, created_at,
+                downloaded_at, output_path, edited_output_paths_json
          FROM channel_videos
          WHERE channel_id = ? AND video_id IN ({placeholders})"
     );
@@ -347,6 +622,9 @@ pub fn get_channel_videos_by_video_ids_db(
                 upload_date: row.get(7)?,
                 status: row.get(8)?,
                 created_at: row.get(9)?,
+                downloaded_at: epoch_to_rfc3339(row.get(10)?),
+                output_path: row.get(11)?,
+                edited_output_paths: parse_edited_output_paths(row.get(12)?),
             })
         })
         .map_err(|e| format!("Query failed: {}", e))?
@@ -394,14 +672,14 @@ fn sync_channel_video_statuses_from_history(
             .map_err(|e| format!("History sync query failed: {}", e))?;
         rows.filter_map(|row| row.ok())
             .filter(|(_, filepath)| std::path::Path::new(filepath).exists())
-            .map(|(id, _)| id)
             .collect::<Vec<_>>()
     };
 
-    for id in candidate_ids {
+    for (id, filepath) in candidate_ids {
         conn.execute(
-            "UPDATE channel_videos SET status = 'downloaded' WHERE id = ?1",
-            params![id],
+            "UPDATE channel_videos SET status = 'downloaded', output_path = ?2,
+                downloaded_at = COALESCE(downloaded_at, ?3) WHERE id = ?1",
+            params![id, filepath, chrono::Utc::now().timestamp()],
         )
         .map_err(|e| format!("Failed to sync channel video status from history: {}", e))?;
     }
@@ -425,13 +703,43 @@ pub fn update_channel_video_status_by_video_id_db(
     channel_id: String,
     video_id: String,
     status: String,
+    filepath: Option<String>,
 ) -> Result<(), String> {
     let conn = get_db()?;
+    let downloaded_at = (status == "downloaded").then(|| chrono::Utc::now().timestamp());
     conn.execute(
-        "UPDATE channel_videos SET status = ?1 WHERE channel_id = ?2 AND video_id = ?3",
-        params![status, channel_id, video_id],
+        "UPDATE channel_videos SET status = ?1,
+            downloaded_at = COALESCE(?4, downloaded_at),
+            output_path = COALESCE(?5, output_path)
+         WHERE channel_id = ?2 AND video_id = ?3",
+        params![status, channel_id, video_id, downloaded_at, filepath],
     )
     .map_err(|e| format!("Failed to update video status: {}", e))?;
+    Ok(())
+}
+
+pub fn complete_channel_creator_processing_db(
+    channel_id: String,
+    video_id: String,
+    output_paths: Vec<String>,
+) -> Result<(), String> {
+    let conn = get_db()?;
+    let output_paths_json = serde_json::to_string(&output_paths)
+        .map_err(|error| format!("Failed to serialize edited output paths: {error}"))?;
+    let primary_path = output_paths.first().cloned();
+    conn.execute(
+        "UPDATE channel_videos SET status = 'downloaded', downloaded_at = ?1,
+            edited_output_paths_json = ?2, output_path = COALESCE(?3, output_path)
+         WHERE channel_id = ?4 AND video_id = ?5",
+        params![
+            chrono::Utc::now().timestamp(),
+            output_paths_json,
+            primary_path,
+            channel_id,
+            video_id
+        ],
+    )
+    .map_err(|error| format!("Failed to save edited channel outputs: {error}"))?;
     Ok(())
 }
 
@@ -518,11 +826,12 @@ mod tests {
                 filter_include_keywords TEXT,
                 filter_exclude_keywords TEXT,
                 filter_max_videos INTEGER,
-                download_threads INTEGER NOT NULL DEFAULT 1,
+                download_threads INTEGER NOT NULL DEFAULT 3,
                 download_video_codec TEXT NOT NULL DEFAULT 'h264',
                 download_audio_bitrate TEXT NOT NULL DEFAULT '192',
                 download_preferred_fps TEXT NOT NULL DEFAULT 'original',
-                youtube_content_type TEXT NOT NULL DEFAULT 'videos'
+                youtube_content_type TEXT NOT NULL DEFAULT 'videos',
+                creator_processing_json TEXT NOT NULL DEFAULT '{}'
             );
             CREATE TABLE IF NOT EXISTS channel_videos (
                 id TEXT PRIMARY KEY,
@@ -534,7 +843,10 @@ mod tests {
                 duration REAL,
                 upload_date TEXT,
                 status TEXT NOT NULL DEFAULT 'new',
-                created_at TEXT NOT NULL
+                created_at TEXT NOT NULL,
+                downloaded_at INTEGER,
+                output_path TEXT,
+                edited_output_paths_json TEXT NOT NULL DEFAULT '[]'
             );
             CREATE UNIQUE INDEX IF NOT EXISTS idx_channel_videos_unique
                 ON channel_videos(channel_id, video_id);
@@ -679,6 +991,7 @@ mod tests {
             "192".to_string(),
             "original".to_string(),
             "videos".to_string(),
+            CreatorProcessingSettings::default(),
         )
         .expect("follow channel first time");
 
@@ -693,6 +1006,7 @@ mod tests {
             "192".to_string(),
             "original".to_string(),
             "videos".to_string(),
+            CreatorProcessingSettings::default(),
         )
         .expect("follow channel second time");
 
@@ -707,5 +1021,101 @@ mod tests {
 
         assert_eq!(second_id, first_id);
         assert_eq!(count, 1);
+    }
+
+    #[test]
+    fn bulk_creator_update_preserves_channel_download_settings() {
+        let _guard = db_test_guard();
+        ensure_test_channel_tables();
+
+        let id = follow_channel_db(
+            "https://www.youtube.com/@creator-settings".to_string(),
+            "Creator settings".to_string(),
+            None,
+            "youtube".to_string(),
+            "1080".to_string(),
+            "mkv".to_string(),
+            "vp9".to_string(),
+            "320".to_string(),
+            "30".to_string(),
+            "shorts".to_string(),
+            CreatorProcessingSettings::default(),
+        )
+        .expect("follow channel");
+        get_db()
+            .expect("get db")
+            .execute(
+                "UPDATE followed_channels SET auto_download = 1, check_interval = 42 WHERE id = ?1",
+                params![id],
+            )
+            .expect("customize channel settings");
+
+        let creator_processing = CreatorProcessingSettings {
+            mode: "parts".to_string(),
+            part_count: 5,
+            ..Default::default()
+        };
+        let result =
+            bulk_update_channel_creator_processing_db(vec![id.clone()], creator_processing.clone())
+                .expect("bulk update creator settings");
+        let channel = get_followed_channel_db(id).expect("load updated channel");
+
+        assert_eq!(result.changed, 1);
+        assert!(channel.auto_download);
+        assert_eq!(channel.check_interval, 42);
+        assert_eq!(channel.download_quality, "1080");
+        assert_eq!(channel.download_format, "mkv");
+        assert_eq!(channel.creator_processing.mode, "parts");
+        assert_eq!(channel.creator_processing.part_count, 5);
+    }
+
+    #[test]
+    fn channel_download_history_tracks_original_and_edited_outputs() {
+        let _guard = db_test_guard();
+        ensure_test_channel_tables();
+        let channel_id = follow_channel_db(
+            "https://www.youtube.com/@history".to_string(),
+            "History".to_string(),
+            None,
+            "youtube".to_string(),
+            "best".to_string(),
+            "mp4".to_string(),
+            "h264".to_string(),
+            "192".to_string(),
+            "original".to_string(),
+            "videos".to_string(),
+            CreatorProcessingSettings::default(),
+        )
+        .expect("follow history channel");
+        insert_channel_video(&channel_id, "video-history", "new", "2026-09-26T00:00:00Z");
+
+        update_channel_video_status_by_video_id_db(
+            channel_id.clone(),
+            "video-history".to_string(),
+            "downloaded".to_string(),
+            Some("C:/Downloads/original.mp4".to_string()),
+        )
+        .expect("record original download");
+        complete_channel_creator_processing_db(
+            channel_id.clone(),
+            "video-history".to_string(),
+            vec![
+                "C:/Downloads/Edited/part-1.mp4".to_string(),
+                "C:/Downloads/Edited/part-2.mp4".to_string(),
+            ],
+        )
+        .expect("record edited outputs");
+
+        let channel = get_followed_channel_db(channel_id.clone()).expect("load channel stats");
+        let videos = get_channel_videos_db(channel_id, Some("downloaded".to_string()), Some(10))
+            .expect("load channel history");
+
+        assert_eq!(channel.downloaded_video_count, 1);
+        assert!(channel.last_downloaded_at.is_some());
+        assert_eq!(
+            videos[0].output_path.as_deref(),
+            Some("C:/Downloads/Edited/part-1.mp4")
+        );
+        assert_eq!(videos[0].edited_output_paths.len(), 2);
     }
 }

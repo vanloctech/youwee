@@ -1,4 +1,5 @@
 import { invoke } from '@tauri-apps/api/core';
+import { listen } from '@tauri-apps/api/event';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { DenoDialog } from '@/components/DenoDialog';
@@ -14,6 +15,7 @@ import { UpdateDialog } from '@/components/UpdateDialog';
 import { ToastProvider } from '@/components/ui/toast';
 import { AIProvider } from '@/contexts/AIContext';
 import { ChannelsProvider } from '@/contexts/ChannelsContext';
+import { useChannels } from '@/contexts/channels-context';
 import { DataExportProvider } from '@/contexts/DataExportContext';
 import { DependenciesProvider, useDependencies } from '@/contexts/DependenciesContext';
 import { DownloadProvider } from '@/contexts/DownloadContext';
@@ -35,9 +37,11 @@ import { useTelegramRemoteCommands } from '@/hooks/useTelegramRemoteCommands';
 import { useTrayDownloadStatus } from '@/hooks/useTrayDownloadStatus';
 import { useTrayEvents } from '@/hooks/useTrayEvents';
 import { useYtdlpAutoUpdateToast } from '@/hooks/useYtdlpAutoUpdateToast';
+import type { FollowedChannel } from '@/lib/types';
 import {
   ChannelsPage,
   DownloadPage,
+  FollowedChannelsPage,
   GalleryPage,
   HistoryPage,
   LogsPage,
@@ -65,6 +69,7 @@ function AppContent() {
   const { ffmpegStatus, ffmpegLoading, isAutoDownloadingDeno, denoStatus, denoSuccess } =
     useDependencies();
   const { isTransitioning, oldMode, applyPendingTheme, onTransitionComplete } = useTheme();
+  const { followedChannels, setActiveChannel, refreshChannels } = useChannels();
   const externalStartLockRef = useRef({ youtube: false, universal: false });
   const externalSummaryRequestIdRef = useRef(0);
 
@@ -98,6 +103,32 @@ function AppContent() {
   useYtdlpAutoUpdateToast({
     onOpenDependencies: openDependenciesSettings,
   });
+
+  useEffect(() => {
+    const unlisten = listen<{ channelId: string; filepath: string }>(
+      'telegram-open-channel-media',
+      async (event) => {
+        let channel = followedChannels.find((item) => item.id === event.payload.channelId);
+        if (!channel) {
+          const channels = await invoke<FollowedChannel[]>('get_followed_channels').catch(() => []);
+          channel = channels.find((item) => item.id === event.payload.channelId);
+          await refreshChannels();
+        }
+        if (channel) setActiveChannel(channel);
+        setCurrentPage('followed-channels');
+        if (event.payload.filepath) {
+          await invoke('open_file_location', { filepath: event.payload.filepath }).catch(
+            (error) => {
+              console.error('Failed to open Telegram media location:', error);
+            },
+          );
+        }
+      },
+    );
+    return () => {
+      void unlisten.then((dispose) => dispose());
+    };
+  }, [followedChannels, refreshChannels, setActiveChannel]);
 
   useEffect(() => {
     const locale = i18n.resolvedLanguage || i18n.language || 'en';
@@ -179,6 +210,7 @@ function AppContent() {
           <GalleryPage onNavigateToSettings={() => openSettingsPage('general')} />
         )}
         {currentPage === 'channels' && <ChannelsPage />}
+        {currentPage === 'followed-channels' && <FollowedChannelsPage />}
         {currentPage === 'summary' && (
           <SummaryPage
             externalRequestId={externalSummaryRequest?.id}

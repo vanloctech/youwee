@@ -15,6 +15,7 @@ import {
   isRetryableError,
   waitWithCancellation,
 } from '@/lib/download-retry';
+import { onGlobalOutputPathChanged } from '@/lib/global-output-path';
 import { buildCookieProxyInvokeOptions, loadNetworkSettings } from '@/lib/network-config';
 import { parseUniversalUrls } from '@/lib/sources';
 import type { DownloadItem } from '@/lib/types';
@@ -142,6 +143,18 @@ export function GalleryDlProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     settingsRef.current = settings;
   }, [settings]);
+
+  useEffect(
+    () =>
+      onGlobalOutputPathChanged((outputPath) => {
+        setSettings((current) => {
+          const next = { ...current, outputPath };
+          saveSettings(next);
+          return next;
+        });
+      }),
+    [],
+  );
 
   useEffect(() => {
     return () => {

@@ -48,7 +48,7 @@ pub struct VideoInfoResponse {
 }
 
 /// Playlist entry with basic video info
-#[derive(Clone, Serialize, Debug)]
+#[derive(Clone, Serialize, Deserialize, Debug)]
 pub struct PlaylistVideoEntry {
     pub id: String,
     pub title: String,
@@ -58,6 +58,7 @@ pub struct PlaylistVideoEntry {
     pub channel: Option<String>,
     pub upload_date: Option<String>,
     pub playlist_title: Option<String>,
+    pub view_count: Option<u64>,
 }
 
 /// Subtitle information

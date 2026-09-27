@@ -18,6 +18,8 @@ use crate::utils::{
 
 #[path = "processing/attachments.rs"]
 mod attachments;
+#[path = "processing/creator.rs"]
+mod creator;
 #[path = "processing/jobs.rs"]
 mod jobs;
 #[path = "processing/metadata.rs"]
@@ -26,6 +28,7 @@ mod metadata;
 mod preview;
 
 pub use attachments::*;
+pub use creator::*;
 pub use jobs::*;
 pub use metadata::*;
 pub use preview::*;
@@ -1169,7 +1172,7 @@ pub async fn generate_quick_action_command(
 }
 
 async fn get_ffprobe_path(app: &AppHandle) -> Option<std::path::PathBuf> {
-    if let Ok(app_data_dir) = app.path().app_data_dir() {
+    if let Ok(app_data_dir) = crate::utils::app_data_dir(app) {
         let bin_dir = app_data_dir.join("bin");
         #[cfg(windows)]
         let ffprobe_path = bin_dir.join("ffprobe.exe");
@@ -1203,10 +1206,7 @@ async fn get_ffprobe_path(app: &AppHandle) -> Option<std::path::PathBuf> {
 }
 
 async fn load_ai_config(app: &AppHandle) -> Result<AIConfig, String> {
-    let app_data_dir = app
-        .path()
-        .app_data_dir()
-        .map_err(|_| "Failed to get app data directory")?;
+    let app_data_dir = crate::utils::app_data_dir(app)?;
 
     let config_path = app_data_dir.join("ai_config.json");
 

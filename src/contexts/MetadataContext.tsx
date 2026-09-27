@@ -4,6 +4,7 @@ import { downloadDir, homeDir } from '@tauri-apps/api/path';
 import { open } from '@tauri-apps/plugin-dialog';
 import { type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { localizeProgressError, localizeUnknownError } from '@/lib/backend-error';
+import { onGlobalOutputPathChanged } from '@/lib/global-output-path';
 import { extractUrls } from '@/lib/sources';
 import { useDownload } from './download-context';
 import { MetadataContext } from './metadata-context';
@@ -99,6 +100,18 @@ export function MetadataProvider({ children }: { children: ReactNode }) {
       subtitleFormat: saved.subtitleFormat || 'srt',
     };
   });
+
+  useEffect(
+    () =>
+      onGlobalOutputPathChanged((outputPath) => {
+        setSettings((current) => {
+          const next = { ...current, outputPath };
+          saveSettings(next);
+          return next;
+        });
+      }),
+    [],
+  );
 
   // Get default output path
   useEffect(() => {

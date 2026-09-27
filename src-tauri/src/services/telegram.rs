@@ -6,6 +6,8 @@ use reqwest::Client;
 use serde::{Deserialize, Serialize};
 use tauri::{AppHandle, Emitter};
 
+use crate::types::ChannelVideo;
+
 const TELEGRAM_API_BASE: &str = "https://api.telegram.org";
 const LONG_POLL_TIMEOUT_SECS: u64 = 30;
 const MAX_BACKOFF_SECS: u64 = 60;
@@ -101,6 +103,19 @@ struct TelegramApiResponse<T> {
 struct TelegramUpdate {
     update_id: u64,
     message: Option<TelegramMessage>,
+    callback_query: Option<TelegramCallbackQuery>,
+}
+
+#[derive(Debug, Deserialize)]
+struct TelegramCallbackQuery {
+    id: String,
+    data: Option<String>,
+    message: Option<TelegramCallbackMessage>,
+}
+
+#[derive(Debug, Deserialize)]
+struct TelegramCallbackMessage {
+    chat: TelegramChat,
 }
 
 #[derive(Debug, Deserialize)]
@@ -128,7 +143,13 @@ struct SendMessageRequest<'a> {
     text: &'a str,
     disable_web_page_preview: bool,
     #[serde(skip_serializing_if = "Option::is_none")]
-    reply_markup: Option<ReplyKeyboardMarkup>,
+    reply_markup: Option<serde_json::Value>,
+}
+
+#[derive(Debug, Serialize)]
+struct AnswerCallbackQueryRequest<'a> {
+    callback_query_id: &'a str,
+    text: &'a str,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -154,12 +175,13 @@ struct BotCommand {
     description: &'static str,
 }
 
-pub fn set_config(app: AppHandle, config: TelegramConfig) {
+pub fn set_config(app: AppHandle, config: TelegramConfig) -> Result<(), String> {
     let sanitized = sanitize_config(config);
+    persist_config(&sanitized)?;
     match TELEGRAM_CONFIG.lock() {
         Ok(mut guard) => {
             if *guard == sanitized {
-                return;
+                return Ok(());
             }
             if guard.bot_token != sanitized.bot_token {
                 TELEGRAM_LAST_UPDATE_ID.store(0, Ordering::SeqCst);
@@ -173,7 +195,7 @@ pub fn set_config(app: AppHandle, config: TelegramConfig) {
             ) {
                 crate::rebuild_tray_menu(&app);
             }
-            return;
+            return Err("Failed to update Telegram config.".to_string());
         }
     }
 
@@ -184,7 +206,7 @@ pub fn set_config(app: AppHandle, config: TelegramConfig) {
         if set_status(TelegramStatusState::Disabled, None) {
             crate::rebuild_tray_menu(&app);
         }
-        return;
+        return Ok(());
     }
 
     if sanitized.bot_token.is_empty() {
@@ -194,7 +216,7 @@ pub fn set_config(app: AppHandle, config: TelegramConfig) {
         ) {
             crate::rebuild_tray_menu(&app);
         }
-        return;
+        return Ok(());
     }
 
     if sanitized.allowed_chat_ids.is_empty() {
@@ -204,7 +226,7 @@ pub fn set_config(app: AppHandle, config: TelegramConfig) {
         ) {
             crate::rebuild_tray_menu(&app);
         }
-        return;
+        return Ok(());
     }
 
     if set_status(TelegramStatusState::Running, None) {
@@ -222,6 +244,54 @@ pub fn set_config(app: AppHandle, config: TelegramConfig) {
     replace_polling_task(tauri::async_runtime::spawn(run_polling_loop(
         app, sanitized, generation,
     )));
+    Ok(())
+}
+
+fn persist_config(config: &TelegramConfig) -> Result<(), String> {
+    let conn = crate::database::get_db()?;
+    let value_json = serde_json::to_string(config)
+        .map_err(|error| format!("Failed to serialize Telegram config: {error}"))?;
+    conn.execute(
+        "INSERT INTO app_settings (key, value_json, updated_at) VALUES ('telegram', ?1, ?2)
+         ON CONFLICT(key) DO UPDATE SET value_json = excluded.value_json, updated_at = excluded.updated_at",
+        rusqlite::params![value_json, chrono::Utc::now().to_rfc3339()],
+    )
+    .map_err(|error| format!("Failed to persist Telegram config: {error}"))?;
+    Ok(())
+}
+
+pub fn get_config() -> TelegramConfig {
+    TELEGRAM_CONFIG
+        .lock()
+        .map(|config| config.clone())
+        .unwrap_or(TelegramConfig {
+            enabled: false,
+            bot_token: String::new(),
+            allowed_chat_ids: Vec::new(),
+            plain_url_action: TelegramPlainUrlAction::Download,
+        })
+}
+
+pub fn load_persisted_config(app: AppHandle) -> Result<bool, String> {
+    // Release the database mutex before set_config persists the sanitized value.
+    // Keeping this guard alive across set_config would attempt to lock the same
+    // non-reentrant mutex twice and freeze the app during startup.
+    let value_json = {
+        let conn = crate::database::get_db()?;
+        match conn.query_row(
+            "SELECT value_json FROM app_settings WHERE key = 'telegram'",
+            [],
+            |row| row.get::<_, String>(0),
+        ) {
+            Ok(value) => value,
+            Err(rusqlite::Error::QueryReturnedNoRows) => return Ok(false),
+            Err(error) => return Err(format!("Failed to load Telegram config: {error}")),
+        }
+    };
+    let config = serde_json::from_str::<TelegramConfig>(&value_json)
+        .map_err(|error| format!("Failed to parse Telegram config: {error}"))?;
+    set_config(app, config)?;
+    Ok(true)
 }
 
 pub fn get_status() -> TelegramStatus {
@@ -245,6 +315,160 @@ pub async fn send_reply(chat_id: String, text: String) -> Result<(), String> {
     }
 
     send_message_with_keyboard(&Client::new(), &config.bot_token, &chat_id, &text).await
+}
+
+/// Notify every configured Telegram chat about videos discovered by channel
+/// polling. This is deliberately kept in the Rust service so notifications
+/// still work when no download page is currently open in the frontend.
+pub async fn send_new_video_notification(
+    channel_name: &str,
+    videos: &[ChannelVideo],
+) -> Result<(), String> {
+    let config = TELEGRAM_CONFIG
+        .lock()
+        .map(|guard| guard.clone())
+        .map_err(|_| "Failed to read Telegram config.".to_string())?;
+
+    if !config.enabled || config.bot_token.is_empty() || config.allowed_chat_ids.is_empty() {
+        return Ok(());
+    }
+    if videos.is_empty() {
+        return Ok(());
+    }
+
+    // Keep one notification comfortably below Telegram's message size limit
+    // while still including direct links to the discovered videos.
+    let mut lines = videos
+        .iter()
+        .take(10)
+        .map(|video| format!("• {}\n{}", video.title, video.url))
+        .collect::<Vec<_>>();
+    if videos.len() > lines.len() {
+        lines.push(format!("…and {} more", videos.len() - lines.len()));
+    }
+    let text = format!(
+        "🆕 {}: {} new video{}\n\n{}",
+        channel_name,
+        videos.len(),
+        if videos.len() == 1 { "" } else { "s" },
+        lines.join("\n\n")
+    );
+
+    let client = Client::new();
+    let mut first_error = None;
+    for chat_id in config.allowed_chat_ids {
+        if let Err(error) =
+            send_message_with_keyboard(&client, &config.bot_token, &chat_id, &text).await
+        {
+            log::warn!("Failed to notify Telegram chat {}: {}", chat_id, error);
+            if first_error.is_none() {
+                first_error = Some(error);
+            }
+        }
+    }
+
+    first_error.map_or(Ok(()), Err)
+}
+
+pub async fn send_channel_media_ready_notification(
+    channel_id: &str,
+    channel_name: &str,
+    video_id: &str,
+    title: &str,
+    filepath: &str,
+    edited: bool,
+) -> Result<(), String> {
+    let config = get_config();
+    if !config.enabled || config.bot_token.is_empty() || config.allowed_chat_ids.is_empty() {
+        return Ok(());
+    }
+
+    let action_id = uuid::Uuid::new_v4().simple().to_string()[..16].to_string();
+    {
+        let conn = crate::database::get_db()?;
+        conn.execute(
+            "INSERT INTO telegram_media_actions (id, channel_id, video_id, filepath, created_at)
+             VALUES (?1, ?2, ?3, ?4, ?5)",
+            rusqlite::params![
+                action_id,
+                channel_id,
+                video_id,
+                filepath,
+                chrono::Utc::now().timestamp()
+            ],
+        )
+        .map_err(|error| format!("Failed to save Telegram media action: {error}"))?;
+        conn.execute(
+            "DELETE FROM telegram_media_actions WHERE created_at < ?1",
+            rusqlite::params![chrono::Utc::now().timestamp() - 30 * 24 * 60 * 60],
+        )
+        .ok();
+    }
+
+    let text = if edited {
+        format!("✅ Đã tải và edit xong\n{}\n{}", channel_name, title)
+    } else {
+        format!("✅ Đã tải xong\n{}\n{}", channel_name, title)
+    };
+    let reply_markup = serde_json::json!({
+        "inline_keyboard": [[{
+            "text": "📂 Mở video trên máy Youwee",
+            "callback_data": format!("open_media:{action_id}")
+        }]]
+    });
+    let client = Client::new();
+    let mut first_error = None;
+    for chat_id in config.allowed_chat_ids {
+        if let Err(error) = send_message_with_reply_markup(
+            &client,
+            &config.bot_token,
+            &chat_id,
+            &text,
+            Some(reply_markup.clone()),
+        )
+        .await
+        {
+            if first_error.is_none() {
+                first_error = Some(error);
+            }
+        }
+    }
+    first_error.map_or(Ok(()), Err)
+}
+
+/// Send a small diagnostic message to every configured chat. This exercises
+/// the same bot token, allow-list, and Telegram API path used by notifications.
+pub async fn send_test_notification() -> Result<(), String> {
+    let config = TELEGRAM_CONFIG
+        .lock()
+        .map(|guard| guard.clone())
+        .map_err(|_| "Failed to read Telegram config.".to_string())?;
+
+    if !config.enabled || config.bot_token.is_empty() || config.allowed_chat_ids.is_empty() {
+        return Err(
+            "Telegram is not configured. Enable it and add a bot token and chat ID.".to_string(),
+        );
+    }
+
+    let client = Client::new();
+    let text = "✅ Youwee Telegram connection test succeeded.";
+    let mut first_error = None;
+    for chat_id in config.allowed_chat_ids {
+        if let Err(error) =
+            send_message_with_keyboard(&client, &config.bot_token, &chat_id, text).await
+        {
+            log::warn!(
+                "Failed to send Telegram test message to {}: {}",
+                chat_id,
+                error
+            );
+            if first_error.is_none() {
+                first_error = Some(error);
+            }
+        }
+    }
+
+    first_error.map_or(Ok(()), Err)
 }
 
 fn sanitize_config(config: TelegramConfig) -> TelegramConfig {
@@ -339,7 +563,7 @@ async fn fetch_updates(
     let request = GetUpdatesRequest {
         timeout: LONG_POLL_TIMEOUT_SECS,
         offset,
-        allowed_updates: vec!["message"],
+        allowed_updates: vec!["message", "callback_query"],
     };
 
     let response = client
@@ -371,6 +595,10 @@ async fn handle_update(
     plain_url_action: &TelegramPlainUrlAction,
     update: TelegramUpdate,
 ) {
+    if let Some(callback) = update.callback_query {
+        handle_callback_query(app, client, bot_token, allowed_chat_ids, callback).await;
+        return;
+    }
     let Some(message) = update.message else {
         return;
     };
@@ -417,6 +645,57 @@ async fn handle_update(
     }
 }
 
+async fn handle_callback_query(
+    app: &AppHandle,
+    client: &Client,
+    bot_token: &str,
+    allowed_chat_ids: &HashSet<String>,
+    callback: TelegramCallbackQuery,
+) {
+    let Some(message) = callback.message else {
+        return;
+    };
+    let chat_id = message.chat.id.to_string();
+    if !allowed_chat_ids.contains(&chat_id) {
+        return;
+    }
+    let Some(action_id) = callback
+        .data
+        .as_deref()
+        .and_then(|value| value.strip_prefix("open_media:"))
+    else {
+        return;
+    };
+    let action = crate::database::get_db().and_then(|conn| {
+        conn.query_row(
+            "SELECT channel_id, filepath FROM telegram_media_actions WHERE id = ?1",
+            rusqlite::params![action_id],
+            |row| Ok((row.get::<_, String>(0)?, row.get::<_, String>(1)?)),
+        )
+        .map_err(|error| format!("Media action not found: {error}"))
+    });
+    let answer = match action {
+        Ok((channel_id, filepath)) => {
+            crate::show_main_window(app);
+            let _ = app.emit(
+                "telegram-open-channel-media",
+                serde_json::json!({ "channelId": channel_id, "filepath": filepath }),
+            );
+            "Đã mở video trên máy Youwee."
+        }
+        Err(_) => "Video không còn trong lịch sử Youwee.",
+    };
+    let url = format!("{}/bot{}/answerCallbackQuery", TELEGRAM_API_BASE, bot_token);
+    let _ = client
+        .post(url)
+        .json(&AnswerCallbackQueryRequest {
+            callback_query_id: &callback.id,
+            text: answer,
+        })
+        .send()
+        .await;
+}
+
 fn emit_url_command(
     app: &AppHandle,
     command: &str,
@@ -453,7 +732,14 @@ async fn send_message_with_keyboard(
     chat_id: &str,
     text: &str,
 ) -> Result<(), String> {
-    send_message_with_reply_markup(client, bot_token, chat_id, text, Some(command_keyboard())).await
+    send_message_with_reply_markup(
+        client,
+        bot_token,
+        chat_id,
+        text,
+        serde_json::to_value(command_keyboard()).ok(),
+    )
+    .await
 }
 
 async fn send_message_with_reply_markup(
@@ -461,7 +747,7 @@ async fn send_message_with_reply_markup(
     bot_token: &str,
     chat_id: &str,
     text: &str,
-    reply_markup: Option<ReplyKeyboardMarkup>,
+    reply_markup: Option<serde_json::Value>,
 ) -> Result<(), String> {
     let url = format!("{}/bot{}/sendMessage", TELEGRAM_API_BASE, bot_token);
     let response = client

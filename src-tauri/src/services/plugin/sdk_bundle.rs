@@ -1,6 +1,6 @@
 use std::path::{Path, PathBuf};
 
-use tauri::{AppHandle, Manager};
+use tauri::AppHandle;
 
 const SDK_JS_PACKAGE_JSON: &str = include_str!(concat!(
     env!("CARGO_MANIFEST_DIR"),
@@ -126,10 +126,7 @@ pub(super) fn write_sdk_package_files(package_root: &Path) -> Result<(), String>
 }
 
 pub(super) fn ensure_app_sdk_runtime_bundle(app: &AppHandle) -> Result<PathBuf, String> {
-    let app_data_dir = app
-        .path()
-        .app_data_dir()
-        .map_err(|e| format!("Failed to resolve app data dir for SDK bundle: {}", e))?;
+    let app_data_dir = crate::utils::app_data_dir(app)?;
     let node_modules_root = app_data_dir
         .join(super::PLUGINS_DIR_NAME)
         .join(".sdk")

@@ -7,6 +7,56 @@ và dự án tuân theo [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+## [0.20.10] - 2026-09-27
+
+### Sửa lỗi
+- **Thông báo YouTube realtime** - Đăng ký đúng topic WebSub `/xml/feeds/videos.xml` đang hoạt động và yêu cầu hub xác minh callback đồng bộ, tránh trạng thái đăng ký giả khiến thông báo phải chờ polling.
+
+## [0.20.9] - 2026-09-27
+
+### Sửa lỗi
+- **Treo khi khởi động trên Windows** - Nhả khóa SQLite trước khi khôi phục cấu hình Telegram đã lưu và không còn sao chép đồng bộ hồ sơ WebView2, tránh các tiến trình Youwee chạy ẩn và chờ vô hạn sau khi cài đặt.
+
+## [0.20.8] - 2026-09-26
+
+### Thêm mới
+- **Thông báo YouTube realtime** - Nhận sự kiện upload YouTube WebSub qua HTTPS tunnel zero-config được quản lý tự động, sau đó dùng ngay luồng Telegram, auto-download và edit theo từng kênh hiện có.
+- **Trạng thái kết nối realtime** - Hiển thị đang kết nối, số kênh đã kết nối hoặc trạng thái quét dự phòng trên trang quản lý kênh.
+
+### Thay đổi
+- **Polling trở thành lớp dự phòng** - Giữ lịch quét kênh để bù khi mất kết nối hoặc app ngừng chạy, thay vì dùng chu kỳ từng kênh làm đường thông báo YouTube chính.
+
+## [0.20.7] - 2026-09-26
+
+### Thêm mới
+- **Trang quản lý kênh theo dõi** - Quản lý kênh trên một trang riêng với lần quét cuối, lần tải cuối, số video đã tải, trạng thái tự động hóa và lịch sử tải của từng kênh.
+- **Thao tác media từ Telegram** - Thông báo tải/edit hoàn tất có nút mở đúng kênh và vị trí file render trên máy đang chạy Youwee.
+
+### Sửa lỗi
+- **Lỗi tranh chấp lúc khởi động Telegram** - Lưu cấu hình Telegram trong SQLite portable và khôi phục trước lần quét kênh đầu tiên, tránh ghi nhận video mới khi hệ thống thông báo chưa sẵn sàng.
+- **Đường dẫn media theo kênh** - Lưu đường dẫn video gốc và output edit cho từng video để lịch sử mở đúng file thực tế thay vì đoán thư mục.
+
+## [0.20.6] - 2026-09-26
+
+### Thêm mới
+- **Edit riêng cho từng kênh** - Lưu chế độ và thông số edit độc lập cho mỗi kênh đã theo dõi, đồng thời có thể áp dụng hàng loạt cho các kênh được chọn.
+
+### Sửa lỗi
+- **Điều phối auto-edit theo kênh** - Video mới tự tải dùng đúng cấu hình edit đã lưu của kênh thay vì một chế độ global; thao tác bulk edit không ghi đè lịch quét hay thiết lập tải.
+
+## [0.20.5] - 2026-09-25
+
+### Thêm mới
+- **CRUD kênh hàng loạt** - Theo dõi hoặc bỏ theo dõi danh sách lớn trong một transaction, giữ nguyên lịch sử tải.
+- **Kiểm tra kết nối Telegram** - Gửi tin nhắn chẩn đoán đến mọi chat đã cấu hình trước khi dùng thông báo.
+- **Gói migration portable** - Kèm snapshot database và script khôi phục để chuyển kênh đã theo dõi cùng lịch sử tải sang máy khác.
+- **Tải hàng loạt theo kênh** - Chọn Shorts hoặc video dài và chuẩn bị toàn bộ hoặc đủ số video mới chưa có trong Thư viện.
+- **Xử lý video sáng tạo** - Tự động duet video vừa tải với video ngẫu nhiên trong thư mục RIGHT hoặc chia video dài thành các phần 9:16 có tiêu đề.
+
+### Sửa lỗi
+- **Thông báo video mới** - Chỉ thông báo các video mới được thêm trong lần quét hiện tại, tránh lặp thông báo Telegram.
+- **Mở vị trí kênh/video** - Dùng đường dẫn đã lưu trong lịch sử thay vì tự đoán từ màn hình hiện tại.
+
 ## [0.20.4] - 2026-09-20
 
 ### Sửa lỗi

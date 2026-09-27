@@ -4,10 +4,11 @@ use crate::database::{
     add_history_internal, add_history_with_summary, assign_history_collections_in_db,
     assign_history_tags_in_db, clear_history_from_db, create_collection_in_db,
     delete_collection_from_db, delete_history_from_db, find_duplicate_downloads_in_history_db,
-    get_collections_from_db, get_history_count_from_db, get_history_entries_by_ids_from_db,
-    get_history_from_db, get_tags_from_db, remove_history_from_collection_in_db,
-    remove_history_tag_from_db, rename_collection_in_db, update_history_filepath_and_title,
-    update_history_filepath_and_title_by_id, update_history_summary,
+    find_history_filepath_by_url_db, get_collections_from_db, get_history_count_from_db,
+    get_history_entries_by_ids_from_db, get_history_from_db, get_tags_from_db,
+    remove_history_from_collection_in_db, remove_history_tag_from_db, rename_collection_in_db,
+    update_history_filepath_and_title, update_history_filepath_and_title_by_id,
+    update_history_summary,
 };
 use crate::types::{
     DownloadDuplicateIdentity, DownloadDuplicateMatch, HistoryAdvancedFilters, HistoryCollection,
@@ -64,6 +65,11 @@ pub fn get_history(
 #[tauri::command]
 pub fn get_history_entries_by_ids(ids: Vec<String>) -> Result<Vec<HistoryEntry>, String> {
     get_history_entries_by_ids_from_db(ids)
+}
+
+#[tauri::command]
+pub fn find_history_filepath_by_url(url: String) -> Result<Option<String>, String> {
+    find_history_filepath_by_url_db(url)
 }
 
 #[tauri::command]
@@ -323,8 +329,9 @@ pub async fn open_file_location(filepath: String) -> Result<(), String> {
         } else {
             // Select file in Explorer
             tokio::process::Command::new("explorer")
-                .arg("/select,")
-                .arg(&filepath)
+                // Explorer expects /select,<path> as one argument. Passing the
+                // comma and path separately makes it open the wrong location.
+                .arg(format!("/select,{}", filepath))
                 .spawn()
                 .map_err(|e| format!("Failed to open location: {}", e))?;
         }
@@ -347,6 +354,37 @@ pub async fn open_file_location(filepath: String) -> Result<(), String> {
                 .map_err(|e| format!("Failed to open location: {}", e))?;
         }
     }
+
+    Ok(())
+}
+
+#[tauri::command]
+pub async fn open_folder_location(folderpath: String) -> Result<(), String> {
+    let path = Path::new(&folderpath);
+    if !path.exists() {
+        return Err("Folder not found".to_string());
+    }
+    if !path.is_dir() {
+        return Err("Folder path points to a file".to_string());
+    }
+
+    #[cfg(target_os = "windows")]
+    tokio::process::Command::new("explorer")
+        .arg(path)
+        .spawn()
+        .map_err(|error| format!("Failed to open folder: {error}"))?;
+
+    #[cfg(target_os = "macos")]
+    tokio::process::Command::new("open")
+        .arg(path)
+        .spawn()
+        .map_err(|error| format!("Failed to open folder: {error}"))?;
+
+    #[cfg(target_os = "linux")]
+    tokio::process::Command::new("xdg-open")
+        .arg(path)
+        .spawn()
+        .map_err(|error| format!("Failed to open folder: {error}"))?;
 
     Ok(())
 }

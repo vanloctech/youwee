@@ -9,6 +9,7 @@ import {
   UniversalSettingsPanel,
   UniversalUrlInput,
 } from '@/components/download';
+import { CreatorDownloadOptions } from '@/components/download/CreatorDownloadOptions';
 import { FFmpegRequiredDialog } from '@/components/FFmpegRequiredDialog';
 import { FreshCookieRequiredDialog } from '@/components/FreshCookieRequiredDialog';
 import { ThemePicker } from '@/components/settings/ThemePicker';
@@ -135,6 +136,8 @@ export function UniversalPage({ onNavigateToSettings }: UniversalPageProps) {
             onLiveFromStartChange={updateLiveFromStart}
             onSkipLiveChange={updateSkipLive}
           />
+
+          <CreatorDownloadOptions disabled={isDownloading} />
         </div>
 
         {/* Subtle divider */}

@@ -47,6 +47,10 @@
     "libraryDeleteKeepFile": "メディアファイルを削除しない"
   },
   "download": {
+    "globalOutputFolder": "Global output folder",
+    "globalOutputFolderDesc": "All downloads use this folder. Channel downloads create one subfolder per channel, and edited videos are saved under Edited.",
+    "selectOutputFolder": "Choose folder",
+    "noOutputFolder": "No folder selected",
     "postProcessing": "後処理",
     "postProcessingDesc": "メタデータやサムネイルをダウンロードしたファイルに埋め込む",
     "embedMetadata": "メタデータを埋め込む",
@@ -537,6 +541,7 @@
     "telegramStatusError": "エラー",
     "telegramStatusDisabled": "無効",
     "telegramStatusUnavailable": "Telegram のステータスは利用できません。",
+    "telegramTest": "テストメッセージを送信",
     "telegramErrorTokenRequired": "Telegram Bot トークンが必要です。",
     "telegramErrorChatRequired": "少なくとも 1 つの許可されたチャット ID が必要です。",
     "telegramBotToken": "Bot トークン",

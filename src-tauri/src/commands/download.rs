@@ -42,6 +42,10 @@ pub static CANCEL_FLAG: AtomicBool = AtomicBool::new(false);
 
 const RECENT_OUTPUT_LIMIT: usize = 30;
 
+// Channel downloads can be queued concurrently. Keep the final rename and
+// collision check atomic from the app's point of view so two workers never
+// select the same `(2)`, `(3)`, ... filename.
+
 fn extract_time_range(download_sections: &Option<String>) -> Option<String> {
     download_sections.as_ref().and_then(|s| {
         let stripped = s.strip_prefix('*').unwrap_or(s);
@@ -720,6 +724,42 @@ mod playlist_chapter_tests {
         assert_eq!(wire.message, "Download cancelled");
         assert_eq!(wire.retryable, Some(false));
     }
+
+    #[test]
+    fn native_retry_removes_only_aria2_options() {
+        let args = vec![
+            "--downloader".to_string(),
+            "aria2c".to_string(),
+            "--downloader".to_string(),
+            "dash,m3u8:native".to_string(),
+            "--downloader-args".to_string(),
+            "aria2c:-x 16 -s 16".to_string(),
+            "--no-playlist".to_string(),
+            "--".to_string(),
+            "https://example.com/video".to_string(),
+        ];
+
+        assert_eq!(
+            without_aria2_downloader_args(&args),
+            vec![
+                "--downloader",
+                "dash,m3u8:native",
+                "--no-playlist",
+                "--",
+                "https://example.com/video",
+            ]
+        );
+    }
+
+    #[test]
+    fn aria2_exit_is_eligible_for_native_retry() {
+        assert!(is_aria2_runtime_failure(
+            "Download failed (exit code 1): ERROR: aria2c exited with code 16"
+        ));
+        assert!(!is_aria2_runtime_failure(
+            "Download failed (exit code 1): HTTP Error 403"
+        ));
+    }
 }
 
 async fn skipped_live_status(
@@ -1069,6 +1109,16 @@ fn kill_all_download_processes() {
         cmd1.hide_window();
         cmd1.spawn().ok();
 
+        let mut cmd_bundled = StdCommand::new("taskkill");
+        cmd_bundled.args(["/F", "/IM", "youwee-yt-dlp.exe"]);
+        cmd_bundled.hide_window();
+        cmd_bundled.spawn().ok();
+
+        let mut cmd_aria2 = StdCommand::new("taskkill");
+        cmd_aria2.args(["/F", "/IM", "aria2c.exe"]);
+        cmd_aria2.hide_window();
+        cmd_aria2.spawn().ok();
+
         let mut cmd2 = StdCommand::new("taskkill");
         cmd2.args(["/F", "/IM", "ffmpeg.exe"]);
         cmd2.hide_window();
@@ -1136,6 +1186,38 @@ fn normalize_aria2_args(raw_args: &str) -> Option<String> {
         };
     }
     Some(format!("aria2c:{}", trimmed))
+}
+
+fn without_aria2_downloader_args(args: &[String]) -> Vec<String> {
+    let mut native_args = Vec::with_capacity(args.len());
+    let mut index = 0;
+    while index < args.len() {
+        let option = args[index].as_str();
+        if matches!(option, "--downloader" | "--external-downloader")
+            && args.get(index + 1).is_some_and(|value| value == "aria2c")
+        {
+            index += 2;
+            continue;
+        }
+        if matches!(option, "--downloader-args" | "--external-downloader-args")
+            && args.get(index + 1).is_some_and(|value| {
+                value == "aria2c" || value.starts_with("aria2c:") || value.starts_with("aria2:")
+            })
+        {
+            index += 2;
+            continue;
+        }
+        native_args.push(args[index].clone());
+        index += 1;
+    }
+    native_args
+}
+
+fn is_aria2_runtime_failure(error: &str) -> bool {
+    let lower = error.to_ascii_lowercase();
+    lower.contains("aria2c exited with code")
+        || lower.contains("aria2 exited with code")
+        || lower.contains("aria2c not found")
 }
 
 fn build_download_error_message(exit_code: Option<i32>, recent_lines: &[String]) -> BackendError {
@@ -1339,6 +1421,22 @@ pub async fn download_video(
         &filename_metadata_fields,
     );
 
+    let mut aria2_enabled = use_aria2.unwrap_or(false);
+    #[cfg(windows)]
+    if aria2_enabled && sanitized_path.starts_with(r"\\?\") {
+        // aria2 cannot create directories through the Windows extended-path
+        // prefix. Let yt-dlp use its native downloader for this case instead
+        // of starting a download that is guaranteed to fail with exit code 18.
+        aria2_enabled = false;
+        add_log_internal(
+            "info",
+            "Aria2 disabled for this long Windows output path; using yt-dlp's native downloader.",
+            None,
+            Some(&url),
+        )
+        .ok();
+    }
+
     // Use a temp file to capture the final filepath from yt-dlp.
     // On Windows with non-UTF-8 locales (e.g. Chinese/GBK), stdout is encoded
     // in the system ANSI code page which cannot represent all Unicode characters
@@ -1496,9 +1594,13 @@ pub async fn download_video(
     }
 
     // External downloader settings (aria2c)
-    if use_aria2.unwrap_or(false) {
+    if aria2_enabled {
         args.push("--downloader".to_string());
         args.push("aria2c".to_string());
+        // Fragmented manifests should stay on yt-dlp's native downloader. This
+        // also follows yt-dlp's security guidance for DASH/HLS media.
+        args.push("--downloader".to_string());
+        args.push("dash,m3u8:native".to_string());
         if let Some(raw_args) = aria2_args.as_ref() {
             if let Some(normalized_args) = normalize_aria2_args(raw_args) {
                 args.push("--downloader-args".to_string());
@@ -1672,10 +1774,75 @@ pub async fn download_video(
             &download_kind,
         );
 
+        let first_result = handle_tokio_download(
+            app.clone(),
+            id.clone(),
+            process,
+            quality.clone(),
+            format.clone(),
+            url.clone(),
+            should_log_stderr,
+            title.clone(),
+            thumbnail.clone(),
+            source.clone(),
+            download_sections.clone(),
+            history_id.clone(),
+            filepath_tmp.clone(),
+            sanitized_path.clone(),
+            completed_workflow_steps.clone(),
+            failed_workflow_steps.clone(),
+            emit_failed_workflow && !aria2_enabled,
+            aria2_enabled,
+            download_kind.clone(),
+            auto_organize_collections.unwrap_or(false),
+            playlist_collection_name.clone(),
+            split_embedded_chapters,
+        )
+        .await;
+        let Err(first_error) = first_result else {
+            return Ok(());
+        };
+        if !aria2_enabled || !is_aria2_runtime_failure(&first_error) {
+            return Err(first_error);
+        }
+
+        add_log_internal(
+            "info",
+            "aria2c failed; retrying once with yt-dlp's native downloader.",
+            Some(&first_error),
+            Some(&url),
+        )
+        .ok();
+        let retry_args = without_aria2_downloader_args(&args);
+        let retry_command = format!(
+            "[{}] yt-dlp {}",
+            binary_path.display(),
+            redact_ytdlp_advanced_args(&retry_args).join(" ")
+        );
+        add_log_internal("command", &retry_command, None, Some(&url)).ok();
+
+        // Remove only yt-dlp's filepath report; partial media is intentionally
+        // preserved so the native downloader can overwrite/resume safely.
+        std::fs::remove_file(&filepath_tmp).ok();
+        let mut retry_cmd = Command::new(&binary_path);
+        retry_cmd
+            .args(&retry_args)
+            .env("HOME", &home_dir)
+            .env("PATH", &extended_path)
+            .stdout(Stdio::piped())
+            .stderr(Stdio::piped());
+        retry_cmd.hide_window();
+        let retry_process = retry_cmd.spawn().map_err(|error| {
+            BackendError::from_message(format!(
+                "Failed to restart yt-dlp with native downloader: {error}"
+            ))
+            .to_wire_string()
+        })?;
+
         return handle_tokio_download(
             app,
             id,
-            process,
+            retry_process,
             quality,
             format,
             url,
@@ -1684,15 +1851,16 @@ pub async fn download_video(
             thumbnail,
             source,
             download_sections,
-            history_id.clone(),
-            filepath_tmp.clone(),
-            sanitized_path.clone(),
-            completed_workflow_steps.clone(),
-            failed_workflow_steps.clone(),
+            history_id,
+            filepath_tmp,
+            sanitized_path,
+            completed_workflow_steps,
+            failed_workflow_steps,
             emit_failed_workflow,
-            download_kind.clone(),
+            false,
+            download_kind,
             auto_organize_collections.unwrap_or(false),
-            playlist_collection_name.clone(),
+            playlist_collection_name,
             split_embedded_chapters,
         )
         .await;
@@ -2353,6 +2521,7 @@ pub async fn download_video(
                 completed_workflow_steps,
                 failed_workflow_steps,
                 emit_failed_workflow,
+                false,
                 download_kind,
                 auto_organize_collections.unwrap_or(false),
                 playlist_collection_name,
@@ -2381,6 +2550,7 @@ async fn handle_tokio_download(
     completed_workflow_steps: Vec<PluginWorkflowStepSnapshot>,
     failed_workflow_steps: Vec<PluginWorkflowStepSnapshot>,
     emit_failed_workflow: bool,
+    defer_terminal_failure: bool,
     download_kind: String,
     auto_organize_collections: bool,
     playlist_collection_name: Option<String>,
@@ -2837,7 +3007,9 @@ async fn handle_tokio_download(
 
         let recent_lines = recent_output_snapshot(&recent_output);
         let error = build_download_error_message(status.code(), &recent_lines);
-        add_log_internal("error", error.message(), None, Some(&url)).ok();
+        if !defer_terminal_failure {
+            add_log_internal("error", error.message(), None, Some(&url)).ok();
+        }
 
         // Emit error progress so frontend can display error message
         let progress = DownloadProgress {
@@ -2860,7 +3032,9 @@ async fn handle_tokio_download(
             downloaded_size: None,
             elapsed_time: None,
         };
-        app.emit("download-progress", progress).ok();
+        if !defer_terminal_failure {
+            app.emit("download-progress", progress).ok();
+        }
 
         if emit_failed_workflow && !failed_workflow_steps.is_empty() {
             let payload = build_trigger_payload(

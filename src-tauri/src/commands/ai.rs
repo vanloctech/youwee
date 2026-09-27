@@ -7,7 +7,7 @@ use std::collections::HashSet;
 use std::fs;
 use std::path::PathBuf;
 use std::sync::{Mutex, OnceLock};
-use tauri::{AppHandle, Emitter, Manager};
+use tauri::{AppHandle, Emitter};
 
 static CANCELLED_SUMMARY_REQUESTS: OnceLock<Mutex<HashSet<String>>> = OnceLock::new();
 
@@ -118,10 +118,7 @@ async fn generate_summary_with_progress(
 
 /// Get the AI config file path
 fn get_config_path(app: &AppHandle) -> Result<PathBuf, String> {
-    let app_data_dir = app
-        .path()
-        .app_data_dir()
-        .map_err(|e| format!("Failed to get app data directory: {}", e))?;
+    let app_data_dir = crate::utils::app_data_dir(app)?;
     Ok(app_data_dir.join("ai_config.json"))
 }
 

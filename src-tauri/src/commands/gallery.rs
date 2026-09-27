@@ -2,7 +2,7 @@ use std::collections::VecDeque;
 use std::path::PathBuf;
 use std::process::Stdio;
 
-use tauri::{AppHandle, Manager};
+use tauri::AppHandle;
 use tokio::io::{AsyncBufReadExt, BufReader};
 use tokio::process::Command;
 
@@ -51,10 +51,7 @@ fn kill_gallery_processes() {
 }
 
 fn archive_file_path(app: &AppHandle) -> Result<PathBuf, String> {
-    let app_data_dir = app
-        .path()
-        .app_data_dir()
-        .map_err(|e| format!("Failed to get app data directory: {}", e))?;
+    let app_data_dir = crate::utils::app_data_dir(app)?;
     Ok(app_data_dir.join("archive").join("gallery-dl.txt"))
 }
 

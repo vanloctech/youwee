@@ -46,6 +46,14 @@
     "libraryDeleteKeepFile": "عدم حذف ملف الوسائط أبدًا"
   },
   "download": {
+    "queuePersistence": "Download Queue",
+    "queuePersistenceDesc": "Keep queued downloads after closing Youwee",
+    "persistDownloadQueue": "Save download queue",
+    "persistDownloadQueueDesc": "Restore YouTube, Universal, and Gallery queue items when the app opens again",
+    "globalOutputFolder": "Global output folder",
+    "globalOutputFolderDesc": "All downloads use this folder. Channel downloads create one subfolder per channel, and edited videos are saved under Edited.",
+    "selectOutputFolder": "Choose folder",
+    "noOutputFolder": "No folder selected",
     "postProcessing": "ما بعد المعالجة",
     "postProcessingDesc": "تضمين البيانات الوصفية والصور المصغرة داخل الملفات التي تم تنزيلها",
     "embedMetadata": "تضمين Metadata",
@@ -827,6 +835,7 @@
     "telegramStatusError": "خطأ",
     "telegramStatusDisabled": "معطّل",
     "telegramStatusUnavailable": "تعذر قراءة حالة Telegram.",
+    "telegramTest": "إرسال رسالة اختبار",
     "telegramErrorTokenRequired": "رمز بوت Telegram مطلوب.",
     "telegramErrorChatRequired": "مطلوب Chat ID واحد مسموح على الأقل.",
     "telegramBotToken": "رمز البوت",

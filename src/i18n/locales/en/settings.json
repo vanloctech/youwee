@@ -47,6 +47,10 @@
     "libraryDeleteKeepFile": "Never delete media file"
   },
   "download": {
+    "globalOutputFolder": "Global output folder",
+    "globalOutputFolderDesc": "All downloads use this folder. Channel downloads create one subfolder per channel, and edited videos are saved under Edited.",
+    "selectOutputFolder": "Choose folder",
+    "noOutputFolder": "No folder selected",
     "postProcessing": "Post-processing",
     "postProcessingDesc": "Embed metadata and thumbnails into downloaded files",
     "embedMetadata": "Embed Metadata",
@@ -537,6 +541,7 @@
     "telegramStatusError": "Error",
     "telegramStatusDisabled": "Disabled",
     "telegramStatusUnavailable": "Telegram status is unavailable.",
+    "telegramTest": "Send test message",
     "telegramErrorTokenRequired": "Telegram bot token is required.",
     "telegramErrorChatRequired": "At least one allowed chat ID is required.",
     "telegramBotToken": "Bot Token",

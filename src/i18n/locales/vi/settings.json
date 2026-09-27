@@ -47,6 +47,10 @@
     "libraryDeleteKeepFile": "Không xóa file media"
   },
   "download": {
+    "globalOutputFolder": "Thư mục lưu toàn cục",
+    "globalOutputFolderDesc": "Mọi nội dung tải về đều dùng thư mục này. Mỗi kênh có một thư mục con và video đã edit nằm trong thư mục Edited.",
+    "selectOutputFolder": "Chọn thư mục",
+    "noOutputFolder": "Chưa chọn thư mục",
     "postProcessing": "Hậu xử lý",
     "postProcessingDesc": "Nhúng metadata và thumbnail vào file đã tải",
     "embedMetadata": "Nhúng Metadata",
@@ -537,6 +541,7 @@
     "telegramStatusError": "Lỗi",
     "telegramStatusDisabled": "Đã tắt",
     "telegramStatusUnavailable": "Không đọc được trạng thái Telegram.",
+    "telegramTest": "Gửi tin nhắn thử",
     "telegramErrorTokenRequired": "Cần nhập Telegram bot token.",
     "telegramErrorChatRequired": "Cần nhập ít nhất một chat ID được phép.",
     "telegramBotToken": "Bot Token",

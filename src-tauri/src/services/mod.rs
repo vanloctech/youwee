@@ -7,6 +7,7 @@ pub mod polling;
 pub mod telegram;
 mod whisper;
 mod youtube_search;
+pub mod youtube_websub;
 mod ytdlp;
 mod ytdlp_args;
 

@@ -19,6 +19,10 @@ export function PlatformTag({ platform, size = 'sm' }: PlatformTagProps) {
       label: 'Youku',
       className: 'bg-blue-500/10 text-blue-500 border-blue-500/20',
     },
+    tiktok: {
+      label: 'TikTok',
+      className: 'bg-foreground/5 text-foreground border-foreground/15',
+    },
   };
 
   const item = config[platform];

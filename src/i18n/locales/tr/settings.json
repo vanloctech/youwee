@@ -47,6 +47,10 @@
     "libraryDeleteKeepFile": "Medya dosyasını asla silme"
   },
   "download": {
+    "globalOutputFolder": "Global output folder",
+    "globalOutputFolderDesc": "All downloads use this folder. Channel downloads create one subfolder per channel, and edited videos are saved under Edited.",
+    "selectOutputFolder": "Choose folder",
+    "noOutputFolder": "No folder selected",
     "postProcessing": "İşlem sonrası",
     "postProcessingDesc": "İndirilen dosyalara meta veriler ve küçük resimler ekleyin",
     "embedMetadata": "Meta Verileri Göm",
@@ -537,6 +541,7 @@
     "telegramStatusError": "Hata",
     "telegramStatusDisabled": "Engelli",
     "telegramStatusUnavailable": "Telegram durumu kullanılamıyor.",
+    "telegramTest": "Test mesajı gönder",
     "telegramErrorTokenRequired": "Telegram bot jetonu gerekli.",
     "telegramErrorChatRequired": "İzin verilen en az bir sohbet kimliği gerekli.",
     "telegramBotToken": "Bot Jetonu",

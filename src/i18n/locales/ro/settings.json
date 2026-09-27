@@ -47,6 +47,10 @@
     "libraryDeleteKeepFile": "Nu ștergeți niciodată fișierul media"
   },
   "download": {
+    "globalOutputFolder": "Global output folder",
+    "globalOutputFolderDesc": "All downloads use this folder. Channel downloads create one subfolder per channel, and edited videos are saved under Edited.",
+    "selectOutputFolder": "Choose folder",
+    "noOutputFolder": "No folder selected",
     "postProcessing": "Post-procesare",
     "postProcessingDesc": "Încorporați metadate și miniaturi în fișierele descărcate",
     "embedMetadata": "Încorporați metadate",
@@ -537,6 +541,7 @@
     "telegramStatusError": "Eroare",
     "telegramStatusDisabled": "Dezactivat",
     "telegramStatusUnavailable": "Starea Telegram este indisponibilă.",
+    "telegramTest": "Trimite mesaj de test",
     "telegramErrorTokenRequired": "Jetonul bot Telegram este necesar.",
     "telegramErrorChatRequired": "Este necesar cel puțin un ID permis de chat.",
     "telegramBotToken": "Token de bot",

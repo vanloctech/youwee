@@ -46,10 +46,37 @@ pub fn sanitize_output_path(path: &str) -> Result<String, String> {
         return Err("Invalid output path: not a directory".to_string());
     }
 
-    canonical
+    let canonical = canonical
         .to_str()
-        .ok_or_else(|| "Invalid output path: contains invalid UTF-8".to_string())
-        .map(|s| s.to_string())
+        .ok_or_else(|| "Invalid output path: contains invalid UTF-8".to_string())?;
+
+    #[cfg(windows)]
+    {
+        return Ok(normalize_windows_canonical_path(canonical));
+    }
+
+    #[cfg(not(windows))]
+    Ok(canonical.to_string())
+}
+
+/// Aria2 on Windows cannot create directories when given the `\\?\` extended
+/// path prefix. Keep that prefix for genuinely long paths, but use the normal
+/// drive/UNC spelling for paths that fit the classic Windows path limit.
+#[cfg(windows)]
+fn normalize_windows_canonical_path(path: &str) -> String {
+    let without_prefix = if let Some(rest) = path.strip_prefix(r"\\?\UNC\") {
+        format!(r"\\{rest}")
+    } else if let Some(rest) = path.strip_prefix(r"\\?\") {
+        rest.to_string()
+    } else {
+        path.to_string()
+    };
+
+    if without_prefix.chars().count() <= 240 {
+        without_prefix
+    } else {
+        path.to_string()
+    }
 }
 
 /// Build candidate executable paths from the current process PATH plus platform fallbacks.
@@ -352,6 +379,22 @@ mod tests {
                 PathBuf::from("/second/bin/tool")
             ]
         );
+    }
+
+    #[cfg(windows)]
+    #[test]
+    fn strips_extended_prefix_from_short_windows_paths() {
+        assert_eq!(
+            normalize_windows_canonical_path(r"\\?\D:\Video Nuôi Tiktok"),
+            r"D:\Video Nuôi Tiktok"
+        );
+    }
+
+    #[cfg(windows)]
+    #[test]
+    fn keeps_extended_prefix_for_long_windows_paths() {
+        let long_path = format!(r"\\?\D:\{}", "nested\\".repeat(60));
+        assert!(normalize_windows_canonical_path(&long_path).starts_with(r"\\?\"));
     }
 
     #[test]

@@ -22,6 +22,12 @@ import {
   localizeProgressError,
 } from '@/lib/backend-error';
 import { createClientId } from '@/lib/client-id';
+import {
+  enqueueCreatorVideo,
+  loadCreatorProcessingSettings,
+  withCreatorOutputFolder,
+} from '@/lib/creator-processing';
+import { invokeDownloadVideo } from '@/lib/download-command';
 import { buildDownloadDuplicateIdentity } from '@/lib/download-duplicates';
 import {
   clampAutoRetryDelaySeconds,
@@ -30,7 +36,11 @@ import {
   isRetryableError,
   waitWithCancellation,
 } from '@/lib/download-retry';
-import { refreshItemPluginWorkflowSnapshots } from '@/lib/download-settings';
+import {
+  refreshItemPluginWorkflowSnapshots,
+  resolveExternalDownloaderSettings,
+} from '@/lib/download-settings';
+import { onGlobalOutputPathChanged } from '@/lib/global-output-path';
 import {
   buildCookieProxyInvokeOptions,
   loadCookieSettings,
@@ -282,6 +292,7 @@ export function UniversalProvider({ children }: { children: ReactNode }) {
 
   const isDownloadingRef = useRef(false);
   const itemsRef = useRef<DownloadItem[]>([]);
+  const completedFilepathsRef = useRef(new Map<string, string>());
   const settingsRef = useRef<UniversalSettings>(settings);
   const focusClearTimerRef = useRef<number | null>(null);
   const { settings: downloadSettings, filterDownloadedDuplicateCandidates } = useDownload();
@@ -303,6 +314,18 @@ export function UniversalProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     settingsRef.current = settings;
   }, [settings]);
+
+  useEffect(
+    () =>
+      onGlobalOutputPathChanged((outputPath) => {
+        setSettings((current) => {
+          const next = { ...current, outputPath };
+          saveSettings(next);
+          return next;
+        });
+      }),
+    [],
+  );
 
   useEffect(() => {
     refreshPostDownloadWorkflowSteps();
@@ -337,6 +360,9 @@ export function UniversalProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const unlisten = listen<DownloadProgress>('download-progress', (event) => {
       const progress = event.payload;
+      if (progress.status === 'finished' && progress.filepath) {
+        completedFilepathsRef.current.set(progress.id, progress.filepath);
+      }
 
       // Detect cookie error on Windows (lock error or DPAPI/App-Bound Encryption)
       const cookieDbLockedPattern =
@@ -536,6 +562,16 @@ export function UniversalProvider({ children }: { children: ReactNode }) {
 
       const currentItems = itemsRef.current;
       const currentSettings = settingsRef.current;
+      const allowSingleVideoActions =
+        urls.length === 1 &&
+        !urls[0].includes('list=') &&
+        currentSettings.quality !== 'audio' &&
+        !['mp3', 'm4a', 'opus'].includes(currentSettings.format);
+      const creatorSettings = allowSingleVideoActions ? loadCreatorProcessingSettings() : null;
+      const creatorOutputPath =
+        creatorSettings && creatorSettings.mode !== 'none'
+          ? currentSettings.outputPath || (await resolveDefaultOutputPath())
+          : '';
       const advancedSettings = loadDownloadAdvancedSettings();
       const workflowSnapshots = loadPluginWorkflowSnapshots();
 
@@ -553,6 +589,12 @@ export function UniversalProvider({ children }: { children: ReactNode }) {
         autoOrganizeCollections: downloadSettings.autoOrganizeCollections,
         pluginWorkflowSnapshots: workflowSnapshots,
         postDownloadWorkflowSteps: loadPostDownloadWorkflowSteps(),
+        overrides: {
+          creatorProcessing:
+            creatorSettings && creatorSettings.mode !== 'none' && creatorOutputPath
+              ? withCreatorOutputFolder(creatorSettings, creatorOutputPath)
+              : undefined,
+        },
       });
 
       const candidates = urls
@@ -562,7 +604,9 @@ export function UniversalProvider({ children }: { children: ReactNode }) {
           title: url,
           duplicateIdentity: buildDownloadDuplicateIdentity(url),
         }));
-      const filteredCandidates = await filterDownloadedDuplicateCandidates(candidates);
+      const filteredCandidates = await filterDownloadedDuplicateCandidates(candidates, {
+        allowRedownload: allowSingleVideoActions,
+      });
       const currentItemsAfterReview = itemsRef.current;
       const enqueueCandidates = filteredCandidates.filter(
         (candidate) => !currentItemsAfterReview.some((item) => item.url === candidate.url),
@@ -646,11 +690,27 @@ export function UniversalProvider({ children }: { children: ReactNode }) {
         }
       }
       const mediaType = options?.mediaType === 'audio' ? 'audio' : 'video';
+      const allowRedownload =
+        mediaType === 'video' && !options?.downloadPlaylist && !normalizedUrl.includes('list=');
+      const redownloadCandidates = await filterDownloadedDuplicateCandidates(
+        [
+          {
+            url: normalizedUrl,
+            title: normalizedUrl,
+            duplicateIdentity: buildDownloadDuplicateIdentity(normalizedUrl),
+          },
+        ],
+        { allowRedownload },
+      );
+      if (redownloadCandidates.length === 0) return { added: false, itemId: null };
       const videoQuality =
         options?.quality && options.quality !== 'audio' ? options.quality : 'best';
       const audioBitrate = options?.audioBitrate === '128' ? '128' : 'auto';
       const advancedSettings = loadDownloadAdvancedSettings();
       const workflowSnapshots = loadPluginWorkflowSnapshots();
+      const creatorSettings = loadCreatorProcessingSettings();
+      const canEditVideo =
+        allowRedownload && creatorSettings.mode !== 'none' && Boolean(outputPath);
 
       const settingsSnapshot = buildItemUniversalSettingsSnapshot(currentSettings, {
         useAria2: advancedSettings.useAria2,
@@ -677,6 +737,9 @@ export function UniversalProvider({ children }: { children: ReactNode }) {
           timeRangeEnd: options?.timeRangeEnd,
           liveFromStart: options?.liveFromStart ?? currentSettings.liveFromStart,
           skipLive: options?.skipLive ?? currentSettings.skipLive,
+          creatorProcessing: canEditVideo
+            ? withCreatorOutputFolder(creatorSettings, outputPath)
+            : undefined,
         },
       });
 
@@ -709,6 +772,7 @@ export function UniversalProvider({ children }: { children: ReactNode }) {
       downloadSettings.numberQueueItems,
       downloadSettings.splitEmbeddedChapters,
       enqueueQueuedWorkflowForItems,
+      filterDownloadedDuplicateCandidates,
       fetchMetadataForItems,
       focusItem,
     ],
@@ -971,7 +1035,6 @@ export function UniversalProvider({ children }: { children: ReactNode }) {
       const networkOptions = buildCookieProxyInvokeOptions(cookieSettings, proxySettings);
       const embedSettings = loadEmbedSettings();
       const sponsorBlockArgs = loadSponsorBlockArgs();
-      const advancedSettings = loadDownloadAdvancedSettings();
 
       const autoRetryEnabled = itemSettings?.autoRetryEnabled ?? settings.autoRetryEnabled;
       const maxRetries = clampAutoRetryMaxAttempts(
@@ -999,7 +1062,8 @@ export function UniversalProvider({ children }: { children: ReactNode }) {
         );
 
         try {
-          await invoke('download_video', {
+          const advancedSettings = loadDownloadAdvancedSettings();
+          await invokeDownloadVideo({
             id: item.id,
             url: item.url,
             outputPath: itemSettings?.outputPath || settings.outputPath,
@@ -1040,9 +1104,8 @@ export function UniversalProvider({ children }: { children: ReactNode }) {
             speedLimit: settings.speedLimitEnabled
               ? `${settings.speedLimitValue}${settings.speedLimitUnit}`
               : null,
-            // External downloader settings (from item snapshot, fallback to global settings)
-            useAria2: itemSettings?.useAria2 ?? advancedSettings.useAria2,
-            aria2Args: itemSettings?.aria2Args ?? advancedSettings.aria2Args,
+            // Global Aria2 disable is a kill switch for already queued items.
+            ...resolveExternalDownloaderSettings(advancedSettings, itemSettings),
             ytdlpAdvancedOptionsEnabled:
               itemSettings?.ytdlpAdvancedOptionsEnabled ??
               advancedSettings.ytdlpAdvancedOptionsEnabled,
@@ -1069,6 +1132,19 @@ export function UniversalProvider({ children }: { children: ReactNode }) {
             emitFailedWorkflow: false,
             downloadKind: 'universal',
           });
+
+          const completedFilepath = completedFilepathsRef.current.get(item.id);
+          completedFilepathsRef.current.delete(item.id);
+          const creatorSettings = itemSettings?.creatorProcessing;
+          if (completedFilepath && creatorSettings && creatorSettings.mode !== 'none') {
+            const completedTitle =
+              itemsRef.current.find((current) => current.id === item.id)?.title || item.title;
+            try {
+              await enqueueCreatorVideo(completedFilepath, completedTitle, creatorSettings);
+            } catch (error) {
+              console.error('Cannot queue creator processing for individual download:', error);
+            }
+          }
 
           setItems((items) =>
             items.map((i) =>

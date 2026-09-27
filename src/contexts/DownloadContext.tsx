@@ -23,6 +23,12 @@ import {
 } from '@/lib/backend-error';
 import { createClientId } from '@/lib/client-id';
 import {
+  enqueueCreatorVideo,
+  loadCreatorProcessingSettings,
+  withCreatorOutputFolder,
+} from '@/lib/creator-processing';
+import { invokeDownloadVideo } from '@/lib/download-command';
+import {
   buildDownloadDuplicateIdentity,
   getDownloadDuplicateIdentityKey,
 } from '@/lib/download-duplicates';
@@ -38,8 +44,10 @@ import {
   buildItemDownloadSettingsSnapshot,
   createDefaultDownloadSettings,
   refreshItemPluginWorkflowSnapshots,
+  resolveExternalDownloaderSettings,
   serializeDownloadSettings,
 } from '@/lib/download-settings';
+import { announceGlobalOutputPath } from '@/lib/global-output-path';
 import {
   buildCookieProxyInvokeOptions,
   buildProxyUrl,
@@ -271,6 +279,7 @@ export interface DownloadContextType {
     >,
   ) => void;
   refreshTelegramStatus: () => Promise<TelegramStatus>;
+  testTelegramConnection: () => Promise<void>;
   // Cookie error detection
   cookieError: { show: boolean; itemId?: string; kind: 'db_locked' | 'fresh_cookies' } | null;
   clearCookieError: () => void;
@@ -311,6 +320,7 @@ export function DownloadProvider({ children }: { children: ReactNode }) {
     const saved = loadSavedSettings();
     return createDefaultDownloadSettings(saved);
   });
+  const [telegramConfigHydrated, setTelegramConfigHydrated] = useState(false);
 
   // Load cookie settings on init
   const [cookieSettings, setCookieSettings] = useState<CookieSettings>(() => loadCookieSettings());
@@ -332,6 +342,7 @@ export function DownloadProvider({ children }: { children: ReactNode }) {
   const itemsRef = useRef<DownloadItem[]>([]);
   const settingsRef = useRef<DownloadSettings>(settings);
   const focusClearTimerRef = useRef<number | null>(null);
+  const completedFilepathsRef = useRef(new Map<string, string>());
   const duplicateReviewResolverRef = useRef<{
     resolve: (action: DownloadDuplicateReviewAction) => void;
   } | null>(null);
@@ -354,6 +365,44 @@ export function DownloadProvider({ children }: { children: ReactNode }) {
   }, []);
 
   useEffect(() => {
+    let cancelled = false;
+    void invoke<{
+      enabled: boolean;
+      botToken: string;
+      allowedChatIds: string[];
+      plainUrlAction: 'add' | 'download';
+    }>('get_telegram_config')
+      .then((persisted) => {
+        if (cancelled) return;
+        const hasPersistedConfig =
+          persisted.enabled ||
+          persisted.botToken.trim().length > 0 ||
+          persisted.allowedChatIds.length > 0;
+        if (hasPersistedConfig) {
+          setSettings((current) => {
+            const next = {
+              ...current,
+              telegramEnabled: persisted.enabled,
+              telegramBotToken: persisted.botToken,
+              telegramAllowedChatIds: persisted.allowedChatIds.join('\n'),
+              telegramPlainUrlAction: persisted.plainUrlAction,
+            };
+            saveSettings(next);
+            return next;
+          });
+        }
+      })
+      .catch((error) => console.error('Failed to restore Telegram config:', error))
+      .finally(() => {
+        if (!cancelled) setTelegramConfigHydrated(true);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!telegramConfigHydrated) return;
     const allowedChatIds = settings.telegramAllowedChatIds
       .split(/[\s,]+/)
       .map((id) => id.trim())
@@ -378,6 +427,7 @@ export function DownloadProvider({ children }: { children: ReactNode }) {
     settings.telegramBotToken,
     settings.telegramAllowedChatIds,
     settings.telegramPlainUrlAction,
+    telegramConfigHydrated,
   ]);
 
   // Keep itemsRef in sync with items state
@@ -420,6 +470,9 @@ export function DownloadProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const unlisten = listen<DownloadProgress>('download-progress', (event) => {
       const progress = event.payload;
+      if (progress.status === 'finished' && progress.filepath) {
+        completedFilepathsRef.current.set(progress.id, progress.filepath);
+      }
 
       if (progress.playlist_index && progress.playlist_count) {
         setCurrentPlaylistInfo({
@@ -567,8 +620,8 @@ export function DownloadProvider({ children }: { children: ReactNode }) {
     ): Promise<T[]> => {
       const currentSettings = settingsRef.current;
       if (
-        !currentSettings.rememberDownloadedVideos ||
-        currentSettings.duplicateDownloadHandling === 'allow' ||
+        (!options.force && !currentSettings.rememberDownloadedVideos) ||
+        (!options.force && currentSettings.duplicateDownloadHandling === 'allow') ||
         candidates.length === 0
       ) {
         return candidates;
@@ -599,7 +652,13 @@ export function DownloadProvider({ children }: { children: ReactNode }) {
           const duplicate = matchByKey.get(
             getDownloadDuplicateIdentityKey(candidate.duplicateIdentity),
           );
-          if (duplicate) {
+          // Channel/bulk downloads use Library as persistent download memory.
+          // Their files are commonly moved to another drive or replaced by
+          // edited outputs, so the historical identity remains authoritative.
+          if (
+            duplicate &&
+            (duplicate.fileExists || options.trustHistory || options.allowRedownload)
+          ) {
             duplicateItems.push({ candidate, duplicate });
           }
         }
@@ -621,7 +680,10 @@ export function DownloadProvider({ children }: { children: ReactNode }) {
           );
         };
 
-        if (currentSettings.duplicateDownloadHandling === 'skip' || options.ask === false) {
+        if (
+          (currentSettings.duplicateDownloadHandling === 'skip' || options.ask === false) &&
+          !options.allowRedownload
+        ) {
           return skipDuplicates();
         }
 
@@ -633,13 +695,15 @@ export function DownloadProvider({ children }: { children: ReactNode }) {
             duplicate: item.duplicate,
           })),
           newCount: candidates.length - duplicateItems.length,
+          allowRedownload: options.allowRedownload,
         });
 
-        if (action === 'add') return candidates;
+        if (action === 'redownload') return candidates;
         if (action === 'skip') return skipDuplicates();
         return [];
       } catch (error) {
         console.warn('Failed to check downloaded duplicates:', error);
+        if (options.throwOnError) throw error;
         return candidates;
       }
     },
@@ -722,7 +786,7 @@ export function DownloadProvider({ children }: { children: ReactNode }) {
 
   // Add individual URLs (not playlist expansion)
   const addUrlsDirectly = useCallback(
-    async (urls: string[], playlistId?: string) => {
+    async (urls: string[], playlistId?: string, allowRedownload = false) => {
       if (urls.length === 0) return 0;
 
       const currentItems = itemsRef.current;
@@ -730,12 +794,23 @@ export function DownloadProvider({ children }: { children: ReactNode }) {
       const workflowSnapshots = loadPluginWorkflowSnapshots();
 
       // Snapshot current settings for these items
+      const singleVideoCreatorSettings = allowRedownload ? loadCreatorProcessingSettings() : null;
+      const creatorOutputPath =
+        singleVideoCreatorSettings && singleVideoCreatorSettings.mode !== 'none'
+          ? currentSettings.outputPath || (await resolveDefaultOutputPath())
+          : '';
       const settingsSnapshot = buildItemDownloadSettingsSnapshot(currentSettings, {
         pluginWorkflowSnapshots: workflowSnapshots,
         postDownloadWorkflowSteps: loadPostDownloadWorkflowSteps(),
         overrides: {
           downloadPlaylist: false,
           playlistLimit: null,
+          creatorProcessing:
+            singleVideoCreatorSettings &&
+            singleVideoCreatorSettings.mode !== 'none' &&
+            creatorOutputPath
+              ? withCreatorOutputFolder(singleVideoCreatorSettings, creatorOutputPath)
+              : undefined,
         },
       });
 
@@ -745,7 +820,9 @@ export function DownloadProvider({ children }: { children: ReactNode }) {
         title: url,
         duplicateIdentity: buildDownloadDuplicateIdentity(url),
       }));
-      const filteredCandidates = await filterDownloadedDuplicateCandidates(candidates);
+      const filteredCandidates = await filterDownloadedDuplicateCandidates(candidates, {
+        allowRedownload,
+      });
       const currentItemsAfterReview = itemsRef.current;
       const enqueueCandidates = filteredCandidates.filter(
         (candidate) => !currentItemsAfterReview.some((item) => item.url === candidate.url),
@@ -820,11 +897,34 @@ export function DownloadProvider({ children }: { children: ReactNode }) {
           });
         }
       }
+      const allowRedownload =
+        options?.mediaType !== 'audio' &&
+        !options?.downloadPlaylist &&
+        !isPlaylistUrl(normalizedUrl);
+      const redownloadCandidates = await filterDownloadedDuplicateCandidates(
+        [
+          {
+            url: normalizedUrl,
+            title: normalizedUrl,
+            duplicateIdentity: buildDownloadDuplicateIdentity(normalizedUrl),
+          },
+        ],
+        { allowRedownload },
+      );
+      if (redownloadCandidates.length === 0) return { added: false, itemId: null };
       const workflowSnapshots = loadPluginWorkflowSnapshots();
+      const creatorSettings = loadCreatorProcessingSettings();
+      const canEditVideo =
+        allowRedownload && creatorSettings.mode !== 'none' && Boolean(outputPath);
       const settingsSnapshot = buildItemDownloadSettingsSnapshot(currentSettings, {
         pluginWorkflowSnapshots: workflowSnapshots,
         postDownloadWorkflowSteps: loadPostDownloadWorkflowSteps(),
-        overrides: buildExternalDownloadSettingsOverrides(currentSettings, options, outputPath),
+        overrides: {
+          ...buildExternalDownloadSettingsOverrides(currentSettings, options, outputPath),
+          creatorProcessing: canEditVideo
+            ? withCreatorOutputFolder(creatorSettings, outputPath)
+            : undefined,
+        },
       });
 
       const newItem: DownloadItem = {
@@ -848,7 +948,7 @@ export function DownloadProvider({ children }: { children: ReactNode }) {
       enqueueQueuedWorkflowForItems([newItem]);
       return { added: true, itemId: newItem.id };
     },
-    [enqueueQueuedWorkflowForItems, focusItem],
+    [enqueueQueuedWorkflowForItems, filterDownloadedDuplicateCandidates, focusItem, isPlaylistUrl],
   );
 
   const addSearchResultsToQueue = useCallback(
@@ -857,12 +957,25 @@ export function DownloadProvider({ children }: { children: ReactNode }) {
 
       const workflowSnapshots = loadPluginWorkflowSnapshots();
       const currentSettings = settingsRef.current;
+      const isSingleVideo =
+        results.length === 1 &&
+        currentSettings.quality !== 'audio' &&
+        !['mp3', 'm4a', 'opus'].includes(currentSettings.format);
+      const creatorSettings = isSingleVideo ? loadCreatorProcessingSettings() : null;
+      const creatorOutputPath =
+        creatorSettings && creatorSettings.mode !== 'none'
+          ? currentSettings.outputPath || (await resolveDefaultOutputPath())
+          : '';
       const settingsSnapshot = buildItemDownloadSettingsSnapshot(currentSettings, {
         pluginWorkflowSnapshots: workflowSnapshots,
         postDownloadWorkflowSteps: loadPostDownloadWorkflowSteps(),
         overrides: {
           downloadPlaylist: false,
           playlistLimit: null,
+          creatorProcessing:
+            creatorSettings && creatorSettings.mode !== 'none' && creatorOutputPath
+              ? withCreatorOutputFolder(creatorSettings, creatorOutputPath)
+              : undefined,
         },
       });
 
@@ -903,7 +1016,9 @@ export function DownloadProvider({ children }: { children: ReactNode }) {
         });
       }
 
-      const filteredCandidates = await filterDownloadedDuplicateCandidates(candidates);
+      const filteredCandidates = await filterDownloadedDuplicateCandidates(candidates, {
+        allowRedownload: isSingleVideo,
+      });
       const currentItemsAfterReview = itemsRef.current;
       const currentYoutubeIdsAfterReview = new Set(
         currentItemsAfterReview
@@ -1056,7 +1171,13 @@ export function DownloadProvider({ children }: { children: ReactNode }) {
 
       // Add regular videos directly
       if (regularUrls.length > 0) {
-        totalAdded += await addUrlsDirectly(regularUrls);
+        const allowSingleVideoActions =
+          urls.length === 1 &&
+          regularUrls.length === 1 &&
+          !isPlaylistUrl(regularUrls[0]) &&
+          settingsRef.current.quality !== 'audio' &&
+          !['mp3', 'm4a', 'opus'].includes(settingsRef.current.format);
+        totalAdded += await addUrlsDirectly(regularUrls, undefined, allowSingleVideoActions);
       }
 
       // Expand playlists if playlist mode is ON
@@ -1134,6 +1255,7 @@ export function DownloadProvider({ children }: { children: ReactNode }) {
           saveSettings(newSettings);
           return newSettings;
         });
+        announceGlobalOutputPath(outputPath);
 
         if (itemsToUpdate.length > 0) {
           setPendingOutputPathUpdate({
@@ -1366,7 +1488,7 @@ export function DownloadProvider({ children }: { children: ReactNode }) {
         );
 
         try {
-          await invoke('download_video', {
+          await invokeDownloadVideo({
             id: item.id,
             url: item.url,
             outputPath: itemSettings?.outputPath || settings.outputPath,
@@ -1415,8 +1537,7 @@ export function DownloadProvider({ children }: { children: ReactNode }) {
               ? `${settings.speedLimitValue}${settings.speedLimitUnit}`
               : null,
             // External downloader settings
-            useAria2: itemSettings?.useAria2 ?? settings.useAria2,
-            aria2Args: itemSettings?.aria2Args ?? settings.aria2Args,
+            ...resolveExternalDownloaderSettings(settingsRef.current, itemSettings),
             // yt-dlp advanced options
             ytdlpAdvancedOptionsEnabled:
               itemSettings?.ytdlpAdvancedOptionsEnabled ?? settings.ytdlpAdvancedOptionsEnabled,
@@ -1445,6 +1566,19 @@ export function DownloadProvider({ children }: { children: ReactNode }) {
             emitFailedWorkflow: false,
             downloadKind: 'download',
           });
+
+          const completedFilepath = completedFilepathsRef.current.get(item.id);
+          completedFilepathsRef.current.delete(item.id);
+          const creatorSettings = itemSettings?.creatorProcessing;
+          if (completedFilepath && creatorSettings && creatorSettings.mode !== 'none') {
+            const completedTitle =
+              itemsRef.current.find((current) => current.id === item.id)?.title || item.title;
+            try {
+              await enqueueCreatorVideo(completedFilepath, completedTitle, creatorSettings);
+            } catch (error) {
+              console.error('Cannot queue creator processing for individual download:', error);
+            }
+          }
 
           setItems((items) =>
             items.map((i) =>
@@ -1849,6 +1983,7 @@ export function DownloadProvider({ children }: { children: ReactNode }) {
   const updateUseAria2 = useCallback((useAria2: boolean) => {
     setSettings((s) => {
       const newSettings = { ...s, useAria2 };
+      settingsRef.current = newSettings;
       saveSettings(newSettings);
       return newSettings;
     });
@@ -1857,6 +1992,7 @@ export function DownloadProvider({ children }: { children: ReactNode }) {
   const updateAria2Args = useCallback((aria2Args: string) => {
     setSettings((s) => {
       const newSettings = { ...s, aria2Args };
+      settingsRef.current = newSettings;
       saveSettings(newSettings);
       return newSettings;
     });
@@ -1926,6 +2062,10 @@ export function DownloadProvider({ children }: { children: ReactNode }) {
 
   const refreshTelegramStatus = useCallback(async () => {
     return invoke<TelegramStatus>('get_telegram_status');
+  }, []);
+
+  const testTelegramConnection = useCallback(async () => {
+    await invoke('test_telegram_connection');
   }, []);
 
   // Clear cookie error dialog
@@ -2025,6 +2165,7 @@ export function DownloadProvider({ children }: { children: ReactNode }) {
       updateSponsorBlockCategory,
       updateTelegramSettings,
       refreshTelegramStatus,
+      testTelegramConnection,
       // Cookie error detection
       cookieError,
       clearCookieError,
@@ -2092,6 +2233,7 @@ export function DownloadProvider({ children }: { children: ReactNode }) {
       updateSponsorBlockCategory,
       updateTelegramSettings,
       refreshTelegramStatus,
+      testTelegramConnection,
       cookieError,
       clearCookieError,
       retryFailedDownload,

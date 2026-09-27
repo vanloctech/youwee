@@ -50,11 +50,23 @@ pub async fn get_video_metadata(app: AppHandle, path: String) -> Result<VideoMet
         .map(|n| n.to_string_lossy().to_string())
         .unwrap_or_default();
 
-    let duration = format
+    let format_duration = format
         .get("duration")
         .and_then(|d| d.as_str())
         .and_then(|d| d.parse::<f64>().ok())
         .unwrap_or(0.0);
+
+    // Some downloads contain an audio track that is much longer than the
+    // actual video stream. Using the container duration in that case makes
+    // channel splitting seek past the last video frame and produces
+    // audio-only parts. Prefer the video stream duration whenever it is
+    // available, while retaining the container value for audio-only media.
+    let duration = video_stream
+        .and_then(|stream| stream.get("duration"))
+        .and_then(|value| value.as_str())
+        .and_then(|value| value.parse::<f64>().ok())
+        .filter(|value| value.is_finite() && *value > 0.0)
+        .unwrap_or(format_duration);
 
     let (width, height, fps, video_codec) = if let Some(vs) = video_stream {
         let w = vs.get("width").and_then(|v| v.as_i64()).unwrap_or(0) as i32;

@@ -1,6 +1,7 @@
 import {
   Database,
   Film,
+  FolderOpen,
   Gauge,
   History,
   Plus,
@@ -12,6 +13,7 @@ import {
   X,
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+import { CreatorProcessingSettings } from '@/components/settings/CreatorProcessingSettings';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -65,6 +67,7 @@ export function DownloadSection({ highlightId }: DownloadSectionProps) {
     updateSponsorBlock,
     updateSponsorBlockMode,
     updateSponsorBlockCategory,
+    selectOutputFolder,
   } = useDownload();
 
   const updateYtdlpAdvancedOptions = (options: YtdlpAdvancedOption[]) => {
@@ -209,6 +212,31 @@ export function DownloadSection({ highlightId }: DownloadSectionProps) {
 
   return (
     <div className="space-y-8">
+      <SettingsSection
+        title={t('download.globalOutputFolder')}
+        description={t('download.globalOutputFolderDesc')}
+        icon={<FolderOpen className="w-5 h-5 text-white" />}
+        iconClassName="bg-gradient-to-br from-sky-500 to-blue-600 shadow-sky-500/20"
+      >
+        <SettingsCard>
+          <SettingsRow
+            id="global-output-folder"
+            label={t('download.globalOutputFolder')}
+            description={settings.outputPath || t('download.noOutputFolder')}
+            highlight={highlightId === 'global-output-folder'}
+          >
+            <Button variant="outline" onClick={selectOutputFolder}>
+              <FolderOpen className="mr-2 h-4 w-4" />
+              {t('download.selectOutputFolder')}
+            </Button>
+          </SettingsRow>
+        </SettingsCard>
+      </SettingsSection>
+
+      <SettingsDivider />
+
+      <CreatorProcessingSettings />
+
       <SettingsSection
         title={t('download.queuePersistence')}
         description={t('download.queuePersistenceDesc')}

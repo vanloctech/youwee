@@ -47,6 +47,10 @@
     "libraryDeleteKeepFile": "永不删除媒体文件"
   },
   "download": {
+    "globalOutputFolder": "全局输出文件夹",
+    "globalOutputFolderDesc": "所有下载均使用此文件夹。每个频道会创建独立子文件夹，编辑后的视频保存在 Edited 文件夹中。",
+    "selectOutputFolder": "选择文件夹",
+    "noOutputFolder": "尚未选择文件夹",
     "postProcessing": "后处理",
     "postProcessingDesc": "将元数据和缩略图嵌入已下载的文件",
     "embedMetadata": "嵌入元数据",
@@ -537,6 +541,7 @@
     "telegramStatusError": "错误",
     "telegramStatusDisabled": "已禁用",
     "telegramStatusUnavailable": "无法读取 Telegram 状态。",
+    "telegramTest": "发送测试消息",
     "telegramErrorTokenRequired": "需要 Telegram bot token。",
     "telegramErrorChatRequired": "至少需要一个允许的 chat ID。",
     "telegramBotToken": "Bot Token",

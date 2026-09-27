@@ -10,6 +10,7 @@ import {
   UrlInput,
   YoutubeKeywordSearch,
 } from '@/components/download';
+import { CreatorDownloadOptions } from '@/components/download/CreatorDownloadOptions';
 import { FFmpegRequiredDialog } from '@/components/FFmpegRequiredDialog';
 import { FreshCookieRequiredDialog } from '@/components/FreshCookieRequiredDialog';
 import { ThemePicker } from '@/components/settings/ThemePicker';
@@ -191,6 +192,8 @@ export function DownloadPage({ onNavigateToSettings }: DownloadPageProps) {
               onSkipLiveChange={updateSkipLive}
               onGoToSettings={onNavigateToSettings}
             />
+
+            <CreatorDownloadOptions disabled={isDownloading} />
           </div>
 
           {/* Subtle divider */}

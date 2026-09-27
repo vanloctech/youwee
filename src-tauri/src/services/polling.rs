@@ -6,8 +6,8 @@ use crate::database;
 use crate::services::{
     build_cookie_args, build_site_header_args, get_deno_path, run_ytdlp_with_stderr,
 };
-use crate::types::{ChannelVideo, FollowedChannel};
-use crate::utils::normalize_channel_content_urls;
+use crate::types::{ChannelVideo, CreatorProcessingSettings, FollowedChannel};
+use crate::utils::{channel_content_type_matches, is_tiktok_url, normalize_channel_content_urls};
 
 /// Cookie/proxy configuration synced from the frontend for background polling.
 #[derive(Clone, Default)]
@@ -47,7 +47,9 @@ fn get_network_config() -> PollingNetworkConfig {
 
 /// Build a fallback video URL based on the channel's platform.
 fn build_fallback_video_url(channel_url: &str, video_id: &str) -> String {
-    if channel_url.contains("bilibili.com") || channel_url.contains("b23.tv") {
+    if is_tiktok_url(channel_url) {
+        format!("https://www.tiktok.com/@_/video/{}", video_id)
+    } else if channel_url.contains("bilibili.com") || channel_url.contains("b23.tv") {
         format!("https://www.bilibili.com/video/{}", video_id)
     } else if channel_url.contains("youku.com") {
         format!("https://v.youku.com/v_show/id_{}.html", video_id)
@@ -59,8 +61,15 @@ fn build_fallback_video_url(channel_url: &str, video_id: &str) -> String {
 /// Flag to control polling (stop on app exit)
 pub static POLLING_ACTIVE: AtomicBool = AtomicBool::new(false);
 
-/// Minimum polling interval in seconds (default: 15 minutes = 900 seconds)
-pub static POLLING_INTERVAL_SECS: AtomicU64 = AtomicU64::new(900);
+/// Generation token used to invalidate an older polling task when the user
+/// presses Check now or polling is restarted. This prevents two loops from
+/// running after a stop/start cycle while the old one is still asleep.
+static POLLING_GENERATION: AtomicU64 = AtomicU64::new(0);
+
+/// Scheduler tick in seconds. Individual channels still honor their own
+/// check interval; a one-minute tick keeps the fallback notifier responsive
+/// without forcing every channel to be fetched every minute.
+pub static POLLING_INTERVAL_SECS: AtomicU64 = AtomicU64::new(60);
 
 /// Event emitted when new videos are found
 #[derive(Clone, serde::Serialize)]
@@ -82,30 +91,37 @@ pub struct AutoDownloadEvent {
     pub preferred_fps: String,
     pub audio_bitrate: String,
     pub download_threads: i64,
+    pub creator_processing: CreatorProcessingSettings,
 }
 
 /// Start the background polling loop
 pub fn start_polling(app: AppHandle) {
-    POLLING_ACTIVE.store(true, Ordering::SeqCst);
+    start_polling_with_options(app, false);
+}
+
+/// Start polling and force every followed channel to be checked on the first
+/// pass. Used by the tray's Check now action.
+pub fn start_polling_now(app: AppHandle) {
+    start_polling_with_options(app, true);
+}
+
+fn start_polling_with_options(app: AppHandle, force_first_pass: bool) {
+    // Starting polling twice should not create duplicate network work.
+    if POLLING_ACTIVE.swap(true, Ordering::SeqCst) {
+        return;
+    }
+    let generation = POLLING_GENERATION.fetch_add(1, Ordering::SeqCst) + 1;
 
     tauri::async_runtime::spawn(async move {
         log::info!("Channel polling started");
+        let mut force_check = force_first_pass;
 
         loop {
             // Check if polling should stop
-            if !POLLING_ACTIVE.load(Ordering::SeqCst) {
+            if !POLLING_ACTIVE.load(Ordering::SeqCst)
+                || POLLING_GENERATION.load(Ordering::SeqCst) != generation
+            {
                 log::info!("Channel polling stopped");
-                break;
-            }
-
-            // Get polling interval
-            let interval = POLLING_INTERVAL_SECS.load(Ordering::SeqCst);
-
-            // Wait for the interval
-            tokio::time::sleep(tokio::time::Duration::from_secs(interval)).await;
-
-            // Check again after sleep (might have been stopped during sleep)
-            if !POLLING_ACTIVE.load(Ordering::SeqCst) {
                 break;
             }
 
@@ -114,75 +130,32 @@ pub fn start_polling(app: AppHandle) {
                 Ok(channels) => channels,
                 Err(e) => {
                     log::error!("Failed to get followed channels for polling: {}", e);
-                    continue;
+                    Vec::new()
                 }
             };
 
-            if channels.is_empty() {
-                continue;
-            }
-
             for channel in &channels {
-                if !POLLING_ACTIVE.load(Ordering::SeqCst) {
+                if !POLLING_ACTIVE.load(Ordering::SeqCst)
+                    || POLLING_GENERATION.load(Ordering::SeqCst) != generation
+                {
                     break;
                 }
 
                 // Check individual channel interval
-                if !should_check_channel(channel) {
+                if !force_check && !should_check_channel(channel) {
                     continue;
                 }
 
-                match check_channel_for_new_videos(&app, channel).await {
-                    Ok(new_count) => {
-                        if new_count > 0 {
-                            // Update last checked
-                            let _ = database::update_channel_last_checked_db(
-                                channel.id.clone(),
-                                None, // Will be set from the first video
-                            );
-
-                            // Get total new count
-                            let total_new = database::get_new_videos_count_db(None).unwrap_or(0);
-
-                            // Emit event to frontend
-                            let _ = app.emit(
-                                "channel-new-videos",
-                                NewVideosEvent {
-                                    channel_id: channel.id.clone(),
-                                    channel_name: channel.name.clone(),
-                                    new_count,
-                                    total_new,
-                                },
-                            );
-
-                            // Update tray menu with new counts
-                            crate::rebuild_tray_menu(&app);
-
-                            // Send notification
-                            send_notification(&app, &channel.name, new_count);
-
-                            // Auto-download if enabled
-                            if channel.auto_download {
-                                let _ = app.emit(
-                                    "channel-auto-download",
-                                    AutoDownloadEvent {
-                                        channel_id: channel.id.clone(),
-                                        channel_name: channel.name.clone(),
-                                        quality: channel.download_quality.clone(),
-                                        format: channel.download_format.clone(),
-                                        video_codec: channel.download_video_codec.clone(),
-                                        preferred_fps: channel.download_preferred_fps.clone(),
-                                        audio_bitrate: channel.download_audio_bitrate.clone(),
-                                        download_threads: channel.download_threads,
-                                    },
-                                );
-                            }
+                match check_channel_for_new_videos(&app, channel, Some(generation)).await {
+                    Ok(new_videos) => {
+                        if !is_polling_generation_current(generation) {
+                            break;
+                        }
+                        if !new_videos.is_empty() {
+                            publish_new_videos(&app, channel, &new_videos).await;
                         } else {
-                            // Still update last checked time
-                            let _ = database::update_channel_last_checked_db(
-                                channel.id.clone(),
-                                channel.last_video_id.clone(),
-                            );
+                            // The channel scan updates its own timestamp and
+                            // cursor, including the duplicate-row case.
                         }
                     }
                     Err(e) => {
@@ -193,13 +166,26 @@ pub fn start_polling(app: AppHandle) {
                 // Small delay between channels to avoid rate limiting
                 tokio::time::sleep(tokio::time::Duration::from_secs(2)).await;
             }
+
+            force_check = false;
+
+            // The first pass is immediate; subsequent passes respect the
+            // global interval. Check now invalidates this task and starts a
+            // fresh immediate pass.
+            let interval = POLLING_INTERVAL_SECS.load(Ordering::SeqCst);
+            tokio::time::sleep(tokio::time::Duration::from_secs(interval)).await;
         }
     });
+}
+
+fn is_polling_generation_current(generation: u64) -> bool {
+    POLLING_ACTIVE.load(Ordering::SeqCst) && POLLING_GENERATION.load(Ordering::SeqCst) == generation
 }
 
 /// Stop polling
 pub fn stop_polling() {
     POLLING_ACTIVE.store(false, Ordering::SeqCst);
+    POLLING_GENERATION.fetch_add(1, Ordering::SeqCst);
 }
 
 /// Check if enough time has passed since last check for a channel
@@ -223,7 +209,8 @@ fn should_check_channel(channel: &FollowedChannel) -> bool {
 async fn check_channel_for_new_videos(
     app: &AppHandle,
     channel: &FollowedChannel,
-) -> Result<usize, String> {
+    generation: Option<u64>,
+) -> Result<Vec<ChannelVideo>, String> {
     let limit = channel.filter_max_videos.unwrap_or(20) as u32;
     let channel_urls =
         normalize_channel_content_urls(&channel.url, Some(&channel.youtube_content_type));
@@ -232,6 +219,7 @@ async fn check_channel_for_new_videos(
 
     for channel_url in channel_urls {
         let is_youtube = channel_url.contains("youtube.com") || channel_url.contains("youtu.be");
+        let is_tiktok = is_tiktok_url(&channel_url);
 
         let mut args = vec![
             "--dump-json".to_string(),
@@ -242,9 +230,8 @@ async fn check_channel_for_new_videos(
             limit.to_string(),
         ];
 
-        // Only use --flat-playlist for YouTube; other platforms (Bilibili, etc.)
-        // return minimal data in flat mode (no title, thumbnail, duration)
-        if is_youtube {
+        // TikTok flat entries include title, thumbnail, and duration.
+        if is_youtube || is_tiktok {
             args.push("--flat-playlist".to_string());
         }
 
@@ -298,6 +285,7 @@ async fn check_channel_for_new_videos(
 
     let mut new_videos: Vec<ChannelVideo> = Vec::new();
     let now = chrono::Utc::now().to_rfc3339();
+    let mut newest_video_id = None;
 
     for line in output.lines() {
         let line = line.trim();
@@ -315,6 +303,10 @@ async fn check_channel_for_new_videos(
                 continue;
             }
 
+            if newest_video_id.is_none() {
+                newest_video_id = Some(id.clone());
+            }
+
             // Check if this video is already known (skip if it is)
             if let Some(ref last_id) = channel.last_video_id {
                 if &id == last_id {
@@ -328,9 +320,12 @@ async fn check_channel_for_new_videos(
                 .unwrap_or("Unknown")
                 .to_string();
             let video_url = json
-                .get("url")
-                .or_else(|| json.get("webpage_url"))
+                .get("webpage_url")
+                .or_else(|| json.get("url"))
                 .and_then(|v| v.as_str())
+                .filter(|candidate| {
+                    candidate.starts_with("http://") || candidate.starts_with("https://")
+                })
                 .map(|s| s.to_string())
                 .unwrap_or_else(|| build_fallback_video_url(&channel.url, &id));
 
@@ -352,6 +347,10 @@ async fn check_channel_for_new_videos(
                 .map(|u| u.replace("http://", "https://"));
 
             let duration = json.get("duration").and_then(|v| v.as_f64());
+            if !channel_content_type_matches(&channel.url, &channel.youtube_content_type, duration)
+            {
+                continue;
+            }
             let upload_date = json
                 .get("upload_date")
                 .and_then(|v| v.as_str())
@@ -410,24 +409,132 @@ async fn check_channel_for_new_videos(
                 upload_date,
                 status: "new".to_string(),
                 created_at: now.clone(),
+                downloaded_at: None,
+                output_path: None,
+                edited_output_paths: Vec::new(),
             });
         }
     }
 
     if new_videos.is_empty() {
-        return Ok(0);
+        let _ = database::update_channel_last_checked_db(
+            channel.id.clone(),
+            newest_video_id.or_else(|| channel.last_video_id.clone()),
+        );
+        return Ok(Vec::new());
     }
 
-    // Save new videos to DB
-    let new_count = new_videos.len();
+    if generation.is_some_and(|value| !is_polling_generation_current(value)) {
+        return Ok(Vec::new());
+    }
 
-    // Update last_video_id to the first (newest) video
-    let first_video_id = new_videos.first().map(|v| v.video_id.clone());
-    let _ = database::update_channel_last_checked_db(channel.id.clone(), first_video_id);
+    // Save first and use the inserted rows for the notification. A channel
+    // scan can contain rows already stored by an earlier scan or task.
+    let inserted_videos = database::save_new_channel_videos_db(channel.id.clone(), new_videos)?;
+    // Update last_video_id to the first (newest) video after the DB write.
+    let last_video_id = if is_tiktok_url(&channel.url) {
+        newest_video_id
+    } else {
+        inserted_videos
+            .first()
+            .map(|video| video.video_id.clone())
+            .or(newest_video_id)
+    };
+    let _ = database::update_channel_last_checked_db(channel.id.clone(), last_video_id);
 
-    let _ = database::save_channel_videos_db(channel.id.clone(), new_videos);
+    if inserted_videos.is_empty()
+        || generation.is_some_and(|value| !is_polling_generation_current(value))
+    {
+        return Ok(Vec::new());
+    }
 
-    Ok(new_count)
+    Ok(inserted_videos)
+}
+
+/// Run the normal metadata/filter scan immediately after a YouTube WebSub
+/// event, then fan the inserted videos out through the exact same desktop,
+/// Telegram, auto-download, and creator-processing path as fallback polling.
+pub async fn check_channel_from_realtime_event(
+    app: &AppHandle,
+    channel: &FollowedChannel,
+    expected_video_id: Option<&str>,
+) {
+    if let Some(video_id) = expected_video_id {
+        if database::get_channel_videos_by_video_ids_db(
+            channel.id.clone(),
+            vec![video_id.to_string()],
+        )
+        .is_ok_and(|videos| !videos.is_empty())
+        {
+            // WebSub also reports title/description edits. Do not turn those
+            // into duplicate notifications or repeated metadata scans.
+            return;
+        }
+    }
+
+    // The push can arrive a few seconds before the new upload appears on the
+    // public channel tab. Retry briefly so the alert remains near-real-time
+    // instead of falling through to the 15-minute recovery poll.
+    for delay_secs in [0_u64, 3, 7, 15] {
+        if delay_secs > 0 {
+            tokio::time::sleep(tokio::time::Duration::from_secs(delay_secs)).await;
+        }
+        match check_channel_for_new_videos(app, channel, None).await {
+            Ok(new_videos) if !new_videos.is_empty() => {
+                publish_new_videos(app, channel, &new_videos).await;
+                return;
+            }
+            Ok(_) => {}
+            Err(error) => {
+                log::warn!("WebSub scan failed for {}: {}", channel.name, error);
+            }
+        }
+    }
+
+    log::debug!(
+        "WebSub scan for {} contained no new rows after retries (already seen or filtered)",
+        channel.name
+    );
+}
+
+async fn publish_new_videos(app: &AppHandle, channel: &FollowedChannel, videos: &[ChannelVideo]) {
+    let new_count = videos.len();
+    let total_new = database::get_new_videos_count_db(None).unwrap_or(0);
+
+    let _ = app.emit(
+        "channel-new-videos",
+        NewVideosEvent {
+            channel_id: channel.id.clone(),
+            channel_name: channel.name.clone(),
+            new_count,
+            total_new,
+        },
+    );
+    crate::rebuild_tray_menu(app);
+    send_notification(app, &channel.name, new_count);
+
+    if let Err(error) =
+        crate::services::telegram::send_new_video_notification(&channel.name, videos).await
+    {
+        log::warn!("Failed to send Telegram new-video notification: {}", error);
+    }
+
+    if channel.auto_download {
+        let _ = app.emit(
+            "channel-auto-download",
+            AutoDownloadEvent {
+                channel_id: channel.id.clone(),
+                channel_name: channel.name.clone(),
+                quality: channel.download_quality.clone(),
+                format: channel.download_format.clone(),
+                video_codec: channel.download_video_codec.clone(),
+                preferred_fps: channel.download_preferred_fps.clone(),
+                audio_bitrate: channel.download_audio_bitrate.clone(),
+                download_threads: channel.download_threads,
+                creator_processing: channel.creator_processing.clone(),
+            },
+        );
+    }
 }
 
 /// Send a desktop notification for new videos

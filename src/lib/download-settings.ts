@@ -240,6 +240,25 @@ export function buildItemDownloadSettingsSnapshot(
   };
 }
 
+/**
+ * Resolve the external downloader for a queued item.
+ *
+ * Queue items keep a snapshot of the settings used when they were added, but
+ * disabling Aria2 globally must still be an immediate kill switch. This also
+ * lets a retry use the current Aria2 arguments without changing the rest of
+ * the item's snapshot.
+ */
+export function resolveExternalDownloaderSettings(
+  globalSettings: Pick<DownloadSettings, 'useAria2' | 'aria2Args'>,
+  itemSettings?: Pick<ItemDownloadSettings | ItemUniversalSettings, 'useAria2' | 'aria2Args'>,
+): Pick<DownloadSettings, 'useAria2' | 'aria2Args'> {
+  const enabled = globalSettings.useAria2 && itemSettings?.useAria2 !== false;
+  return {
+    useAria2: enabled,
+    aria2Args: enabled ? (itemSettings?.aria2Args ?? globalSettings.aria2Args) : '',
+  };
+}
+
 export function refreshItemPluginWorkflowSnapshots<
   T extends ItemDownloadSettings | ItemUniversalSettings,
 >(settings: T, pluginWorkflowSnapshots: PluginWorkflowSnapshotMap): T {

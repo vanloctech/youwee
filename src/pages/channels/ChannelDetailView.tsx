@@ -1,7 +1,11 @@
+import { openUrl } from '@tauri-apps/plugin-opener';
 import {
   ArrowLeft,
   CheckSquare,
   Download,
+  ExternalLink,
+  FolderOpen,
+  History,
   ListPlus,
   Loader2,
   RefreshCw,
@@ -10,7 +14,7 @@ import {
   Tv,
   X,
 } from 'lucide-react';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { FFmpegRequiredDialog } from '@/components/FFmpegRequiredDialog';
 import { ThemePicker } from '@/components/settings/ThemePicker';
@@ -18,15 +22,25 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
+import { sanitizeChannelFolderName } from '@/contexts/channels/useChannelsController';
 import { useChannels } from '@/contexts/channels-context';
 import { useDependencies } from '@/contexts/DependenciesContext';
+import { isTikTokChannelContentUrl, matchesChannelContentType } from '@/lib/channel-content';
+import { DEFAULT_CREATOR_PROCESSING_SETTINGS, pickCreatorFolder } from '@/lib/creator-processing';
+import {
+  findHistoryFilepathByUrl,
+  openFileLocation,
+  openFolderLocation,
+} from '@/lib/open-file-location';
 import type {
+  CreatorProcessingSettings,
   FollowedChannel,
   PreferredFps,
   Quality,
   YoutubeChannelContentType,
 } from '@/lib/types';
 import { cn } from '@/lib/utils';
+import { ChannelActivityPanel } from '@/pages/channels/ChannelActivityPanel';
 import { ChannelFetchLoadingState } from '@/pages/channels/ChannelFetchLoadingState';
 import { ChannelSettingsBar, YoutubeContentTypeSelect } from '@/pages/channels/ChannelSettingsBar';
 import { ChannelVideoListItem } from '@/pages/channels/ChannelVideoListItem';
@@ -42,10 +56,18 @@ type ChannelDetailViewProps = {
   onBack: () => void;
 };
 
+function getParentPath(filepath: string): string | null {
+  const separatorIndex = Math.max(filepath.lastIndexOf('/'), filepath.lastIndexOf('\\'));
+  return separatorIndex > 0 ? filepath.slice(0, separatorIndex) : null;
+}
+
 export function ChannelDetailView({ channel, onBack }: ChannelDetailViewProps) {
   const { t } = useTranslation('channels');
+  const isTikTokChannel = isTikTokChannelContentUrl(channel.url);
   const {
     unfollowChannel,
+    followedChannels,
+    channelProgressByUrl,
     updateChannelSettings,
     fetchChannelVideos,
     clearBrowse,
@@ -57,6 +79,12 @@ export function ChannelDetailView({ channel, onBack }: ChannelDetailViewProps) {
     browseLoadingMore,
     loadMoreChannelVideos,
     stopChannelFetch,
+    channelScanOrder,
+    setChannelScanOrder,
+    channelFetchLimit,
+    setChannelFetchLimit,
+    showDownloadedVideos,
+    setShowDownloadedVideos,
     selectedVideoIds,
     toggleVideoSelection,
     selectAllVideos,
@@ -65,6 +93,9 @@ export function ChannelDetailView({ channel, onBack }: ChannelDetailViewProps) {
     stopDownload,
     isDownloading,
     videoStates,
+    activeChannelVideos,
+    loadingActiveVideos,
+    refreshActiveChannelVideos,
     outputPath,
     selectOutputFolder,
     setActiveChannel,
@@ -73,6 +104,7 @@ export function ChannelDetailView({ channel, onBack }: ChannelDetailViewProps) {
   const { ffmpegStatus } = useDependencies();
 
   const [confirmUnfollow, setConfirmUnfollow] = useState(false);
+  const [showHistory, setShowHistory] = useState(false);
 
   const [showSettings, setShowSettings] = useState(false);
   const [settingsCheckInterval, setSettingsCheckInterval] = useState(channel.check_interval);
@@ -111,7 +143,13 @@ export function ChannelDetailView({ channel, onBack }: ChannelDetailViewProps) {
     channel.download_audio_bitrate || '192',
   );
   const [settingsYoutubeContentType, setSettingsYoutubeContentType] =
-    useState<YoutubeChannelContentType>(channel.youtube_content_type || 'videos');
+    useState<YoutubeChannelContentType>(
+      channel.youtube_content_type || (isTikTokChannel ? 'videos_shorts' : 'videos'),
+    );
+  const [settingsCreatorProcessing, setSettingsCreatorProcessing] =
+    useState<CreatorProcessingSettings>(
+      channel.creator_processing ?? DEFAULT_CREATOR_PROCESSING_SETTINGS,
+    );
   const [settingsIsAudioMode, setSettingsIsAudioMode] = useState(
     channel.download_quality === 'audio' ||
       ['mp3', 'm4a', 'opus'].includes(channel.download_format),
@@ -138,19 +176,78 @@ export function ChannelDetailView({ channel, onBack }: ChannelDetailViewProps) {
     setSettingsDownloadVideoCodec(channel.download_video_codec || 'h264');
     setSettingsDownloadPreferredFps(channel.download_preferred_fps === '30' ? '30' : 'original');
     setSettingsDownloadAudioBitrate(channel.download_audio_bitrate || '192');
-    setSettingsYoutubeContentType(channel.youtube_content_type || 'videos');
+    setSettingsYoutubeContentType(
+      channel.youtube_content_type || (isTikTokChannel ? 'videos_shorts' : 'videos'),
+    );
+    setSettingsCreatorProcessing(channel.creator_processing ?? DEFAULT_CREATOR_PROCESSING_SETTINGS);
     setSettingsIsAudioMode(
       channel.download_quality === 'audio' ||
         ['mp3', 'm4a', 'opus'].includes(channel.download_format),
     );
-  }, [channel]);
+  }, [channel, isTikTokChannel]);
+
+  const resolveChannelVideoFilepath = useCallback(
+    async (video: {
+      id: string;
+      url: string;
+      output_path?: string;
+      edited_output_paths?: string[];
+    }) => {
+      const editedPath = video.edited_output_paths?.find(Boolean);
+      if (editedPath) return editedPath;
+      if (video.output_path) return video.output_path;
+      const sessionFilepath = videoStates.get(video.id)?.filepath;
+      if (sessionFilepath) return sessionFilepath;
+      return findHistoryFilepathByUrl(video.url);
+    },
+    [videoStates],
+  );
+
+  const openChannelVideoLocation = useCallback(
+    async (video: { id: string; url: string }) => {
+      const filepath = await resolveChannelVideoFilepath(video);
+      if (filepath) {
+        try {
+          await openFileLocation(filepath);
+          return;
+        } catch {
+          // The history row can outlive its file. Fall back to the current
+          // channel folder when the saved file is no longer present.
+        }
+      }
+
+      if (outputPath) {
+        await openFolderLocation(`${outputPath}/${sanitizeChannelFolderName(channel.name)}`);
+      }
+    },
+    [channel.name, outputPath, resolveChannelVideoFilepath],
+  );
+
+  const openChannelFolderLocation = useCallback(async () => {
+    for (const video of activeChannelVideos) {
+      const filepath = await resolveChannelVideoFilepath(video);
+      const parentPath = filepath ? getParentPath(filepath) : null;
+      if (parentPath) {
+        try {
+          await openFolderLocation(parentPath);
+          return;
+        } catch {
+          // Continue with the configured channel folder fallback.
+        }
+      }
+    }
+
+    if (outputPath) {
+      await openFolderLocation(`${outputPath}/${sanitizeChannelFolderName(channel.name)}`);
+    }
+  }, [activeChannelVideos, channel.name, outputPath, resolveChannelVideoFilepath]);
 
   const handleSaveSettings = useCallback(async () => {
     setSavingSettings(true);
     try {
       await updateChannelSettings({
         id: channel.id,
-        checkInterval: Math.max(5, settingsCheckInterval),
+        checkInterval: Math.max(1, settingsCheckInterval),
         autoDownload: settingsAutoDownload,
         downloadQuality: settingsIsAudioMode ? 'audio' : settingsDownloadQuality,
         downloadFormat: settingsDownloadFormat,
@@ -163,13 +260,15 @@ export function ChannelDetailView({ channel, onBack }: ChannelDetailViewProps) {
         filterExcludeKeywords: settingsFilterExcludeKeywords || null,
         filterMaxVideos: settingsFilterMaxVideos ? Number(settingsFilterMaxVideos) : null,
         downloadThreads: Math.max(1, settingsDownloadThreads),
-        youtubeContentType: isYoutubeChannelContentUrl(channel.url)
-          ? settingsYoutubeContentType
-          : 'videos',
+        youtubeContentType:
+          isYoutubeChannelContentUrl(channel.url) || isTikTokChannel
+            ? settingsYoutubeContentType
+            : 'videos',
+        creatorProcessing: { ...settingsCreatorProcessing, outputFolder: '' },
       });
       setActiveChannel({
         ...channel,
-        check_interval: Math.max(5, settingsCheckInterval),
+        check_interval: Math.max(1, settingsCheckInterval),
         auto_download: settingsAutoDownload,
         download_quality: settingsIsAudioMode ? 'audio' : settingsDownloadQuality,
         download_format: settingsDownloadFormat,
@@ -186,9 +285,11 @@ export function ChannelDetailView({ channel, onBack }: ChannelDetailViewProps) {
         filter_exclude_keywords: settingsFilterExcludeKeywords || undefined,
         filter_max_videos: settingsFilterMaxVideos ? Number(settingsFilterMaxVideos) : undefined,
         download_threads: Math.max(1, settingsDownloadThreads),
-        youtube_content_type: isYoutubeChannelContentUrl(channel.url)
-          ? settingsYoutubeContentType
-          : 'videos',
+        youtube_content_type:
+          isYoutubeChannelContentUrl(channel.url) || isTikTokChannel
+            ? settingsYoutubeContentType
+            : 'videos',
+        creator_processing: { ...settingsCreatorProcessing, outputFolder: '' },
       });
       setShowSettings(false);
     } catch (error) {
@@ -206,6 +307,7 @@ export function ChannelDetailView({ channel, onBack }: ChannelDetailViewProps) {
     settingsDownloadPreferredFps,
     settingsDownloadAudioBitrate,
     settingsYoutubeContentType,
+    settingsCreatorProcessing,
     settingsIsAudioMode,
     settingsFilterMinDuration,
     settingsFilterMaxDuration,
@@ -215,6 +317,7 @@ export function ChannelDetailView({ channel, onBack }: ChannelDetailViewProps) {
     settingsDownloadThreads,
     setActiveChannel,
     updateChannelSettings,
+    isTikTokChannel,
   ]);
 
   const [initSettings] = useState(loadInitialSettings);
@@ -280,24 +383,83 @@ export function ChannelDetailView({ channel, onBack }: ChannelDetailViewProps) {
       return;
     }
     try {
-      await downloadSelectedVideos(quality, format, videoCodec, preferredFps);
+      await downloadSelectedVideos(
+        quality,
+        format,
+        videoCodec,
+        preferredFps,
+        channel.creator_processing ?? DEFAULT_CREATOR_PROCESSING_SETTINGS,
+      );
     } catch (error) {
       console.error('Download failed:', error);
     }
-  }, [downloadSelectedVideos, quality, format, videoCodec, preferredFps, ffmpegRequired]);
+  }, [
+    channel.creator_processing,
+    downloadSelectedVideos,
+    quality,
+    format,
+    videoCodec,
+    preferredFps,
+    ffmpegRequired,
+  ]);
 
   const pendingCount = selectedVideoIds.size;
+  const visibleBrowseVideos = useMemo(
+    () =>
+      browseVideos.filter((video) =>
+        matchesChannelContentType(channel.platform, channel.youtube_content_type, video.duration),
+      ),
+    [browseVideos, channel.platform, channel.youtube_content_type],
+  );
   const canReuseInitialBrowseRef = useRef(browseUrl === channel.url && browseVideos.length > 0);
+  const previousShowDownloaded = useRef(showDownloadedVideos);
+
+  useEffect(() => {
+    if (
+      previousShowDownloaded.current !== showDownloadedVideos &&
+      browseUrl === channel.url &&
+      !browseLoading &&
+      !browseLoadingMore
+    ) {
+      void fetchChannelVideos(
+        channel.url,
+        channelFetchLimit,
+        channel.youtube_content_type || 'videos',
+        channelScanOrder,
+      );
+    }
+    previousShowDownloaded.current = showDownloadedVideos;
+  }, [
+    browseLoading,
+    browseLoadingMore,
+    browseUrl,
+    channel,
+    channelFetchLimit,
+    channelScanOrder,
+    fetchChannelVideos,
+    showDownloadedVideos,
+  ]);
 
   useEffect(() => {
     if (!canReuseInitialBrowseRef.current) {
-      fetchChannelVideos(channel.url, undefined, channel.youtube_content_type || 'videos');
+      fetchChannelVideos(
+        channel.url,
+        undefined,
+        channel.youtube_content_type || 'videos',
+        channelScanOrder,
+      );
     }
 
     return () => {
       clearBrowse();
     };
-  }, [channel.url, channel.youtube_content_type, fetchChannelVideos, clearBrowse]);
+  }, [
+    channel.url,
+    channel.youtube_content_type,
+    channelScanOrder,
+    fetchChannelVideos,
+    clearBrowse,
+  ]);
 
   return (
     <div className="flex-1 flex flex-col overflow-hidden">
@@ -334,8 +496,9 @@ export function ChannelDetailView({ channel, onBack }: ChannelDetailViewProps) {
                 ? stopChannelFetch()
                 : fetchChannelVideos(
                     channel.url,
-                    undefined,
+                    channelFetchLimit,
                     channel.youtube_content_type || 'videos',
+                    channelScanOrder,
                   )
             }
             disabled={false}
@@ -346,6 +509,57 @@ export function ChannelDetailView({ channel, onBack }: ChannelDetailViewProps) {
               <RefreshCw className="w-3.5 h-3.5" />
             )}
             {browseLoading || browseLoadingMore ? t('stopFetch') : t('checkNow')}
+          </Button>
+          <select
+            value={channelScanOrder}
+            onChange={(event) =>
+              setChannelScanOrder(event.target.value === 'popular' ? 'popular' : 'latest')
+            }
+            className="h-8 rounded-md border border-border/50 bg-background px-2 text-xs"
+            aria-label={t('scanOrder.title')}
+          >
+            <option value="latest">{t('scanOrder.latest')}</option>
+            <option value="popular">{t('scanOrder.popular')}</option>
+          </select>
+          <Input
+            type="number"
+            min={1}
+            max={500}
+            value={channelFetchLimit}
+            onChange={(event) => setChannelFetchLimit(Number(event.target.value))}
+            className="h-8 w-16 text-center text-xs"
+            aria-label={t('fetchLimit')}
+            title={t('fetchLimit')}
+          />
+          <label className="flex h-8 items-center gap-1 text-xs text-muted-foreground">
+            <input
+              type="checkbox"
+              checked={showDownloadedVideos}
+              onChange={(event) => setShowDownloadedVideos(event.target.checked)}
+            />
+            {t('showDownloaded')}
+          </label>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-8 w-8"
+            title={t('openChannelFolder')}
+            onClick={() => void openChannelFolderLocation()}
+          >
+            <FolderOpen className="h-4 w-4" />
+          </Button>
+          <Button
+            variant={showHistory ? 'secondary' : 'ghost'}
+            size="sm"
+            className="h-8 gap-1.5"
+            title={t('downloadHistory')}
+            onClick={() => {
+              setShowHistory((current) => !current);
+              if (!showHistory) void refreshActiveChannelVideos();
+            }}
+          >
+            <History className="h-4 w-4" />
+            <span className="hidden lg:inline">{t('downloadHistory')}</span>
           </Button>
           <Button
             variant={showSettings ? 'secondary' : 'ghost'}
@@ -374,6 +588,35 @@ export function ChannelDetailView({ channel, onBack }: ChannelDetailViewProps) {
         </div>
       </header>
 
+      {followedChannels.length > 1 && (
+        <div className="flex-shrink-0 px-4 sm:px-6 pb-2 overflow-x-auto">
+          <div className="flex items-center gap-1.5 min-w-max">
+            {followedChannels.map((item) => {
+              const itemProgress = channelProgressByUrl[item.url];
+              const itemBusy = Boolean(
+                itemProgress && (itemProgress.active > 0 || itemProgress.queued > 0),
+              );
+              return (
+                <button
+                  key={item.id}
+                  type="button"
+                  onClick={() => setActiveChannel(item)}
+                  className={cn(
+                    'rounded-md border px-2.5 py-1 text-xs transition-colors',
+                    item.url === channel.url
+                      ? 'border-primary/60 bg-primary/10 text-primary'
+                      : 'border-border/50 text-muted-foreground hover:text-foreground hover:bg-muted/50',
+                  )}
+                >
+                  {item.name}
+                  {itemBusy && <span className="ml-1.5 text-primary">•</span>}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
       <div className="mx-4 sm:mx-6 h-px bg-gradient-to-r from-transparent via-border/50 to-transparent" />
 
       {showSettings && (
@@ -393,10 +636,10 @@ export function ChannelDetailView({ channel, onBack }: ChannelDetailViewProps) {
                 <Label className="text-sm text-muted-foreground">{t('checkInterval')}</Label>
                 <Input
                   type="number"
-                  min={5}
+                  min={1}
                   value={settingsCheckInterval}
                   onChange={(event) =>
-                    setSettingsCheckInterval(Math.max(5, Number(event.target.value)))
+                    setSettingsCheckInterval(Math.max(1, Number(event.target.value)))
                   }
                   className="w-20 h-9 text-sm bg-background/50 border-border/50"
                 />
@@ -457,10 +700,14 @@ export function ChannelDetailView({ channel, onBack }: ChannelDetailViewProps) {
                   </button>
                 </div>
 
-                {isYoutubeChannelContentUrl(channel.url) && (
+                {(isYoutubeChannelContentUrl(channel.url) || isTikTokChannel) && (
                   <YoutubeContentTypeSelect
                     value={settingsYoutubeContentType}
-                    onChange={setSettingsYoutubeContentType}
+                    onChange={(contentType) => {
+                      setSettingsYoutubeContentType(contentType);
+                      deselectAllVideos();
+                    }}
+                    platform={isTikTokChannel ? 'tiktok' : 'youtube'}
                     disabled={savingSettings}
                   />
                 )}
@@ -553,6 +800,117 @@ export function ChannelDetailView({ channel, onBack }: ChannelDetailViewProps) {
                       <option value="auto">Auto</option>
                     </select>
                   </div>
+                )}
+              </div>
+            </div>
+
+            <div className="h-px bg-gradient-to-r from-transparent via-border/40 to-transparent" />
+
+            <div className="space-y-3">
+              <div>
+                <Label className="text-sm font-medium">{t('creator.title')}</Label>
+                <p className="mt-0.5 text-xs text-muted-foreground">
+                  {t('creator.perChannelHint')}
+                </p>
+              </div>
+              <div className="flex flex-wrap items-center gap-3">
+                <select
+                  value={settingsCreatorProcessing.mode}
+                  onChange={(event) =>
+                    setSettingsCreatorProcessing((current) => ({
+                      ...current,
+                      mode: event.target.value as CreatorProcessingSettings['mode'],
+                    }))
+                  }
+                  className="h-8 rounded-md border border-border/50 bg-background/50 px-2 text-xs"
+                >
+                  <option value="none">{t('creator.none')}</option>
+                  <option value="duet">{t('creator.duet')}</option>
+                  <option value="portrait">{t('creator.portrait')}</option>
+                  <option value="parts">{t('creator.parts')}</option>
+                </select>
+
+                {settingsCreatorProcessing.mode === 'duet' && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={async () => {
+                      const folder = await pickCreatorFolder(
+                        settingsCreatorProcessing.rightFolder || undefined,
+                      );
+                      if (folder) {
+                        setSettingsCreatorProcessing((current) => ({
+                          ...current,
+                          rightFolder: folder,
+                        }));
+                      }
+                    }}
+                    title={settingsCreatorProcessing.rightFolder}
+                  >
+                    {settingsCreatorProcessing.rightFolder
+                      ? t('creator.changeRight')
+                      : t('creator.selectRight')}
+                  </Button>
+                )}
+
+                {settingsCreatorProcessing.mode === 'parts' && (
+                  <>
+                    <select
+                      value={settingsCreatorProcessing.splitBy}
+                      onChange={(event) =>
+                        setSettingsCreatorProcessing((current) => ({
+                          ...current,
+                          splitBy: event.target.value === 'count' ? 'count' : 'duration',
+                        }))
+                      }
+                      className="h-8 rounded-md border border-border/50 bg-background/50 px-2 text-xs"
+                    >
+                      <option value="duration">{t('creator.splitByDuration')}</option>
+                      <option value="count">{t('creator.splitByCount')}</option>
+                    </select>
+                    <Label className="flex items-center gap-2 text-xs text-muted-foreground">
+                      {settingsCreatorProcessing.splitBy === 'count'
+                        ? t('creator.partCount')
+                        : t('creator.partSeconds')}
+                      <Input
+                        type="number"
+                        min={1}
+                        value={
+                          settingsCreatorProcessing.splitBy === 'count'
+                            ? settingsCreatorProcessing.partCount
+                            : settingsCreatorProcessing.partSeconds
+                        }
+                        onChange={(event) => {
+                          const value = Math.max(1, Number(event.target.value));
+                          setSettingsCreatorProcessing((current) =>
+                            current.splitBy === 'count'
+                              ? { ...current, partCount: value }
+                              : { ...current, partSeconds: value },
+                          );
+                        }}
+                        className="h-8 w-20"
+                      />
+                    </Label>
+                  </>
+                )}
+
+                {settingsCreatorProcessing.mode !== 'none' && (
+                  <select
+                    value={settingsCreatorProcessing.encoder}
+                    onChange={(event) =>
+                      setSettingsCreatorProcessing((current) => ({
+                        ...current,
+                        encoder: event.target.value as CreatorProcessingSettings['encoder'],
+                      }))
+                    }
+                    className="h-8 rounded-md border border-border/50 bg-background/50 px-2 text-xs"
+                  >
+                    <option value="libx264">CPU x264</option>
+                    <option value="h264_nvenc">NVIDIA NVENC</option>
+                    <option value="h264_qsv">Intel Quick Sync</option>
+                    <option value="h264_amf">AMD AMF</option>
+                  </select>
                 )}
               </div>
             </div>
@@ -667,28 +1025,126 @@ export function ChannelDetailView({ channel, onBack }: ChannelDetailViewProps) {
 
       <div className="mx-4 sm:mx-6 h-px bg-gradient-to-r from-transparent via-border/40 to-transparent" />
 
-      {browseVideos.length > 0 && (
+      <ChannelActivityPanel
+        progressByUrl={channelProgressByUrl}
+        followedChannels={followedChannels}
+      />
+
+      {showHistory && (
+        <section className="flex-shrink-0 px-4 sm:px-6 pt-3">
+          <div className="rounded-xl border border-border/50 bg-card/50 p-3">
+            <div className="mb-2 flex items-center justify-between gap-3">
+              <div className="flex min-w-0 items-center gap-2">
+                <History className="h-4 w-4 text-primary" />
+                <h2 className="truncate text-sm font-semibold">{t('downloadHistory')}</h2>
+                <span className="text-xs text-muted-foreground">
+                  {t('videoCount', { count: activeChannelVideos.length })}
+                </span>
+              </div>
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                className="h-7 w-7"
+                onClick={() => void refreshActiveChannelVideos()}
+                title={t('checkNow')}
+              >
+                <RefreshCw className={cn('h-3.5 w-3.5', loadingActiveVideos && 'animate-spin')} />
+              </Button>
+            </div>
+            {loadingActiveVideos ? (
+              <div className="py-4 text-center text-xs text-muted-foreground">{t('checking')}</div>
+            ) : activeChannelVideos.length === 0 ? (
+              <div className="py-4 text-center text-xs text-muted-foreground">{t('noVideos')}</div>
+            ) : (
+              <div className="max-h-64 space-y-1.5 overflow-y-auto pr-1">
+                {activeChannelVideos.map((video) => {
+                  const folderName = sanitizeChannelFolderName(channel.name);
+                  const channelFolder =
+                    folderName && outputPath ? `${outputPath}/${folderName}` : '';
+                  return (
+                    <div
+                      key={video.id}
+                      className="flex items-center gap-2 rounded-lg p-1.5 hover:bg-muted/50"
+                    >
+                      <div className="h-10 w-16 flex-shrink-0 overflow-hidden rounded bg-muted">
+                        {video.thumbnail ? (
+                          <img
+                            src={video.thumbnail}
+                            alt=""
+                            className="h-full w-full object-cover"
+                            loading="lazy"
+                            referrerPolicy="no-referrer"
+                          />
+                        ) : null}
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-xs font-medium" title={video.title}>
+                          {video.title}
+                        </p>
+                        <span className="text-[11px] text-muted-foreground">
+                          {t(`status.${video.status}`, { defaultValue: video.status })}
+                        </span>
+                      </div>
+                      <div className="flex flex-shrink-0 items-center gap-1">
+                        {channelFolder && (
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            className="h-7 w-7"
+                            title={t('openFileLocation')}
+                            onClick={() => void openChannelVideoLocation(video)}
+                          >
+                            <FolderOpen className="h-3.5 w-3.5" />
+                          </Button>
+                        )}
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          className="h-7 w-7"
+                          title={t('openVideoWeb')}
+                          onClick={() => void openUrl(video.url)}
+                        >
+                          <ExternalLink className="h-3.5 w-3.5" />
+                        </Button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        </section>
+      )}
+
+      {visibleBrowseVideos.length > 0 && (
         <div className="flex-shrink-0 px-4 sm:px-6 py-3 flex items-center justify-between">
           <span className="text-xs text-muted-foreground">
             {selectedVideoIds.size > 0
               ? t('selected', { count: selectedVideoIds.size })
-              : t('videoCount', { count: browseVideos.length })}
+              : t('videoCount', { count: visibleBrowseVideos.length })}
           </span>
           <Button
             variant="ghost"
             size="sm"
             onClick={
-              selectedVideoIds.size === browseVideos.length ? deselectAllVideos : selectAllVideos
+              selectedVideoIds.size === visibleBrowseVideos.length
+                ? deselectAllVideos
+                : () => selectAllVideos()
             }
             className="h-7 text-xs"
             disabled={isDownloading}
           >
-            {selectedVideoIds.size === browseVideos.length ? (
+            {selectedVideoIds.size === visibleBrowseVideos.length ? (
               <CheckSquare className="w-3.5 h-3.5" />
             ) : (
               <Square className="w-3.5 h-3.5" />
             )}
-            {selectedVideoIds.size === browseVideos.length ? t('deselectAll') : t('selectAll')}
+            {selectedVideoIds.size === visibleBrowseVideos.length
+              ? t('deselectAll')
+              : t('selectAll')}
           </Button>
         </div>
       )}
@@ -697,15 +1153,23 @@ export function ChannelDetailView({ channel, onBack }: ChannelDetailViewProps) {
         <div className="h-full overflow-y-auto px-4 sm:px-6">
           {browseLoading && <ChannelFetchLoadingState progress={browseFetchProgress} />}
 
-          {browseVideos.length > 0 && (
+          {visibleBrowseVideos.length > 0 && (
             <div className="space-y-2 pb-20">
-              {browseVideos.map((video) => (
+              {visibleBrowseVideos.map((video) => (
                 <ChannelVideoListItem
                   key={video.id}
                   video={video}
                   isSelected={selectedVideoIds.has(video.id)}
                   videoState={videoStates.get(video.id)}
                   onToggle={() => toggleVideoSelection(video.id)}
+                  onOpenFolder={
+                    outputPath || videoStates.get(video.id)?.filepath
+                      ? () => void openChannelVideoLocation(video)
+                      : undefined
+                  }
+                  onOpenUrl={() => void openUrl(video.url)}
+                  openFolderLabel={t('openFileLocation')}
+                  openUrlLabel={t('openVideoWeb')}
                 />
               ))}
             </div>

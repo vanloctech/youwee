@@ -53,10 +53,7 @@ pub async fn generate_video_preview(
         "FFmpeg not found. Please install FFmpeg from the Dependencies tab in Settings.".to_string()
     })?;
 
-    let app_data_dir = app
-        .path()
-        .app_data_dir()
-        .map_err(|_| "Failed to get app data directory")?;
+    let app_data_dir = crate::utils::app_data_dir(&app)?;
     let preview_dir = app_data_dir.join("previews");
     std::fs::create_dir_all(&preview_dir).ok();
 
@@ -142,10 +139,7 @@ pub async fn check_preview_exists(
     app: AppHandle,
     input_path: String,
 ) -> Result<Option<String>, String> {
-    let app_data_dir = app
-        .path()
-        .app_data_dir()
-        .map_err(|_| "Failed to get app data directory")?;
+    let app_data_dir = crate::utils::app_data_dir(&app)?;
     let preview_dir = app_data_dir.join("previews");
 
     let hash = {
@@ -166,10 +160,7 @@ pub async fn check_preview_exists(
 
 #[tauri::command]
 pub async fn cleanup_previews(app: AppHandle) -> Result<u32, String> {
-    let app_data_dir = app
-        .path()
-        .app_data_dir()
-        .map_err(|_| "Failed to get app data directory")?;
+    let app_data_dir = crate::utils::app_data_dir(&app)?;
     let preview_dir = app_data_dir.join("previews");
 
     if !preview_dir.exists() {
@@ -206,10 +197,7 @@ pub async fn generate_video_thumbnail(
         "FFmpeg not found. Please install FFmpeg from the Dependencies tab in Settings.".to_string()
     })?;
 
-    let app_data_dir = app
-        .path()
-        .app_data_dir()
-        .map_err(|_| "Failed to get app data directory")?;
+    let app_data_dir = crate::utils::app_data_dir(&app)?;
     let preview_dir = app_data_dir.join("previews");
     std::fs::create_dir_all(&preview_dir).ok();
 
@@ -270,10 +258,7 @@ pub async fn generate_audio_preview(app: AppHandle, input_path: String) -> Resul
         "FFmpeg not found. Please install FFmpeg from the Dependencies tab in Settings.".to_string()
     })?;
 
-    let app_data_dir = app
-        .path()
-        .app_data_dir()
-        .map_err(|_| "Failed to get app data directory")?;
+    let app_data_dir = crate::utils::app_data_dir(&app)?;
     let preview_dir = app_data_dir.join("previews");
     std::fs::create_dir_all(&preview_dir).ok();
 

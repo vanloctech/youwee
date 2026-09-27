@@ -65,8 +65,7 @@ pub fn system_ytdlp_upgrade_message() -> String {
 
 /// Get the config file path for storing yt-dlp source selection
 fn get_source_config_path(app: &AppHandle) -> Option<PathBuf> {
-    app.path()
-        .app_data_dir()
+    crate::utils::app_data_dir(app)
         .ok()
         .map(|p| p.join("bin").join(SOURCE_CONFIG_FILE))
 }
@@ -109,8 +108,7 @@ fn get_system_ytdlp_path() -> Option<PathBuf> {
 
 /// Get the config file path for storing channel selection
 fn get_channel_config_path(app: &AppHandle) -> Option<PathBuf> {
-    app.path()
-        .app_data_dir()
+    crate::utils::app_data_dir(app)
         .ok()
         .map(|p| p.join("bin").join(CHANNEL_CONFIG_FILE))
 }
@@ -166,8 +164,7 @@ fn get_channel_binary_name(channel: &YtdlpChannel) -> &'static str {
 
 /// Get the path to a specific channel's binary in app_data_dir
 fn get_channel_binary_path(app: &AppHandle, channel: &YtdlpChannel) -> Option<PathBuf> {
-    app.path()
-        .app_data_dir()
+    crate::utils::app_data_dir(app)
         .ok()
         .map(|p| p.join("bin").join(get_channel_binary_name(channel)))
 }
@@ -179,14 +176,16 @@ fn get_legacy_ytdlp_path(app: &AppHandle) -> Option<PathBuf> {
     #[cfg(not(windows))]
     let binary_name = "yt-dlp";
 
-    app.path().app_data_dir().ok().and_then(|app_data_dir| {
-        let legacy_binary = app_data_dir.join("bin").join(binary_name);
-        if legacy_binary.exists() {
-            Some(legacy_binary)
-        } else {
-            None
-        }
-    })
+    crate::utils::app_data_dir(app)
+        .ok()
+        .and_then(|app_data_dir| {
+            let legacy_binary = app_data_dir.join("bin").join(binary_name);
+            if legacy_binary.exists() {
+                Some(legacy_binary)
+            } else {
+                None
+            }
+        })
 }
 
 /// Get the bundled yt-dlp path

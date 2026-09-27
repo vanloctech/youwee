@@ -47,6 +47,10 @@
     "libraryDeleteKeepFile": "Hech qachon media faylni o'chirmang"
   },
   "download": {
+    "globalOutputFolder": "Global output folder",
+    "globalOutputFolderDesc": "All downloads use this folder. Channel downloads create one subfolder per channel, and edited videos are saved under Edited.",
+    "selectOutputFolder": "Choose folder",
+    "noOutputFolder": "No folder selected",
     "postProcessing": "Keyingi ishlov berish",
     "postProcessingDesc": "Yuklab olingan fayllarga metadata va eskizlarni joylashtiring",
     "embedMetadata": "Metamaʼlumotlarni joylashtirish",
@@ -537,6 +541,7 @@
     "telegramStatusError": "Xato",
     "telegramStatusDisabled": "O'chirilgan",
     "telegramStatusUnavailable": "Telegram holati mavjud emas.",
+    "telegramTest": "Sinov xabarini yuborish",
     "telegramErrorTokenRequired": "Telegram bot tokeni talab qilinadi.",
     "telegramErrorChatRequired": "Kamida bitta ruxsat etilgan chat identifikatori talab qilinadi.",
     "telegramBotToken": "Bot tokeni",

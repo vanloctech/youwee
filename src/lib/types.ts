@@ -86,6 +86,20 @@ export type SourcePlatform =
   | 'data_export'
   | 'other';
 
+export type CreatorProcessingMode = 'none' | 'duet' | 'portrait' | 'parts';
+export type CreatorProcessingEncoder = 'libx264' | 'h264_nvenc' | 'h264_qsv' | 'h264_amf';
+
+export interface CreatorProcessingSettings {
+  mode: CreatorProcessingMode;
+  rightFolder: string;
+  outputFolder: string;
+  splitBy: 'duration' | 'count';
+  partSeconds: number;
+  partCount: number;
+  encoder: CreatorProcessingEncoder;
+  deleteInputAfterSuccess: boolean;
+}
+
 // Settings snapshot saved with each queue item (YouTube page)
 export interface ItemDownloadSettings {
   quality: Quality;
@@ -118,6 +132,7 @@ export interface ItemDownloadSettings {
   playlistCollectionName?: string | null;
   pluginWorkflowSnapshots?: PluginWorkflowSnapshotMap;
   postDownloadWorkflowSteps?: PluginWorkflowStepSnapshot[];
+  creatorProcessing?: CreatorProcessingSettings;
   autoRetryEnabled: boolean;
   autoRetryMaxAttempts: number;
   autoRetryDelaySeconds: number;
@@ -147,6 +162,7 @@ export interface ItemUniversalSettings {
   autoOrganizeCollections?: boolean;
   pluginWorkflowSnapshots?: PluginWorkflowSnapshotMap;
   postDownloadWorkflowSteps?: PluginWorkflowStepSnapshot[];
+  creatorProcessing?: CreatorProcessingSettings;
   autoRetryEnabled: boolean;
   autoRetryMaxAttempts: number;
   autoRetryDelaySeconds: number;
@@ -242,7 +258,7 @@ export interface YoutubeSearchQueueResult {
 
 export type DuplicateDownloadHandling = 'ask' | 'skip' | 'allow';
 
-export type DownloadDuplicateReviewAction = 'skip' | 'add' | 'cancel';
+export type DownloadDuplicateReviewAction = 'skip' | 'redownload' | 'cancel';
 
 export interface DownloadDuplicateIdentity {
   mediaId?: string | null;
@@ -270,6 +286,12 @@ export interface DownloadDuplicateCandidate {
 export interface DownloadDuplicateFilterOptions {
   ask?: boolean;
   notify?: boolean;
+  force?: boolean;
+  throwOnError?: boolean;
+  /** Treat a persistent Library entry as downloaded even if its old filepath moved. */
+  trustHistory?: boolean;
+  /** Allow the user to re-download a prior video when adding exactly one URL. */
+  allowRedownload?: boolean;
 }
 
 export interface DownloadDuplicateReviewItem {
@@ -282,6 +304,7 @@ export interface DownloadDuplicateReviewItem {
 export interface DownloadDuplicateReview {
   duplicates: DownloadDuplicateReviewItem[];
   newCount: number;
+  allowRedownload?: boolean;
 }
 
 export interface ExternalEnqueueResult {
@@ -863,9 +886,11 @@ export interface PlaylistVideoEntry {
   channel?: string;
   upload_date?: string;
   playlist_title?: string;
+  view_count?: number;
 }
 
 export type YoutubeChannelContentType = 'videos' | 'shorts' | 'streams' | 'videos_shorts';
+export type ChannelScanOrder = 'latest' | 'popular';
 
 export type ExportSource =
   | 'auto'
@@ -1342,6 +1367,8 @@ export interface FollowedChannel {
   platform: string;
   last_checked_at?: string;
   last_video_id?: string;
+  last_downloaded_at?: string;
+  downloaded_video_count: number;
   check_interval: number; // minutes
   auto_download: boolean;
   download_quality: string;
@@ -1358,6 +1385,7 @@ export interface FollowedChannel {
   download_audio_bitrate: string; // audio bitrate (128, 192, 256, 320, auto)
   download_preferred_fps: PreferredFps; // original, 30
   youtube_content_type: YoutubeChannelContentType;
+  creator_processing: CreatorProcessingSettings;
 }
 
 export interface ChannelVideo {
@@ -1371,4 +1399,7 @@ export interface ChannelVideo {
   upload_date?: string;
   status: 'new' | 'downloaded' | 'skipped' | 'downloading';
   created_at: string;
+  downloaded_at?: string;
+  output_path?: string;
+  edited_output_paths: string[];
 }

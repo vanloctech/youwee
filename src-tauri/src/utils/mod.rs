@@ -1,3 +1,4 @@
+mod app_data;
 mod command;
 mod extract;
 mod filename;
@@ -7,6 +8,7 @@ mod path;
 mod progress;
 mod security;
 
+pub use app_data::*;
 pub use command::*;
 pub use extract::*;
 pub use filename::*;
