@@ -7,6 +7,9 @@ và dự án tuân theo [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+### Sửa lỗi
+- **Danh mục launcher Linux** - Thêm các danh mục `AudioVideo`, `Video` và `Network` vào desktop entry trên Linux để Youwee không còn nằm trong mục "Other" của menu ứng dụng
+
 ## [0.20.4] - 2026-09-20
 
 ### Sửa lỗi

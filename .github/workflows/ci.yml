@@ -164,6 +164,7 @@ jobs:
           DESKTOP_FILE="$PACKAGE_DIR/usr/share/applications/Youwee.desktop"
           grep -Fx 'Exec=youwee %U' "$DESKTOP_FILE"
           grep -Fqx 'MimeType=x-scheme-handler/youwee;' "$DESKTOP_FILE"
+          grep -Fqx 'Categories=AudioVideo;Video;Network;' "$DESKTOP_FILE"
 
       - name: Validate repaired Linux AppImage runtime
         if: matrix.platform == 'ubuntu-22.04'

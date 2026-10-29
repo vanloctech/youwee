@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+- **Linux launcher category** - Add `AudioVideo`, `Video`, and `Network` categories to the Linux desktop entry so Youwee no longer appears under "Other" in application menus
+
 ## [0.20.4] - 2026-09-20
 
 ### Fixed
