@@ -7,6 +7,9 @@ và dự án tuân theo [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+### Thêm mới
+- **Cập nhật delta cho AppImage** - Nhúng thông tin cập nhật AppImage và phát hành kèm file `.zsync` cho mỗi bản Linux để AppImageUpdate, AppImageLauncher và các trình quản lý AppImage khác chỉ cần tải phần thay đổi
+
 ### Sửa lỗi
 - **Danh mục launcher Linux** - Thêm các danh mục `AudioVideo`, `Video` và `Network` vào desktop entry trên Linux để Youwee không còn nằm trong mục "Other" của menu ứng dụng
 
