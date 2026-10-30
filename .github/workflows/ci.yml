@@ -175,7 +175,15 @@ jobs:
           APPIMAGE="$(cd "$(dirname "$APPIMAGE")" && pwd)/$(basename "$APPIMAGE")"
           UPDATE_INFORMATION="gh-releases-zsync|${{ github.repository_owner }}|${{ github.event.repository.name }}|latest|Youwee-Linux.AppImage.zsync"
           bash scripts/repair-appimage-runtime.sh "$APPIMAGE" "youwee" "$UPDATE_INFORMATION"
-          test "$(APPIMAGE_EXTRACT_AND_RUN=1 "$APPIMAGE" --appimage-updateinformation)" = "$UPDATE_INFORMATION"
+          # Read .upd_info from the runtime's ELF headers instead of executing
+          # the AppImage: APPIMAGE_EXTRACT_AND_RUN would launch the app itself.
+          read -r UPD_OFFSET UPD_SIZE < <(
+            readelf -S -W "$APPIMAGE" | awk '{ sub(/^.*\]/, "") } $1 == ".upd_info" { print $4, $5 }'
+          )
+          EMBEDDED_UPDATE_INFORMATION="$(
+            dd if="$APPIMAGE" bs=1 skip="$((16#$UPD_OFFSET))" count="$((16#$UPD_SIZE))" status=none | tr -d '\0'
+          )"
+          test "$EMBEDDED_UPDATE_INFORMATION" = "$UPDATE_INFORMATION"
 
           INSPECT_DIR="$(mktemp -d)"
           trap 'rm -rf "$INSPECT_DIR"' EXIT
