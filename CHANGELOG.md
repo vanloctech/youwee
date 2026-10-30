@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- **AppImage delta updates** - Embed AppImage update information and publish a `.zsync` file with each Linux release so AppImageUpdate, AppImageLauncher, and other AppImage managers can download only the changed parts
+
 ## [0.20.4] - 2026-09-20
 
 ### Fixed

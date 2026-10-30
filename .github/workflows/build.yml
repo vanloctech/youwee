@@ -91,6 +91,7 @@ jobs:
             librsvg2-dev \
             patchelf \
             squashfs-tools \
+            zsync \
             libssl-dev \
             libgtk-3-dev \
             libayatana-appindicator3-dev
@@ -139,7 +140,10 @@ jobs:
           APPIMAGE_DIR="src-tauri/target/${{ matrix.target }}/release/bundle/appimage"
           APPIMAGE=$(find "$APPIMAGE_DIR" -maxdepth 1 -type f -name "*.AppImage" | head -n 1)
           test -n "$APPIMAGE"
-          bash scripts/repair-appimage-runtime.sh "$APPIMAGE" "youwee"
+          # Let AppImageUpdate-compatible tools fetch delta updates from the
+          # latest GitHub release via the .zsync file generated below.
+          UPDATE_INFORMATION="gh-releases-zsync|${{ github.repository_owner }}|${{ github.event.repository.name }}|latest|Youwee-${{ matrix.friendly_name }}.AppImage.zsync"
+          bash scripts/repair-appimage-runtime.sh "$APPIMAGE" "youwee" "$UPDATE_INFORMATION"
 
           # The AppImage payload changed after Tauri produced updater artifacts.
           # Regenerate its signature so latest.json always matches the release file.
@@ -185,6 +189,8 @@ jobs:
             for f in *.AppImage; do
               mv "$f" "Youwee-${{ matrix.friendly_name }}.AppImage"
             done
+            # Delta update metadata referenced by the embedded update information.
+            zsyncmake -o "Youwee-${{ matrix.friendly_name }}.AppImage.zsync" "Youwee-${{ matrix.friendly_name }}.AppImage"
             cd ..
           fi
           ls -laR
@@ -223,6 +229,7 @@ jobs:
             src-tauri/target/${{ matrix.target }}/release/bundle/deb/*.deb
             src-tauri/target/${{ matrix.target }}/release/bundle/appimage/*.AppImage
             src-tauri/target/${{ matrix.target }}/release/bundle/appimage/*.AppImage.sig
+            src-tauri/target/${{ matrix.target }}/release/bundle/appimage/*.AppImage.zsync
             src-tauri/target/${{ matrix.target }}/release/bundle/msi/*.msi
             src-tauri/target/${{ matrix.target }}/release/bundle/msi/*.msi.sig
             src-tauri/target/${{ matrix.target }}/release/bundle/nsis/*.exe
@@ -679,6 +686,7 @@ jobs:
             artifacts/**/*.flatpak
             artifacts/**/*.AppImage
             artifacts/**/*.AppImage.sig
+            artifacts/**/*.AppImage.zsync
             artifacts/**/*.msi
             artifacts/**/*.msi.sig
             artifacts/**/*.exe

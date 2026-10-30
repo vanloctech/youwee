@@ -6,15 +6,21 @@
 # the Ubuntu 22.04 copies with a newer host causes WebKitGTK to abort while
 # creating its EGL display.  This script keeps application libraries (including
 # WebKitGTK) bundled, but defers the desktop-stack libraries to the host.
+#
+# The optional third argument is AppImage update information (for example
+# "gh-releases-zsync|owner|repo|latest|App.AppImage.zsync"). It is written to
+# the runtime's .upd_info ELF section so AppImageUpdate-compatible tools can
+# find delta updates.
 set -euo pipefail
 
-if [ "$#" -ne 2 ]; then
-  echo "Usage: $0 <AppImage> <main-binary-name>" >&2
+if [ "$#" -lt 2 ] || [ "$#" -gt 3 ]; then
+  echo "Usage: $0 <AppImage> <main-binary-name> [update-information]" >&2
   exit 64
 fi
 
 appimage=$1
 main_binary=$2
+update_information=${3:-}
 
 if [ ! -f "$appimage" ]; then
   echo "AppImage does not exist: $appimage" >&2
@@ -97,9 +103,38 @@ payload="$workspace/payload.squashfs"
 rebuilt="$workspace/$(basename "$appimage")"
 
 dd if="$appimage_abs" of="$runtime" bs=1 count="$offset" status=none
+
+if [ -n "$update_information" ]; then
+  command -v readelf >/dev/null || {
+    echo "Missing required command: readelf" >&2
+    exit 1
+  }
+
+  # readelf -S -W columns after "[Nr]": Name Type Address Off Size ...
+  read -r section_offset section_size < <(
+    readelf -S -W "$runtime" | awk '{ sub(/^.*\]/, "") } $1 == ".upd_info" { print $4, $5 }'
+  ) || true
+  if [ -z "${section_offset:-}" ]; then
+    echo "AppImage runtime has no .upd_info section" >&2
+    exit 1
+  fi
+  section_offset=$((16#$section_offset))
+  section_size=$((16#$section_size))
+  if [ "${#update_information}" -ge "$section_size" ]; then
+    echo "Update information is longer than the .upd_info section ($section_size bytes)" >&2
+    exit 1
+  fi
+
+  dd if=/dev/zero of="$runtime" bs=1 seek="$section_offset" count="$section_size" conv=notrunc status=none
+  printf '%s' "$update_information" |
+    dd of="$runtime" bs=1 seek="$section_offset" conv=notrunc status=none
+fi
 mksquashfs "$appdir" "$payload" -noappend -all-root -comp zstd -no-progress >/dev/null
 cat "$runtime" "$payload" > "$rebuilt"
 chmod +x "$rebuilt"
 mv "$rebuilt" "$appimage_abs"
 
 echo "Rebuilt AppImage with host Wayland/GLib/GStreamer runtime libraries: $appimage_abs"
+if [ -n "$update_information" ]; then
+  echo "Embedded AppImage update information: $update_information"
+fi
