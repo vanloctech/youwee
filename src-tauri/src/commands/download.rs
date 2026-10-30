@@ -565,6 +565,16 @@ mod playlist_chapter_tests {
     }
 
     #[test]
+    fn detects_youtube_age_verification_notice() {
+        assert!(is_youtube_age_verification_notice(
+            "[youtube] YCuT6oXJX7A: This video is age-restricted and YouTube is requiring account age-verification; some formats may be missing"
+        ));
+        assert!(!is_youtube_age_verification_notice(
+            "[youtube] YCuT6oXJX7A: This video is age-restricted; some formats may be missing without authentication."
+        ));
+    }
+
+    #[test]
     fn output_path_arg_uses_ytdlp_home_path_slot() {
         assert_eq!(
             output_path_arg("C:/very/long/folder"),
@@ -1106,6 +1116,26 @@ fn is_aria2_not_found_line(line: &str) -> bool {
         && (lower.contains("not found")
             || lower.contains("no such file")
             || lower.contains("is not recognized"))
+}
+
+/// yt-dlp prints this when a logged-in account is not age-verified for an
+/// age-restricted YouTube video. It then falls back to clients that need a
+/// GVS PO Token, so without one only format 18 (360p) remains.
+fn is_youtube_age_verification_notice(line: &str) -> bool {
+    line.contains("age-restricted") && line.contains("requiring account age-verification")
+}
+
+fn log_youtube_age_verification_notice(line: &str, logged: &AtomicBool, url: &str) {
+    if !is_youtube_age_verification_notice(line) || logged.swap(true, Ordering::SeqCst) {
+        return;
+    }
+    add_log_internal(
+        "info",
+        "YouTube requires account age-verification for this age-restricted video; only low-quality formats (usually 360p) may be available. Verify your age on YouTube with the account used for cookies, then refresh cookies.",
+        None,
+        Some(url),
+    )
+    .ok();
 }
 
 fn download_cancelled_error() -> BackendError {
@@ -1784,6 +1814,7 @@ pub async fn download_video(
             let mut printed_filepaths: Vec<String> = Vec::new();
             let mut observed_filepaths: Vec<String> = Vec::new();
             let mut recent_output: VecDeque<String> = VecDeque::new();
+            let age_verification_logged = AtomicBool::new(false);
 
             let quality_display = match quality.as_str() {
                 "8k" => Some("8K".to_string()),
@@ -1812,6 +1843,7 @@ pub async fn download_video(
                         if let Some(filepath) = parse_ytdlp_output_filepath(&line) {
                             push_unique_filepath(&mut observed_filepaths, &filepath);
                         }
+                        log_youtube_age_verification_notice(&line, &age_verification_logged, &url);
 
                         // Parse playlist item info
                         if line.contains("Downloading item") {
@@ -1935,6 +1967,11 @@ pub async fn download_video(
                         if let Some(filepath) = parse_ytdlp_output_filepath(&stderr_line) {
                             push_unique_filepath(&mut observed_filepaths, &filepath);
                         }
+                        log_youtube_age_verification_notice(
+                            &stderr_line,
+                            &age_verification_logged,
+                            &url,
+                        );
 
                         if let Some((percent, speed, eta, pi, pc, downloaded_size, elapsed_time)) =
                             parse_progress(&stderr_line)
@@ -2424,6 +2461,10 @@ async fn handle_tokio_download(
     let stderr_url = url.clone();
     let stderr_recent_output = recent_output.clone();
     let stderr_observed_filepaths = observed_filepaths.clone();
+    // yt-dlp prints the age-verification notice to stdout, but check stderr too
+    // in case output is redirected (e.g. quiet/logtostderr); log it only once.
+    let age_verification_logged = Arc::new(AtomicBool::new(false));
+    let stderr_age_verification_logged = age_verification_logged.clone();
     let stderr_task = if let Some(stderr_handle) = stderr {
         Some(tokio::spawn(async move {
             let mut stderr_reader = BufReader::new(stderr_handle);
@@ -2449,6 +2490,11 @@ async fn handle_tokio_download(
                         push_unique_filepath(&mut paths, &filepath);
                     }
                 }
+                log_youtube_age_verification_notice(
+                    &line,
+                    &stderr_age_verification_logged,
+                    &stderr_url,
+                );
 
                 // Parse progress from stderr (live streams output here)
                 if let Some((percent, speed, eta, pi, pc, downloaded_size, elapsed_time)) =
@@ -2516,6 +2562,7 @@ async fn handle_tokio_download(
                 push_unique_filepath(&mut paths, &filepath);
             }
         }
+        log_youtube_age_verification_notice(&line, &age_verification_logged, &url);
 
         // Parse progress and emit events
         if let Some((percent, speed, eta, pi, pc, downloaded_size, elapsed_time)) =
