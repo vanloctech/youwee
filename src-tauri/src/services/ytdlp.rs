@@ -553,6 +553,17 @@ pub fn parse_ytdlp_error(stderr: &str) -> Option<BackendError> {
         );
     }
 
+    // YouTube bot check ("Sign in to confirm you're not a bot")
+    if crate::types::is_bot_check_message(&stderr_lower) {
+        return Some(
+            BackendError::new(
+                crate::types::code::YT_BOT_CHECK,
+                "YouTube is asking to confirm you're not a bot. Enable cookies from a signed-in browser (or a cookie file) in Settings → Network & Auth, or switch network/proxy, then retry.",
+            )
+            .with_retryable(false),
+        );
+    }
+
     // Rate limiting
     if stderr_lower.contains("429") || stderr_lower.contains("too many requests") {
         return Some(BackendError::from_message(
@@ -1250,6 +1261,17 @@ mod tests {
         .expect("upcoming live error should be parsed");
 
         assert_eq!(error.code(), crate::types::code::YT_UPCOMING_LIVE);
+        assert_eq!(error.to_wire().retryable, Some(false));
+    }
+
+    #[test]
+    fn parse_ytdlp_error_detects_bot_check() {
+        let error = parse_ytdlp_error(
+            "ERROR: [youtube] mlvbJxzN958: Sign in to confirm you\u{2019}re not a bot. Use --cookies-from-browser or --cookies for the authentication.",
+        )
+        .expect("bot check error should be parsed");
+
+        assert_eq!(error.code(), crate::types::code::YT_BOT_CHECK);
         assert_eq!(error.to_wire().retryable, Some(false));
     }
 

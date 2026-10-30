@@ -28,6 +28,7 @@ const NON_RETRYABLE_CODES = new Set([
   'YT_AGE_RESTRICTED',
   'YT_MEMBERS_ONLY',
   'YT_SIGNIN_REQUIRED',
+  'YT_BOT_CHECK',
   'YT_GEO_RESTRICTED',
   'DOWNLOAD_CANCELLED',
   'VALIDATION_INVALID_URL',
@@ -69,6 +70,7 @@ export function inferBackendErrorCode(message: string): string {
   if (m.includes('members-only') || m.includes('member-only') || m.includes('join this channel')) {
     return 'YT_MEMBERS_ONLY';
   }
+  if (m.includes('not a bot')) return 'YT_BOT_CHECK';
   if (m.includes('sign in') || m.includes('login required')) return 'YT_SIGNIN_REQUIRED';
   if (
     m.includes('not available in your country') ||
