@@ -13,6 +13,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 - **Linux launcher category** - Add `AudioVideo`, `Video`, and `Network` categories to the Linux desktop entry so Youwee no longer appears under "Other" in application menus
 - **YouTube bot check message** - Show a dedicated error when YouTube asks to "confirm you're not a bot", pointing to cookies in Settings → Network & Auth or a network/proxy change, instead of the misleading "This video requires sign-in" message
+- **Age-restricted YouTube quality notice** - Log a clear explanation when YouTube requires account age-verification for an age-restricted video, which limits yt-dlp to low-quality formats (usually 360p) instead of silently downloading them
 
 ## [0.20.4] - 2026-09-20
 
