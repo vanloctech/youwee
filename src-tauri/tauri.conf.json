@@ -46,6 +46,11 @@
       "icons/icon.icns",
       "icons/icon.ico"
     ],
+    "linux": {
+      "deb": {
+        "desktopTemplate": "linux/youwee.desktop"
+      }
+    },
     "macOS": {
       "minimumSystemVersion": "10.15"
     },
