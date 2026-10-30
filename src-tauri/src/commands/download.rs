@@ -713,6 +713,21 @@ mod playlist_chapter_tests {
     }
 
     #[test]
+    fn bot_check_errors_are_not_reported_as_sign_in_required() {
+        let error = build_download_error_message(
+            Some(1),
+            &[
+                "ERROR: [youtube] mlvbJxzN958: Sign in to confirm you\u{2019}re not a bot. Use --cookies-from-browser or --cookies for the authentication.".to_string(),
+                "[download] Finished".to_string(),
+            ],
+        );
+        let wire = error.to_wire();
+
+        assert_eq!(wire.code, crate::types::code::YT_BOT_CHECK);
+        assert_eq!(wire.retryable, Some(false));
+    }
+
+    #[test]
     fn cancelled_download_error_is_non_retryable() {
         let wire = download_cancelled_error().to_wire();
 
@@ -1159,6 +1174,14 @@ fn build_download_error_message(exit_code: Option<i32>, recent_lines: &[String])
             "Skipped by yt-dlp match filter.",
         )
         .with_retryable(false);
+    }
+
+    if let Some(line) = recent_lines
+        .iter()
+        .find(|line| crate::types::is_bot_check_message(line))
+    {
+        return BackendError::new(crate::types::code::YT_BOT_CHECK, line.trim())
+            .with_retryable(false);
     }
 
     let reason = recent_lines

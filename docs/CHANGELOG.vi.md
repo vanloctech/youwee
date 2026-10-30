@@ -12,6 +12,7 @@ và dự án tuân theo [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ### Sửa lỗi
 - **Danh mục launcher Linux** - Thêm các danh mục `AudioVideo`, `Video` và `Network` vào desktop entry trên Linux để Youwee không còn nằm trong mục "Other" của menu ứng dụng
+- **Thông báo xác minh bot của YouTube** - Hiển thị lỗi riêng khi YouTube yêu cầu "xác minh bạn không phải bot", hướng dẫn bật cookie trong Cài đặt → Mạng & Xác thực hoặc đổi mạng/proxy, thay cho thông báo dễ gây hiểu nhầm "Video này yêu cầu đăng nhập"
 
 ## [0.20.4] - 2026-09-20
 

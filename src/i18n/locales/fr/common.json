@@ -74,6 +74,7 @@
     "YT_AGE_RESTRICTED": "Cette vidéo est limitée par l'âge. Activez l'authentification dans Paramètres.",
     "YT_MEMBERS_ONLY": "Cette vidéo est réservée aux membres. Utilisez un compte abonné.",
     "YT_SIGNIN_REQUIRED": "Cette vidéo nécessite une connexion. Activez l'authentification dans Paramètres.",
+    "YT_BOT_CHECK": "YouTube demande de confirmer que vous n'êtes pas un robot. Activez les cookies d'un navigateur connecté (ou un fichier de cookies) dans Paramètres → Réseau et auth, ou changez de réseau/proxy, puis réessayez.",
     "YT_GEO_RESTRICTED": "Cette vidéo n'est pas disponible dans votre région.",
     "YT_VIDEO_UNAVAILABLE": "Cette vidéo est indisponible.",
     "YT_SKIPPED_LIVE": "Vidéo live ignorée (statut : {{liveStatus}}).",
