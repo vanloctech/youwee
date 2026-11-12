@@ -58,7 +58,7 @@
     "numberQueueItems": "Đánh số item trong hàng đợi",
     "numberQueueItemsDesc": "Thêm số thứ tự hàng đợi vào đầu tên file khi tải nhiều video thường",
     "filenameMetadata": "Metadata trong tên file",
-    "filenameMetadataDesc": "Thêm thông tin video đã chọn trước tiêu đề file",
+    "filenameMetadataDesc": "Thêm thông tin video đã chọn vào tên file",
     "filenameMetadataFields": {
       "uploadDate": "Ngày đăng",
       "viewCount": "Lượt xem",
@@ -66,6 +66,11 @@
       "duration": "Thời lượng",
       "resolution": "Độ phân giải",
       "videoId": "ID video"
+    },
+    "filenameMetadataPosition": "Vị trí",
+    "filenameMetadataPositions": {
+      "prefix": "Trước tiêu đề",
+      "suffix": "Sau tiêu đề"
     },
     "splitEmbeddedChapters": "Tách chapter có sẵn",
     "splitEmbeddedChaptersDesc": "Tạo file riêng từ các chapter đã có trong video",

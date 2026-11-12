@@ -58,7 +58,7 @@
     "numberQueueItems": "Număr articolele aflate în coadă",
     "numberQueueItemsDesc": "Prefixați descărcările obișnuite în coadă de așteptare cu ordinea lor",
     "filenameMetadata": "Metadate în numele fișierului",
-    "filenameMetadataDesc": "Adaugă detaliile video selectate înaintea titlului",
+    "filenameMetadataDesc": "Adaugă detaliile video selectate în numele fișierului",
     "filenameMetadataFields": {
       "uploadDate": "Data încărcării",
       "viewCount": "Vizualizări",
@@ -66,6 +66,11 @@
       "duration": "Durată",
       "resolution": "Rezoluție",
       "videoId": "ID video"
+    },
+    "filenameMetadataPosition": "Poziție",
+    "filenameMetadataPositions": {
+      "prefix": "Înaintea titlului",
+      "suffix": "După titlu"
     },
     "splitEmbeddedChapters": "Împărțiți capitolele încorporate",
     "splitEmbeddedChaptersDesc": "Creați fișiere separate din capitolele incluse în videoclip",

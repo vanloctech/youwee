@@ -9,6 +9,7 @@ Youwee 的所有重要更改都将记录在此文件中。
 
 ### 新增
 - **AppImage 增量更新** - 在 AppImage 中嵌入更新信息，并随每个 Linux 版本发布 `.zsync` 文件，使 AppImageUpdate、AppImageLauncher 等 AppImage 管理工具只需下载变更部分
+- **文件名元数据位置** - 可在 设置 → 下载 中选择将文件名元数据放在视频标题之前或之后，使文件名可以以标题开头（播放列表/队列编号仍位于最前）
 
 ### 修复
 - **Linux 启动器分类** - 为 Linux 桌面入口添加 `AudioVideo`、`Video` 和 `Network` 分类，使 Youwee 不再显示在应用菜单的“其他”分类中

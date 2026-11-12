@@ -58,7 +58,7 @@
     "numberQueueItems": "キューの項目に番号を付ける",
     "numberQueueItemsDesc": "通常のキュー項目ファイル名の先頭に順序番号を付与する",
     "filenameMetadata": "ファイル名メタデータ",
-    "filenameMetadataDesc": "選択した動画情報をタイトルの前に追加します",
+    "filenameMetadataDesc": "選択した動画情報をファイル名に追加します",
     "filenameMetadataFields": {
       "uploadDate": "アップロード日",
       "viewCount": "再生回数",
@@ -66,6 +66,11 @@
       "duration": "再生時間",
       "resolution": "解像度",
       "videoId": "動画 ID"
+    },
+    "filenameMetadataPosition": "位置",
+    "filenameMetadataPositions": {
+      "prefix": "タイトルの前",
+      "suffix": "タイトルの後"
     },
     "splitEmbeddedChapters": "チャプターを分割する",
     "splitEmbeddedChaptersDesc": "動画内のチャプターごとに個別のファイルを作成する",

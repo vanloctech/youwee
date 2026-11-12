@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 - **AppImage delta updates** - Embed AppImage update information and publish a `.zsync` file with each Linux release so AppImageUpdate, AppImageLauncher, and other AppImage managers can download only the changed parts
+- **Filename metadata position** - Choose whether filename metadata goes before or after the video title in Settings → Download, so filenames can start with the title (playlist/queue numbering still comes first)
 
 ### Fixed
 - **Linux launcher category** - Add `AudioVideo`, `Video`, and `Network` categories to the Linux desktop entry so Youwee no longer appears under "Other" in application menus

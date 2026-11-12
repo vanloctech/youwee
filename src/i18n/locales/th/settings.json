@@ -57,7 +57,7 @@
     "numberQueueItems": "ใส่เลขรายการในคิว",
     "numberQueueItemsDesc": "เติมเลขลำดับคิวนำหน้าชื่อไฟล์สำหรับวิดีโอทั่วไปหลายรายการ",
     "filenameMetadata": "เมตาดาต้าในชื่อไฟล์",
-    "filenameMetadataDesc": "เพิ่มรายละเอียดวิดีโอที่เลือกไว้หน้าชื่อเรื่อง",
+    "filenameMetadataDesc": "เพิ่มรายละเอียดวิดีโอที่เลือกไว้ในชื่อไฟล์",
     "filenameMetadataFields": {
       "uploadDate": "วันที่อัปโหลด",
       "viewCount": "ยอดดู",
@@ -65,6 +65,11 @@
       "duration": "ความยาว",
       "resolution": "ความละเอียด",
       "videoId": "ID วิดีโอ"
+    },
+    "filenameMetadataPosition": "ตำแหน่ง",
+    "filenameMetadataPositions": {
+      "prefix": "หน้าชื่อเรื่อง",
+      "suffix": "หลังชื่อเรื่อง"
     },
     "splitEmbeddedChapters": "แยก chapter ที่ฝังอยู่",
     "splitEmbeddedChaptersDesc": "สร้างไฟล์แยกจาก chapter ที่มีอยู่ในวิดีโอ",

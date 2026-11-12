@@ -58,7 +58,7 @@
     "numberQueueItems": "Number queued items",
     "numberQueueItemsDesc": "Prefix regular queued downloads with their queue order",
     "filenameMetadata": "Filename metadata",
-    "filenameMetadataDesc": "Add selected video details before the title",
+    "filenameMetadataDesc": "Add selected video details to the filename",
     "filenameMetadataFields": {
       "uploadDate": "Upload date",
       "viewCount": "View count",
@@ -66,6 +66,11 @@
       "duration": "Duration",
       "resolution": "Resolution",
       "videoId": "Video ID"
+    },
+    "filenameMetadataPosition": "Position",
+    "filenameMetadataPositions": {
+      "prefix": "Before title",
+      "suffix": "After title"
     },
     "splitEmbeddedChapters": "Split embedded chapters",
     "splitEmbeddedChaptersDesc": "Create separate files from chapters included in the video",

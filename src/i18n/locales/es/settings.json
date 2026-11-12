@@ -58,7 +58,7 @@
     "numberQueueItems": "Numerar elementos en cola",
     "numberQueueItemsDesc": "Añade el orden de la cola como prefijo en las descargas normales en cola",
     "filenameMetadata": "Metadatos en el nombre",
-    "filenameMetadataDesc": "Añade datos seleccionados del vídeo antes del título",
+    "filenameMetadataDesc": "Añade datos seleccionados del vídeo al nombre del archivo",
     "filenameMetadataFields": {
       "uploadDate": "Fecha de subida",
       "viewCount": "Visualizaciones",
@@ -66,6 +66,11 @@
       "duration": "Duración",
       "resolution": "Resolución",
       "videoId": "ID del vídeo"
+    },
+    "filenameMetadataPosition": "Posición",
+    "filenameMetadataPositions": {
+      "prefix": "Antes del título",
+      "suffix": "Después del título"
     },
     "splitEmbeddedChapters": "Dividir capítulos incrustados",
     "splitEmbeddedChaptersDesc": "Crea archivos separados a partir de los capítulos incluidos en el vídeo",
