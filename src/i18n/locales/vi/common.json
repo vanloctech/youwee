@@ -74,6 +74,7 @@
     "YT_AGE_RESTRICTED": "Video bị giới hạn độ tuổi. Hãy bật xác thực trong Cài đặt.",
     "YT_MEMBERS_ONLY": "Video chỉ dành cho thành viên. Hãy dùng tài khoản đã đăng ký.",
     "YT_SIGNIN_REQUIRED": "Video yêu cầu đăng nhập. Hãy bật xác thực trong Cài đặt.",
+    "YT_BOT_CHECK": "YouTube yêu cầu xác minh bạn không phải bot. Hãy bật cookie từ trình duyệt đã đăng nhập (hoặc file cookie) trong Cài đặt → Mạng & Xác thực, hoặc đổi mạng/proxy rồi thử lại.",
     "YT_GEO_RESTRICTED": "Video không khả dụng tại khu vực của bạn.",
     "YT_VIDEO_UNAVAILABLE": "Video hiện không khả dụng.",
     "YT_NO_SUBTITLES": "Video này không có phụ đề.",

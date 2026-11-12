@@ -74,6 +74,7 @@
     "YT_AGE_RESTRICTED": "Bu videoya yaş sınırlaması getirilmiştir. Ayarlar'da kimlik doğrulamayı etkinleştirin.",
     "YT_MEMBERS_ONLY": "Bu video yalnızca üyelere açıktır. Abone olunan bir hesap kullanın.",
     "YT_SIGNIN_REQUIRED": "Bu video oturum açmayı gerektiriyor. Ayarlar'da kimlik doğrulamayı etkinleştirin.",
+    "YT_BOT_CHECK": "YouTube bot olmadığınızı doğrulamanızı istiyor. Ayarlar → Ağ ve Kimlik Doğrulama bölümünde oturum açılmış bir tarayıcıdan çerezleri (veya bir çerez dosyasını) etkinleştirin ya da ağı/proxy'yi değiştirip yeniden deneyin.",
     "YT_GEO_RESTRICTED": "Bu video bölgenizde kullanılamıyor.",
     "YT_VIDEO_UNAVAILABLE": "Bu video kullanılamıyor.",
     "YT_NO_SUBTITLES": "Bu video için altyazı mevcut değil.",

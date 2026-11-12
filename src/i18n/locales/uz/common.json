@@ -74,6 +74,7 @@
     "YT_AGE_RESTRICTED": "Bu video yoshga qarab cheklangan. Sozlamalarda autentifikatsiyani yoqing.",
     "YT_MEMBERS_ONLY": "Bu video faqat aʼzolar uchun. Obuna qilingan hisobdan foydalaning.",
     "YT_SIGNIN_REQUIRED": "Bu video tizimga kirishni talab qiladi. Sozlamalarda autentifikatsiyani yoqing.",
+    "YT_BOT_CHECK": "YouTube siz bot emasligingizni tasdiqlashni so‘ramoqda. Sozlamalar → Tarmoq va avtorizatsiya bo‘limida tizimga kirilgan brauzer cookie fayllarini (yoki cookie faylini) yoqing yoki tarmoq/proksini almashtirib, qayta urinib ko‘ring.",
     "YT_GEO_RESTRICTED": "Bu video sizning mintaqangizda mavjud emas.",
     "YT_VIDEO_UNAVAILABLE": "Bu video mavjud emas.",
     "YT_NO_SUBTITLES": "Bu video uchun subtitrlar mavjud emas.",

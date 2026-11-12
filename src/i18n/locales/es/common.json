@@ -74,6 +74,7 @@
     "YT_AGE_RESTRICTED": "Este vídeo tiene restricción de edad. Activa la autenticación en Ajustes.",
     "YT_MEMBERS_ONLY": "Este vídeo es solo para miembros. Usa una cuenta suscrita.",
     "YT_SIGNIN_REQUIRED": "Este vídeo requiere iniciar sesión. Activa la autenticación en Ajustes.",
+    "YT_BOT_CHECK": "YouTube pide confirmar que no eres un bot. Activa las cookies de un navegador con sesión iniciada (o un archivo de cookies) en Ajustes → Red y autenticación, o cambia de red/proxy y vuelve a intentarlo.",
     "YT_GEO_RESTRICTED": "Este vídeo no está disponible en tu región.",
     "YT_VIDEO_UNAVAILABLE": "Este vídeo no está disponible.",
     "YT_NO_SUBTITLES": "No hay subtítulos disponibles para este vídeo.",

@@ -14,6 +14,7 @@ pub mod code {
     pub const YT_AGE_RESTRICTED: &str = "YT_AGE_RESTRICTED";
     pub const YT_MEMBERS_ONLY: &str = "YT_MEMBERS_ONLY";
     pub const YT_SIGNIN_REQUIRED: &str = "YT_SIGNIN_REQUIRED";
+    pub const YT_BOT_CHECK: &str = "YT_BOT_CHECK";
     pub const YT_GEO_RESTRICTED: &str = "YT_GEO_RESTRICTED";
     pub const YT_VIDEO_UNAVAILABLE: &str = "YT_VIDEO_UNAVAILABLE";
     pub const YT_NO_SUBTITLES: &str = "YT_NO_SUBTITLES";
@@ -180,6 +181,9 @@ pub fn infer_error_code(message: &str) -> &'static str {
     if m.contains("members-only") || m.contains("member-only") || m.contains("join this channel") {
         return code::YT_MEMBERS_ONLY;
     }
+    if is_bot_check_message(&m) {
+        return code::YT_BOT_CHECK;
+    }
     if m.contains("sign in")
         || m.contains("login required")
         || m.contains("cookies") && m.contains("required")
@@ -294,6 +298,12 @@ pub fn infer_error_code(message: &str) -> &'static str {
     }
 
     code::BACKEND_UNKNOWN
+}
+
+/// YouTube's "Sign in to confirm you're not a bot" check. It is tied to the
+/// network/session rather than the video, so it is not a generic sign-in error.
+pub fn is_bot_check_message(message: &str) -> bool {
+    message.to_lowercase().contains("not a bot")
 }
 
 pub fn default_retryable(code: &str) -> bool {

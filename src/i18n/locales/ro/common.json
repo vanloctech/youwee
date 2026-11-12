@@ -74,6 +74,7 @@
     "YT_AGE_RESTRICTED": "Acest videoclip are restricții de vârstă. Activați autentificarea în Setări.",
     "YT_MEMBERS_ONLY": "Acest video este disponibil doar pentru membri. Folosește un cont abonat.",
     "YT_SIGNIN_REQUIRED": "Acest videoclip necesită conectare. Activați autentificarea în Setări.",
+    "YT_BOT_CHECK": "YouTube cere confirmarea că nu ești un robot. Activează cookie-urile dintr-un browser autentificat (sau un fișier de cookie-uri) în Setări → Rețea și autentificare ori schimbă rețeaua/proxy-ul, apoi reîncearcă.",
     "YT_GEO_RESTRICTED": "Acest videoclip nu este disponibil în regiunea dvs.",
     "YT_VIDEO_UNAVAILABLE": "Acest videoclip nu este disponibil.",
     "YT_NO_SUBTITLES": "Nu sunt disponibile subtitrări pentru acest videoclip.",
