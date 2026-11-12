@@ -37,9 +37,17 @@ export interface GalleryDlStatus {
   version: string | null;
   binary_path: string | null;
   is_system: boolean;
+  can_install: boolean; // An official standalone build exists for this platform
 }
 
 export interface FfmpegUpdateInfo {
+  has_update: boolean;
+  current_version: string | null;
+  latest_version: string | null;
+  release_url: string | null;
+}
+
+export interface GalleryDlUpdateInfo {
   has_update: boolean;
   current_version: string | null;
   latest_version: string | null;
@@ -138,6 +146,13 @@ interface DependenciesContextType {
   galleryDlLoading: boolean;
   galleryDlError: string | null;
   checkGalleryDl: () => Promise<GalleryDlStatus | null>;
+  galleryDlDownloading: boolean;
+  galleryDlDownloadProgress: DownloadProgress | null;
+  galleryDlInstallError: string | null;
+  galleryDlUpdateInfo: GalleryDlUpdateInfo | null;
+  galleryDlCheckingUpdate: boolean;
+  downloadGalleryDl: () => Promise<boolean>;
+  checkGalleryDlUpdate: () => Promise<void>;
 }
 
 const DependenciesContext = createContext<DependenciesContextType | null>(null);
@@ -193,6 +208,12 @@ export function DependenciesProvider({ children }: { children: ReactNode }) {
   const [galleryDlStatus, setGalleryDlStatus] = useState<GalleryDlStatus | null>(null);
   const [galleryDlLoading, setGalleryDlLoading] = useState(false);
   const [galleryDlError, setGalleryDlError] = useState<string | null>(null);
+  const [galleryDlDownloading, setGalleryDlDownloading] = useState(false);
+  const [galleryDlDownloadProgress, setGalleryDlDownloadProgress] =
+    useState<DownloadProgress | null>(null);
+  const [galleryDlInstallError, setGalleryDlInstallError] = useState<string | null>(null);
+  const [galleryDlUpdateInfo, setGalleryDlUpdateInfo] = useState<GalleryDlUpdateInfo | null>(null);
+  const [galleryDlCheckingUpdate, setGalleryDlCheckingUpdate] = useState(false);
 
   // Load yt-dlp version (only once on first mount)
   const refreshYtdlpVersion = useCallback(async () => {
@@ -483,6 +504,44 @@ export function DependenciesProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
+  // Check for a newer official gallery-dl (app-managed copy only)
+  const checkGalleryDlUpdate = useCallback(async () => {
+    setGalleryDlCheckingUpdate(true);
+    setGalleryDlInstallError(null);
+    try {
+      const info = await invoke<GalleryDlUpdateInfo>('check_gallerydl_update');
+      setGalleryDlUpdateInfo(info);
+    } catch (err) {
+      setGalleryDlInstallError(localizeUnknownError(err));
+    } finally {
+      setGalleryDlCheckingUpdate(false);
+    }
+  }, []);
+
+  // Install or update the app-managed gallery-dl
+  const downloadGalleryDl = useCallback(async () => {
+    setGalleryDlDownloading(true);
+    setGalleryDlInstallError(null);
+    setGalleryDlDownloadProgress(null);
+    try {
+      const version = await invoke<string>('download_gallerydl');
+      setGalleryDlUpdateInfo({
+        has_update: false,
+        current_version: version,
+        latest_version: version,
+        release_url: null,
+      });
+      await checkGalleryDl();
+      return true;
+    } catch (err) {
+      setGalleryDlInstallError(localizeUnknownError(err));
+      return false;
+    } finally {
+      setGalleryDlDownloading(false);
+      setGalleryDlDownloadProgress(null);
+    }
+  }, [checkGalleryDl]);
+
   // Initialize on first mount - auto download Deno and yt-dlp stable if not installed
   useEffect(() => {
     if (!initialized) {
@@ -564,9 +623,17 @@ export function DependenciesProvider({ children }: { children: ReactNode }) {
         }
       });
 
-      checkGalleryDl().catch(() => {
-        // gallery-dl is system-managed only, so failure here is non-fatal
-      });
+      checkGalleryDl()
+        .then((status) => {
+          if (status?.installed && !status.is_system) {
+            checkGalleryDlUpdate().catch(() => {
+              // Non-critical
+            });
+          }
+        })
+        .catch(() => {
+          // gallery-dl is optional (Gallery page only), so failure here is non-fatal
+        });
     }
   }, [
     initialized,
@@ -576,6 +643,7 @@ export function DependenciesProvider({ children }: { children: ReactNode }) {
     checkFfmpegUpdate,
     checkDeno,
     checkGalleryDl,
+    checkGalleryDlUpdate,
   ]);
 
   // Listen to download progress events
@@ -594,6 +662,11 @@ export function DependenciesProvider({ children }: { children: ReactNode }) {
     // yt-dlp channel binary download progress
     listen<DownloadProgress>('ytdlp-download-progress', (event) => {
       setYtdlpDownloadProgress(event.payload.stage === 'complete' ? null : event.payload);
+    }).then((unlisten) => unlisteners.push(unlisten));
+
+    // gallery-dl download progress
+    listen<DownloadProgress>('gallerydl-download-progress', (event) => {
+      setGalleryDlDownloadProgress(event.payload.stage === 'complete' ? null : event.payload);
     }).then((unlisten) => unlisteners.push(unlisten));
 
     // Deno download progress
@@ -717,6 +790,13 @@ export function DependenciesProvider({ children }: { children: ReactNode }) {
         galleryDlLoading,
         galleryDlError,
         checkGalleryDl,
+        galleryDlDownloading,
+        galleryDlDownloadProgress,
+        galleryDlInstallError,
+        galleryDlUpdateInfo,
+        galleryDlCheckingUpdate,
+        downloadGalleryDl,
+        checkGalleryDlUpdate,
       }}
     >
       {children}

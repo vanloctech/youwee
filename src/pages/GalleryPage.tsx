@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { GalleryQueueList } from '@/components/download/GalleryQueueList';
 import { GallerySettingsPanel } from '@/components/download/GallerySettingsPanel';
 import { GalleryUrlInput } from '@/components/download/GalleryUrlInput';
+import { GalleryDlInstall } from '@/components/GalleryDlInstall';
 import { ThemePicker } from '@/components/settings/ThemePicker';
 import { Button } from '@/components/ui/button';
 import { useDependencies } from '@/contexts/DependenciesContext';
@@ -75,6 +76,9 @@ export function GalleryPage({ onNavigateToSettings }: GalleryPageProps) {
                       <RefreshCw className={cn('w-4 h-4', galleryDlLoading && 'animate-spin')} />
                     </Button>
                   </div>
+                  <div className="mt-3">
+                    <GalleryDlInstall />
+                  </div>
                   <div className="mt-3 flex flex-wrap gap-2">
                     {onNavigateToSettings && (
                       <Button
@@ -87,7 +91,7 @@ export function GalleryPage({ onNavigateToSettings }: GalleryPageProps) {
                       </Button>
                     )}
                     <a
-                      href="https://github.com/mikf/gallery-dl"
+                      href="https://codeberg.org/mikf/gallery-dl#installation"
                       target="_blank"
                       rel="noopener noreferrer"
                       className={cn(

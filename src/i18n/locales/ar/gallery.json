@@ -5,8 +5,8 @@
   },
   "missing": {
     "title": "gallery-dl مطلوب",
-    "checking": "جارٍ التحقق من gallery-dl الخاص بالنظام...",
-    "description": "ثبّت gallery-dl على نظامك لتنزيل المعارض والمجموعات وتغذيات المنشئين.",
+    "checking": "جارٍ التحقق من gallery-dl...",
+    "description": "يحتاج Youwee إلى gallery-dl لتنزيل المعارض والمجموعات وخلاصات المنشئين.",
     "refresh": "تحديث الحالة",
     "openDependencies": "فتح Dependencies",
     "installGuide": "دليل التثبيت"

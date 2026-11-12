@@ -233,7 +233,7 @@ function AppContent() {
           <UniversalPage onNavigateToSettings={() => openSettingsPage('general')} />
         )}
         {currentPage === 'gallery' && (
-          <GalleryPage onNavigateToSettings={() => openSettingsPage('general')} />
+          <GalleryPage onNavigateToSettings={openDependenciesSettings} />
         )}
         {currentPage === 'channels' && <ChannelsPage />}
         {currentPage === 'summary' && (

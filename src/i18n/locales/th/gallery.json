@@ -5,8 +5,8 @@
   },
   "missing": {
     "title": "ต้องใช้ gallery-dl",
-    "checking": "กำลังตรวจสอบ gallery-dl ของระบบ...",
-    "description": "ติดตั้ง gallery-dl ในระบบของคุณเพื่อดาวน์โหลดแกลเลอรี คอลเลกชัน และฟีดของครีเอเตอร์",
+    "checking": "กำลังตรวจสอบ gallery-dl...",
+    "description": "Youwee ต้องใช้ gallery-dl เพื่อดาวน์โหลดแกลเลอรี คอลเลกชัน และฟีดของครีเอเตอร์",
     "refresh": "รีเฟรชสถานะ",
     "openDependencies": "เปิด Dependencies",
     "installGuide": "คู่มือติดตั้ง"

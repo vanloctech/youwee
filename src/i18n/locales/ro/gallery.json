@@ -5,8 +5,8 @@
   },
   "missing": {
     "title": "gallery-dl este necesar",
-    "checking": "Sistem de verificare gallery-dl...",
-    "description": "Instalați gallery-dl pe sistemul dvs. pentru a descărca galerii, colecții și fluxuri pentru creatori.",
+    "checking": "Se verifică gallery-dl...",
+    "description": "Youwee are nevoie de gallery-dl pentru a descărca galerii, colecții și fluxuri ale creatorilor.",
     "refresh": "Starea de reîmprospătare",
     "openDependencies": "Deschideți dependențe",
     "installGuide": "Ghid de instalare"

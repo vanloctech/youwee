@@ -5,8 +5,8 @@
   },
   "missing": {
     "title": "gallery-dl is required",
-    "checking": "Checking system gallery-dl...",
-    "description": "Install gallery-dl on your system to download galleries, collections, and creator feeds.",
+    "checking": "Проверка gallery-dl...",
+    "description": "Youwee нужен gallery-dl для загрузки галерей, коллекций и лент авторов.",
     "refresh": "Refresh status",
     "openDependencies": "Open Dependencies",
     "installGuide": "Install guide"

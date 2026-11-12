@@ -638,7 +638,6 @@
     "systemYtdlp": "系统 yt-dlp - 通过包管理器更新",
     "systemYtdlpNotFound": "未找到系统 yt-dlp",
     "systemGallerydl": "系统 gallery-dl - 通过包管理器更新",
-    "systemGallerydlNotFound": "未找到系统 gallery-dl",
     "systemManagedOnly": "仅支持系统管理",
     "systemManagedOnlyDesc": "图库下载只使用系统中的 gallery-dl 二进制。安装和更新需要在应用外完成。",
     "denoRuntime": "Deno 运行时",
@@ -664,7 +663,16 @@
     "downloading": "下载中",
     "extracting": "正在解压...",
     "verifying": "正在验证...",
-    "checkingChecksum": "正在检查校验和..."
+    "checkingChecksum": "正在检查校验和...",
+    "installGallerydl": "安装 gallery-dl",
+    "retryInstall": "重新安装",
+    "gallerydlHomebrewHint": "gallery-dl 没有适用于 macOS 的官方版本。请在终端中用 Homebrew 安装，然后重新检查。",
+    "gallerydlPipHint": "gallery-dl 没有适用于此系统的官方版本。请用 pip 安装，然后重新检查。",
+    "copyCommand": "复制",
+    "copied": "已复制",
+    "checkAgain": "重新检查",
+    "appGallerydl": "由 Youwee 安装",
+    "gallerydlNotInstalled": "未安装 gallery-dl"
   },
   "network": {
     "title": "网络与认证",

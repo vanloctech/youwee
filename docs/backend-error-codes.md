@@ -52,6 +52,9 @@ Frontend should:
 | `DB_OPERATION_FAILED` | Database operation failed | false |
 | `YTDLP_NOT_FOUND` | yt-dlp binary missing | false |
 | `FFMPEG_NOT_FOUND` | FFmpeg/ffprobe missing | false |
+| `GALLERYDL_NOT_FOUND` | gallery-dl binary missing | false |
+| `GALLERYDL_INSTALL_UNSUPPORTED` | No official standalone gallery-dl build for this platform (e.g. macOS); install with Homebrew/pip | false |
+| `GALLERYDL_SYSTEM_MANAGED` | System gallery-dl is in use; update it with the package manager | false |
 | `AI_API_ERROR` | AI provider API returned error | false |
 | `AI_NO_API_KEY` | AI API key missing | false |
 | `AI_NO_TRANSCRIPT` | Transcript missing for AI step | false |
