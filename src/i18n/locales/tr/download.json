@@ -89,7 +89,10 @@
           "hdr": "HDR"
         }
       }
-    }
+    },
+    "guideYtdlpStableTitle": "yt-dlp Stable kullanın",
+    "guideYtdlpStableText": "Dahili yt-dlp, YouTube'un gerisinde kalabilir. Başarısız veya düşük kaliteli indirmeleri önlemek için Ayarlar > Bağımlılıklar bölümünden Stable'a geçin.",
+    "guideSetupQuality": "Yüksek kaliteyi ayarla"
   },
   "page": {
     "quickSettings": "Hızlı ayarlar",

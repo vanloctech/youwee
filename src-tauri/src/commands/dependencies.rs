@@ -412,7 +412,20 @@ pub async fn download_ytdlp_channel(app: AppHandle, channel: String) -> Result<S
         }
     };
 
+    let emit_progress = |stage: &str, percent: u8, downloaded: u64, total: u64| {
+        let _ = app.emit(
+            "ytdlp-download-progress",
+            DownloadProgress {
+                stage: stage.to_string(),
+                percent,
+                downloaded,
+                total,
+            },
+        );
+    };
+
     // Download checksums
+    emit_progress("checksum", 0, 0, 0);
     let checksums_response = client
         .get(checksums_url)
         .send()
@@ -444,6 +457,7 @@ pub async fn download_ytdlp_channel(app: AppHandle, channel: String) -> Result<S
         .ok_or_else(|| format!("Checksum not found for {}", checksum_filename))?;
 
     // Download binary
+    emit_progress("downloading", 0, 0, 0);
     let response = client
         .get(download_url)
         .send()
@@ -457,12 +471,30 @@ pub async fn download_ytdlp_channel(app: AppHandle, channel: String) -> Result<S
         ));
     }
 
-    let bytes = response
-        .bytes()
-        .await
-        .map_err(|e| format!("Failed to read response: {}", e))?;
+    // Stream the body so the UI can show download progress (the binary is a few dozen MB).
+    let total_size = response.content_length().unwrap_or(0);
+    let mut bytes: Vec<u8> = Vec::with_capacity(total_size as usize);
+    let mut last_percent: u8 = 0;
+    let mut stream = response.bytes_stream();
+    while let Some(chunk) = stream.next().await {
+        let chunk = chunk.map_err(|e| format!("Failed to read response: {}", e))?;
+        bytes.extend_from_slice(&chunk);
+
+        let downloaded = bytes.len() as u64;
+        let percent = if total_size > 0 {
+            ((downloaded as f64 / total_size as f64) * 100.0).min(100.0) as u8
+        } else {
+            0
+        };
+        // Only emit every 5% to avoid spamming
+        if percent >= last_percent.saturating_add(5) || (percent == 100 && last_percent != 100) {
+            last_percent = percent;
+            emit_progress("downloading", percent, downloaded, total_size);
+        }
+    }
 
     // Verify checksum
+    emit_progress("verifying", 100, bytes.len() as u64, total_size);
     if !verify_sha256(&bytes, &expected_hash) {
         return Err("Security error: SHA256 checksum verification failed.".to_string());
     }
@@ -499,6 +531,7 @@ pub async fn download_ytdlp_channel(app: AppHandle, channel: String) -> Result<S
         .await
         .map_err(|e| format!("Failed to verify installation: {}", e))?;
 
+    emit_progress("complete", 100, bytes.len() as u64, total_size);
     Ok(String::from_utf8_lossy(&output.stdout).trim().to_string())
 }
 

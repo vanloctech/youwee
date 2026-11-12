@@ -89,7 +89,10 @@
           "hdr": "HDR"
         }
       }
-    }
+    },
+    "guideYtdlpStableTitle": "Используйте yt-dlp Stable",
+    "guideYtdlpStableText": "Встроенный yt-dlp может отставать от YouTube. Переключитесь на Stable в Настройки > Зависимости, чтобы избежать ошибок и низкого качества.",
+    "guideSetupQuality": "Настроить высокое качество"
   },
   "page": {
     "quickSettings": "Быстрые настройки",

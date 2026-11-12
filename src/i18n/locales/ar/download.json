@@ -89,7 +89,10 @@
           "hdr": "HDR"
         }
       }
-    }
+    },
+    "guideYtdlpStableTitle": "استخدم yt-dlp المستقر",
+    "guideYtdlpStableText": "قد يتأخر yt-dlp المرفق عن تغييرات YouTube. بدّل إلى الإصدار المستقر من الإعدادات > Dependencies لتجنب فشل التنزيل أو انخفاض الجودة.",
+    "guideSetupQuality": "إعداد الجودة العالية"
   },
   "page": {
     "quickSettings": "إعدادات سريعة",

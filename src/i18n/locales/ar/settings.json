@@ -590,7 +590,8 @@
     "downloadingYtdlp": "جارٍ تنزيل yt-dlp...",
     "downloading": "جارٍ التنزيل",
     "extracting": "جارٍ الاستخراج...",
-    "verifying": "جارٍ التحقق..."
+    "verifying": "جارٍ التحقق...",
+    "checkingChecksum": "جارٍ التحقق من المجموع الاختباري..."
   },
   "network": {
     "title": "الشبكة والمصادقة",

@@ -89,7 +89,10 @@
           "hdr": "HDR"
         }
       }
-    }
+    },
+    "guideYtdlpStableTitle": "使用 yt-dlp Stable",
+    "guideYtdlpStableText": "自带的 yt-dlp 可能跟不上 YouTube 的变化。请在 设置 > 依赖项 中切换到 Stable，以避免下载失败或画质较低。",
+    "guideSetupQuality": "设置高画质"
   },
   "page": {
     "quickSettings": "快捷设置",

@@ -31,6 +31,7 @@ import { Switch } from '@/components/ui/switch';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { useDependencies } from '@/contexts/DependenciesContext';
 import { useDownload } from '@/contexts/download-context';
+import { formatDependencyProgressLabel } from '@/lib/dependency-progress';
 import type { DependencySource, YtdlpChannel } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import { SettingsCard, SettingsSection } from '../SettingsSection';
@@ -85,6 +86,7 @@ export function DependenciesSection({ highlightId }: DependenciesSectionProps) {
     checkFfmpegUpdate,
     downloadFfmpeg,
     ffmpegDownloadProgress,
+    ytdlpDownloadProgress,
     setFfmpegSource,
     checkFfmpeg,
     // Deno
@@ -270,11 +272,15 @@ export function DependenciesSection({ highlightId }: DependenciesSectionProps) {
                     {isUpdating || isChannelDownloading ? (
                       <span className="flex items-center gap-1 text-primary">
                         <Loader2 className="w-3 h-3 animate-spin" />
-                        {isAutoDownloadingYtdlp
-                          ? t('dependencies.downloadingYtdlp')
-                          : needsDownload()
-                            ? t('dependencies.installing')
-                            : t('dependencies.updating')}
+                        {formatDependencyProgressLabel(
+                          t,
+                          isChannelDownloading ? ytdlpDownloadProgress : null,
+                          isAutoDownloadingYtdlp
+                            ? t('dependencies.downloadingYtdlp')
+                            : needsDownload()
+                              ? t('dependencies.installing')
+                              : t('dependencies.updating'),
+                        )}
                       </span>
                     ) : updateSuccess || channelDownloadSuccess ? (
                       <span className="text-emerald-500">{t('dependencies.updated')}</span>
@@ -526,17 +532,13 @@ export function DependenciesSection({ highlightId }: DependenciesSectionProps) {
                     {ffmpegDownloading ? (
                       <span className="flex items-center gap-1 text-primary">
                         <Loader2 className="w-3 h-3 animate-spin" />
-                        {ffmpegDownloadProgress
-                          ? ffmpegDownloadProgress.stage === 'downloading'
-                            ? `${t('dependencies.downloading')} ${ffmpegDownloadProgress.percent}%`
-                            : ffmpegDownloadProgress.stage === 'extracting'
-                              ? t('dependencies.extracting')
-                              : ffmpegDownloadProgress.stage === 'verifying'
-                                ? t('dependencies.verifying')
-                                : t('dependencies.installing')
-                          : ffmpegUpdateInfo?.has_update
+                        {formatDependencyProgressLabel(
+                          t,
+                          ffmpegDownloadProgress,
+                          ffmpegUpdateInfo?.has_update
                             ? t('dependencies.updating')
-                            : t('dependencies.installing')}
+                            : t('dependencies.installing'),
+                        )}
                       </span>
                     ) : ffmpegCheckingUpdate ? (
                       <span className="flex items-center gap-1 text-muted-foreground">
@@ -679,15 +681,13 @@ export function DependenciesSection({ highlightId }: DependenciesSectionProps) {
                     {denoDownloading ? (
                       <span className="flex items-center gap-1 text-primary">
                         <Loader2 className="w-3 h-3 animate-spin" />
-                        {denoDownloadProgress
-                          ? denoDownloadProgress.stage === 'downloading'
-                            ? `${t('dependencies.downloading')} ${denoDownloadProgress.percent}%`
-                            : denoDownloadProgress.stage === 'extracting'
-                              ? t('dependencies.extracting')
-                              : t('dependencies.installing')
-                          : denoUpdateInfo?.has_update
+                        {formatDependencyProgressLabel(
+                          t,
+                          denoDownloadProgress,
+                          denoUpdateInfo?.has_update
                             ? t('dependencies.updating')
-                            : t('dependencies.installing')}
+                            : t('dependencies.installing'),
+                        )}
                       </span>
                     ) : denoCheckingUpdate ? (
                       <span className="flex items-center gap-1 text-muted-foreground">

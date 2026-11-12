@@ -106,5 +106,44 @@
     "WHISPER_NO_API_KEY": "لم يتم إعداد مفتاح API الخاص بـ Whisper.",
     "WHISPER_UNSUPPORTED_FORMAT": "تنسيق الصوت غير مدعوم في Whisper.",
     "YT_SKIPPED_FILTER": "Skipped by yt-dlp match filter."
+  },
+  "setupDialog": {
+    "title": "احصل على أفضل جودة تنزيل",
+    "description": "يعمل Youwee بالفعل، لكن هذه الخطوات تتيح التنزيل بأعلى جودة. يمكنك تغييرها في أي وقت من الإعدادات ← Dependencies.",
+    "ytdlp": {
+      "title": "تبديل yt-dlp إلى {{channel}}",
+      "text": "قد يتأخر yt-dlp المرفق مع Youwee عن تغييرات YouTube. يتم تحديث الإصدار المستقر بشكل أكثر، لذا تفشل التنزيلات أقل ويمكن الوصول إلى جودة أعلى.",
+      "current": "الحالي: المرفق {{version}}",
+      "downloaded": "تم تنزيل {{channel}} {{version}} · لا يزال المرفق {{bundled}} قيد الاستخدام",
+      "missingFile": "تم اختيار {{channel}} لكن ملفه مفقود · يُستخدم المرفق {{bundled}} مؤقتًا",
+      "inUse": "يُستخدم {{channel}} {{version}}"
+    },
+    "ffmpeg": {
+      "title": "تثبيت FFmpeg",
+      "text": "مقاطع الفيديو عالية الجودة (1080p وما فوق و2K و4K) تأتي بمسارات فيديو وصوت منفصلة. يدمجها FFmpeg في ملف واحد؛ وبدونه قد تحصل على جودة أقل أو فيديو بلا صوت."
+    },
+    "status": {
+      "notDownloaded": "غير منزّل",
+      "downloadedNotActive": "منزّل، غير مستخدم",
+      "missingFile": "الملف مفقود",
+      "inUse": "قيد الاستخدام",
+      "notInstalled": "غير مثبت",
+      "installed": "مثبت",
+      "downloading": "جارٍ التنزيل",
+      "switching": "جارٍ التبديل…",
+      "failed": "فشل"
+    },
+    "actions": {
+      "downloadAndSwitch": "تنزيل وتبديل",
+      "switch": "التبديل إلى {{channel}}",
+      "download": "تنزيل",
+      "install": "تثبيت",
+      "retry": "إعادة المحاولة"
+    },
+    "setUpAll": "إعداد الكل",
+    "working": "جارٍ العمل…",
+    "later": "لاحقًا",
+    "done": "تم",
+    "openDependencies": "إعدادات التبعيات"
   }
 }

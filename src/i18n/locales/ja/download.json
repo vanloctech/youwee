@@ -89,7 +89,10 @@
           "hdr": "HDR"
         }
       }
-    }
+    },
+    "guideYtdlpStableTitle": "yt-dlp Stable を使う",
+    "guideYtdlpStableText": "同梱の yt-dlp は YouTube の変更に追いつけないことがあります。設定 > 依存関係 で Stable に切り替えると、失敗や低画質を防げます。",
+    "guideSetupQuality": "高画質を設定"
   },
   "page": {
     "quickSettings": "クイック設定",

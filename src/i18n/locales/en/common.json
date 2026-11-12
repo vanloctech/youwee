@@ -106,5 +106,44 @@
     "WHISPER_NO_API_KEY": "Whisper API key not configured.",
     "WHISPER_UNSUPPORTED_FORMAT": "Unsupported audio format for Whisper.",
     "YT_SKIPPED_FILTER": "Skipped by yt-dlp match filter."
+  },
+  "setupDialog": {
+    "title": "Get the best download quality",
+    "description": "Youwee already works, but these steps let it download at the highest quality. You can change them anytime in Settings → Dependencies.",
+    "ytdlp": {
+      "title": "Switch yt-dlp to {{channel}}",
+      "text": "The yt-dlp bundled with Youwee can fall behind YouTube changes. Stable is updated more often, so downloads fail less and can reach higher qualities.",
+      "current": "Current: bundled {{version}}",
+      "downloaded": "{{channel}} {{version}} is downloaded · still using bundled {{bundled}}",
+      "missingFile": "{{channel}} is selected but its file is missing · using bundled {{bundled}} for now",
+      "inUse": "Using {{channel}} {{version}}"
+    },
+    "ffmpeg": {
+      "title": "Install FFmpeg",
+      "text": "High-quality videos (1080p and above, 2K, 4K) come as separate video and audio streams. FFmpeg merges them into one file; without it you may get lower quality or video without sound."
+    },
+    "status": {
+      "notDownloaded": "Not downloaded",
+      "downloadedNotActive": "Downloaded, not in use",
+      "missingFile": "File missing",
+      "inUse": "In use",
+      "notInstalled": "Not installed",
+      "installed": "Installed",
+      "downloading": "Downloading",
+      "switching": "Switching…",
+      "failed": "Failed"
+    },
+    "actions": {
+      "downloadAndSwitch": "Download & switch",
+      "switch": "Switch to {{channel}}",
+      "download": "Download",
+      "install": "Install",
+      "retry": "Retry"
+    },
+    "setUpAll": "Set up all",
+    "working": "Working…",
+    "later": "Later",
+    "done": "Done",
+    "openDependencies": "Dependencies settings"
   }
 }

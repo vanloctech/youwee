@@ -106,5 +106,44 @@
     "WHISPER_UNSUPPORTED_FORMAT": "Format audio non pris en charge par Whisper.",
     "ARIA2_NOT_FOUND": "aria2c est introuvable. Installez aria2 et assurez-vous que aria2c est disponible dans PATH.",
     "YT_SKIPPED_FILTER": "Skipped by yt-dlp match filter."
+  },
+  "setupDialog": {
+    "title": "Obtenez la meilleure qualité de téléchargement",
+    "description": "Youwee fonctionne déjà, mais ces étapes lui permettent de télécharger en qualité maximale. Vous pouvez les modifier à tout moment dans Paramètres → Dépendances.",
+    "ytdlp": {
+      "title": "Passer yt-dlp en {{channel}}",
+      "text": "Le yt-dlp fourni avec Youwee peut prendre du retard sur les changements de YouTube. Stable est mis à jour plus souvent : moins d'échecs et une meilleure qualité accessible.",
+      "current": "Actuel : intégré {{version}}",
+      "downloaded": "{{channel}} {{version}} est téléchargé · la version intégrée {{bundled}} reste utilisée",
+      "missingFile": "{{channel}} est sélectionné mais son fichier est manquant · version intégrée {{bundled}} utilisée pour l'instant",
+      "inUse": "{{channel}} {{version}} utilisé"
+    },
+    "ffmpeg": {
+      "title": "Installer FFmpeg",
+      "text": "Les vidéos de haute qualité (1080p et plus, 2K, 4K) arrivent avec des flux vidéo et audio séparés. FFmpeg les fusionne en un seul fichier ; sans lui, la qualité peut être plus basse ou la vidéo sans son."
+    },
+    "status": {
+      "notDownloaded": "Non téléchargé",
+      "downloadedNotActive": "Téléchargé, non utilisé",
+      "missingFile": "Fichier manquant",
+      "inUse": "Utilisé",
+      "notInstalled": "Non installé",
+      "installed": "Installé",
+      "downloading": "Téléchargement",
+      "switching": "Changement…",
+      "failed": "Échec"
+    },
+    "actions": {
+      "downloadAndSwitch": "Télécharger et activer",
+      "switch": "Passer en {{channel}}",
+      "download": "Télécharger",
+      "install": "Installer",
+      "retry": "Réessayer"
+    },
+    "setUpAll": "Tout configurer",
+    "working": "En cours…",
+    "later": "Plus tard",
+    "done": "Terminé",
+    "openDependencies": "Paramètres des dépendances"
   }
 }

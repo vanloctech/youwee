@@ -23,6 +23,7 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
+import { requestOpenSetupDialog } from '@/lib/setup-dialog';
 import { extractUrls } from '@/lib/sources';
 import { cn } from '@/lib/utils';
 import { VideoPreview } from './VideoPreview';
@@ -469,6 +470,12 @@ export function UrlInput({
 
           <div className="space-y-3">
             <div className="rounded-lg bg-muted/50 border border-border/60 px-3 py-2.5">
+              <p className="text-sm font-medium">{t('urlInput.guideYtdlpStableTitle')}</p>
+              <p className="text-sm text-muted-foreground mt-1">
+                {t('urlInput.guideYtdlpStableText')}
+              </p>
+            </div>
+            <div className="rounded-lg bg-muted/50 border border-border/60 px-3 py-2.5">
               <p className="text-sm font-medium">{t('urlInput.guideHighResTitle')}</p>
               <p className="text-sm text-muted-foreground mt-1">{t('urlInput.guideHighResText')}</p>
             </div>
@@ -489,6 +496,15 @@ export function UrlInput({
           <DialogFooter className="gap-2 sm:gap-0">
             <Button variant="outline" onClick={() => setShowGuideDialog(false)}>
               {t('urlInput.guideGotIt')}
+            </Button>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setShowGuideDialog(false);
+                requestOpenSetupDialog();
+              }}
+            >
+              {t('urlInput.guideSetupQuality')}
             </Button>
             <Button
               onClick={() => {

@@ -106,5 +106,44 @@
     "WHISPER_NO_API_KEY": "未配置 Whisper API Key。",
     "WHISPER_UNSUPPORTED_FORMAT": "Whisper 不支持该音频格式。",
     "YT_SKIPPED_FILTER": "已被 yt-dlp 匹配过滤器跳过。"
+  },
+  "setupDialog": {
+    "title": "获得最佳下载画质",
+    "description": "Youwee 已可直接使用，但完成以下步骤后可以下载最高画质。你可以随时在 设置 → 依赖项 中更改。",
+    "ytdlp": {
+      "title": "将 yt-dlp 切换到 {{channel}}",
+      "text": "Youwee 自带的 yt-dlp 可能跟不上 YouTube 的变化。Stable 版本更新更频繁，下载更少失败，并能获取更高画质。",
+      "current": "当前：自带版本 {{version}}",
+      "downloaded": "已下载 {{channel}} {{version}} · 仍在使用自带版本 {{bundled}}",
+      "missingFile": "已选择 {{channel}}，但文件缺失 · 暂时使用自带版本 {{bundled}}",
+      "inUse": "正在使用 {{channel}} {{version}}"
+    },
+    "ffmpeg": {
+      "title": "安装 FFmpeg",
+      "text": "高画质视频（1080p 及以上、2K、4K）的视频和音频是分开的流。FFmpeg 会将它们合并为一个文件；没有它可能只能下载较低画质或没有声音的视频。"
+    },
+    "status": {
+      "notDownloaded": "未下载",
+      "downloadedNotActive": "已下载，未使用",
+      "missingFile": "文件缺失",
+      "inUse": "使用中",
+      "notInstalled": "未安装",
+      "installed": "已安装",
+      "downloading": "下载中",
+      "switching": "切换中…",
+      "failed": "失败"
+    },
+    "actions": {
+      "downloadAndSwitch": "下载并切换",
+      "switch": "切换到 {{channel}}",
+      "download": "下载",
+      "install": "安装",
+      "retry": "重试"
+    },
+    "setUpAll": "全部设置",
+    "working": "处理中…",
+    "later": "稍后",
+    "done": "完成",
+    "openDependencies": "依赖项设置"
   }
 }

@@ -89,7 +89,10 @@
           "hdr": "HDR"
         }
       }
-    }
+    },
+    "guideYtdlpStableTitle": "Utiliser yt-dlp Stable",
+    "guideYtdlpStableText": "Le yt-dlp intégré peut prendre du retard sur YouTube. Passez à Stable dans Paramètres > Dépendances pour éviter les échecs ou une qualité réduite.",
+    "guideSetupQuality": "Configurer la haute qualité"
   },
   "page": {
     "quickSettings": "Paramètres rapides",

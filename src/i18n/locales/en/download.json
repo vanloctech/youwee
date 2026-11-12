@@ -89,7 +89,10 @@
           "hdr": "HDR"
         }
       }
-    }
+    },
+    "guideYtdlpStableTitle": "Use yt-dlp Stable",
+    "guideYtdlpStableText": "The bundled yt-dlp can fall behind YouTube changes. Switch to Stable in Settings > Dependencies to avoid failed or low-quality downloads.",
+    "guideSetupQuality": "Set up high quality"
   },
   "page": {
     "quickSettings": "Quick settings",

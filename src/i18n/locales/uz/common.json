@@ -93,7 +93,7 @@
     "DB_OPERATION_FAILED": "Maʼlumotlar bazasi bilan ishlash muvaffaqiyatsiz tugadi.",
     "YTDLP_NOT_FOUND": "yt-dlp topilmadi. Dependencies sozlamalarini tekshiring.",
     "YTDLP_SYSTEM_NOT_FOUND": "Tizimdagi yt-dlp topilmadi. Uni paket menejeri orqali oʻrnating yoki App-managed rejimiga oʻting.",
-    "YTDLP_APP_NOT_FOUND": "Ilova boshqaruvidagi yt-dlp topilmadi. Uni Sozlamalar > Bogʻliqliklar sahifasidan oʻrnating.",
+    "YTDLP_APP_NOT_FOUND": "Ilova boshqaruvidagi yt-dlp topilmadi. Uni Sozlamalar > Bog'liqlar sahifasidan oʻrnating.",
     "YTDLP_SYSTEM_MANAGED": "yt-dlp tizimi tashqi tomondan boshqariladi. Uni paket menejeri orqali yangilang yoki ilova boshqariladi ga oʻting.",
     "GALLERYDL_NOT_FOUND": "gallery-dl tizimi topilmadi. Uni paket menejeri yoki pip bilan oʻrnating, keyin qayta urinib koʻring.",
     "ARIA2_NOT_FOUND": "aria2c topilmadi. Aria2 ni oʻrnating va aria2c PATH da mavjudligiga ishonch hosil qiling.",
@@ -106,5 +106,44 @@
     "WHISPER_NO_API_KEY": "Whisper API kaliti sozlanmagan.",
     "WHISPER_UNSUPPORTED_FORMAT": "Whisper uchun qoʻllab-quvvatlanmaydigan audio formati.",
     "YT_SKIPPED_FILTER": "yt-dlp moslik filtri oʻtkazib yubordi."
+  },
+  "setupDialog": {
+    "title": "Eng yaxshi yuklab olish sifatiga erishing",
+    "description": "Youwee allaqachon ishlaydi, lekin bu qadamlar eng yuqori sifatda yuklab olish imkonini beradi. Ularni istalgan vaqtda Sozlamalar → Bog'liqlar boʻlimida oʻzgartirishingiz mumkin.",
+    "ytdlp": {
+      "title": "yt-dlp ni {{channel}} ga oʻtkazing",
+      "text": "Youwee bilan birga keladigan yt-dlp YouTube oʻzgarishlaridan orqada qolishi mumkin. Stable tez-tez yangilanadi, shuning uchun yuklashlar kamroq xato beradi va yuqoriroq sifatga erishiladi.",
+      "current": "Joriy: ichki {{version}}",
+      "downloaded": "{{channel}} {{version}} yuklab olingan · hali ichki {{bundled}} ishlatilmoqda",
+      "missingFile": "{{channel}} tanlangan, lekin fayli yoʻq · hozircha ichki {{bundled}} ishlatilmoqda",
+      "inUse": "{{channel}} {{version}} ishlatilmoqda"
+    },
+    "ffmpeg": {
+      "title": "FFmpeg ni oʻrnating",
+      "text": "Yuqori sifatli videolar (1080p va undan yuqori, 2K, 4K) alohida video va audio oqimlari bilan keladi. FFmpeg ularni bitta faylga birlashtiradi; usiz sifat pastroq yoki video ovozsiz boʻlishi mumkin."
+    },
+    "status": {
+      "notDownloaded": "Yuklab olinmagan",
+      "downloadedNotActive": "Yuklab olingan, ishlatilmayapti",
+      "missingFile": "Fayl yoʻq",
+      "inUse": "Ishlatilmoqda",
+      "notInstalled": "Oʻrnatilmagan",
+      "installed": "Oʻrnatilgan",
+      "downloading": "Yuklab olinmoqda",
+      "switching": "Oʻtkazilmoqda…",
+      "failed": "Xato"
+    },
+    "actions": {
+      "downloadAndSwitch": "Yuklab olish va oʻtkazish",
+      "switch": "{{channel}} ga oʻtkazish",
+      "download": "Yuklab olish",
+      "install": "Oʻrnatish",
+      "retry": "Qayta urinish"
+    },
+    "setUpAll": "Hammasini sozlash",
+    "working": "Bajarilmoqda…",
+    "later": "Keyinroq",
+    "done": "Tayyor",
+    "openDependencies": "Bogʻliqliklar sozlamalari"
   }
 }

@@ -5,10 +5,10 @@ import { DenoDialog } from '@/components/DenoDialog';
 import { DuplicateDownloadReviewHost } from '@/components/download';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { MeteorTransition } from '@/components/effects/MeteorTransition';
-import { FFmpegDialog } from '@/components/FFmpegDialog';
 import type { Page } from '@/components/layout';
 import { MainLayout } from '@/components/layout';
 import { MusicPlayer } from '@/components/player';
+import { SetupDialog } from '@/components/SetupDialog';
 import type { SettingsSectionId } from '@/components/settings';
 import { UpdateDialog } from '@/components/UpdateDialog';
 import { ToastProvider } from '@/components/ui/toast';
@@ -36,6 +36,15 @@ import { useTrayDownloadStatus } from '@/hooks/useTrayDownloadStatus';
 import { useTrayEvents } from '@/hooks/useTrayEvents';
 import { useYtdlpAutoUpdateToast } from '@/hooks/useYtdlpAutoUpdateToast';
 import {
+  getApplicableSetupItems,
+  getMissingSetupItems,
+  hasSeenSetupDialog,
+  markSetupDialogSeen,
+  onOpenSetupDialogRequest,
+  type SetupDependencyState,
+  type SetupItem,
+} from '@/lib/setup-dialog';
+import {
   ChannelsPage,
   DownloadPage,
   GalleryPage,
@@ -58,12 +67,24 @@ function AppContent() {
     id: number;
     url: string;
   } | null>(null);
-  const [showFfmpegDialog, setShowFfmpegDialog] = useState(false);
+  const [setupDialogItems, setSetupDialogItems] = useState<SetupItem[] | null>(null);
+  const [setupChecked, setSetupChecked] = useState(false);
   const [showDenoDialog, setShowDenoDialog] = useState(false);
-  const [ffmpegChecked, setFfmpegChecked] = useState(false);
   const updater = useUpdater();
-  const { ffmpegStatus, ffmpegLoading, isAutoDownloadingDeno, denoStatus, denoSuccess } =
-    useDependencies();
+  const {
+    ytdlpSource,
+    ytdlpChannel,
+    ytdlpAllVersions,
+    channelError,
+    ffmpegSource,
+    ffmpegStatus,
+    ffmpegLoading,
+    isAutoDownloadingDeno,
+    denoStatus,
+    denoError,
+    denoDownloading,
+    denoSuccess,
+  } = useDependencies();
   const { isTransitioning, oldMode, applyPendingTheme, onTransitionComplete } = useTheme();
   const externalStartLockRef = useRef({ youtube: false, universal: false });
   const externalSummaryRequestIdRef = useRef(0);
@@ -115,26 +136,62 @@ function AppContent() {
     });
   }, [i18n.language, i18n.resolvedLanguage]);
 
-  // Show FFmpeg dialog on startup if not installed
-  useEffect(() => {
-    if (!ffmpegLoading && !ffmpegChecked) {
-      setFfmpegChecked(true);
-      if (ffmpegStatus && !ffmpegStatus.installed) {
-        // Small delay to let the app render first
-        const timer = setTimeout(() => {
-          setShowFfmpegDialog(true);
-        }, 500);
-        return () => clearTimeout(timer);
-      }
-    }
-  }, [ffmpegStatus, ffmpegLoading, ffmpegChecked]);
+  const setupState: SetupDependencyState = {
+    ytdlpSource,
+    ytdlpChannel,
+    ytdlpAllVersions,
+    ffmpegSource,
+    ffmpegStatus,
+  };
+  const setupStateRef = useRef(setupState);
+  setupStateRef.current = setupState;
 
-  // Close FFmpeg dialog when FFmpeg gets installed
+  // Startup checks are done once FFmpeg, the yt-dlp channel info and Deno have all been looked at.
+  const setupStateReady =
+    !ffmpegLoading &&
+    ffmpegStatus !== null &&
+    (ytdlpSource === 'system' || ytdlpAllVersions !== null || channelError !== null) &&
+    (denoStatus !== null || denoError !== null);
+
+  // First launch (or first launch after this dialog was added): suggest switching yt-dlp to
+  // Stable and installing FFmpeg for high-quality downloads. Shown at most once automatically.
   useEffect(() => {
-    if (ffmpegStatus?.installed && showFfmpegDialog) {
-      setShowFfmpegDialog(false);
-    }
-  }, [ffmpegStatus, showFfmpegDialog]);
+    if (setupChecked || !setupStateReady) return;
+    // Let the Deno first-run install finish first so two dialogs never stack.
+    if (showDenoDialog || denoDownloading) return;
+
+    // Small delay to let the app render and late startup state settle.
+    const timer = setTimeout(() => {
+      setSetupChecked(true);
+      if (hasSeenSetupDialog()) return;
+      const missing = getMissingSetupItems(setupStateRef.current);
+      if (missing.length === 0) {
+        markSetupDialogSeen();
+        return;
+      }
+      setSetupDialogItems(missing);
+    }, 800);
+    return () => clearTimeout(timer);
+  }, [setupChecked, setupStateReady, showDenoDialog, denoDownloading]);
+
+  // Manual open (e.g. from the download guide) lists every item that applies.
+  useEffect(
+    () =>
+      onOpenSetupDialogRequest(() => {
+        const items = getApplicableSetupItems(setupStateRef.current);
+        if (items.length === 0) {
+          openSettingsPage('dependencies');
+          return;
+        }
+        setSetupDialogItems(items);
+      }),
+    [openSettingsPage],
+  );
+
+  const closeSetupDialog = useCallback(() => {
+    markSetupDialogSeen();
+    setSetupDialogItems(null);
+  }, []);
 
   // Show Deno dialog when auto-downloading on first launch
   useEffect(() => {
@@ -216,7 +273,13 @@ function AppContent() {
         onRetry={updater.checkForUpdate}
       />
 
-      {showFfmpegDialog && <FFmpegDialog onDismiss={() => setShowFfmpegDialog(false)} />}
+      {setupDialogItems && (
+        <SetupDialog
+          items={setupDialogItems}
+          onClose={closeSetupDialog}
+          onOpenDependencies={openDependenciesSettings}
+        />
+      )}
 
       {showDenoDialog && <DenoDialog onDismiss={() => setShowDenoDialog(false)} />}
       <DuplicateDownloadReviewHost />

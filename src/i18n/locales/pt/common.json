@@ -106,5 +106,44 @@
     "WHISPER_UNSUPPORTED_FORMAT": "Formato de áudio não suportado para Whisper.",
     "ARIA2_NOT_FOUND": "aria2c não encontrado. Instale o aria2 e verifique se aria2c está disponível no PATH.",
     "YT_SKIPPED_FILTER": "Skipped by yt-dlp match filter."
+  },
+  "setupDialog": {
+    "title": "Obtenha a melhor qualidade de download",
+    "description": "O Youwee já funciona, mas estes passos permitem baixar na qualidade máxima. Você pode alterá-los a qualquer momento em Configurações → Dependências.",
+    "ytdlp": {
+      "title": "Mudar o yt-dlp para {{channel}}",
+      "text": "O yt-dlp incluído no Youwee pode ficar desatualizado em relação às mudanças do YouTube. O Stable é atualizado com mais frequência, então os downloads falham menos e alcançam qualidade maior.",
+      "current": "Atual: incluído {{version}}",
+      "downloaded": "{{channel}} {{version}} foi baixado · ainda usando o incluído {{bundled}}",
+      "missingFile": "{{channel}} está selecionado, mas o arquivo está ausente · usando o incluído {{bundled}} por enquanto",
+      "inUse": "Usando {{channel}} {{version}}"
+    },
+    "ffmpeg": {
+      "title": "Instalar FFmpeg",
+      "text": "Vídeos de alta qualidade (1080p ou mais, 2K, 4K) vêm com vídeo e áudio separados. O FFmpeg junta-os num único arquivo; sem ele você pode obter qualidade menor ou vídeo sem som."
+    },
+    "status": {
+      "notDownloaded": "Não baixado",
+      "downloadedNotActive": "Baixado, não usado",
+      "missingFile": "Arquivo ausente",
+      "inUse": "Em uso",
+      "notInstalled": "Não instalado",
+      "installed": "Instalado",
+      "downloading": "Baixando",
+      "switching": "Alternando…",
+      "failed": "Falhou"
+    },
+    "actions": {
+      "downloadAndSwitch": "Baixar e alternar",
+      "switch": "Mudar para {{channel}}",
+      "download": "Baixar",
+      "install": "Instalar",
+      "retry": "Tentar novamente"
+    },
+    "setUpAll": "Configurar tudo",
+    "working": "Processando…",
+    "later": "Depois",
+    "done": "Concluído",
+    "openDependencies": "Configurações de dependências"
   }
 }

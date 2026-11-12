@@ -663,7 +663,8 @@
     "downloadingYtdlp": "正在下载 yt-dlp...",
     "downloading": "下载中",
     "extracting": "正在解压...",
-    "verifying": "正在验证..."
+    "verifying": "正在验证...",
+    "checkingChecksum": "正在检查校验和..."
   },
   "network": {
     "title": "网络与认证",

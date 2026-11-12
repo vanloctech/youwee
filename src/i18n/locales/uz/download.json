@@ -89,7 +89,10 @@
           "hdr": "HDR"
         }
       }
-    }
+    },
+    "guideYtdlpStableTitle": "yt-dlp Stable dan foydalaning",
+    "guideYtdlpStableText": "Ichki yt-dlp YouTube dan orqada qolishi mumkin. Xato yoki past sifatli yuklashlarning oldini olish uchun Sozlamalar > Bog'liqlar boʻlimida Stable ga oʻting.",
+    "guideSetupQuality": "Yuqori sifatni sozlash"
   },
   "page": {
     "quickSettings": "Tez sozlamalar",

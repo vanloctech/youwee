@@ -106,5 +106,44 @@
     "WHISPER_NO_API_KEY": "Whisper API anahtarı yapılandırılmamış.",
     "WHISPER_UNSUPPORTED_FORMAT": "Whisper için desteklenmeyen ses formatı.",
     "YT_SKIPPED_FILTER": "yt-dlp eşleşme filtresi tarafından atlandı."
+  },
+  "setupDialog": {
+    "title": "En iyi indirme kalitesini alın",
+    "description": "Youwee zaten çalışıyor, ancak bu adımlar en yüksek kalitede indirmeyi sağlar. Bunları istediğiniz zaman Ayarlar → Bağımlılıklar bölümünden değiştirebilirsiniz.",
+    "ytdlp": {
+      "title": "yt-dlp'yi {{channel}} sürümüne geçirin",
+      "text": "Youwee ile gelen yt-dlp, YouTube değişikliklerinin gerisinde kalabilir. Stable daha sık güncellenir; indirmeler daha az başarısız olur ve daha yüksek kaliteye ulaşılır.",
+      "current": "Mevcut: dahili {{version}}",
+      "downloaded": "{{channel}} {{version}} indirildi · hâlâ dahili {{bundled}} kullanılıyor",
+      "missingFile": "{{channel}} seçili ancak dosyası eksik · şimdilik dahili {{bundled}} kullanılıyor",
+      "inUse": "{{channel}} {{version}} kullanılıyor"
+    },
+    "ffmpeg": {
+      "title": "FFmpeg'i yükleyin",
+      "text": "Yüksek kaliteli videolar (1080p ve üzeri, 2K, 4K) ayrı video ve ses akışları olarak gelir. FFmpeg bunları tek bir dosyada birleştirir; olmadan daha düşük kalite veya sessiz video alabilirsiniz."
+    },
+    "status": {
+      "notDownloaded": "İndirilmedi",
+      "downloadedNotActive": "İndirildi, kullanılmıyor",
+      "missingFile": "Dosya eksik",
+      "inUse": "Kullanımda",
+      "notInstalled": "Yüklü değil",
+      "installed": "Yüklendi",
+      "downloading": "İndiriliyor",
+      "switching": "Geçiliyor…",
+      "failed": "Başarısız"
+    },
+    "actions": {
+      "downloadAndSwitch": "İndir ve geç",
+      "switch": "{{channel}} sürümüne geç",
+      "download": "İndir",
+      "install": "Yükle",
+      "retry": "Yeniden dene"
+    },
+    "setUpAll": "Tümünü kur",
+    "working": "İşleniyor…",
+    "later": "Daha sonra",
+    "done": "Tamam",
+    "openDependencies": "Bağımlılık ayarları"
   }
 }
