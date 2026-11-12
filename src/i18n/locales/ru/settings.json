@@ -551,7 +551,6 @@
     "checkingUpdates": "Проверка обновлений...",
     "systemFfmpeg": "Системный FFmpeg — обновляйте через менеджер пакетов",
     "systemGallerydl": "Системный gallery-dl — обновляйте через менеджер пакетов",
-    "systemGallerydlNotFound": "Системный gallery-dl не найден",
     "systemManagedOnly": "Только системное управление",
     "systemManagedOnlyDesc": "Загрузка галерей использует только системный binary gallery-dl. Установка и обновление выполняются вне приложения.",
     "denoRuntime": "Deno Runtime",
@@ -591,7 +590,16 @@
     "confirmProceed": "Switch",
     "systemFfmpegNotFound": "System FFmpeg not found",
     "systemYtdlp": "System yt-dlp - update via package manager",
-    "systemYtdlpNotFound": "System yt-dlp not found"
+    "systemYtdlpNotFound": "System yt-dlp not found",
+    "installGallerydl": "Установить gallery-dl",
+    "retryInstall": "Повторить установку",
+    "gallerydlHomebrewHint": "У gallery-dl нет официальной сборки для macOS. Установите его через Homebrew в Терминале, затем проверьте снова.",
+    "gallerydlPipHint": "У gallery-dl нет официальной сборки для этой системы. Установите его через pip, затем проверьте снова.",
+    "copyCommand": "Копировать",
+    "copied": "Скопировано",
+    "checkAgain": "Проверить снова",
+    "appGallerydl": "Установлено Youwee",
+    "gallerydlNotInstalled": "gallery-dl не установлен"
   },
   "network": {
     "title": "Сеть и авторизация",

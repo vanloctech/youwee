@@ -5,8 +5,8 @@
   },
   "missing": {
     "title": "需要 gallery-dl",
-    "checking": "正在检查系统 gallery-dl...",
-    "description": "请先在系统中安装 gallery-dl，才能下载图库、合集和创作者动态。",
+    "checking": "正在检查 gallery-dl...",
+    "description": "Youwee 需要 gallery-dl 来下载图集、合集和作者动态。",
     "refresh": "刷新状态",
     "openDependencies": "打开 Dependencies",
     "installGuide": "安装指南"

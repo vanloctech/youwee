@@ -638,7 +638,6 @@
     "systemYtdlp": "Sistem yt-dlp - actualizare prin manager de pachete",
     "systemYtdlpNotFound": "Sistemul yt-dlp nu a fost găsit",
     "systemGallerydl": "Sistem gallery-dl - actualizare prin manager de pachete",
-    "systemGallerydlNotFound": "Sistemul gallery-dl nu a fost găsit",
     "systemManagedOnly": "Sistem administrat numai",
     "systemManagedOnlyDesc": "Descărcările Gallery folosesc sistemul dvs. numai binar gallery-dl. Instalați-l și actualizați-l în afara aplicației.",
     "denoRuntime": "Deno Runtime",
@@ -664,7 +663,16 @@
     "downloading": "Descărcare",
     "extracting": "Se extrage...",
     "verifying": "Se verifică...",
-    "checkingChecksum": "Se verifică suma de control..."
+    "checkingChecksum": "Se verifică suma de control...",
+    "installGallerydl": "Instalează gallery-dl",
+    "retryInstall": "Reîncearcă instalarea",
+    "gallerydlHomebrewHint": "gallery-dl nu are o versiune oficială pentru macOS. Instalează-l cu Homebrew în Terminal, apoi verifică din nou.",
+    "gallerydlPipHint": "gallery-dl nu are o versiune oficială pentru acest sistem. Instalează-l cu pip, apoi verifică din nou.",
+    "copyCommand": "Copiază",
+    "copied": "Copiat",
+    "checkAgain": "Verifică din nou",
+    "appGallerydl": "Instalat de Youwee",
+    "gallerydlNotInstalled": "gallery-dl nu este instalat"
   },
   "network": {
     "title": "Rețea și autentificare",

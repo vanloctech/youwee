@@ -638,7 +638,6 @@
     "systemYtdlp": "System yt-dlp - paket yöneticisi aracılığıyla güncelleme",
     "systemYtdlpNotFound": "Sistem yt-dlp bulunamadı",
     "systemGallerydl": "System gallery-dl - paket yöneticisi aracılığıyla güncelleme",
-    "systemGallerydlNotFound": "Sistem gallery-dl bulunamadı",
     "systemManagedOnly": "Yalnızca sistem yönetilir",
     "systemManagedOnlyDesc": "Galeri indirmeleri yalnızca sisteminizin gallery-dl ikili programını kullanır. Uygulamanın dışına yükleyin ve güncelleyin.",
     "denoRuntime": "Deno Çalışma Zamanı",
@@ -664,7 +663,16 @@
     "downloading": "İndiriliyor",
     "extracting": "Çıkarılıyor...",
     "verifying": "Doğrulanıyor...",
-    "checkingChecksum": "Sağlama toplamı kontrol ediliyor..."
+    "checkingChecksum": "Sağlama toplamı kontrol ediliyor...",
+    "installGallerydl": "gallery-dl'yi yükle",
+    "retryInstall": "Yüklemeyi yeniden dene",
+    "gallerydlHomebrewHint": "gallery-dl'nin macOS için resmi bir sürümü yok. Terminal'de Homebrew ile yükleyin, ardından tekrar kontrol edin.",
+    "gallerydlPipHint": "gallery-dl'nin bu sistem için resmi bir sürümü yok. pip ile yükleyin, ardından tekrar kontrol edin.",
+    "copyCommand": "Kopyala",
+    "copied": "Kopyalandı",
+    "checkAgain": "Tekrar kontrol et",
+    "appGallerydl": "Youwee tarafından yüklendi",
+    "gallerydlNotInstalled": "gallery-dl yüklü değil"
   },
   "network": {
     "title": "Ağ ve Kimlik Doğrulama",

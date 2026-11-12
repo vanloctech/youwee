@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { GalleryDlInstall } from '@/components/GalleryDlInstall';
 import { FaIcon } from '@/components/shared/FaIcon';
 import {
   AlertDialog,
@@ -104,6 +105,13 @@ export function DependenciesSection({ highlightId }: DependenciesSectionProps) {
     galleryDlLoading,
     galleryDlError,
     checkGalleryDl,
+    galleryDlDownloading,
+    galleryDlDownloadProgress,
+    galleryDlInstallError,
+    galleryDlUpdateInfo,
+    galleryDlCheckingUpdate,
+    downloadGalleryDl,
+    checkGalleryDlUpdate,
   } = useDependencies();
 
   // Compare versions with normalization to avoid false positives (e.g. "v2026.02.04")
@@ -802,43 +810,97 @@ export function DependenciesSection({ highlightId }: DependenciesSectionProps) {
                       </span>
                     ) : galleryDlError ? (
                       <span className="text-destructive">{galleryDlError}</span>
-                    ) : galleryDlStatus?.installed ? (
+                    ) : galleryDlStatus?.installed && galleryDlStatus.is_system ? (
                       t('dependencies.systemGallerydl')
+                    ) : galleryDlStatus?.installed ? (
+                      galleryDlCheckingUpdate ? (
+                        <span className="flex items-center gap-1 text-muted-foreground">
+                          <Loader2 className="w-3 h-3 animate-spin" />
+                          {t('dependencies.checkingUpdates')}
+                        </span>
+                      ) : galleryDlDownloading ? (
+                        <span className="flex items-center gap-1 text-primary">
+                          <Loader2 className="w-3 h-3 animate-spin" />
+                          {formatDependencyProgressLabel(
+                            t,
+                            galleryDlDownloadProgress,
+                            t('dependencies.updating'),
+                          )}
+                        </span>
+                      ) : galleryDlInstallError ? (
+                        <span className="text-destructive">{galleryDlInstallError}</span>
+                      ) : galleryDlUpdateInfo?.has_update ? (
+                        <span className="text-primary">
+                          {t('dependencies.available', {
+                            version: galleryDlUpdateInfo.latest_version,
+                          })}
+                        </span>
+                      ) : galleryDlUpdateInfo ? (
+                        <span className="text-emerald-500">{t('dependencies.upToDate')}</span>
+                      ) : (
+                        t('dependencies.appGallerydl')
+                      )
                     ) : (
                       <span className="text-amber-500">
-                        {t('dependencies.systemGallerydlNotFound')}
+                        {t('dependencies.gallerydlNotInstalled')}
                       </span>
                     )}
                   </p>
                 </div>
               </div>
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => void checkGalleryDl()}
-                disabled={galleryDlLoading}
-                title={t('dependencies.checkForUpdates')}
-              >
-                {galleryDlLoading ? (
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                ) : (
-                  <RefreshCw className="w-4 h-4" />
-                )}
-              </Button>
+              <div className="flex items-center gap-2">
+                {galleryDlStatus?.installed &&
+                  !galleryDlStatus.is_system &&
+                  galleryDlUpdateInfo?.has_update && (
+                    <Button
+                      size="sm"
+                      onClick={() => void downloadGalleryDl()}
+                      disabled={galleryDlDownloading}
+                    >
+                      {galleryDlDownloading ? (
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                      ) : (
+                        t('dependencies.update')
+                      )}
+                    </Button>
+                  )}
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() =>
+                    void (galleryDlStatus?.installed && !galleryDlStatus.is_system
+                      ? checkGalleryDlUpdate()
+                      : checkGalleryDl())
+                  }
+                  disabled={galleryDlLoading || galleryDlCheckingUpdate || galleryDlDownloading}
+                  title={t('dependencies.checkForUpdates')}
+                >
+                  {galleryDlLoading || galleryDlCheckingUpdate ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <RefreshCw className="w-4 h-4" />
+                  )}
+                </Button>
+              </div>
             </div>
+
+            {galleryDlStatus && !galleryDlStatus.installed && (
+              <div className="mt-3">
+                <GalleryDlInstall />
+              </div>
+            )}
 
             <p className="mt-3 text-xs text-muted-foreground">
               {t('dependencies.galleryCollectionsEngine')}
             </p>
 
             <a
-              href="https://github.com/mikf/gallery-dl"
+              href="https://codeberg.org/mikf/gallery-dl"
               target="_blank"
               rel="noopener noreferrer"
               className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground mt-3 pt-3 border-t border-border/50"
             >
-              <FaIcon icon={faGithub} className="text-[12px]" />
-              mikf/gallery-dl
+              codeberg.org/mikf/gallery-dl
               <ExternalLink className="w-3 h-3" />
             </a>
           </SettingsCard>

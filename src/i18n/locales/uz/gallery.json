@@ -5,8 +5,8 @@
   },
   "missing": {
     "title": "gallery-dl talab qilinadi",
-    "checking": "gallery-dl tizimi tekshirilmoqda...",
-    "description": "Galereyalar, kolleksiyalar va ijodkorlar tasmalarini yuklab olish uchun gallery-dl-ni tizimingizga o‘rnating.",
+    "checking": "gallery-dl tekshirilmoqda...",
+    "description": "Youwee galereyalar, toʻplamlar va mualliflar lentalarini yuklab olish uchun gallery-dl talab qiladi.",
     "refresh": "Holatni yangilash",
     "openDependencies": "Bogʻliqliklarni ochish",
     "installGuide": "Oʻrnatish yo'riqnomasi"
