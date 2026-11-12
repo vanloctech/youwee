@@ -663,7 +663,8 @@
     "downloadingYtdlp": "Downloading yt-dlp...",
     "downloading": "Downloading",
     "extracting": "Extracting...",
-    "verifying": "Verifying..."
+    "verifying": "Verifying...",
+    "checkingChecksum": "Checking checksum..."
   },
   "network": {
     "title": "Network & Authentication",

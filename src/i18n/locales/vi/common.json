@@ -106,5 +106,44 @@
     "WHISPER_NO_API_KEY": "Chưa cấu hình API key cho Whisper.",
     "WHISPER_UNSUPPORTED_FORMAT": "Định dạng âm thanh không được Whisper hỗ trợ.",
     "YT_SKIPPED_FILTER": "Đã bỏ qua theo bộ lọc match của yt-dlp."
+  },
+  "setupDialog": {
+    "title": "Tải với chất lượng cao nhất",
+    "description": "Youwee đã dùng được ngay, nhưng các bước dưới đây giúp tải được chất lượng cao nhất. Bạn có thể đổi lại bất cứ lúc nào trong Cài đặt → Phụ thuộc.",
+    "ytdlp": {
+      "title": "Chuyển yt-dlp sang {{channel}}",
+      "text": "yt-dlp đi kèm Youwee có thể chậm cập nhật so với các thay đổi của YouTube. Bản Stable được cập nhật thường xuyên hơn nên ít lỗi tải và lấy được chất lượng cao hơn.",
+      "current": "Hiện tại: bản đi kèm {{version}}",
+      "downloaded": "Đã tải {{channel}} {{version}} · vẫn đang dùng bản đi kèm {{bundled}}",
+      "missingFile": "Đã chọn {{channel}} nhưng thiếu file · tạm dùng bản đi kèm {{bundled}}",
+      "inUse": "Đang dùng {{channel}} {{version}}"
+    },
+    "ffmpeg": {
+      "title": "Cài FFmpeg",
+      "text": "Video chất lượng cao (từ 1080p trở lên, 2K, 4K) có video và âm thanh tách riêng. FFmpeg ghép chúng thành một file; thiếu FFmpeg bạn có thể chỉ tải được chất lượng thấp hơn hoặc video không có tiếng."
+    },
+    "status": {
+      "notDownloaded": "Chưa tải",
+      "downloadedNotActive": "Đã tải, chưa dùng",
+      "missingFile": "Thiếu file",
+      "inUse": "Đang dùng",
+      "notInstalled": "Chưa cài",
+      "installed": "Đã cài",
+      "downloading": "Đang tải",
+      "switching": "Đang chuyển…",
+      "failed": "Lỗi"
+    },
+    "actions": {
+      "downloadAndSwitch": "Tải và chuyển",
+      "switch": "Chuyển sang {{channel}}",
+      "download": "Tải về",
+      "install": "Cài đặt",
+      "retry": "Thử lại"
+    },
+    "setUpAll": "Thiết lập tất cả",
+    "working": "Đang xử lý…",
+    "later": "Để sau",
+    "done": "Xong",
+    "openDependencies": "Cài đặt phụ thuộc"
   }
 }

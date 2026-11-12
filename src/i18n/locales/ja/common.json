@@ -106,5 +106,44 @@
     "WHISPER_NO_API_KEY": "Whisper API キーが設定されていません。",
     "WHISPER_UNSUPPORTED_FORMAT": "Whisper でサポートされていない音声フォーマットです。",
     "YT_SKIPPED_FILTER": "yt-dlp のマッチフィルターによりスキップされました。"
+  },
+  "setupDialog": {
+    "title": "最高画質でダウンロードする",
+    "description": "Youwee はすぐに使えますが、以下の手順で最高画質のダウンロードが可能になります。設定 → 依存関係 からいつでも変更できます。",
+    "ytdlp": {
+      "title": "yt-dlp を {{channel}} に切り替え",
+      "text": "Youwee に同梱の yt-dlp は YouTube の変更に追いつけないことがあります。Stable はより頻繁に更新されるため、失敗が減り、より高い画質を取得できます。",
+      "current": "現在: 同梱版 {{version}}",
+      "downloaded": "{{channel}} {{version}} はダウンロード済み · 同梱版 {{bundled}} を使用中",
+      "missingFile": "{{channel}} が選択されていますがファイルがありません · 一時的に同梱版 {{bundled}} を使用中",
+      "inUse": "{{channel}} {{version}} を使用中"
+    },
+    "ffmpeg": {
+      "title": "FFmpeg をインストール",
+      "text": "高画質の動画（1080p 以上、2K、4K）は映像と音声が別々のストリームです。FFmpeg がそれらを 1 つのファイルに結合します。ない場合は画質が下がったり、音声のない動画になることがあります。"
+    },
+    "status": {
+      "notDownloaded": "未ダウンロード",
+      "downloadedNotActive": "ダウンロード済み・未使用",
+      "missingFile": "ファイルなし",
+      "inUse": "使用中",
+      "notInstalled": "未インストール",
+      "installed": "インストール済み",
+      "downloading": "ダウンロード中",
+      "switching": "切り替え中…",
+      "failed": "失敗"
+    },
+    "actions": {
+      "downloadAndSwitch": "ダウンロードして切り替え",
+      "switch": "{{channel}} に切り替え",
+      "download": "ダウンロード",
+      "install": "インストール",
+      "retry": "再試行"
+    },
+    "setUpAll": "すべて設定",
+    "working": "処理中…",
+    "later": "後で",
+    "done": "完了",
+    "openDependencies": "依存関係の設定"
   }
 }

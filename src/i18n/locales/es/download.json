@@ -89,7 +89,10 @@
           "hdr": "HDR"
         }
       }
-    }
+    },
+    "guideYtdlpStableTitle": "Usa yt-dlp Stable",
+    "guideYtdlpStableText": "El yt-dlp incluido puede quedarse atrás frente a YouTube. Cambia a Stable en Ajustes > Dependencias para evitar descargas fallidas o de baja calidad.",
+    "guideSetupQuality": "Configurar alta calidad"
   },
   "page": {
     "quickSettings": "Ajustes rápidos",

@@ -106,5 +106,44 @@
     "WHISPER_NO_API_KEY": "ยังไม่ได้ตั้งค่า Whisper API key",
     "WHISPER_UNSUPPORTED_FORMAT": "รูปแบบเสียงนี้ยังไม่รองรับสำหรับ Whisper",
     "YT_SKIPPED_FILTER": "Skipped by yt-dlp match filter."
+  },
+  "setupDialog": {
+    "title": "ดาวน์โหลดด้วยคุณภาพสูงสุด",
+    "description": "Youwee ใช้งานได้แล้ว แต่ขั้นตอนเหล่านี้ช่วยให้ดาวน์โหลดได้คุณภาพสูงสุด คุณเปลี่ยนได้ทุกเมื่อใน ตั้งค่า → Dependencies",
+    "ytdlp": {
+      "title": "เปลี่ยน yt-dlp เป็น {{channel}}",
+      "text": "yt-dlp ที่มาพร้อม Youwee อาจตามการเปลี่ยนแปลงของ YouTube ไม่ทัน รุ่น Stable อัปเดตบ่อยกว่า จึงดาวน์โหลดล้มเหลวน้อยลงและได้คุณภาพสูงขึ้น",
+      "current": "ปัจจุบัน: รุ่นที่มาพร้อมแอป {{version}}",
+      "downloaded": "ดาวน์โหลด {{channel}} {{version}} แล้ว · ยังใช้รุ่นที่มาพร้อมแอป {{bundled}}",
+      "missingFile": "เลือก {{channel}} แล้วแต่ไม่พบไฟล์ · ใช้รุ่นที่มาพร้อมแอป {{bundled}} ชั่วคราว",
+      "inUse": "กำลังใช้ {{channel}} {{version}}"
+    },
+    "ffmpeg": {
+      "title": "ติดตั้ง FFmpeg",
+      "text": "วิดีโอคุณภาพสูง (1080p ขึ้นไป, 2K, 4K) มีภาพและเสียงแยกกัน FFmpeg จะรวมเป็นไฟล์เดียว หากไม่มีอาจได้คุณภาพต่ำกว่าหรือวิดีโอไม่มีเสียง"
+    },
+    "status": {
+      "notDownloaded": "ยังไม่ดาวน์โหลด",
+      "downloadedNotActive": "ดาวน์โหลดแล้ว ยังไม่ใช้",
+      "missingFile": "ไม่พบไฟล์",
+      "inUse": "กำลังใช้",
+      "notInstalled": "ยังไม่ติดตั้ง",
+      "installed": "ติดตั้งแล้ว",
+      "downloading": "กำลังดาวน์โหลด",
+      "switching": "กำลังเปลี่ยน…",
+      "failed": "ล้มเหลว"
+    },
+    "actions": {
+      "downloadAndSwitch": "ดาวน์โหลดและเปลี่ยน",
+      "switch": "เปลี่ยนเป็น {{channel}}",
+      "download": "ดาวน์โหลด",
+      "install": "ติดตั้ง",
+      "retry": "ลองอีกครั้ง"
+    },
+    "setUpAll": "ตั้งค่าทั้งหมด",
+    "working": "กำลังดำเนินการ…",
+    "later": "ภายหลัง",
+    "done": "เสร็จสิ้น",
+    "openDependencies": "ตั้งค่าส่วนประกอบ"
   }
 }

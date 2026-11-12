@@ -89,7 +89,10 @@
           "hdr": "HDR"
         }
       }
-    }
+    },
+    "guideYtdlpStableTitle": "ใช้ yt-dlp รุ่น Stable",
+    "guideYtdlpStableText": "yt-dlp ที่มาพร้อมแอปอาจตาม YouTube ไม่ทัน เปลี่ยนเป็น Stable ใน ตั้งค่า > Dependencies เพื่อหลีกเลี่ยงการดาวน์โหลดล้มเหลวหรือคุณภาพต่ำ",
+    "guideSetupQuality": "ตั้งค่าคุณภาพสูง"
   },
   "page": {
     "quickSettings": "การตั้งค่าด่วน",

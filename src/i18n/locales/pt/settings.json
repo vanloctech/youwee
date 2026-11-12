@@ -577,6 +577,7 @@
     "downloading": "Baixando",
     "extracting": "Extraindo...",
     "verifying": "Verificando...",
+    "checkingChecksum": "Verificando checksum...",
     "source": "Source",
     "sourceAppManaged": "App managed",
     "sourceSystem": "System (external)",

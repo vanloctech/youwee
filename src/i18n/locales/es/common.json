@@ -106,5 +106,44 @@
     "WHISPER_NO_API_KEY": "Clave API de Whisper no configurada.",
     "WHISPER_UNSUPPORTED_FORMAT": "Formato de audio no compatible con Whisper.",
     "YT_SKIPPED_FILTER": "Omitido por el filtro de yt-dlp."
+  },
+  "setupDialog": {
+    "title": "Obtén la mejor calidad de descarga",
+    "description": "Youwee ya funciona, pero estos pasos le permiten descargar con la máxima calidad. Puedes cambiarlos cuando quieras en Ajustes → Dependencias.",
+    "ytdlp": {
+      "title": "Cambiar yt-dlp a {{channel}}",
+      "text": "El yt-dlp incluido con Youwee puede quedarse atrás frente a los cambios de YouTube. Stable se actualiza más a menudo, así que las descargas fallan menos y alcanzan mayor calidad.",
+      "current": "Actual: incluido {{version}}",
+      "downloaded": "{{channel}} {{version}} está descargado · aún se usa el incluido {{bundled}}",
+      "missingFile": "{{channel}} está seleccionado pero falta su archivo · se usa el incluido {{bundled}} por ahora",
+      "inUse": "Usando {{channel}} {{version}}"
+    },
+    "ffmpeg": {
+      "title": "Instalar FFmpeg",
+      "text": "Los vídeos de alta calidad (1080p o más, 2K, 4K) llegan con vídeo y audio separados. FFmpeg los une en un solo archivo; sin él puedes obtener menos calidad o vídeo sin sonido."
+    },
+    "status": {
+      "notDownloaded": "No descargado",
+      "downloadedNotActive": "Descargado, sin usar",
+      "missingFile": "Falta el archivo",
+      "inUse": "En uso",
+      "notInstalled": "No instalado",
+      "installed": "Instalado",
+      "downloading": "Descargando",
+      "switching": "Cambiando…",
+      "failed": "Error"
+    },
+    "actions": {
+      "downloadAndSwitch": "Descargar y cambiar",
+      "switch": "Cambiar a {{channel}}",
+      "download": "Descargar",
+      "install": "Instalar",
+      "retry": "Reintentar"
+    },
+    "setUpAll": "Configurar todo",
+    "working": "Procesando…",
+    "later": "Más tarde",
+    "done": "Listo",
+    "openDependencies": "Ajustes de dependencias"
   }
 }

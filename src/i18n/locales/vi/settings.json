@@ -663,7 +663,8 @@
     "downloadingYtdlp": "Đang tải yt-dlp...",
     "downloading": "Đang tải",
     "extracting": "Đang giải nén...",
-    "verifying": "Đang xác minh..."
+    "verifying": "Đang xác minh...",
+    "checkingChecksum": "Đang kiểm tra checksum..."
   },
   "network": {
     "title": "Mạng & Xác thực",

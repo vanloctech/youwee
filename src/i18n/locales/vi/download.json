@@ -89,7 +89,10 @@
           "hdr": "HDR"
         }
       }
-    }
+    },
+    "guideYtdlpStableTitle": "Dùng yt-dlp bản Stable",
+    "guideYtdlpStableText": "yt-dlp đi kèm có thể chậm cập nhật so với YouTube. Hãy chuyển sang Stable trong Cài đặt > Phụ thuộc để tránh tải lỗi hoặc chất lượng thấp.",
+    "guideSetupQuality": "Thiết lập chất lượng cao"
   },
   "page": {
     "quickSettings": "Cài đặt nhanh",

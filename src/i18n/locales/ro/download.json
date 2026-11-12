@@ -23,7 +23,7 @@
     "guideHighResTitle": "2K/4K/8K cu H.264",
     "guideHighResText": "Multe surse oferă doar H.264 până la Full HD. Pentru 2K/4K/8K, utilizați Auto (sau VP9/AV1 când este disponibil) pentru a obține o rezoluție mai mare.",
     "guideFfmpegTitle": "Video și audio descărcate separat",
-    "guideFfmpegText": "Instalați FFmpeg în Setări > Dependențe, astfel încât Youwee să poată îmbina videoclipurile și audio într-un singur fișier de ieșire.",
+    "guideFfmpegText": "Instalați FFmpeg în Setări > Dependente, astfel încât Youwee să poată îmbina videoclipurile și audio într-un singur fișier de ieșire.",
     "guidePreferredFpsTitle": "Frecvența cadrelor poate modifica calitatea",
     "guidePreferredFpsText": "30 FPS poate economisi spațiu, dar Youwee selectează doar fluxurile existente. Unele videoclipuri oferă doar 30 FPS la calități inferioare, cum ar fi 720p sau 480p, astfel încât calitatea descărcată poate fi mai mică decât calitatea pe care ați selectat-o.",
     "guideOpenSettings": "Deschide Setări",
@@ -89,7 +89,10 @@
           "hdr": "HDR"
         }
       }
-    }
+    },
+    "guideYtdlpStableTitle": "Folosește yt-dlp Stable",
+    "guideYtdlpStableText": "yt-dlp inclus poate rămâne în urma YouTube. Treci pe Stable din Setări > Dependente pentru a evita descărcările eșuate sau de calitate scăzută.",
+    "guideSetupQuality": "Configurează calitatea înaltă"
   },
   "page": {
     "quickSettings": "Setări rapide",

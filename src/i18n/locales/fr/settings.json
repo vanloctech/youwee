@@ -577,6 +577,7 @@
     "downloading": "Téléchargement",
     "extracting": "Extraction...",
     "verifying": "Vérification...",
+    "checkingChecksum": "Vérification de la somme de contrôle...",
     "source": "Source",
     "sourceAppManaged": "App managed",
     "sourceSystem": "System (external)",

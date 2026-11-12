@@ -663,7 +663,8 @@
     "downloadingYtdlp": "yt-dlp indiriliyor...",
     "downloading": "İndiriliyor",
     "extracting": "Çıkarılıyor...",
-    "verifying": "Doğrulanıyor..."
+    "verifying": "Doğrulanıyor...",
+    "checkingChecksum": "Sağlama toplamı kontrol ediliyor..."
   },
   "network": {
     "title": "Ağ ve Kimlik Doğrulama",

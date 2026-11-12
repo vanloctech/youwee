@@ -10,6 +10,7 @@ và dự án tuân theo [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 ### Thêm mới
 - **Cập nhật delta cho AppImage** - Nhúng thông tin cập nhật AppImage và phát hành kèm file `.zsync` cho mỗi bản Linux để AppImageUpdate, AppImageLauncher và các trình quản lý AppImage khác chỉ cần tải phần thay đổi
 - **Vị trí metadata trong tên file** - Chọn đặt metadata trong tên file trước hoặc sau tiêu đề video trong Cài đặt → Tải xuống, để tên file có thể bắt đầu bằng tiêu đề (số thứ tự playlist/hàng đợi vẫn đứng đầu)
+- **Thiết lập chất lượng lần đầu** - Dialog thiết lập khi mở app lần đầu, đề xuất chuyển yt-dlp từ bản đi kèm sang Stable và cài FFmpeg để tải được chất lượng cao (1080p trở lên, 2K, 4K có tiếng) ngay từ đầu. Dialog chỉ hiện các bước còn thiếu, tự hiện một lần và có thể mở lại từ phần Hướng dẫn tải. Dialog này thay cho thông báo FFmpeg trước đây hiện mỗi lần mở app; Cài đặt → Phụ thuộc giờ cũng hiện tiến độ tải yt-dlp
 
 ### Sửa lỗi
 - **Danh mục launcher Linux** - Thêm các danh mục `AudioVideo`, `Video` và `Network` vào desktop entry trên Linux để Youwee không còn nằm trong mục "Other" của menu ứng dụng

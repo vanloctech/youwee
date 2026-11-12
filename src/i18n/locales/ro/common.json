@@ -93,7 +93,7 @@
     "DB_OPERATION_FAILED": "Operarea bazei de date a eșuat.",
     "YTDLP_NOT_FOUND": "yt-dlp nu a fost găsit. Verificați setările Dependențe.",
     "YTDLP_SYSTEM_NOT_FOUND": "Sistemul yt-dlp nu a fost găsit. Instalați-l prin managerul de pachete sau comutați la Gestionat aplicație.",
-    "YTDLP_APP_NOT_FOUND": "yt-dlp gestionat de aplicație nu a fost găsit. Instalați-l din Setări > Dependențe.",
+    "YTDLP_APP_NOT_FOUND": "yt-dlp gestionat de aplicație nu a fost găsit. Instalați-l din Setări > Dependente.",
     "YTDLP_SYSTEM_MANAGED": "Sistemul yt-dlp este gestionat extern. Actualizați-l cu managerul de pachete sau comutați la Gestionat aplicație.",
     "GALLERYDL_NOT_FOUND": "Sistemul gallery-dl nu a fost găsit. Instalați-l cu managerul de pachete sau pip, apoi reîncercați.",
     "ARIA2_NOT_FOUND": "aria2c nu a fost găsit. Instalați aria2 și asigurați-vă că aria2c este disponibil în PATH.",
@@ -106,5 +106,44 @@
     "WHISPER_NO_API_KEY": "Cheia Whisper API nu este configurată.",
     "WHISPER_UNSUPPORTED_FORMAT": "Format audio neacceptat pentru Whisper.",
     "YT_SKIPPED_FILTER": "Omis de filtrul de potrivire yt-dlp."
+  },
+  "setupDialog": {
+    "title": "Obține cea mai bună calitate la descărcare",
+    "description": "Youwee funcționează deja, dar acești pași îi permit să descarce la calitatea maximă. Le poți schimba oricând din Setări → Dependente.",
+    "ytdlp": {
+      "title": "Treci yt-dlp pe {{channel}}",
+      "text": "yt-dlp inclus în Youwee poate rămâne în urma schimbărilor YouTube. Stable este actualizat mai des, așa că descărcările eșuează mai rar și ating o calitate mai mare.",
+      "current": "Curent: inclus {{version}}",
+      "downloaded": "{{channel}} {{version}} este descărcat · se folosește încă versiunea inclusă {{bundled}}",
+      "missingFile": "{{channel}} este selectat, dar fișierul lipsește · se folosește temporar versiunea inclusă {{bundled}}",
+      "inUse": "Se folosește {{channel}} {{version}}"
+    },
+    "ffmpeg": {
+      "title": "Instalează FFmpeg",
+      "text": "Videoclipurile de calitate înaltă (1080p și peste, 2K, 4K) vin cu fluxuri video și audio separate. FFmpeg le combină într-un singur fișier; fără el poți obține o calitate mai mică sau video fără sunet."
+    },
+    "status": {
+      "notDownloaded": "Nedescărcat",
+      "downloadedNotActive": "Descărcat, nefolosit",
+      "missingFile": "Fișier lipsă",
+      "inUse": "În uz",
+      "notInstalled": "Neinstalat",
+      "installed": "Instalat",
+      "downloading": "Se descarcă",
+      "switching": "Se comută…",
+      "failed": "Eșuat"
+    },
+    "actions": {
+      "downloadAndSwitch": "Descarcă și comută",
+      "switch": "Comută pe {{channel}}",
+      "download": "Descarcă",
+      "install": "Instalează",
+      "retry": "Reîncearcă"
+    },
+    "setUpAll": "Configurează tot",
+    "working": "Se procesează…",
+    "later": "Mai târziu",
+    "done": "Gata",
+    "openDependencies": "Setări dependențe"
   }
 }

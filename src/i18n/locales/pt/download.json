@@ -89,7 +89,10 @@
           "hdr": "HDR"
         }
       }
-    }
+    },
+    "guideYtdlpStableTitle": "Use o yt-dlp Stable",
+    "guideYtdlpStableText": "O yt-dlp incluído pode ficar desatualizado em relação ao YouTube. Mude para Stable em Configurações > Dependências para evitar falhas ou baixa qualidade.",
+    "guideSetupQuality": "Configurar alta qualidade"
   },
   "page": {
     "quickSettings": "Configurações rápidas",

@@ -577,6 +577,7 @@
     "downloading": "Загрузка",
     "extracting": "Извлечение...",
     "verifying": "Проверка...",
+    "checkingChecksum": "Проверка контрольной суммы...",
     "source": "Source",
     "sourceAppManaged": "App managed",
     "sourceSystem": "System (external)",

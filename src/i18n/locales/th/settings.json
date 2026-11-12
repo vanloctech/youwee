@@ -590,7 +590,8 @@
     "downloadingYtdlp": "กำลังดาวน์โหลด yt-dlp...",
     "downloading": "กำลังดาวน์โหลด",
     "extracting": "กำลังแตกไฟล์...",
-    "verifying": "กำลังตรวจสอบ..."
+    "verifying": "กำลังตรวจสอบ...",
+    "checkingChecksum": "กำลังตรวจสอบ checksum..."
   },
   "network": {
     "title": "เครือข่ายและการยืนยันตัวตน",

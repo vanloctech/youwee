@@ -663,7 +663,8 @@
     "downloadingYtdlp": "Se descarcă yt-dlp...",
     "downloading": "Descărcare",
     "extracting": "Se extrage...",
-    "verifying": "Se verifică..."
+    "verifying": "Se verifică...",
+    "checkingChecksum": "Se verifică suma de control..."
   },
   "network": {
     "title": "Rețea și autentificare",
