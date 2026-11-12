@@ -57,7 +57,7 @@
     "numberQueueItems": "Нумеровать элементы очереди",
     "numberQueueItemsDesc": "Добавлять порядок в очереди к обычным загрузкам",
     "filenameMetadata": "Метаданные в имени файла",
-    "filenameMetadataDesc": "Добавлять выбранные сведения о видео перед названием",
+    "filenameMetadataDesc": "Добавлять выбранные сведения о видео в имя файла",
     "filenameMetadataFields": {
       "uploadDate": "Дата загрузки",
       "viewCount": "Просмотры",
@@ -65,6 +65,11 @@
       "duration": "Длительность",
       "resolution": "Разрешение",
       "videoId": "ID видео"
+    },
+    "filenameMetadataPosition": "Положение",
+    "filenameMetadataPositions": {
+      "prefix": "Перед названием",
+      "suffix": "После названия"
     },
     "splitEmbeddedChapters": "Разделять встроенные главы",
     "splitEmbeddedChaptersDesc": "Создавать отдельные файлы из глав, включенных в видео",

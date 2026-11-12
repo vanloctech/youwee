@@ -58,7 +58,7 @@
     "numberQueueItems": "为队列项目编号",
     "numberQueueItemsDesc": "为普通队列下载文件添加队列顺序前缀",
     "filenameMetadata": "文件名元数据",
-    "filenameMetadataDesc": "在标题前添加所选视频信息",
+    "filenameMetadataDesc": "在文件名中添加所选视频信息",
     "filenameMetadataFields": {
       "uploadDate": "上传日期",
       "viewCount": "观看次数",
@@ -66,6 +66,11 @@
       "duration": "时长",
       "resolution": "分辨率",
       "videoId": "视频 ID"
+    },
+    "filenameMetadataPosition": "位置",
+    "filenameMetadataPositions": {
+      "prefix": "标题前",
+      "suffix": "标题后"
     },
     "splitEmbeddedChapters": "拆分内嵌章节",
     "splitEmbeddedChaptersDesc": "根据视频中已有的章节创建单独文件",

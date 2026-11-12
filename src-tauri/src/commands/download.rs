@@ -184,7 +184,22 @@ fn filename_metadata_template(field: &str) -> Option<&'static str> {
     }
 }
 
-fn build_filename_metadata_prefix(enabled: bool, fields: &[String]) -> Option<String> {
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum FilenameMetadataPosition {
+    Prefix,
+    Suffix,
+}
+
+impl FilenameMetadataPosition {
+    fn from_setting(value: Option<&str>) -> Self {
+        match value {
+            Some("suffix") => Self::Suffix,
+            _ => Self::Prefix,
+        }
+    }
+}
+
+fn build_filename_metadata(enabled: bool, fields: &[String]) -> Option<String> {
     if !enabled {
         return None;
     }
@@ -202,10 +217,11 @@ fn build_filename_metadata_prefix(enabled: bool, fields: &[String]) -> Option<St
     if templates.is_empty() {
         None
     } else {
-        Some(format!("{}_", templates.join("_")))
+        Some(templates.join("_"))
     }
 }
 
+#[allow(clippy::too_many_arguments)]
 fn build_output_template(
     number_playlist_items: bool,
     playlist_index: Option<u32>,
@@ -215,14 +231,22 @@ fn build_output_template(
     queue_total: Option<u32>,
     filename_metadata_enabled: bool,
     filename_metadata_fields: &[String],
+    filename_metadata_position: FilenameMetadataPosition,
 ) -> String {
+    // Playlist/queue numbering always stays first so files keep sorting in order.
     let item_prefix = build_playlist_prefix(number_playlist_items, playlist_index, playlist_total)
         .or_else(|| build_queue_prefix(number_queue_items, queue_index, queue_total))
         .unwrap_or_default();
-    let metadata_prefix =
-        build_filename_metadata_prefix(filename_metadata_enabled, filename_metadata_fields)
-            .unwrap_or_default();
-    format!("{item_prefix}{metadata_prefix}%(title)s.%(ext)s")
+    let metadata = build_filename_metadata(filename_metadata_enabled, filename_metadata_fields);
+    match (metadata, filename_metadata_position) {
+        (Some(metadata), FilenameMetadataPosition::Prefix) => {
+            format!("{item_prefix}{metadata}_%(title)s.%(ext)s")
+        }
+        (Some(metadata), FilenameMetadataPosition::Suffix) => {
+            format!("{item_prefix}%(title)s_{metadata}.%(ext)s")
+        }
+        (None, _) => format!("{item_prefix}%(title)s.%(ext)s"),
+    }
 }
 
 fn build_chapter_output_template(
@@ -466,7 +490,17 @@ mod playlist_chapter_tests {
     #[test]
     fn output_template_is_unchanged_when_numbering_is_off() {
         assert_eq!(
-            build_output_template(false, None, None, false, None, None, false, &[]),
+            build_output_template(
+                false,
+                None,
+                None,
+                false,
+                None,
+                None,
+                false,
+                &[],
+                FilenameMetadataPosition::Prefix
+            ),
             "%(title)s.%(ext)s"
         );
     }
@@ -474,7 +508,17 @@ mod playlist_chapter_tests {
     #[test]
     fn output_template_uses_frontend_playlist_index_for_expanded_playlist_items() {
         assert_eq!(
-            build_output_template(true, Some(3), Some(120), false, None, None, false, &[]),
+            build_output_template(
+                true,
+                Some(3),
+                Some(120),
+                false,
+                None,
+                None,
+                false,
+                &[],
+                FilenameMetadataPosition::Prefix
+            ),
             "003 - %(title)s.%(ext)s"
         );
     }
@@ -482,7 +526,17 @@ mod playlist_chapter_tests {
     #[test]
     fn output_template_uses_frontend_queue_index_for_regular_queue_items() {
         assert_eq!(
-            build_output_template(false, None, None, true, Some(7), Some(42), false, &[]),
+            build_output_template(
+                false,
+                None,
+                None,
+                true,
+                Some(7),
+                Some(42),
+                false,
+                &[],
+                FilenameMetadataPosition::Prefix
+            ),
             "07 - %(title)s.%(ext)s"
         );
     }
@@ -498,7 +552,8 @@ mod playlist_chapter_tests {
                 Some(7),
                 Some(42),
                 false,
-                &[]
+                &[],
+                FilenameMetadataPosition::Prefix
             ),
             "003 - %(title)s.%(ext)s"
         );
@@ -509,7 +564,17 @@ mod playlist_chapter_tests {
         let fields = vec!["uploadDate".to_string(), "viewCount".to_string()];
 
         assert_eq!(
-            build_output_template(false, None, None, false, None, None, true, &fields),
+            build_output_template(
+                false,
+                None,
+                None,
+                false,
+                None,
+                None,
+                true,
+                &fields,
+                FilenameMetadataPosition::Prefix
+            ),
             "%(upload_date>%Y-%m-%d)s_%(view_count)sviews_%(title)s.%(ext)s"
         );
     }
@@ -527,7 +592,8 @@ mod playlist_chapter_tests {
                 Some(7),
                 Some(42),
                 true,
-                &fields
+                &fields,
+                FilenameMetadataPosition::Prefix
             ),
             "003 - %(id)s_%(title)s.%(ext)s"
         );
@@ -543,8 +609,98 @@ mod playlist_chapter_tests {
         ];
 
         assert_eq!(
-            build_output_template(false, None, None, false, None, None, true, &fields),
+            build_output_template(
+                false,
+                None,
+                None,
+                false,
+                None,
+                None,
+                true,
+                &fields,
+                FilenameMetadataPosition::Prefix
+            ),
             "%(upload_date>%Y-%m-%d)s_%(title)s.%(ext)s"
+        );
+    }
+
+    #[test]
+    fn output_template_places_filename_metadata_after_title_as_suffix() {
+        let fields = vec!["uploadDate".to_string(), "viewCount".to_string()];
+
+        assert_eq!(
+            build_output_template(
+                false,
+                None,
+                None,
+                false,
+                None,
+                None,
+                true,
+                &fields,
+                FilenameMetadataPosition::Suffix
+            ),
+            "%(title)s_%(upload_date>%Y-%m-%d)s_%(view_count)sviews.%(ext)s"
+        );
+    }
+
+    #[test]
+    fn output_template_keeps_numbering_first_with_filename_metadata_suffix() {
+        let fields = vec!["videoId".to_string()];
+
+        assert_eq!(
+            build_output_template(
+                true,
+                Some(3),
+                Some(120),
+                false,
+                None,
+                None,
+                true,
+                &fields,
+                FilenameMetadataPosition::Suffix
+            ),
+            "003 - %(title)s_%(id)s.%(ext)s"
+        );
+    }
+
+    #[test]
+    fn output_template_suffix_without_valid_fields_keeps_plain_title() {
+        let fields = vec!["--cookies".to_string()];
+
+        assert_eq!(
+            build_output_template(
+                false,
+                None,
+                None,
+                false,
+                None,
+                None,
+                true,
+                &fields,
+                FilenameMetadataPosition::Suffix
+            ),
+            "%(title)s.%(ext)s"
+        );
+    }
+
+    #[test]
+    fn filename_metadata_position_defaults_to_prefix() {
+        assert_eq!(
+            FilenameMetadataPosition::from_setting(Some("suffix")),
+            FilenameMetadataPosition::Suffix
+        );
+        assert_eq!(
+            FilenameMetadataPosition::from_setting(Some("prefix")),
+            FilenameMetadataPosition::Prefix
+        );
+        assert_eq!(
+            FilenameMetadataPosition::from_setting(Some("%(title)s")),
+            FilenameMetadataPosition::Prefix
+        );
+        assert_eq!(
+            FilenameMetadataPosition::from_setting(None),
+            FilenameMetadataPosition::Prefix
         );
     }
 
@@ -1257,6 +1413,7 @@ pub async fn download_video(
     number_queue_items: Option<bool>,
     filename_metadata_enabled: Option<bool>,
     filename_metadata_fields: Option<Vec<String>>,
+    filename_metadata_position: Option<String>,
     split_embedded_chapters: Option<bool>,
     number_chapter_files: Option<bool>,
     auto_organize_collections: Option<bool>,
@@ -1376,11 +1533,12 @@ pub async fn download_video(
     let number_queue_items = number_queue_items.unwrap_or(false);
     let filename_metadata_enabled = filename_metadata_enabled.unwrap_or(false);
     let filename_metadata_fields = filename_metadata_fields.unwrap_or_default();
+    let filename_metadata_position =
+        FilenameMetadataPosition::from_setting(filename_metadata_position.as_deref());
     let split_embedded_chapters = split_embedded_chapters.unwrap_or(false);
     let number_chapter_files = number_chapter_files.unwrap_or(true);
     let has_filename_metadata =
-        build_filename_metadata_prefix(filename_metadata_enabled, &filename_metadata_fields)
-            .is_some();
+        build_filename_metadata(filename_metadata_enabled, &filename_metadata_fields).is_some();
     let output_template = build_output_template(
         number_playlist_items,
         playlist_index,
@@ -1390,6 +1548,7 @@ pub async fn download_video(
         queue_total,
         filename_metadata_enabled,
         &filename_metadata_fields,
+        filename_metadata_position,
     );
 
     // Use a temp file to capture the final filepath from yt-dlp.

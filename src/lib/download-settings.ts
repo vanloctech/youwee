@@ -7,6 +7,7 @@ import type {
   DownloadSettings,
   ExternalEnqueueOptions,
   FilenameMetadataField,
+  FilenameMetadataPosition,
   ItemDownloadSettings,
   ItemUniversalSettings,
   PluginWorkflowSnapshotMap,
@@ -56,6 +57,10 @@ export function sanitizeFilenameMetadataFields(value: unknown): FilenameMetadata
   return fields;
 }
 
+export function sanitizeFilenameMetadataPosition(value: unknown): FilenameMetadataPosition {
+  return value === 'suffix' ? 'suffix' : 'prefix';
+}
+
 export function createDefaultDownloadSettings(saved: Partial<DownloadSettings>): DownloadSettings {
   const filenameMetadataFields = sanitizeFilenameMetadataFields(saved.filenameMetadataFields);
 
@@ -82,6 +87,7 @@ export function createDefaultDownloadSettings(saved: Partial<DownloadSettings>):
     numberQueueItems: saved.numberQueueItems === true,
     filenameMetadataEnabled: saved.filenameMetadataEnabled === true,
     filenameMetadataFields,
+    filenameMetadataPosition: sanitizeFilenameMetadataPosition(saved.filenameMetadataPosition),
     splitEmbeddedChapters: saved.splitEmbeddedChapters === true,
     numberChapterFiles: saved.numberChapterFiles !== false,
     autoOrganizeCollections: saved.autoOrganizeCollections === true,
@@ -173,6 +179,7 @@ export function serializeDownloadSettings(settings: DownloadSettings): Partial<D
     numberQueueItems: settings.numberQueueItems,
     filenameMetadataEnabled: settings.filenameMetadataEnabled,
     filenameMetadataFields: sanitizeFilenameMetadataFields(settings.filenameMetadataFields),
+    filenameMetadataPosition: sanitizeFilenameMetadataPosition(settings.filenameMetadataPosition),
     splitEmbeddedChapters: settings.splitEmbeddedChapters,
     numberChapterFiles: settings.numberChapterFiles,
     autoOrganizeCollections: settings.autoOrganizeCollections,
@@ -228,6 +235,7 @@ export function buildItemDownloadSettingsSnapshot(
     numberQueueItems: settings.numberQueueItems,
     filenameMetadataEnabled: settings.filenameMetadataEnabled,
     filenameMetadataFields: sanitizeFilenameMetadataFields(settings.filenameMetadataFields),
+    filenameMetadataPosition: sanitizeFilenameMetadataPosition(settings.filenameMetadataPosition),
     splitEmbeddedChapters: settings.splitEmbeddedChapters,
     numberChapterFiles: settings.numberChapterFiles,
     autoOrganizeCollections: settings.autoOrganizeCollections,

@@ -57,7 +57,7 @@
     "numberQueueItems": "Numéroter les éléments de file",
     "numberQueueItemsDesc": "Préfixer les téléchargements ordinaires avec leur ordre dans la file",
     "filenameMetadata": "Métadonnées du nom de fichier",
-    "filenameMetadataDesc": "Ajouter les détails vidéo sélectionnés avant le titre",
+    "filenameMetadataDesc": "Ajouter les détails vidéo sélectionnés au nom du fichier",
     "filenameMetadataFields": {
       "uploadDate": "Date de mise en ligne",
       "viewCount": "Vues",
@@ -65,6 +65,11 @@
       "duration": "Durée",
       "resolution": "Résolution",
       "videoId": "ID vidéo"
+    },
+    "filenameMetadataPosition": "Position",
+    "filenameMetadataPositions": {
+      "prefix": "Avant le titre",
+      "suffix": "Après le titre"
     },
     "splitEmbeddedChapters": "Découper les chapitres intégrés",
     "splitEmbeddedChaptersDesc": "Créer des fichiers séparés à partir des chapitres inclus dans la vidéo",

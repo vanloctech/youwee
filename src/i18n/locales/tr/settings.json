@@ -58,7 +58,7 @@
     "numberQueueItems": "Kuyruktaki öğeleri numaralandır",
     "numberQueueItemsDesc": "Normal sıraya alınmış indirme işlemlerine kuyruk sırasını önek olarak ekleyin",
     "filenameMetadata": "Dosya adı metadatası",
-    "filenameMetadataDesc": "Seçilen video bilgilerini başlığın önüne ekleyin",
+    "filenameMetadataDesc": "Seçilen video bilgilerini dosya adına ekleyin",
     "filenameMetadataFields": {
       "uploadDate": "Yükleme tarihi",
       "viewCount": "Görüntülenme",
@@ -66,6 +66,11 @@
       "duration": "Süre",
       "resolution": "Çözünürlük",
       "videoId": "Video ID"
+    },
+    "filenameMetadataPosition": "Konum",
+    "filenameMetadataPositions": {
+      "prefix": "Başlıktan önce",
+      "suffix": "Başlıktan sonra"
     },
     "splitEmbeddedChapters": "Gömülü bölümleri böl",
     "splitEmbeddedChaptersDesc": "Videoda yer alan bölümlerden ayrı dosyalar oluşturun",

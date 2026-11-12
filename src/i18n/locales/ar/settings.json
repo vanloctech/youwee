@@ -57,7 +57,7 @@
     "numberQueueItems": "ترقيم عناصر قائمة الانتظار",
     "numberQueueItemsDesc": "إضافة ترتيب قائمة الانتظار كبادئة للتنزيلات العادية",
     "filenameMetadata": "بيانات وصفية في اسم الملف",
-    "filenameMetadataDesc": "إضافة تفاصيل الفيديو المحددة قبل العنوان",
+    "filenameMetadataDesc": "إضافة تفاصيل الفيديو المحددة إلى اسم الملف",
     "filenameMetadataFields": {
       "uploadDate": "تاريخ الرفع",
       "viewCount": "عدد المشاهدات",
@@ -65,6 +65,11 @@
       "duration": "المدة",
       "resolution": "الدقة",
       "videoId": "معرف الفيديو"
+    },
+    "filenameMetadataPosition": "الموضع",
+    "filenameMetadataPositions": {
+      "prefix": "قبل العنوان",
+      "suffix": "بعد العنوان"
     },
     "splitEmbeddedChapters": "تقسيم الفصول المضمنة",
     "splitEmbeddedChaptersDesc": "إنشاء ملفات منفصلة من الفصول الموجودة داخل الفيديو",

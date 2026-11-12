@@ -58,7 +58,7 @@
     "numberQueueItems": "Navbatdagi elementlarni raqamlash",
     "numberQueueItemsDesc": "Muntazam navbatdagi yuklamalarni navbat tartibi bilan oldindan belgilang",
     "filenameMetadata": "Fayl nomi metamaʼlumoti",
-    "filenameMetadataDesc": "Tanlangan video maʼlumotlarini sarlavhadan oldin qoʻshing",
+    "filenameMetadataDesc": "Tanlangan video maʼlumotlarini fayl nomiga qoʻshing",
     "filenameMetadataFields": {
       "uploadDate": "Yuklangan sana",
       "viewCount": "Koʻrishlar",
@@ -66,6 +66,11 @@
       "duration": "Davomiylik",
       "resolution": "Aniqlik",
       "videoId": "Video ID"
+    },
+    "filenameMetadataPosition": "Joylashuv",
+    "filenameMetadataPositions": {
+      "prefix": "Sarlavhadan oldin",
+      "suffix": "Sarlavhadan keyin"
     },
     "splitEmbeddedChapters": "Oʻrnatilgan bo'limlarni ajrating",
     "splitEmbeddedChaptersDesc": "Videoga kiritilgan boblardan alohida fayllar yarating",

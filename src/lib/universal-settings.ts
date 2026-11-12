@@ -6,6 +6,7 @@ import {
 import type {
   AudioBitrate,
   FilenameMetadataField,
+  FilenameMetadataPosition,
   Format,
   ItemUniversalSettings,
   PluginWorkflowSnapshotMap,
@@ -43,6 +44,7 @@ interface UniversalSnapshotOptions {
   numberQueueItems: boolean;
   filenameMetadataEnabled: boolean;
   filenameMetadataFields: FilenameMetadataField[];
+  filenameMetadataPosition: FilenameMetadataPosition;
   splitEmbeddedChapters: boolean;
   numberChapterFiles: boolean;
   autoOrganizeCollections: boolean;
@@ -130,6 +132,7 @@ export function buildItemUniversalSettingsSnapshot(
     numberQueueItems: options.numberQueueItems,
     filenameMetadataEnabled: options.filenameMetadataEnabled,
     filenameMetadataFields: [...options.filenameMetadataFields],
+    filenameMetadataPosition: options.filenameMetadataPosition,
     splitEmbeddedChapters: options.splitEmbeddedChapters,
     numberChapterFiles: options.numberChapterFiles,
     autoOrganizeCollections: options.autoOrganizeCollections,

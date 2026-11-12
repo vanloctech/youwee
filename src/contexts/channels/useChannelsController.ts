@@ -2,7 +2,10 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { localizeProgressError, localizeUnknownError } from '@/lib/backend-error';
 import { createClientId } from '@/lib/client-id';
 import { buildDownloadDuplicateIdentity } from '@/lib/download-duplicates';
-import { sanitizeFilenameMetadataFields } from '@/lib/download-settings';
+import {
+  sanitizeFilenameMetadataFields,
+  sanitizeFilenameMetadataPosition,
+} from '@/lib/download-settings';
 import { buildCookieProxyInvokeOptions, loadNetworkSettings } from '@/lib/network-config';
 import {
   enqueuePluginWorkflowTrigger,
@@ -825,6 +828,7 @@ export function useChannelsController(): ChannelsContextType {
       let embedThumbnail = false;
       let filenameMetadataEnabled = false;
       let filenameMetadataFields: DownloadSettings['filenameMetadataFields'] = [];
+      let filenameMetadataPosition: DownloadSettings['filenameMetadataPosition'] = 'prefix';
       let liveFromStart = false;
       let autoOrganizeCollections = false;
       let speedLimit: string | null = null;
@@ -856,6 +860,9 @@ export function useChannelsController(): ChannelsContextType {
           embedThumbnail = parsed.embedThumbnail || false;
           filenameMetadataEnabled = parsed.filenameMetadataEnabled === true;
           filenameMetadataFields = sanitizeFilenameMetadataFields(parsed.filenameMetadataFields);
+          filenameMetadataPosition = sanitizeFilenameMetadataPosition(
+            parsed.filenameMetadataPosition,
+          );
           liveFromStart = parsed.liveFromStart || false;
           autoOrganizeCollections = parsed.autoOrganizeCollections === true;
           if (parsed.speedLimitEnabled && parsed.speedLimitValue) {
@@ -983,6 +990,7 @@ export function useChannelsController(): ChannelsContextType {
                 embedThumbnail,
                 filenameMetadataEnabled,
                 filenameMetadataFields,
+                filenameMetadataPosition,
                 liveFromStart,
                 ...collectionOptions,
                 speedLimit,
@@ -1297,6 +1305,7 @@ export function useChannelsController(): ChannelsContextType {
         let autoOrganizeCollections = false;
         let filenameMetadataEnabled = false;
         let filenameMetadataFields: DownloadSettings['filenameMetadataFields'] = [];
+        let filenameMetadataPosition: DownloadSettings['filenameMetadataPosition'] = 'prefix';
 
         try {
           const saved = localStorage.getItem('youwee-settings');
@@ -1312,6 +1321,9 @@ export function useChannelsController(): ChannelsContextType {
             autoOrganizeCollections = parsed.autoOrganizeCollections === true;
             filenameMetadataEnabled = parsed.filenameMetadataEnabled === true;
             filenameMetadataFields = sanitizeFilenameMetadataFields(parsed.filenameMetadataFields);
+            filenameMetadataPosition = sanitizeFilenameMetadataPosition(
+              parsed.filenameMetadataPosition,
+            );
           }
           logStderr = localStorage.getItem('youwee_log_stderr') !== 'false';
         } catch (_e) {
@@ -1434,6 +1446,7 @@ export function useChannelsController(): ChannelsContextType {
               ...collectionOptions,
               filenameMetadataEnabled,
               filenameMetadataFields,
+              filenameMetadataPosition,
               useAria2,
               aria2Args,
               ytdlpAdvancedOptionsEnabled,
