@@ -730,7 +730,11 @@
     "localFree": "Local / Free",
     "custom": "Custom",
     "enableAI": "Activate AI",
-    "chooseProvider": "Choose AI Provider"
+    "chooseProvider": "Choose AI Provider",
+    "sponsored": "Спонсор",
+    "enterInfistarApiKey": "Введите API-ключ Infistar (sk-...)",
+    "infistarHelp": "Один ключ для Claude, GPT, Gemini, Grok, DeepSeek и более 200 моделей по цене в разы ниже официальной. Пользователи Youwee получают 5 юаней бесплатно при регистрации по этой ссылке.",
+    "infistarSignup": "Зарегистрироваться и получить 5 юаней"
   },
   "extension": {
     "title": "Расширение для браузера",

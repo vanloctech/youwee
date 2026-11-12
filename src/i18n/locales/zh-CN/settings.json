@@ -803,7 +803,11 @@
     "localFree": "本地 / 免费",
     "custom": "自定义",
     "enableAI": "启用 AI",
-    "chooseProvider": "选择 AI 提供商"
+    "chooseProvider": "选择 AI 提供商",
+    "sponsored": "赞助",
+    "enterInfistarApiKey": "输入 Infistar API Key（sk-...）",
+    "infistarHelp": "一个 Key 即可使用 Claude、GPT、Gemini、Grok、DeepSeek 等 200+ 模型，价格仅为官方的一小部分。Youwee 用户通过此链接注册即送 5 元。",
+    "infistarSignup": "注册即送 5 元"
   },
   "extension": {
     "title": "浏览器扩展",

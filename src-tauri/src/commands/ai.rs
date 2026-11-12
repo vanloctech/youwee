@@ -305,6 +305,12 @@ mod tests {
     }
 }
 
+/// Infistar chat models from its public catalog, grouped by brand (cached for a day)
+#[tauri::command]
+pub async fn get_infistar_models(app: AppHandle) -> Vec<crate::services::GroupedModelOption> {
+    crate::services::get_infistar_models_internal(&app).await
+}
+
 /// Get available AI models for a provider
 #[tauri::command]
 pub fn get_ai_models(provider: String) -> Vec<ModelOption> {
@@ -389,6 +395,13 @@ pub fn get_ai_models(provider: String) -> Vec<ModelOption> {
                 label: "Qwen 3.5 Flash".to_string(),
             },
         ],
+        "infistar" => crate::services::infistar_fallback_models()
+            .into_iter()
+            .map(|m| ModelOption {
+                value: m.value,
+                label: m.label,
+            })
+            .collect(),
         "proxy" => vec![
             ModelOption {
                 value: "gpt-5.5".to_string(),

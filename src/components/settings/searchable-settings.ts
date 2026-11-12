@@ -309,6 +309,8 @@ export const SEARCHABLE_SETTINGS: SearchableSetting[] = [
       'qwen',
       'gpt',
       'claude',
+      'infistar',
+      'grok',
     ],
     section: 'ai',
   },

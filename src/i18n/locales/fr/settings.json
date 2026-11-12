@@ -730,7 +730,11 @@
     "localFree": "Local / Free",
     "custom": "Custom",
     "enableAI": "Activate AI",
-    "chooseProvider": "Choose AI Provider"
+    "chooseProvider": "Choose AI Provider",
+    "sponsored": "Sponsorisé",
+    "enterInfistarApiKey": "Saisissez votre clé API Infistar (sk-...)",
+    "infistarHelp": "Une seule clé pour Claude, GPT, Gemini, Grok, DeepSeek et plus de 200 modèles, pour une fraction des prix officiels. Les utilisateurs de Youwee reçoivent 5 CNY offerts en s'inscrivant via ce lien.",
+    "infistarSignup": "S'inscrire et recevoir 5 CNY"
   },
   "extension": {
     "title": "Extension navigateur",

@@ -803,7 +803,11 @@
     "localFree": "Local / Gratis",
     "custom": "Personalizado",
     "enableAI": "Activar IA",
-    "chooseProvider": "Elegir proveedor de IA"
+    "chooseProvider": "Elegir proveedor de IA",
+    "sponsored": "Patrocinado",
+    "enterInfistarApiKey": "Introduce tu clave API de Infistar (sk-...)",
+    "infistarHelp": "Una sola clave para Claude, GPT, Gemini, Grok, DeepSeek y más de 200 modelos, por una fracción del precio oficial. Los usuarios de Youwee reciben 5 CNY gratis al registrarse con este enlace.",
+    "infistarSignup": "Regístrate y recibe 5 CNY gratis"
   },
   "extension": {
     "title": "Extensión de navegador",

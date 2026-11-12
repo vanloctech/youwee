@@ -20,7 +20,12 @@ pub enum AIProvider {
     Ollama,
     LmStudio,
     Proxy,
+    /// Infistar (sponsor): OpenAI-compatible gateway with a fixed base URL
+    Infistar,
 }
+
+/// OpenAI-compatible base URL for Infistar. Use the bare domain: `www.` rejects API POSTs.
+pub const INFISTAR_BASE_URL: &str = "https://infistar.cc";
 
 impl Default for AIProvider {
     fn default() -> Self {

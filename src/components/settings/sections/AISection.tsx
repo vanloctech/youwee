@@ -10,6 +10,7 @@ import {
   ExternalLink,
   Eye,
   EyeOff,
+  Gift,
   Globe,
   GripVertical,
   Info,
@@ -17,6 +18,7 @@ import {
   Loader2,
   Lock,
   Mic,
+  Orbit,
   Plus,
   Server,
   Settings2,
@@ -34,12 +36,15 @@ import { Input } from '@/components/ui/input';
 import {
   Select,
   SelectContent,
+  SelectGroup,
   SelectItem,
+  SelectLabel,
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
 import { useAI } from '@/contexts/AIContext';
+import { INFISTAR_REFERRAL_URL } from '@/lib/sponsors';
 import type { AIProvider, SummaryStyle } from '@/lib/types';
 import { DEFAULT_TRANSCRIPT_LANGUAGES, LANGUAGE_OPTIONS } from '@/lib/types';
 import { cn } from '@/lib/utils';
@@ -90,7 +95,19 @@ export function AISection({ highlightId }: AISectionProps) {
     name: string;
     type: 'cloud' | 'local' | 'custom';
     logo: ReactNode;
+    sponsored?: boolean;
   }[] = [
+    {
+      id: 'infistar',
+      name: 'Infistar',
+      type: 'cloud',
+      sponsored: true,
+      logo: (
+        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-violet-500 flex items-center justify-center flex-shrink-0">
+          <Orbit className="w-5 h-5 text-white" aria-hidden="true" />
+        </div>
+      ),
+    },
     {
       id: 'gemini',
       name: 'Google Gemini',
@@ -237,6 +254,17 @@ export function AISection({ highlightId }: AISectionProps) {
     },
   ];
 
+  // Group models by brand when the provider supplies groups (Infistar), keeping their order.
+  const modelGroups = ai.models.some((m) => m.group)
+    ? ai.models.reduce<[string, typeof ai.models][]>((groups, model) => {
+        const name = model.group || 'Other';
+        const existing = groups.find(([group]) => group === name);
+        if (existing) existing[1].push(model);
+        else groups.push([name, [model]]);
+        return groups;
+      }, [])
+    : null;
+
   const handleProviderSelect = (providerId: AIProvider) => {
     const defaultModels: Record<string, string> = {
       gemini: 'gemini-3.5-flash',
@@ -246,6 +274,7 @@ export function AISection({ highlightId }: AISectionProps) {
       ollama: 'gpt-oss:20b',
       lmstudio: 'openai/gpt-oss-20b',
       proxy: 'gpt-5.5',
+      infistar: 'gpt-6.1-sol',
     };
     ai.updateConfig({
       provider: providerId,
@@ -267,6 +296,14 @@ export function AISection({ highlightId }: AISectionProps) {
         return ['gpt-oss:20b', 'qwen3:8b', 'gemma3:12b'];
       case 'lmstudio':
         return ['openai/gpt-oss-20b', 'qwen/qwen3-8b', 'google/gemma-3-12b'];
+      case 'infistar':
+        return [
+          'gpt-6.1-sol',
+          'claude-sonnet-5-5',
+          'gemini-3.5-flash',
+          'deepseek-v4.1-flash',
+          'grok-4.7',
+        ];
       default:
         return ['gpt-5.5', 'gpt-5.4', 'gpt-5.4-mini'];
     }
@@ -354,6 +391,11 @@ export function AISection({ highlightId }: AISectionProps) {
                       <div className="flex items-center gap-1.5 mt-1 text-[10px] text-muted-foreground/80">
                         {getProviderTypeMeta(prov.type).icon}
                         <span>{getProviderTypeMeta(prov.type).label}</span>
+                        {prov.sponsored && (
+                          <span className="rounded bg-violet-500/10 px-1 py-px font-medium text-violet-600 dark:text-violet-400">
+                            {t('ai.sponsored')}
+                          </span>
+                        )}
                       </div>
                     </div>
                   </button>
@@ -393,15 +435,17 @@ export function AISection({ highlightId }: AISectionProps) {
                   {ai.config.provider !== 'proxy' && (
                     <a
                       href={
-                        ai.config.provider === 'gemini'
-                          ? 'https://aistudio.google.com/apikey'
-                          : ai.config.provider === 'openai'
-                            ? 'https://platform.openai.com/api-keys'
-                            : ai.config.provider === 'deepseek'
-                              ? 'https://platform.deepseek.com/api_keys'
-                              : ai.config.provider === 'qwen'
-                                ? 'https://dashscope.console.aliyun.com/apiKey'
-                                : '#'
+                        ai.config.provider === 'infistar'
+                          ? INFISTAR_REFERRAL_URL
+                          : ai.config.provider === 'gemini'
+                            ? 'https://aistudio.google.com/apikey'
+                            : ai.config.provider === 'openai'
+                              ? 'https://platform.openai.com/api-keys'
+                              : ai.config.provider === 'deepseek'
+                                ? 'https://platform.deepseek.com/api_keys'
+                                : ai.config.provider === 'qwen'
+                                  ? 'https://dashscope.console.aliyun.com/apiKey'
+                                  : '#'
                       }
                       target="_blank"
                       rel="noopener noreferrer"
@@ -428,7 +472,9 @@ export function AISection({ highlightId }: AISectionProps) {
                               ? t('ai.enterDeepSeekApiKey')
                               : ai.config.provider === 'qwen'
                                 ? t('ai.enterQwenApiKey')
-                                : t('ai.enterProxyApiKey')
+                                : ai.config.provider === 'infistar'
+                                  ? t('ai.enterInfistarApiKey')
+                                  : t('ai.enterProxyApiKey')
                       }
                       className="h-10 bg-background/50 border-border/80 pr-10 focus-visible:ring-primary"
                     />
@@ -455,6 +501,24 @@ export function AISection({ highlightId }: AISectionProps) {
                     )}
                   </Button>
                 </div>
+
+                {ai.config.provider === 'infistar' && (
+                  <div className="flex items-start gap-2 rounded-lg bg-violet-500/10 p-2.5 text-[11px] leading-normal text-muted-foreground">
+                    <Gift className="mt-0.5 h-4 w-4 flex-shrink-0 text-violet-500" />
+                    <div className="space-y-1">
+                      <p>{t('ai.infistarHelp')}</p>
+                      <a
+                        href={INFISTAR_REFERRAL_URL}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1 font-medium text-violet-600 hover:underline dark:text-violet-400"
+                      >
+                        {t('ai.infistarSignup')}
+                        <ExternalLink className="h-3 w-3" />
+                      </a>
+                    </div>
+                  </div>
+                )}
 
                 {/* Connection Status result floating block */}
                 {ai.testResult && (
@@ -638,11 +702,24 @@ export function AISection({ highlightId }: AISectionProps) {
                       <SelectValue placeholder={t('ai.quickSelect')} />
                     </SelectTrigger>
                     <SelectContent>
-                      {ai.models.map((m) => (
-                        <SelectItem key={m.value} value={m.value} className="text-xs">
-                          {m.label}
-                        </SelectItem>
-                      ))}
+                      {modelGroups
+                        ? modelGroups.map(([group, groupModels]) => (
+                            <SelectGroup key={group}>
+                              <SelectLabel className="text-[10px] uppercase tracking-wide text-muted-foreground">
+                                {group}
+                              </SelectLabel>
+                              {groupModels.map((m) => (
+                                <SelectItem key={m.value} value={m.value} className="text-xs">
+                                  {m.label}
+                                </SelectItem>
+                              ))}
+                            </SelectGroup>
+                          ))
+                        : ai.models.map((m) => (
+                            <SelectItem key={m.value} value={m.value} className="text-xs">
+                              {m.label}
+                            </SelectItem>
+                          ))}
                     </SelectContent>
                   </Select>
                 </div>

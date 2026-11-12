@@ -11,6 +11,7 @@ Youwee 的所有重要更改都将记录在此文件中。
 - **AppImage 增量更新** - 在 AppImage 中嵌入更新信息，并随每个 Linux 版本发布 `.zsync` 文件，使 AppImageUpdate、AppImageLauncher 等 AppImage 管理工具只需下载变更部分
 - **文件名元数据位置** - 可在 设置 → 下载 中选择将文件名元数据放在视频标题之前或之后，使文件名可以以标题开头（播放列表/队列编号仍位于最前）
 - **首次启动画质设置** - 首次启动时显示设置对话框，建议将 yt-dlp 从自带版本切换到 Stable 并安装 FFmpeg，使高画质下载（1080p 及以上、2K、4K 且带音频）开箱即用。对话框只显示尚未完成的步骤，自动显示一次，并可从下载指南中再次打开。它取代了以前每次启动都会出现的 FFmpeg 提示；设置 → 依赖项 现在也会显示 yt-dlp 的下载进度
+- **Infistar AI 提供商** - 在 设置 → AI → 选择 AI 提供商 中新增 Infistar（赞助商）：兼容 OpenAI 的网关，一个 API Key 即可使用 Claude、GPT、Gemini、Grok、DeepSeek 等模型，用于视频总结和字幕翻译。模型列表直接取自 Infistar 的实时目录（164 个对话模型，按品牌分组，缓存一天）。Youwee 用户通过应用内链接注册即送 5 元
 
 ### 修复
 - **Linux 启动器分类** - 为 Linux 桌面入口添加 `AudioVideo`、`Video` 和 `Network` 分类，使 Youwee 不再显示在应用菜单的“其他”分类中

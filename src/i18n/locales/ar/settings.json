@@ -730,7 +730,11 @@
     "localFree": "Local / Free",
     "custom": "Custom",
     "enableAI": "Activate AI",
-    "chooseProvider": "Choose AI Provider"
+    "chooseProvider": "Choose AI Provider",
+    "sponsored": "برعاية",
+    "enterInfistarApiKey": "أدخل مفتاح Infistar API (sk-...)",
+    "infistarHelp": "مفتاح واحد لـ Claude وGPT وGemini وGrok وDeepSeek وأكثر من 200 نموذج آخر بجزء بسيط من الأسعار الرسمية. يحصل مستخدمو Youwee على 5 يوان مجانًا عند التسجيل عبر هذا الرابط.",
+    "infistarSignup": "سجّل واحصل على 5 يوان مجانًا"
   },
   "extension": {
     "title": "إضافة المتصفح",

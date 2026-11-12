@@ -132,15 +132,33 @@ Youwee 是一个本地工具，用于下载和处理用户提供的 URL 中的�
 
 通过 Telegram 命令远程控制 Youwee，例如添加链接、下载、查看队列、状态和停止下载。文档：[youwee.app/docs/remote-download](https://youwee.app/docs/remote-download)
 
-### 从源码构建
+## 赞助商
 
-#### 环境要求
+<a href="https://www.infistar.cc/register?aff=6VX7D2Z3">
+  <img src="sponsors/infistar.png" alt="Youwee × Infistar.cc：Claude、GPT、Gemini、Grok、DeepSeek 等模型，一个 Key，价格仅为官方的一小部分" width="800">
+</a>
+
+**Youwee × Infistar.cc** | Claude、GPT、Gemini、Grok、DeepSeek 等模型，一个 Key 通用，价格仅为官方的一小部分
+
+- 💥 最高省 99%：低至官方价格的 0.1 倍
+- ✅ 官方上游，100% 正品模型：不降级、不掺水，每个模型均可验证
+- ⚡ 1000+ 冗余线路，自动故障转移：一条线路异常，下一条立即接管
+- 🧩 16 个品牌 200+ 模型：文本、图像、视频一个 Key 搞定
+- 🏆 已获 100+ 顶级开源项目推荐，其中最大的项目 Star 超过 10 万
+- 🎯 一个 API Key 即可总结视频、翻译字幕，无需分别管理各家服务商账号
+- 🎁 Youwee 用户：通过专属链接注册即送 5 元
+
+👉 [https://www.infistar.cc/register?aff=6VX7D2Z3](https://www.infistar.cc/register?aff=6VX7D2Z3)
+
+## 从源码构建
+
+### 环境要求
 
 - [Bun](https://bun.sh/) (v1.3.5 或更高)
 - [Rust](https://www.rust-lang.org/) (v1.70 或更高)
 - [Tauri CLI](https://tauri.app/v1/guides/getting-started/prerequisites)
 
-#### 构建步骤
+### 构建步骤
 
 ```bash
 # 克隆仓库

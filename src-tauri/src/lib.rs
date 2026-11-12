@@ -415,6 +415,7 @@ pub fn run() {
             commands::cancel_summary_generation,
             commands::generate_ai_response,
             commands::get_ai_models,
+            commands::get_infistar_models,
             commands::get_summary_languages,
             // Processing commands
             commands::get_video_metadata,
