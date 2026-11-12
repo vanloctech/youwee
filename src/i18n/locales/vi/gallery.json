@@ -5,8 +5,8 @@
   },
   "missing": {
     "title": "Cần có gallery-dl",
-    "checking": "Đang kiểm tra gallery-dl hệ thống...",
-    "description": "Hãy cài gallery-dl trên hệ thống để tải gallery, bộ sưu tập và feed của creator.",
+    "checking": "Đang kiểm tra gallery-dl...",
+    "description": "Youwee cần gallery-dl để tải gallery, bộ sưu tập và feed của tác giả.",
     "refresh": "Làm mới trạng thái",
     "openDependencies": "Mở Dependencies",
     "installGuide": "Hướng dẫn cài đặt"

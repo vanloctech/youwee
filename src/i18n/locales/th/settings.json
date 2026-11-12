@@ -565,7 +565,6 @@
     "systemYtdlp": "yt-dlp ของระบบ - อัปเดตผ่าน package manager",
     "systemYtdlpNotFound": "ไม่พบ yt-dlp ของระบบ",
     "systemGallerydl": "gallery-dl ของระบบ - อัปเดตผ่าน package manager",
-    "systemGallerydlNotFound": "ไม่พบ gallery-dl ของระบบ",
     "systemManagedOnly": "จัดการผ่านระบบเท่านั้น",
     "systemManagedOnlyDesc": "การดาวน์โหลดแกลเลอรีใช้เฉพาะ binary gallery-dl ของระบบ ติดตั้งและอัปเดตภายนอกแอป",
     "denoRuntime": "Deno Runtime",
@@ -591,7 +590,16 @@
     "downloading": "กำลังดาวน์โหลด",
     "extracting": "กำลังแตกไฟล์...",
     "verifying": "กำลังตรวจสอบ...",
-    "checkingChecksum": "กำลังตรวจสอบ checksum..."
+    "checkingChecksum": "กำลังตรวจสอบ checksum...",
+    "installGallerydl": "ติดตั้ง gallery-dl",
+    "retryInstall": "ลองติดตั้งอีกครั้ง",
+    "gallerydlHomebrewHint": "gallery-dl ไม่มีรุ่นทางการสำหรับ macOS ติดตั้งด้วย Homebrew ใน Terminal แล้วตรวจสอบอีกครั้ง",
+    "gallerydlPipHint": "gallery-dl ไม่มีรุ่นทางการสำหรับระบบนี้ ติดตั้งด้วย pip แล้วตรวจสอบอีกครั้ง",
+    "copyCommand": "คัดลอก",
+    "copied": "คัดลอกแล้ว",
+    "checkAgain": "ตรวจสอบอีกครั้ง",
+    "appGallerydl": "ติดตั้งโดย Youwee",
+    "gallerydlNotInstalled": "ยังไม่ได้ติดตั้ง gallery-dl"
   },
   "network": {
     "title": "เครือข่ายและการยืนยันตัวตน",

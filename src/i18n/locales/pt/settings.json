@@ -551,7 +551,6 @@
     "checkingUpdates": "Buscando atualizações...",
     "systemFfmpeg": "FFmpeg do Sistema - atualize via gerenciador de pacotes",
     "systemGallerydl": "gallery-dl do sistema - atualize via gerenciador de pacotes",
-    "systemGallerydlNotFound": "gallery-dl do sistema não encontrado",
     "systemManagedOnly": "Somente gerenciado pelo sistema",
     "systemManagedOnlyDesc": "Downloads de galeria usam apenas o binário gallery-dl do sistema. Instalação e atualização ficam fora do app.",
     "denoRuntime": "Deno Runtime",
@@ -591,7 +590,16 @@
     "confirmProceed": "Switch",
     "systemFfmpegNotFound": "System FFmpeg not found",
     "systemYtdlp": "System yt-dlp - update via package manager",
-    "systemYtdlpNotFound": "System yt-dlp not found"
+    "systemYtdlpNotFound": "System yt-dlp not found",
+    "installGallerydl": "Instalar gallery-dl",
+    "retryInstall": "Tentar instalar de novo",
+    "gallerydlHomebrewHint": "O gallery-dl não tem versão oficial para macOS. Instale com o Homebrew no Terminal e verifique novamente.",
+    "gallerydlPipHint": "O gallery-dl não tem versão oficial para este sistema. Instale com pip e verifique novamente.",
+    "copyCommand": "Copiar",
+    "copied": "Copiado",
+    "checkAgain": "Verificar novamente",
+    "appGallerydl": "Instalado pelo Youwee",
+    "gallerydlNotInstalled": "gallery-dl não está instalado"
   },
   "network": {
     "title": "Rede e Autenticação",

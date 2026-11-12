@@ -1,12 +1,14 @@
 use crate::services::{
-    check_deno_internal, check_deno_update_internal, check_ffmpeg_internal,
-    check_ffmpeg_update_internal, check_gallerydl_internal, get_all_ytdlp_versions,
-    get_channel_api_url, get_deno_download_url, get_ffmpeg_download_info, get_ffmpeg_path,
-    get_ffmpeg_source, get_latest_ffmpeg_release_info, get_ytdlp_channel,
-    get_ytdlp_channel_download_url, get_ytdlp_download_info, get_ytdlp_source,
+    app_gallerydl_install_path, check_deno_internal, check_deno_update_internal,
+    check_ffmpeg_internal, check_ffmpeg_update_internal, check_gallerydl_internal,
+    check_gallerydl_update_internal, fetch_latest_gallerydl_release, find_sha256_for,
+    gallerydl_http_client, gallerydl_install_unsupported_message, gallerydl_release_asset_name,
+    get_all_ytdlp_versions, get_channel_api_url, get_deno_download_url, get_ffmpeg_download_info,
+    get_ffmpeg_path, get_ffmpeg_source, get_latest_ffmpeg_release_info, get_system_gallerydl_path,
+    get_ytdlp_channel, get_ytdlp_channel_download_url, get_ytdlp_download_info, get_ytdlp_source,
     get_ytdlp_version_internal, parse_ffmpeg_version, set_ffmpeg_source, set_ytdlp_channel,
     set_ytdlp_source, system_ffmpeg_upgrade_message, system_ytdlp_upgrade_message, verify_sha256,
-    write_app_ffmpeg_release_version, DenoUpdateInfo, FfmpegUpdateInfo,
+    write_app_ffmpeg_release_version, DenoUpdateInfo, FfmpegUpdateInfo, GalleryDlUpdateInfo,
 };
 use crate::types::{
     BackendError, DenoStatus, DependencySource, FfmpegStatus, GalleryDlStatus, YtdlpAllVersions,
@@ -831,6 +833,131 @@ pub async fn check_deno(app: AppHandle) -> Result<DenoStatus, String> {
 #[tauri::command]
 pub async fn check_gallerydl(app: AppHandle) -> Result<GalleryDlStatus, String> {
     check_gallerydl_internal(&app).await
+}
+
+#[tauri::command]
+pub async fn check_gallerydl_update(app: AppHandle) -> Result<GalleryDlUpdateInfo, String> {
+    check_gallerydl_update_internal(&app).await
+}
+
+/// Install or update Youwee's own gallery-dl from the latest official Codeberg release.
+#[tauri::command]
+pub async fn download_gallerydl(app: AppHandle) -> Result<String, String> {
+    let Some(asset_name) = gallerydl_release_asset_name() else {
+        return Err(BackendError::new(
+            crate::types::code::GALLERYDL_INSTALL_UNSUPPORTED,
+            gallerydl_install_unsupported_message(),
+        )
+        .with_retryable(false)
+        .to_wire_string());
+    };
+    // A system gallery-dl always wins over the app copy, so installing one would have no effect.
+    if get_system_gallerydl_path().is_some() {
+        return Err(BackendError::new(
+            crate::types::code::GALLERYDL_SYSTEM_MANAGED,
+            "System gallery-dl is installed and used. Update it with your package manager.",
+        )
+        .with_retryable(false)
+        .to_wire_string());
+    }
+    let binary_path =
+        app_gallerydl_install_path(&app).ok_or("Failed to get app data directory".to_string())?;
+
+    let emit_progress = |stage: &str, percent: u8, downloaded: u64, total: u64| {
+        let _ = app.emit(
+            "gallerydl-download-progress",
+            DownloadProgress {
+                stage: stage.to_string(),
+                percent,
+                downloaded,
+                total,
+            },
+        );
+    };
+
+    emit_progress("checksum", 0, 0, 0);
+    let client = gallerydl_http_client(600)?;
+    let release = fetch_latest_gallerydl_release(&client).await?;
+    let asset_url = release
+        .asset_url
+        .ok_or_else(|| format!("{} not found in gallery-dl {}", asset_name, release.version))?;
+    let sums_url = release
+        .sums_url
+        .ok_or_else(|| format!("SHA256SUMS not found in gallery-dl {}", release.version))?;
+
+    let sums = client
+        .get(&sums_url)
+        .send()
+        .await
+        .map_err(|e| format!("Failed to download checksums: {}", e))?
+        .error_for_status()
+        .map_err(|e| format!("Failed to download checksums: {}", e))?
+        .text()
+        .await
+        .map_err(|e| format!("Failed to read checksums: {}", e))?;
+    let expected_hash = find_sha256_for(&sums, asset_name)
+        .ok_or_else(|| format!("Checksum not found for {}", asset_name))?;
+
+    emit_progress("downloading", 0, 0, 0);
+    let response = client
+        .get(&asset_url)
+        .send()
+        .await
+        .map_err(|e| format!("Failed to download gallery-dl: {}", e))?;
+    if !response.status().is_success() {
+        return Err(format!(
+            "Download failed with status: {}",
+            response.status()
+        ));
+    }
+
+    let total_size = response.content_length().unwrap_or(0);
+    let mut bytes: Vec<u8> = Vec::with_capacity(total_size as usize);
+    let mut last_percent: u8 = 0;
+    let mut stream = response.bytes_stream();
+    while let Some(chunk) = stream.next().await {
+        let chunk = chunk.map_err(|e| format!("Download error: {}", e))?;
+        bytes.extend_from_slice(&chunk);
+        let downloaded = bytes.len() as u64;
+        let percent = if total_size > 0 {
+            ((downloaded as f64 / total_size as f64) * 100.0).min(100.0) as u8
+        } else {
+            0
+        };
+        if percent >= last_percent.saturating_add(5) || (percent == 100 && last_percent != 100) {
+            last_percent = percent;
+            emit_progress("downloading", percent, downloaded, total_size);
+        }
+    }
+
+    emit_progress("verifying", 100, bytes.len() as u64, total_size);
+    if !verify_sha256(&bytes, &expected_hash) {
+        return Err("Security error: SHA256 checksum verification failed.".to_string());
+    }
+
+    if let Some(parent) = binary_path.parent() {
+        tokio::fs::create_dir_all(parent)
+            .await
+            .map_err(|e| format!("Failed to create bin directory: {}", e))?;
+    }
+    let temp_path = binary_path.with_extension("download");
+    tokio::fs::write(&temp_path, &bytes)
+        .await
+        .map_err(|e| format!("Failed to write gallery-dl: {}", e))?;
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        tokio::fs::set_permissions(&temp_path, std::fs::Permissions::from_mode(0o755))
+            .await
+            .map_err(|e| format!("Failed to set permissions: {}", e))?;
+    }
+    tokio::fs::rename(&temp_path, &binary_path)
+        .await
+        .map_err(|e| format!("Failed to install gallery-dl: {}", e))?;
+
+    let status = check_gallerydl_internal(&app).await?;
+    emit_progress("complete", 100, bytes.len() as u64, total_size);
+    Ok(status.version.unwrap_or(release.version))
 }
 
 #[tauri::command]

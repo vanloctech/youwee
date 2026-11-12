@@ -5,8 +5,8 @@
   },
   "missing": {
     "title": "Se requiere gallery-dl",
-    "checking": "Comprobando gallery-dl del sistema...",
-    "description": "Instala gallery-dl en tu sistema para descargar galerías, colecciones y feeds de creadores.",
+    "checking": "Comprobando gallery-dl...",
+    "description": "Youwee necesita gallery-dl para descargar galerías, colecciones y feeds de creadores.",
     "refresh": "Actualizar estado",
     "openDependencies": "Abrir dependencias",
     "installGuide": "Guía de instalación"

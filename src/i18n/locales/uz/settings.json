@@ -638,7 +638,6 @@
     "systemYtdlp": "yt-dlp tizimi - paket menejeri orqali yangilash",
     "systemYtdlpNotFound": "yt-dlp tizimi topilmadi",
     "systemGallerydl": "gallery-dl tizimi - paket menejeri orqali yangilash",
-    "systemGallerydlNotFound": "gallery-dl tizimi topilmadi",
     "systemManagedOnly": "Faqat tizim boshqariladi",
     "systemManagedOnlyDesc": "Gallery yuklamalari faqat tizimingiz gallery-dl ikkilik faylidan foydalanadi. Uni ilovadan tashqarida oʻrnating va yangilang.",
     "denoRuntime": "Deno ish vaqti",
@@ -664,7 +663,16 @@
     "downloading": "Yuklab olinmoqda",
     "extracting": "Chiqarilmoqda...",
     "verifying": "Tekshirilmoqda...",
-    "checkingChecksum": "Nazorat summasi tekshirilmoqda..."
+    "checkingChecksum": "Nazorat summasi tekshirilmoqda...",
+    "installGallerydl": "gallery-dl ni oʻrnatish",
+    "retryInstall": "Qayta oʻrnatish",
+    "gallerydlHomebrewHint": "gallery-dl ning macOS uchun rasmiy versiyasi yoʻq. Terminalda Homebrew orqali oʻrnating, soʻng qayta tekshiring.",
+    "gallerydlPipHint": "gallery-dl ning bu tizim uchun rasmiy versiyasi yoʻq. pip orqali oʻrnating, soʻng qayta tekshiring.",
+    "copyCommand": "Nusxalash",
+    "copied": "Nusxalandi",
+    "checkAgain": "Qayta tekshirish",
+    "appGallerydl": "Youwee tomonidan oʻrnatilgan",
+    "gallerydlNotInstalled": "gallery-dl oʻrnatilmagan"
   },
   "network": {
     "title": "Tarmoq va autentifikatsiya",

@@ -5,8 +5,8 @@
   },
   "missing": {
     "title": "gallery-dl gereklidir",
-    "checking": "Sistemde gallery-dl kontrol ediliyor...",
-    "description": "Galerileri, koleksiyonları ve yaratıcı yayınlarını indirmek için gallery-dl'yi sisteminize yükleyin.",
+    "checking": "gallery-dl kontrol ediliyor...",
+    "description": "Youwee'nin galerileri, koleksiyonları ve içerik üretici akışlarını indirmesi için gallery-dl gerekir.",
     "refresh": "Durumu yenile",
     "openDependencies": "Bağımlılıkları aç",
     "installGuide": "Kurulum kılavuzu"

@@ -119,4 +119,6 @@ pub struct GalleryDlStatus {
     pub version: Option<String>,
     pub binary_path: Option<String>,
     pub is_system: bool,
+    /// Whether Youwee can install its own copy (an official standalone build exists here).
+    pub can_install: bool,
 }

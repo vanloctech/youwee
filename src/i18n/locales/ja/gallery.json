@@ -5,8 +5,8 @@
   },
   "missing": {
     "title": "gallery-dl が必要です",
-    "checking": "システムの gallery-dl を確認中...",
-    "description": "ギャラリー、コレクション、クリエイターのフィードをダウンロードするには、システムに gallery-dl をインストールしてください。",
+    "checking": "gallery-dl を確認中...",
+    "description": "ギャラリー、コレクション、クリエイターのフィードをダウンロードするには gallery-dl が必要です。",
     "refresh": "ステータスを更新",
     "openDependencies": "依存関係を開く",
     "installGuide": "インストールガイド"

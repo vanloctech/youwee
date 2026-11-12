@@ -638,7 +638,6 @@
     "systemYtdlp": "yt-dlp hệ thống - cập nhật qua trình quản lý gói",
     "systemYtdlpNotFound": "Không tìm thấy yt-dlp hệ thống",
     "systemGallerydl": "gallery-dl hệ thống - cập nhật qua trình quản lý gói",
-    "systemGallerydlNotFound": "Không tìm thấy gallery-dl hệ thống",
     "systemManagedOnly": "Chỉ hỗ trợ hệ thống quản lý",
     "systemManagedOnlyDesc": "Tải gallery chỉ dùng binary gallery-dl của hệ thống. Việc cài đặt và cập nhật thực hiện bên ngoài ứng dụng.",
     "denoRuntime": "Deno Runtime",
@@ -664,7 +663,16 @@
     "downloading": "Đang tải",
     "extracting": "Đang giải nén...",
     "verifying": "Đang xác minh...",
-    "checkingChecksum": "Đang kiểm tra checksum..."
+    "checkingChecksum": "Đang kiểm tra checksum...",
+    "installGallerydl": "Cài gallery-dl",
+    "retryInstall": "Thử cài lại",
+    "gallerydlHomebrewHint": "gallery-dl không có bản chính thức cho macOS. Hãy cài bằng Homebrew trong Terminal rồi kiểm tra lại.",
+    "gallerydlPipHint": "gallery-dl không có bản chính thức cho hệ thống này. Hãy cài bằng pip rồi kiểm tra lại.",
+    "copyCommand": "Sao chép",
+    "copied": "Đã sao chép",
+    "checkAgain": "Kiểm tra lại",
+    "appGallerydl": "Do Youwee cài",
+    "gallerydlNotInstalled": "Chưa cài gallery-dl"
   },
   "network": {
     "title": "Mạng & Xác thực",

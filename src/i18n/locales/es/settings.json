@@ -638,7 +638,6 @@
     "systemYtdlp": "yt-dlp del sistema: actualizar mediante gestor de paquetes",
     "systemYtdlpNotFound": "No se encontró yt-dlp del sistema",
     "systemGallerydl": "gallery-dl del sistema: actualizar mediante gestor de paquetes",
-    "systemGallerydlNotFound": "No se encontró gallery-dl del sistema",
     "systemManagedOnly": "Solo gestionado por el sistema",
     "systemManagedOnlyDesc": "Las descargas de galerías usan únicamente el archivo binario gallery-dl de tu sistema. Instálalo y actuálizalo fuera de la aplicación.",
     "denoRuntime": "Entorno de ejecución Deno",
@@ -664,7 +663,16 @@
     "downloading": "Descargando",
     "extracting": "Extrayendo...",
     "verifying": "Verificando...",
-    "checkingChecksum": "Comprobando checksum..."
+    "checkingChecksum": "Comprobando checksum...",
+    "installGallerydl": "Instalar gallery-dl",
+    "retryInstall": "Reintentar instalación",
+    "gallerydlHomebrewHint": "gallery-dl no tiene versión oficial para macOS. Instálalo con Homebrew en Terminal y vuelve a comprobar.",
+    "gallerydlPipHint": "gallery-dl no tiene versión oficial para este sistema. Instálalo con pip y vuelve a comprobar.",
+    "copyCommand": "Copiar",
+    "copied": "Copiado",
+    "checkAgain": "Comprobar de nuevo",
+    "appGallerydl": "Instalado por Youwee",
+    "gallerydlNotInstalled": "gallery-dl no está instalado"
   },
   "network": {
     "title": "Red y autenticación",

@@ -565,7 +565,6 @@
     "systemYtdlp": "yt-dlp الخاص بالنظام - حدّث عبر مدير الحزم",
     "systemYtdlpNotFound": "لم يتم العثور على yt-dlp الخاص بالنظام",
     "systemGallerydl": "gallery-dl الخاص بالنظام - حدّث عبر مدير الحزم",
-    "systemGallerydlNotFound": "لم يتم العثور على gallery-dl الخاص بالنظام",
     "systemManagedOnly": "مدار عبر النظام فقط",
     "systemManagedOnlyDesc": "تستخدم تنزيلات المعارض فقط binary النظام لـ gallery-dl. قم بالتثبيت والتحديث خارج التطبيق.",
     "denoRuntime": "بيئة Deno",
@@ -591,7 +590,16 @@
     "downloading": "جارٍ التنزيل",
     "extracting": "جارٍ الاستخراج...",
     "verifying": "جارٍ التحقق...",
-    "checkingChecksum": "جارٍ التحقق من المجموع الاختباري..."
+    "checkingChecksum": "جارٍ التحقق من المجموع الاختباري...",
+    "installGallerydl": "تثبيت gallery-dl",
+    "retryInstall": "إعادة التثبيت",
+    "gallerydlHomebrewHint": "لا يوجد إصدار رسمي من gallery-dl لنظام macOS. ثبّته باستخدام Homebrew في الطرفية ثم تحقق مرة أخرى.",
+    "gallerydlPipHint": "لا يوجد إصدار رسمي من gallery-dl لهذا النظام. ثبّته باستخدام pip ثم تحقق مرة أخرى.",
+    "copyCommand": "نسخ",
+    "copied": "تم النسخ",
+    "checkAgain": "تحقق مرة أخرى",
+    "appGallerydl": "مثبت بواسطة Youwee",
+    "gallerydlNotInstalled": "gallery-dl غير مثبت"
   },
   "network": {
     "title": "الشبكة والمصادقة",

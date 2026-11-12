@@ -638,7 +638,6 @@
     "systemYtdlp": "システム yt-dlp - パッケージマネージャーで更新してください",
     "systemYtdlpNotFound": "システムの yt-dlp が見つかりません",
     "systemGallerydl": "システム gallery-dl - パッケージマネージャーで更新してください",
-    "systemGallerydlNotFound": "システムの gallery-dl が見つかりません",
     "systemManagedOnly": "システム管理のみ",
     "systemManagedOnlyDesc": "ギャラリーのダウンロードはシステムの gallery-dl バイナリのみを使用します。アプリ外でインストールおよび更新を行ってください。",
     "denoRuntime": "Deno ランタイム",
@@ -664,7 +663,16 @@
     "downloading": "ダウンロード中",
     "extracting": "展開中...",
     "verifying": "検証中...",
-    "checkingChecksum": "チェックサムを確認中..."
+    "checkingChecksum": "チェックサムを確認中...",
+    "installGallerydl": "gallery-dl をインストール",
+    "retryInstall": "インストールを再試行",
+    "gallerydlHomebrewHint": "gallery-dl には macOS 用の公式ビルドがありません。ターミナルで Homebrew を使ってインストールし、再確認してください。",
+    "gallerydlPipHint": "gallery-dl にはこのシステム用の公式ビルドがありません。pip でインストールし、再確認してください。",
+    "copyCommand": "コピー",
+    "copied": "コピーしました",
+    "checkAgain": "再確認",
+    "appGallerydl": "Youwee がインストール",
+    "gallerydlNotInstalled": "gallery-dl がインストールされていません"
   },
   "network": {
     "title": "ネットワーク＆認証",
