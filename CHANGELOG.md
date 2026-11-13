@@ -20,6 +20,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Age-restricted YouTube quality notice** - Log a clear explanation when YouTube requires account age-verification for an age-restricted video, which limits yt-dlp to low-quality formats (usually 360p) instead of silently downloading them
 - **Browser cookie errors** - When Youwee can't read browser cookies, the dialog now shows the real cause: macOS blocking access (with a button to open Full Disk Access settings), a missing browser profile, or a locked database. Before, a missing or blocked profile was reported as "Chrome is currently open", so closing the browser never helped. The dialog is now translated
 
+### Changed
+- **Dependency updates** - Updated Tauri to 2.12 with all Tauri plugins, React 19.3, Vite 8.3, i18next 27, react-i18next 18, Biome 2.6, Radix UI, lucide-react, and other frontend packages, plus Rust crates including zip 9 and rusqlite 0.42
+
 ## [0.20.4] - 2026-09-20
 
 ### Fixed

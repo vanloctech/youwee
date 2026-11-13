@@ -20,6 +20,9 @@ và dự án tuân theo [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - **Thông báo chất lượng video YouTube giới hạn độ tuổi** - Ghi log giải thích rõ ràng khi YouTube yêu cầu xác minh tuổi tài khoản cho video giới hạn độ tuổi, khiến yt-dlp chỉ lấy được định dạng chất lượng thấp (thường là 360p) thay vì âm thầm tải bản đó
 - **Lỗi cookie trình duyệt** - Khi không đọc được cookie trình duyệt, dialog giờ hiện đúng nguyên nhân: macOS chặn quyền truy cập (kèm nút mở cài đặt Truy cập toàn bộ ổ đĩa), không tìm thấy profile trình duyệt, hoặc database bị khoá. Trước đây profile bị thiếu hoặc bị chặn đều báo nhầm "Chrome đang mở", nên đóng trình duyệt cũng không hết lỗi. Dialog cũng đã được dịch
 
+### Thay đổi
+- **Cập nhật thư viện phụ thuộc** - Nâng Tauri lên 2.12 cùng toàn bộ plugin Tauri, React 19.3, Vite 8.3, i18next 27, react-i18next 18, Biome 2.6, Radix UI, lucide-react và các gói frontend khác, cùng các crate Rust như zip 9 và rusqlite 0.42
+
 ## [0.20.4] - 2026-09-20
 
 ### Sửa lỗi
