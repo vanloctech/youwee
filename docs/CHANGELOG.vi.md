@@ -20,6 +20,7 @@ và dự án tuân theo [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 - **Thông báo xác minh bot của YouTube** - Hiển thị lỗi riêng khi YouTube yêu cầu "xác minh bạn không phải bot", hướng dẫn bật cookie trong Cài đặt → Mạng & Xác thực hoặc đổi mạng/proxy, thay cho thông báo dễ gây hiểu nhầm "Video này yêu cầu đăng nhập"
 - **Thông báo chất lượng video YouTube giới hạn độ tuổi** - Ghi log giải thích rõ ràng khi YouTube yêu cầu xác minh tuổi tài khoản cho video giới hạn độ tuổi, khiến yt-dlp chỉ lấy được định dạng chất lượng thấp (thường là 360p) thay vì âm thầm tải bản đó
 - **Lỗi cookie trình duyệt** - Khi không đọc được cookie trình duyệt, dialog giờ hiện đúng nguyên nhân: macOS chặn quyền truy cập (kèm nút mở cài đặt Truy cập toàn bộ ổ đĩa), không tìm thấy profile trình duyệt, hoặc database bị khoá. Trước đây profile bị thiếu hoặc bị chặn đều báo nhầm "Chrome đang mở", nên đóng trình duyệt cũng không hết lỗi. Dialog cũng đã được dịch
+- **Nút "Open Dependencies" ở trang Gallery** - Nút trong banner "gallery-dl is required" của trang Gallery giờ mở đúng Cài đặt → Phụ thuộc thay vì tab Chung
 
 ### Thay đổi
 - **Cập nhật thư viện phụ thuộc** - Nâng Tauri lên 2.12 cùng toàn bộ plugin Tauri, React 19.3, Vite 8.3, i18next 27, react-i18next 18, Biome 2.6, Radix UI, lucide-react và các gói frontend khác, cùng các crate Rust như zip 9 và rusqlite 0.42
