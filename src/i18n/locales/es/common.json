@@ -82,6 +82,8 @@
     "YT_SKIPPED_UPCOMING_LIVE": "Directo programado omitido porque la opción 'Omitir directos' está activada.",
     "YT_UPCOMING_LIVE": "Este evento en directo aún no ha comenzado. Inténtalo de nuevo cuando empiece o activa 'Omitir directos'.",
     "YT_COOKIE_DB_LOCKED": "La base de datos de cookies del navegador está bloqueada. Cierra el navegador y reinténtalo, o usa el modo de archivo de cookies.",
+    "YT_COOKIE_ACCESS_DENIED": "macOS impidió que Youwee leyera las cookies del navegador. Activa Acceso total al disco para Youwee en Ajustes del Sistema → Privacidad y seguridad y reinicia Youwee.",
+    "YT_COOKIE_PROFILE_NOT_FOUND": "No se encontró la base de datos de cookies del navegador. Elige otro perfil en Ajustes → Red y autenticación o usa el modo Archivo de cookies.",
     "YT_FRESH_COOKIES_REQUIRED": "Se requieren cookies de inicio de sesión recientes. Actualiza la sesión en el navegador y reinténtalo.",
     "NETWORK_TIMEOUT": "Tiempo de espera de red agotado. Por favor, inténtalo de nuevo.",
     "NETWORK_REQUEST_FAILED": "Error en la solicitud de red. Comprueba tu conexión y reinténtalo.",
@@ -147,5 +149,51 @@
     "later": "Más tarde",
     "done": "Listo",
     "openDependencies": "Ajustes de dependencias"
+  },
+  "cookieErrorDialog": {
+    "db_locked": {
+      "title": "Error al acceder a las cookies",
+      "subtitle": "El navegador bloquea el acceso a las cookies",
+      "heading": "{{browser}} está abierto",
+      "body": "Los navegadores basados en Chromium bloquean su base de datos de cookies mientras se ejecutan. Cierra {{browser}} por completo e inténtalo de nuevo.",
+      "step1": "Cierra todas las ventanas de {{browser}}",
+      "step2": "Asegúrate de que {{browser}} no siga ejecutándose en segundo plano (revisa la bandeja del sistema)",
+      "step3": "Pulsa \"Reintentar descarga\" abajo"
+    },
+    "access_denied": {
+      "title": "No se pueden leer las cookies del navegador",
+      "subtitle": "macOS bloquea el acceso a los datos de {{browser}}",
+      "heading": "La protección de privacidad de macOS bloquea Youwee",
+      "body": "Youwee necesita Acceso total al disco para leer las cookies de {{browser}}. Cerrar el navegador no lo soluciona.",
+      "step1": "Abre Ajustes del Sistema → Privacidad y seguridad → Acceso total al disco",
+      "step2": "Activa Youwee (en una versión de desarrollo, activa la terminal desde la que lo inicias)",
+      "step3": "Cierra y vuelve a abrir Youwee, y reinténtalo"
+    },
+    "access_denied_other": {
+      "title": "No se pueden leer las cookies del navegador",
+      "subtitle": "Acceso denegado a los datos de {{browser}}",
+      "heading": "El sistema denegó el acceso al perfil del navegador",
+      "body": "Youwee no tiene permiso para leer la carpeta del perfil de {{browser}}.",
+      "step1": "Comprueba que tu usuario puede leer la carpeta del perfil de {{browser}}",
+      "step2": "Asegúrate de que ningún software de seguridad bloquee Youwee",
+      "step3": "Reinténtalo o usa el modo Archivo de cookies"
+    },
+    "profile_not_found": {
+      "title": "Perfil del navegador no encontrado",
+      "subtitle": "No hay cookies de {{browser}} en el perfil elegido",
+      "heading": "No se encontró el perfil de {{browser}} seleccionado",
+      "body": "Youwee no encontró la base de datos de cookies del perfil de {{browser}} elegido en los ajustes. Puede que se haya eliminado o renombrado.",
+      "step1": "En {{browser}}, abre chrome://version (o about:profiles en Firefox) para ver el perfil que usas",
+      "step2": "Elige ese perfil en Ajustes → Red y autenticación",
+      "step3": "Reintenta la descarga"
+    },
+    "stepsTitle": "Para solucionarlo:",
+    "alternativeLabel": "Alternativa:",
+    "alternative": "Usa el modo \"Archivo de cookies\" en Ajustes → Red y autenticación para exportar las cookies con una extensión del navegador.",
+    "retry": "Reintentar descarga",
+    "goToSettings": "Ir a Ajustes",
+    "chooseProfile": "Elegir perfil del navegador",
+    "openPrivacySettings": "Abrir ajustes de privacidad",
+    "dismiss": "Cerrar"
   }
 }

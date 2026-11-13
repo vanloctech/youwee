@@ -82,6 +82,8 @@
     "YT_SKIPPED_UPCOMING_LIVE": "已跳过即将开始的直播，因为已启用“跳过直播”。",
     "YT_UPCOMING_LIVE": "该直播尚未开始。请在开始后重试，或启用“跳过直播”。",
     "YT_COOKIE_DB_LOCKED": "浏览器 Cookie 数据库已锁定。请关闭浏览器后重试，或使用 Cookie 文件模式。",
+    "YT_COOKIE_ACCESS_DENIED": "macOS 阻止了 Youwee 读取浏览器 Cookie。请在 系统设置 → 隐私与安全性 中为 Youwee 开启完全磁盘访问权限，然后重启 Youwee。",
+    "YT_COOKIE_PROFILE_NOT_FOUND": "未找到浏览器 Cookie 数据库。请在 设置 → 网络与认证 中选择其他浏览器配置文件，或使用 Cookie 文件模式。",
     "YT_FRESH_COOKIES_REQUIRED": "需要最新登录 Cookie。请在浏览器重新登录后重试。",
     "NETWORK_TIMEOUT": "网络超时，请重试。",
     "NETWORK_REQUEST_FAILED": "网络请求失败，请检查连接后重试。",
@@ -147,5 +149,51 @@
     "later": "稍后",
     "done": "完成",
     "openDependencies": "依赖项设置"
+  },
+  "cookieErrorDialog": {
+    "db_locked": {
+      "title": "Cookie 访问失败",
+      "subtitle": "浏览器阻止了 Cookie 访问",
+      "heading": "{{browser}} 正在运行",
+      "body": "基于 Chromium 的浏览器在运行时会锁定 Cookie 数据库。请完全关闭 {{browser}} 后重试。",
+      "step1": "关闭所有 {{browser}} 窗口",
+      "step2": "确认 {{browser}} 没有在后台运行（检查系统托盘）",
+      "step3": "点击下方的“重试下载”"
+    },
+    "access_denied": {
+      "title": "无法读取浏览器 Cookie",
+      "subtitle": "macOS 阻止了对 {{browser}} 数据的访问",
+      "heading": "macOS 隐私保护阻止了 Youwee",
+      "body": "Youwee 需要“完全磁盘访问权限”才能读取 {{browser}} 的 Cookie，关闭浏览器无法解决此问题。",
+      "step1": "打开 系统设置 → 隐私与安全性 → 完全磁盘访问权限",
+      "step2": "开启 Youwee（开发版请开启用于启动它的终端应用）",
+      "step3": "完全退出并重新打开 Youwee，然后重试"
+    },
+    "access_denied_other": {
+      "title": "无法读取浏览器 Cookie",
+      "subtitle": "访问 {{browser}} 数据被拒绝",
+      "heading": "系统拒绝访问浏览器配置文件",
+      "body": "Youwee 没有读取 {{browser}} 配置文件夹的权限。",
+      "step1": "确认当前用户可以读取 {{browser}} 配置文件夹",
+      "step2": "确保没有安全软件阻止 Youwee",
+      "step3": "重试，或改用 Cookie 文件模式"
+    },
+    "profile_not_found": {
+      "title": "未找到浏览器配置文件",
+      "subtitle": "所选配置文件中没有 {{browser}} Cookie",
+      "heading": "未找到所选的 {{browser}} 配置文件",
+      "body": "Youwee 找不到设置中所选 {{browser}} 配置文件的 Cookie 数据库，该配置文件可能已被删除或重命名。",
+      "step1": "在 {{browser}} 中打开 chrome://version（Firefox 为 about:profiles）查看正在使用的配置文件",
+      "step2": "在 设置 → 网络与认证 中选择该配置文件",
+      "step3": "重试下载"
+    },
+    "stepsTitle": "解决方法：",
+    "alternativeLabel": "其他方式：",
+    "alternative": "在 设置 → 网络与认证 中使用“Cookie 文件”模式，并通过浏览器扩展导出 Cookie。",
+    "retry": "重试下载",
+    "goToSettings": "前往设置",
+    "chooseProfile": "选择浏览器配置文件",
+    "openPrivacySettings": "打开隐私设置",
+    "dismiss": "关闭"
   }
 }

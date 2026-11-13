@@ -82,6 +82,8 @@
     "YT_SKIPPED_UPCOMING_LIVE": "Canlı yayınları atla özelliği etkin olduğundan yaklaşan canlı yayın atlandı.",
     "YT_UPCOMING_LIVE": "Bu canlı etkinlik henüz başlamadı. Başladıktan sonra tekrar deneyin veya Canlı yayınları atla seçeneğini etkinleştirin.",
     "YT_COOKIE_DB_LOCKED": "Tarayıcı çerez veritabanı kilitli. Tarayıcıyı kapatıp yeniden deneyin veya çerez dosyası modunu kullanın.",
+    "YT_COOKIE_ACCESS_DENIED": "macOS, Youwee'nin tarayıcı çerezlerini okumasını engelledi. Sistem Ayarları → Gizlilik ve Güvenlik'te Youwee için Tam Disk Erişimi'ni açın ve Youwee'yi yeniden başlatın.",
+    "YT_COOKIE_PROFILE_NOT_FOUND": "Tarayıcı çerez veritabanı bulunamadı. Ayarlar → Ağ ve Kimlik Doğrulama bölümünde başka bir profil seçin veya Çerez Dosyası modunu kullanın.",
     "YT_FRESH_COOKIES_REQUIRED": "Yeni giriş çerezleri gereklidir. Tarayıcı oturum açma bilgilerini yenileyin ve yeniden deneyin.",
     "NETWORK_TIMEOUT": "Ağ zaman aşımı. Lütfen tekrar deneyin.",
     "NETWORK_REQUEST_FAILED": "Ağ isteği başarısız oldu. Lütfen bağlantınızı kontrol edip tekrar deneyin.",
@@ -147,5 +149,51 @@
     "later": "Daha sonra",
     "done": "Tamam",
     "openDependencies": "Bağımlılık ayarları"
+  },
+  "cookieErrorDialog": {
+    "db_locked": {
+      "title": "Çerez erişimi başarısız",
+      "subtitle": "Tarayıcı çerez erişimini engelliyor",
+      "heading": "{{browser}} şu anda açık",
+      "body": "Chromium tabanlı tarayıcılar çalışırken çerez veritabanını kilitler. {{browser}}'ı tamamen kapatıp tekrar deneyin.",
+      "step1": "Tüm {{browser}} pencerelerini kapatın",
+      "step2": "{{browser}}'ın arka planda çalışmadığından emin olun (sistem tepsisini kontrol edin)",
+      "step3": "Aşağıdaki \"İndirmeyi yeniden dene\" düğmesine tıklayın"
+    },
+    "access_denied": {
+      "title": "Tarayıcı çerezleri okunamıyor",
+      "subtitle": "macOS {{browser}} verilerine erişimi engelliyor",
+      "heading": "macOS gizlilik koruması Youwee'yi engelliyor",
+      "body": "Youwee'nin {{browser}} çerezlerini okuması için Tam Disk Erişimi gerekir. Tarayıcıyı kapatmak sorunu çözmez.",
+      "step1": "Sistem Ayarları → Gizlilik ve Güvenlik → Tam Disk Erişimi'ni açın",
+      "step2": "Youwee'yi etkinleştirin (geliştirme sürümünde, onu başlattığınız terminal uygulamasını etkinleştirin)",
+      "step3": "Youwee'den çıkıp yeniden açın ve tekrar deneyin"
+    },
+    "access_denied_other": {
+      "title": "Tarayıcı çerezleri okunamıyor",
+      "subtitle": "{{browser}} verilerine erişim reddedildi",
+      "heading": "Sistem tarayıcı profiline erişimi reddetti",
+      "body": "Youwee'nin {{browser}} profil klasörünü okuma izni yok.",
+      "step1": "Hesabınızın {{browser}} profil klasörünü okuyabildiğini kontrol edin",
+      "step2": "Hiçbir güvenlik yazılımının Youwee'yi engellemediğinden emin olun",
+      "step3": "Tekrar deneyin veya Çerez Dosyası modunu kullanın"
+    },
+    "profile_not_found": {
+      "title": "Tarayıcı profili bulunamadı",
+      "subtitle": "Seçilen profilde {{browser}} çerezi yok",
+      "heading": "Seçilen {{browser}} profili bulunamadı",
+      "body": "Youwee, ayarlarda seçilen {{browser}} profilinin çerez veritabanını bulamadı. Profil silinmiş veya yeniden adlandırılmış olabilir.",
+      "step1": "{{browser}}'da chrome://version (Firefox'ta about:profiles) açarak kullandığınız profili görün",
+      "step2": "Bu profili Ayarlar → Ağ ve Kimlik Doğrulama bölümünde seçin",
+      "step3": "İndirmeyi yeniden deneyin"
+    },
+    "stepsTitle": "Sorunu çözmek için:",
+    "alternativeLabel": "Alternatif:",
+    "alternative": "Çerezleri bir tarayıcı eklentisiyle dışa aktarmak için Ayarlar → Ağ ve Kimlik Doğrulama bölümünde \"Çerez Dosyası\" modunu kullanın.",
+    "retry": "İndirmeyi yeniden dene",
+    "goToSettings": "Ayarlara git",
+    "chooseProfile": "Tarayıcı profilini seç",
+    "openPrivacySettings": "Gizlilik ayarlarını aç",
+    "dismiss": "Kapat"
   }
 }

@@ -82,6 +82,8 @@
     "YT_SKIPPED_UPCOMING_LIVE": "Kelgusi translatsiya o‘tkazib yuborildi, chunki Jonli translatsiyalarni o‘tkazib yuborish yoqilgan.",
     "YT_UPCOMING_LIVE": "Bu jonli tadbir hali boshlanmagan. U boshlanganidan keyin qayta urinib ko‘ring yoki Jonli translatsiyalarni o‘tkazib yuborishni yoqing.",
     "YT_COOKIE_DB_LOCKED": "Brauzer cookie ma'lumotlar bazasi bloklangan. Brauzerni yoping va qayta urinib koʻring yoki cookie fayl rejimidan foydalaning.",
+    "YT_COOKIE_ACCESS_DENIED": "macOS Youwee'ga brauzer cookie'larini oʻqishni taqiqladi. Tizim sozlamalari → Maxfiylik va xavfsizlik boʻlimida Youwee uchun Toʻliq disk ruxsatini yoqing va Youwee'ni qayta ishga tushiring.",
+    "YT_COOKIE_PROFILE_NOT_FOUND": "Brauzer cookie bazasi topilmadi. Sozlamalar → Tarmoq va avtorizatsiya boʻlimida boshqa profilni tanlang yoki Cookie fayl rejimidan foydalaning.",
     "YT_FRESH_COOKIES_REQUIRED": "Yangi kirish kukilari talab qilinadi. Brauzerga kirishni yangilang va qayta urinib koʻring.",
     "NETWORK_TIMEOUT": "Tarmoq vaqti tugashi. Iltimos, qayta urinib koʻring.",
     "NETWORK_REQUEST_FAILED": "Tarmoq so‘rovi bajarilmadi. Iltimos, ulanishingizni tekshiring va qayta urinib koʻring.",
@@ -147,5 +149,51 @@
     "later": "Keyinroq",
     "done": "Tayyor",
     "openDependencies": "Bogʻliqliklar sozlamalari"
+  },
+  "cookieErrorDialog": {
+    "db_locked": {
+      "title": "Cookie'ga kirish amalga oshmadi",
+      "subtitle": "Brauzer cookie'ga kirishni bloklayapti",
+      "heading": "{{browser}} hozir ochiq",
+      "body": "Chromium asosidagi brauzerlar ishlayotganda cookie bazasini qulflaydi. {{browser}}ni toʻliq yopib, qayta urining.",
+      "step1": "Barcha {{browser}} oynalarini yoping",
+      "step2": "{{browser}} fonda ishlamayotganiga ishonch hosil qiling (tizim panelini tekshiring)",
+      "step3": "Quyidagi \"Yuklashni qayta urinish\" tugmasini bosing"
+    },
+    "access_denied": {
+      "title": "Brauzer cookie'larini oʻqib boʻlmadi",
+      "subtitle": "macOS {{browser}} maʼlumotlariga kirishni bloklayapti",
+      "heading": "macOS maxfiylik himoyasi Youwee'ni bloklayapti",
+      "body": "{{browser}} cookie'larini oʻqish uchun Youwee'ga Toʻliq disk ruxsati kerak. Brauzerni yopish yordam bermaydi.",
+      "step1": "Tizim sozlamalari → Maxfiylik va xavfsizlik → Toʻliq disk ruxsati boʻlimini oching",
+      "step2": "Youwee'ni yoqing (ishlab chiqish versiyasida uni ishga tushiradigan terminal ilovasini yoqing)",
+      "step3": "Youwee'dan chiqib, qayta oching va yana urinib koʻring"
+    },
+    "access_denied_other": {
+      "title": "Brauzer cookie'larini oʻqib boʻlmadi",
+      "subtitle": "{{browser}} maʼlumotlariga kirish rad etildi",
+      "heading": "Tizim brauzer profiliga kirishni rad etdi",
+      "body": "Youwee'da {{browser}} profil papkasini oʻqish ruxsati yoʻq.",
+      "step1": "Hisobingiz {{browser}} profil papkasini oʻqiy olishini tekshiring",
+      "step2": "Hech qanday xavfsizlik dasturi Youwee'ni bloklamayotganiga ishonch hosil qiling",
+      "step3": "Qayta urining yoki Cookie fayl rejimidan foydalaning"
+    },
+    "profile_not_found": {
+      "title": "Brauzer profili topilmadi",
+      "subtitle": "Tanlangan profilda {{browser}} cookie'lari yoʻq",
+      "heading": "Tanlangan {{browser}} profili topilmadi",
+      "body": "Youwee sozlamalarda tanlangan {{browser}} profilining cookie bazasini topa olmadi. Profil oʻchirilgan yoki nomi oʻzgartirilgan boʻlishi mumkin.",
+      "step1": "{{browser}}da chrome://version (Firefox'da about:profiles) ni ochib, ishlatayotgan profilingizni koʻring",
+      "step2": "Shu profilni Sozlamalar → Tarmoq va avtorizatsiya boʻlimida tanlang",
+      "step3": "Yuklashni qayta urining"
+    },
+    "stepsTitle": "Muammoni hal qilish:",
+    "alternativeLabel": "Muqobil:",
+    "alternative": "Cookie'larni brauzer kengaytmasi bilan eksport qilish uchun Sozlamalar → Tarmoq va avtorizatsiya boʻlimida \"Cookie fayl\" rejimidan foydalaning.",
+    "retry": "Yuklashni qayta urinish",
+    "goToSettings": "Sozlamalarga oʻtish",
+    "chooseProfile": "Brauzer profilini tanlash",
+    "openPrivacySettings": "Maxfiylik sozlamalarini ochish",
+    "dismiss": "Yopish"
   }
 }

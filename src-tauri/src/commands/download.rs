@@ -879,6 +879,18 @@ mod playlist_chapter_tests {
     }
 
     #[test]
+    fn missing_browser_cookie_db_is_not_reported_as_locked() {
+        let error = build_download_error_message(
+            Some(1),
+            &[r#"ERROR: could not find chrome cookies database in "/nonexistent-youwee-test/Chrome/Profile 3""#.to_string()],
+        );
+        let wire = error.to_wire();
+
+        assert_eq!(wire.code, crate::types::code::YT_COOKIE_PROFILE_NOT_FOUND);
+        assert_eq!(wire.retryable, Some(false));
+    }
+
+    #[test]
     fn bot_check_errors_are_not_reported_as_sign_in_required() {
         let error = build_download_error_message(
             Some(1),
@@ -1360,6 +1372,13 @@ fn build_download_error_message(exit_code: Option<i32>, recent_lines: &[String])
             "Skipped by yt-dlp match filter.",
         )
         .with_retryable(false);
+    }
+
+    if let Some(error) = recent_lines
+        .iter()
+        .find_map(|line| crate::types::classify_missing_cookie_db(line))
+    {
+        return error;
     }
 
     if let Some(line) = recent_lines
