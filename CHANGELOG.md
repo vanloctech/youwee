@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- **Browser extension X/Twitter download buttons** - Add a Download button to the action bar of every video post on X/Twitter, next to Bookmark, instead of the fixed floating button, so each video on the page downloads separately
 - **AppImage delta updates** - Embed AppImage update information and publish a `.zsync` file with each Linux release so AppImageUpdate, AppImageLauncher, and other AppImage managers can download only the changed parts
 - **Filename metadata position** - Choose whether filename metadata goes before or after the video title in Settings → Download, so filenames can start with the title (playlist/queue numbering still comes first)
 - **First-run quality setup** - A setup dialog on first launch offers to switch yt-dlp from the bundled build to Stable and to install FFmpeg, so high-quality downloads (1080p+, 2K, 4K with audio) work out of the box. It shows only the steps still missing, appears automatically once, and can be reopened from the download Guide. It replaces the FFmpeg prompt that appeared on every launch, and Settings → Dependencies now shows download progress for yt-dlp as well
