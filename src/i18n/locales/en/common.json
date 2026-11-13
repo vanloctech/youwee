@@ -82,6 +82,8 @@
     "YT_SKIPPED_UPCOMING_LIVE": "Skipped upcoming livestream because Skip live streams is enabled.",
     "YT_UPCOMING_LIVE": "This live event has not started yet. Try again after it starts, or enable Skip live streams.",
     "YT_COOKIE_DB_LOCKED": "Browser cookie database is locked. Close the browser and retry, or use cookie file mode.",
+    "YT_COOKIE_ACCESS_DENIED": "macOS blocked Youwee from reading browser cookies. Turn on Full Disk Access for Youwee in System Settings → Privacy & Security, then restart Youwee.",
+    "YT_COOKIE_PROFILE_NOT_FOUND": "Browser cookie database not found. Choose another browser profile in Settings → Network & Auth, or use Cookie File mode.",
     "YT_FRESH_COOKIES_REQUIRED": "Fresh login cookies are required. Refresh browser login and retry.",
     "NETWORK_TIMEOUT": "Network timeout. Please try again.",
     "NETWORK_REQUEST_FAILED": "Network request failed. Please check your connection and retry.",
@@ -147,5 +149,51 @@
     "later": "Later",
     "done": "Done",
     "openDependencies": "Dependencies settings"
+  },
+  "cookieErrorDialog": {
+    "db_locked": {
+      "title": "Cookie Access Failed",
+      "subtitle": "Browser is blocking cookie access",
+      "heading": "{{browser}} is currently open",
+      "body": "Chromium-based browsers lock their cookie database while running. Please close {{browser}} completely and try again.",
+      "step1": "Close all {{browser}} windows",
+      "step2": "Make sure {{browser}} is not running in the background (check the system tray)",
+      "step3": "Click \"Retry Download\" below"
+    },
+    "access_denied": {
+      "title": "Can't Read Browser Cookies",
+      "subtitle": "macOS is blocking access to {{browser}} data",
+      "heading": "macOS privacy protection is blocking Youwee",
+      "body": "Youwee needs Full Disk Access to read {{browser}} cookies. Closing the browser won't help.",
+      "step1": "Open System Settings → Privacy & Security → Full Disk Access",
+      "step2": "Turn on Youwee (for a development build, turn on the terminal app you start it from)",
+      "step3": "Quit and reopen Youwee, then retry"
+    },
+    "access_denied_other": {
+      "title": "Can't Read Browser Cookies",
+      "subtitle": "Access to {{browser}} data was denied",
+      "heading": "The system denied access to the browser profile",
+      "body": "Youwee doesn't have permission to read the {{browser}} profile folder.",
+      "step1": "Check that your user account can read the {{browser}} profile folder",
+      "step2": "Make sure no security software is blocking Youwee",
+      "step3": "Retry, or use Cookie File mode instead"
+    },
+    "profile_not_found": {
+      "title": "Browser Profile Not Found",
+      "subtitle": "No {{browser}} cookies in the selected profile",
+      "heading": "The selected {{browser}} profile was not found",
+      "body": "Youwee couldn't find the cookie database of the {{browser}} profile chosen in settings. The profile may have been removed or renamed.",
+      "step1": "In {{browser}}, open chrome://version (or about:profiles in Firefox) to see the profile you use",
+      "step2": "Choose that profile in Settings → Network & Auth",
+      "step3": "Retry the download"
+    },
+    "stepsTitle": "To fix this issue:",
+    "alternativeLabel": "Alternative:",
+    "alternative": "Use \"Cookie File\" mode in Settings → Network & Auth to export cookies with a browser extension.",
+    "retry": "Retry Download",
+    "goToSettings": "Go to Settings",
+    "chooseProfile": "Choose Browser Profile",
+    "openPrivacySettings": "Open Privacy Settings",
+    "dismiss": "Dismiss"
   }
 }

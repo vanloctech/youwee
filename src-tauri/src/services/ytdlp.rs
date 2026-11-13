@@ -482,6 +482,14 @@ pub fn parse_ytdlp_error(stderr: &str) -> Option<BackendError> {
         );
     }
 
+    // Browser cookie database missing, or its folder blocked by the OS (macOS privacy)
+    if let Some(error) = stderr
+        .lines()
+        .find_map(crate::types::classify_missing_cookie_db)
+    {
+        return Some(error);
+    }
+
     // Browser cookie database locked / unavailable
     if stderr_lower.contains("could not copy")
         && stderr_lower.contains("cookie")

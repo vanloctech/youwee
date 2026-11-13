@@ -29,6 +29,8 @@ const NON_RETRYABLE_CODES = new Set([
   'YT_MEMBERS_ONLY',
   'YT_SIGNIN_REQUIRED',
   'YT_BOT_CHECK',
+  'YT_COOKIE_ACCESS_DENIED',
+  'YT_COOKIE_PROFILE_NOT_FOUND',
   'YT_GEO_RESTRICTED',
   'DOWNLOAD_CANCELLED',
   'VALIDATION_INVALID_URL',
@@ -60,6 +62,9 @@ export function inferBackendErrorCode(message: string): string {
   }
   if (m.includes('could not copy') && m.includes('cookie') && m.includes('database')) {
     return 'YT_COOKIE_DB_LOCKED';
+  }
+  if (m.includes('could not find') && m.includes('cookies database')) {
+    return 'YT_COOKIE_PROFILE_NOT_FOUND';
   }
   if (m.includes('fresh cookies')) return 'YT_FRESH_COOKIES_REQUIRED';
   if (m.includes('429') || m.includes('too many requests') || m.includes('rate limited')) {

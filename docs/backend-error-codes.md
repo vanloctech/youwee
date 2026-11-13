@@ -41,6 +41,8 @@ Frontend should:
 | `YT_VIDEO_UNAVAILABLE` | Video unavailable | false |
 | `YT_NO_SUBTITLES` | Subtitles not available | false |
 | `YT_COOKIE_DB_LOCKED` | Browser cookie database locked | false |
+| `YT_COOKIE_ACCESS_DENIED` | OS blocked reading the browser profile (macOS privacy / Full Disk Access) | false |
+| `YT_COOKIE_PROFILE_NOT_FOUND` | Selected browser profile has no cookie database | false |
 | `YT_FRESH_COOKIES_REQUIRED` | Fresh cookies are required | false |
 | `NETWORK_TIMEOUT` | Request timeout | true |
 | `NETWORK_REQUEST_FAILED` | Network/connection failure | true |

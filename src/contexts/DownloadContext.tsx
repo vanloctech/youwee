@@ -22,6 +22,7 @@ import {
   localizeProgressError,
 } from '@/lib/backend-error';
 import { createClientId } from '@/lib/client-id';
+import { type CookieErrorKind, getCookieErrorKind } from '@/lib/cookie-errors';
 import {
   buildDownloadDuplicateIdentity,
   getDownloadDuplicateIdentityKey,
@@ -272,7 +273,7 @@ export interface DownloadContextType {
   ) => void;
   refreshTelegramStatus: () => Promise<TelegramStatus>;
   // Cookie error detection
-  cookieError: { show: boolean; itemId?: string; kind: 'db_locked' | 'fresh_cookies' } | null;
+  cookieError: { show: boolean; itemId?: string; kind: CookieErrorKind } | null;
   clearCookieError: () => void;
   retryFailedDownload: (itemId: string) => void;
   resolveDuplicateReview: (action: DownloadDuplicateReviewAction, applyToAll: boolean) => void;
@@ -297,7 +298,7 @@ export function DownloadProvider({ children }: { children: ReactNode }) {
   const [cookieError, setCookieError] = useState<{
     show: boolean;
     itemId?: string;
-    kind: 'db_locked' | 'fresh_cookies';
+    kind: CookieErrorKind;
   } | null>(null);
   const [duplicateReview, setDuplicateReview] = useState<DownloadDuplicateReview | null>(null);
   const [duplicateSkipNotice, setDuplicateSkipNotice] = useState<{ count: number } | null>(null);
@@ -429,17 +430,13 @@ export function DownloadProvider({ children }: { children: ReactNode }) {
         });
       }
 
-      // Detect cookie error on Windows (lock error or DPAPI/App-Bound Encryption)
-      const cookieDbLockedPattern =
-        /could not copy.*cookie|permission denied.*cookies|cookie.*database|failed to.*cookie|failed to decrypt.*dpapi|app.bound.encryption/i;
-      if (progress.status === 'error' && progress.error_code === 'YT_FRESH_COOKIES_REQUIRED') {
-        setCookieError({ show: true, itemId: progress.id, kind: 'fresh_cookies' });
-      } else if (
-        progress.status === 'error' &&
-        ((progress.error_code && progress.error_code === 'YT_COOKIE_DB_LOCKED') ||
-          (progress.error_message && cookieDbLockedPattern.test(progress.error_message)))
-      ) {
-        setCookieError({ show: true, itemId: progress.id, kind: 'db_locked' });
+      // Browser cookie failures get a dedicated dialog that matches the actual cause
+      const cookieErrorKind =
+        progress.status === 'error'
+          ? getCookieErrorKind(progress.error_code, progress.error_message)
+          : null;
+      if (cookieErrorKind) {
+        setCookieError({ show: true, itemId: progress.id, kind: cookieErrorKind });
       }
 
       setItems((currentItems) => {

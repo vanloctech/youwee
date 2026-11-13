@@ -22,6 +22,8 @@ pub mod code {
     pub const YT_SKIPPED_FILTER: &str = "YT_SKIPPED_FILTER";
     pub const YT_UPCOMING_LIVE: &str = "YT_UPCOMING_LIVE";
     pub const YT_COOKIE_DB_LOCKED: &str = "YT_COOKIE_DB_LOCKED";
+    pub const YT_COOKIE_ACCESS_DENIED: &str = "YT_COOKIE_ACCESS_DENIED";
+    pub const YT_COOKIE_PROFILE_NOT_FOUND: &str = "YT_COOKIE_PROFILE_NOT_FOUND";
     pub const YT_FRESH_COOKIES_REQUIRED: &str = "YT_FRESH_COOKIES_REQUIRED";
     pub const NETWORK_TIMEOUT: &str = "NETWORK_TIMEOUT";
     pub const NETWORK_REQUEST_FAILED: &str = "NETWORK_REQUEST_FAILED";
@@ -168,6 +170,11 @@ pub fn infer_error_code(message: &str) -> &'static str {
     if m.contains("could not copy") && m.contains("cookie") && m.contains("database") {
         return code::YT_COOKIE_DB_LOCKED;
     }
+    // Without a file-system check we can't tell a blocked folder from a missing profile;
+    // classify_missing_cookie_db() refines this where the path is available.
+    if is_missing_cookie_db_message(&m) {
+        return code::YT_COOKIE_PROFILE_NOT_FOUND;
+    }
     if m.contains("fresh cookies") {
         return code::YT_FRESH_COOKIES_REQUIRED;
     }
@@ -302,6 +309,63 @@ pub fn infer_error_code(message: &str) -> &'static str {
     code::BACKEND_UNKNOWN
 }
 
+/// yt-dlp's `could not find <browser> cookies database in "<path>"`.
+pub fn is_missing_cookie_db_message(message: &str) -> bool {
+    let m = message.to_lowercase();
+    m.contains("could not find") && m.contains("cookies database")
+}
+
+/// Classify yt-dlp's "could not find <browser> cookies database" error.
+///
+/// yt-dlp prints the same message when the profile folder is missing and when the OS
+/// refuses to list it. On macOS the latter happens when privacy protection (TCC) blocks
+/// Youwee from reading another app's data, which needs Full Disk Access, not a different
+/// profile. `probe` returns the error kind from listing a folder (None when it succeeds).
+pub fn classify_missing_cookie_db_with(
+    message: &str,
+    probe: impl Fn(&std::path::Path) -> Option<std::io::ErrorKind>,
+) -> Option<BackendError> {
+    if !is_missing_cookie_db_message(message) {
+        return None;
+    }
+    let path = message
+        .split_once(" in \"")
+        .and_then(|(_, rest)| rest.split('"').next())
+        .map(std::path::PathBuf::from);
+
+    let denied = path.as_deref().is_some_and(|path| {
+        std::iter::successors(Some(path), |p| p.parent())
+            .take(2)
+            .any(|p| probe(p) == Some(std::io::ErrorKind::PermissionDenied))
+    });
+
+    let shown_path = path
+        .as_deref()
+        .map(|p| p.display().to_string())
+        .unwrap_or_default();
+    Some(if denied {
+        BackendError::new(
+            code::YT_COOKIE_ACCESS_DENIED,
+            "The system blocked Youwee from reading the browser's cookie folder. On macOS, turn on Full Disk Access for Youwee in System Settings → Privacy & Security, then restart Youwee.",
+        )
+        .with_param("path", shown_path)
+        .with_retryable(false)
+    } else {
+        BackendError::new(
+            code::YT_COOKIE_PROFILE_NOT_FOUND,
+            "Browser cookie database not found. The selected browser profile may not exist; choose another profile in Settings → Network & Auth, or switch to Cookie File mode.",
+        )
+        .with_param("path", shown_path)
+        .with_retryable(false)
+    })
+}
+
+pub fn classify_missing_cookie_db(message: &str) -> Option<BackendError> {
+    classify_missing_cookie_db_with(message, |path| {
+        std::fs::read_dir(path).err().map(|e| e.kind())
+    })
+}
+
 /// YouTube's "Sign in to confirm you're not a bot" check. It is tied to the
 /// network/session rather than the video, so it is not a generic sign-in error.
 pub fn is_bot_check_message(message: &str) -> bool {
@@ -327,4 +391,61 @@ fn escape_json_string(input: &str) -> String {
         .replace('\n', "\\n")
         .replace('\r', "\\r")
         .replace('\t', "\\t")
+}
+
+#[cfg(test)]
+mod cookie_db_tests {
+    use super::*;
+    use std::io::ErrorKind;
+    use std::path::Path;
+
+    const MISSING: &str = r#"ERROR: could not find chrome cookies database in "/Users/me/Library/Application Support/Google/Chrome/Profile 3""#;
+
+    #[test]
+    fn blocked_browser_folder_is_access_denied() {
+        let error = classify_missing_cookie_db_with(MISSING, |path: &Path| {
+            path.ends_with("Google/Chrome")
+                .then_some(ErrorKind::PermissionDenied)
+        })
+        .expect("classified");
+        assert_eq!(error.code(), code::YT_COOKIE_ACCESS_DENIED);
+        assert_eq!(error.to_wire().retryable, Some(false));
+    }
+
+    #[test]
+    fn blocked_profile_folder_is_access_denied() {
+        let error = classify_missing_cookie_db_with(MISSING, |path: &Path| {
+            path.ends_with("Profile 3")
+                .then_some(ErrorKind::PermissionDenied)
+        })
+        .expect("classified");
+        assert_eq!(error.code(), code::YT_COOKIE_ACCESS_DENIED);
+    }
+
+    #[test]
+    fn readable_folder_without_profile_is_profile_not_found() {
+        let error = classify_missing_cookie_db_with(MISSING, |path: &Path| {
+            path.ends_with("Profile 3").then_some(ErrorKind::NotFound)
+        })
+        .expect("classified");
+        assert_eq!(error.code(), code::YT_COOKIE_PROFILE_NOT_FOUND);
+    }
+
+    #[test]
+    fn other_errors_are_not_classified() {
+        assert!(classify_missing_cookie_db_with(
+            "ERROR: Could not copy Chrome cookie database",
+            |_| None
+        )
+        .is_none());
+    }
+
+    #[test]
+    fn message_only_inference_maps_to_profile_not_found_not_db_locked() {
+        assert_eq!(infer_error_code(MISSING), code::YT_COOKIE_PROFILE_NOT_FOUND);
+        assert_eq!(
+            infer_error_code("ERROR: Could not copy Chrome cookie database"),
+            code::YT_COOKIE_DB_LOCKED
+        );
+    }
 }

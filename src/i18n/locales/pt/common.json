@@ -82,6 +82,8 @@
     "YT_UPCOMING_LIVE": "Este evento ao vivo ainda não começou. Tente novamente depois que começar ou ative Ignorar lives.",
     "YT_NO_SUBTITLES": "Não há legendas disponíveis para este vídeo.",
     "YT_COOKIE_DB_LOCKED": "O banco de dados de cookies do navegador está bloqueado. Feche o navegador e tente novamente, ou use o modo de arquivo de cookies.",
+    "YT_COOKIE_ACCESS_DENIED": "O macOS impediu o Youwee de ler os cookies do navegador. Ative o Acesso Total ao Disco para o Youwee em Ajustes do Sistema → Privacidade e Segurança e reinicie o Youwee.",
+    "YT_COOKIE_PROFILE_NOT_FOUND": "Banco de cookies do navegador não encontrado. Escolha outro perfil em Configurações → Rede e Autenticação ou use o modo Arquivo de cookies.",
     "YT_FRESH_COOKIES_REQUIRED": "São necessários cookies de login recentes. Atualize o login do navegador e tente novamente.",
     "NETWORK_TIMEOUT": "Tempo limite da rede esgotado. Tente novamente.",
     "NETWORK_REQUEST_FAILED": "A solicitação de rede falhou. Verifique sua conexão e tente novamente.",
@@ -147,5 +149,51 @@
     "later": "Depois",
     "done": "Concluído",
     "openDependencies": "Configurações de dependências"
+  },
+  "cookieErrorDialog": {
+    "db_locked": {
+      "title": "Falha ao acessar os cookies",
+      "subtitle": "O navegador está bloqueando o acesso aos cookies",
+      "heading": "{{browser}} está aberto",
+      "body": "Navegadores baseados em Chromium bloqueiam o banco de dados de cookies enquanto estão abertos. Feche o {{browser}} completamente e tente novamente.",
+      "step1": "Feche todas as janelas do {{browser}}",
+      "step2": "Verifique se o {{browser}} não está rodando em segundo plano (bandeja do sistema)",
+      "step3": "Clique em \"Tentar baixar novamente\" abaixo"
+    },
+    "access_denied": {
+      "title": "Não foi possível ler os cookies do navegador",
+      "subtitle": "O macOS está bloqueando o acesso aos dados do {{browser}}",
+      "heading": "A proteção de privacidade do macOS está bloqueando o Youwee",
+      "body": "O Youwee precisa de Acesso Total ao Disco para ler os cookies do {{browser}}. Fechar o navegador não resolve.",
+      "step1": "Abra Ajustes do Sistema → Privacidade e Segurança → Acesso Total ao Disco",
+      "step2": "Ative o Youwee (em uma versão de desenvolvimento, ative o terminal usado para iniciá-lo)",
+      "step3": "Feche e reabra o Youwee e tente novamente"
+    },
+    "access_denied_other": {
+      "title": "Não foi possível ler os cookies do navegador",
+      "subtitle": "Acesso aos dados do {{browser}} negado",
+      "heading": "O sistema negou o acesso ao perfil do navegador",
+      "body": "O Youwee não tem permissão para ler a pasta do perfil do {{browser}}.",
+      "step1": "Verifique se sua conta pode ler a pasta do perfil do {{browser}}",
+      "step2": "Garanta que nenhum software de segurança está bloqueando o Youwee",
+      "step3": "Tente novamente ou use o modo Arquivo de cookies"
+    },
+    "profile_not_found": {
+      "title": "Perfil do navegador não encontrado",
+      "subtitle": "Nenhum cookie do {{browser}} no perfil escolhido",
+      "heading": "O perfil do {{browser}} selecionado não foi encontrado",
+      "body": "O Youwee não encontrou o banco de cookies do perfil do {{browser}} escolhido nas configurações. Ele pode ter sido removido ou renomeado.",
+      "step1": "No {{browser}}, abra chrome://version (ou about:profiles no Firefox) para ver o perfil em uso",
+      "step2": "Escolha esse perfil em Configurações → Rede e Autenticação",
+      "step3": "Tente baixar novamente"
+    },
+    "stepsTitle": "Para resolver:",
+    "alternativeLabel": "Alternativa:",
+    "alternative": "Use o modo \"Arquivo de cookies\" em Configurações → Rede e Autenticação para exportar os cookies com uma extensão do navegador.",
+    "retry": "Tentar baixar novamente",
+    "goToSettings": "Ir para Configurações",
+    "chooseProfile": "Escolher perfil do navegador",
+    "openPrivacySettings": "Abrir ajustes de privacidade",
+    "dismiss": "Fechar"
   }
 }

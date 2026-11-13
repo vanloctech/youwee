@@ -82,6 +82,8 @@
     "YT_SKIPPED_UPCOMING_LIVE": "S-a omis următorul flux live, deoarece Omiteți fluxurile live este activat.",
     "YT_UPCOMING_LIVE": "Acest eveniment live nu a început încă. Încearcă din nou după ce pornește sau activează Omite streamurile live.",
     "YT_COOKIE_DB_LOCKED": "Baza de date cookie din browser este blocată. Închideți browserul și încercați din nou sau utilizați modul fișier cookie.",
+    "YT_COOKIE_ACCESS_DENIED": "macOS a împiedicat Youwee să citească cookie-urile browserului. Activează Acces complet la disc pentru Youwee în Setări sistem → Confidențialitate și securitate, apoi repornește Youwee.",
+    "YT_COOKIE_PROFILE_NOT_FOUND": "Baza de date de cookie-uri a browserului nu a fost găsită. Alege alt profil în Setări → Rețea și autentificare sau folosește modul Fișier cookie.",
     "YT_FRESH_COOKIES_REQUIRED": "Sunt necesare cookie-uri noi de conectare. Actualizați autentificarea browserului și reîncercați.",
     "NETWORK_TIMEOUT": "Timeout rețea. Vă rugăm să încercați din nou.",
     "NETWORK_REQUEST_FAILED": "Solicitarea rețelei a eșuat. Vă rugăm să vă verificați conexiunea și să încercați din nou.",
@@ -147,5 +149,51 @@
     "later": "Mai târziu",
     "done": "Gata",
     "openDependencies": "Setări dependențe"
+  },
+  "cookieErrorDialog": {
+    "db_locked": {
+      "title": "Accesul la cookie-uri a eșuat",
+      "subtitle": "Browserul blochează accesul la cookie-uri",
+      "heading": "{{browser}} este deschis",
+      "body": "Browserele bazate pe Chromium blochează baza de date de cookie-uri cât timp rulează. Închide complet {{browser}} și încearcă din nou.",
+      "step1": "Închide toate ferestrele {{browser}}",
+      "step2": "Asigură-te că {{browser}} nu rulează în fundal (verifică bara de sistem)",
+      "step3": "Apasă „Reîncearcă descărcarea” mai jos"
+    },
+    "access_denied": {
+      "title": "Nu se pot citi cookie-urile browserului",
+      "subtitle": "macOS blochează accesul la datele {{browser}}",
+      "heading": "Protecția confidențialității din macOS blochează Youwee",
+      "body": "Youwee are nevoie de Acces complet la disc pentru a citi cookie-urile {{browser}}. Închiderea browserului nu ajută.",
+      "step1": "Deschide Setări sistem → Confidențialitate și securitate → Acces complet la disc",
+      "step2": "Activează Youwee (pentru o versiune de dezvoltare, activează terminalul din care îl pornești)",
+      "step3": "Închide și redeschide Youwee, apoi reîncearcă"
+    },
+    "access_denied_other": {
+      "title": "Nu se pot citi cookie-urile browserului",
+      "subtitle": "Accesul la datele {{browser}} a fost refuzat",
+      "heading": "Sistemul a refuzat accesul la profilul browserului",
+      "body": "Youwee nu are permisiunea de a citi folderul profilului {{browser}}.",
+      "step1": "Verifică dacă utilizatorul tău poate citi folderul profilului {{browser}}",
+      "step2": "Asigură-te că niciun program de securitate nu blochează Youwee",
+      "step3": "Reîncearcă sau folosește modul Fișier cookie"
+    },
+    "profile_not_found": {
+      "title": "Profilul browserului nu a fost găsit",
+      "subtitle": "Nu există cookie-uri {{browser}} în profilul ales",
+      "heading": "Profilul {{browser}} selectat nu a fost găsit",
+      "body": "Youwee nu a găsit baza de date de cookie-uri a profilului {{browser}} ales în setări. Poate a fost șters sau redenumit.",
+      "step1": "În {{browser}}, deschide chrome://version (sau about:profiles în Firefox) pentru a vedea profilul folosit",
+      "step2": "Alege acel profil în Setări → Rețea și autentificare",
+      "step3": "Reîncearcă descărcarea"
+    },
+    "stepsTitle": "Pentru a rezolva:",
+    "alternativeLabel": "Alternativă:",
+    "alternative": "Folosește modul „Fișier cookie” din Setări → Rețea și autentificare pentru a exporta cookie-urile cu o extensie de browser.",
+    "retry": "Reîncearcă descărcarea",
+    "goToSettings": "Mergi la Setări",
+    "chooseProfile": "Alege profilul browserului",
+    "openPrivacySettings": "Deschide setările de confidențialitate",
+    "dismiss": "Închide"
   }
 }

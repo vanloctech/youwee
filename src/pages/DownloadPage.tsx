@@ -319,7 +319,7 @@ export function DownloadPage({ onNavigateToSettings }: DownloadPageProps) {
         />
       )}
 
-      {/* Browser Cookie Error Dialog - shown when cookie extraction fails on Windows */}
+      {/* Browser Cookie Error Dialog - locked, blocked (macOS privacy) or missing profile */}
       {(() => {
         const itemId = cookieError?.itemId;
         if (!cookieError?.show || !itemId) return null;
@@ -333,6 +333,7 @@ export function DownloadPage({ onNavigateToSettings }: DownloadPageProps) {
         }
         return (
           <BrowserCookieErrorDialog
+            kind={cookieError.kind}
             browserName={cookieSettings.browser}
             onRetry={() => retryFailedDownload(itemId)}
             onDismiss={clearCookieError}
