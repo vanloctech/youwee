@@ -7,6 +7,8 @@ và dự án tuân theo [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+## [0.21.0] - 2026-11-13
+
 ### Thêm mới
 - **Nút tải trên X/Twitter trong tiện ích trình duyệt** - Thêm nút Tải xuống vào thanh hành động của mỗi bài đăng có video trên X/Twitter, cạnh nút Bookmark, thay cho nút nổi cố định, để tải riêng từng video trên trang
 - **Cập nhật delta cho AppImage** - Nhúng thông tin cập nhật AppImage và phát hành kèm file `.zsync` cho mỗi bản Linux để AppImageUpdate, AppImageLauncher và các trình quản lý AppImage khác chỉ cần tải phần thay đổi

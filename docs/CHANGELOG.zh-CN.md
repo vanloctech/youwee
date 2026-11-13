@@ -7,6 +7,8 @@ Youwee 的所有重要更改都将记录在此文件中。
 
 ## [Unreleased]
 
+## [0.21.0] - 2026-11-13
+
 ### 新增
 - **浏览器扩展 X/Twitter 下载按钮** - 在 X/Twitter 每条含视频的帖子操作栏中（书签按钮旁）添加下载按钮，取代固定的悬浮按钮，页面上的每个视频都可单独下载
 - **AppImage 增量更新** - 在 AppImage 中嵌入更新信息，并随每个 Linux 版本发布 `.zsync` 文件，使 AppImageUpdate、AppImageLauncher 等 AppImage 管理工具只需下载变更部分

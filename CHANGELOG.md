@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.21.0] - 2026-11-13
+
 ### Added
 - **Browser extension X/Twitter download buttons** - Add a Download button to the action bar of every video post on X/Twitter, next to Bookmark, instead of the fixed floating button, so each video on the page downloads separately
 - **AppImage delta updates** - Embed AppImage update information and publish a `.zsync` file with each Linux release so AppImageUpdate, AppImageLauncher, and other AppImage managers can download only the changed parts
