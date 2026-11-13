@@ -140,8 +140,99 @@
     void persistPrefs();
   }
 
+  function isXPage() {
+    return /(^|\.)(x|twitter)\.com$/.test(currentHost);
+  }
+
   function shouldShowWidget() {
-    return ext.isAllowlistedUrl(location.href) && isEnabled();
+    return ext.isAllowlistedUrl(location.href) && isEnabled() && !isXPage();
+  }
+
+  // X/Twitter: one inline Download button per video tweet instead of the floating widget.
+  const X_BUTTON_CLASS = 'youwee-x-btn';
+  let xObserver = null;
+  let xScanQueued = false;
+
+  function getTweetUrl(article) {
+    // The first timestamp link is the tweet's own permalink (a quoted tweet's comes later).
+    const link = article.querySelector('a[href*="/status/"] time')?.closest('a');
+    return link?.href || location.href;
+  }
+
+  function createXButton(article) {
+    const label = ext.t('floatingButton', 'Download with Youwee');
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = X_BUTTON_CLASS;
+    button.title = label;
+    button.setAttribute('aria-label', label);
+    button.innerHTML = ACTION_ICONS.download;
+    button.addEventListener('click', (event) => {
+      // Keep X from opening the tweet behind the button.
+      event.preventDefault();
+      event.stopPropagation();
+      if (!isTrustedUserEvent(event)) return;
+      try {
+        ext.openDeepLink(getTweetUrl(article), undefined, {
+          action: 'download_now',
+          media: 'video',
+          quality: 'best',
+        });
+      } catch {
+        // Protocol launch failures surface in the browser itself.
+      }
+    });
+    return button;
+  }
+
+  function injectXButtons() {
+    xScanQueued = false;
+    for (const article of document.querySelectorAll('article[data-testid="tweet"]')) {
+      if (article.querySelector(`.${X_BUTTON_CLASS}`)) continue;
+      // Before playback X renders only a thumbnail (`*_video_thumb`) with a play button.
+      if (
+        !article.querySelector(
+          '[data-testid="videoPlayer"], [data-testid="videoComponent"], [data-testid="playButton"], img[src*="video_thumb"]',
+        )
+      ) {
+        continue;
+      }
+
+      const bookmark = article.querySelector(
+        '[role="group"] [data-testid="bookmark"], [role="group"] [data-testid="removeBookmark"]',
+      );
+      const anchor = bookmark?.parentElement;
+      if (anchor?.parentElement) {
+        anchor.parentElement.insertBefore(createXButton(article), anchor);
+        continue;
+      }
+
+      const groups = article.querySelectorAll('[role="group"]');
+      groups[groups.length - 1]?.appendChild(createXButton(article));
+    }
+  }
+
+  function queueXScan() {
+    if (xScanQueued) return;
+    xScanQueued = true;
+    window.requestAnimationFrame(injectXButtons);
+  }
+
+  function syncXButtons() {
+    if (!isXPage() || !isEnabled()) {
+      xObserver?.disconnect();
+      xObserver = null;
+      for (const button of document.querySelectorAll(`.${X_BUTTON_CLASS}`)) {
+        button.remove();
+      }
+      return;
+    }
+
+    if (!xObserver) {
+      xObserver = new MutationObserver(queueXScan);
+      xObserver.observe(document.body, { childList: true, subtree: true });
+    }
+    queueXScan();
   }
 
   function getMediaValue() {
@@ -492,6 +583,8 @@
   }
 
   function ensureWidget() {
+    syncXButtons();
+
     if (!shouldShowWidget()) {
       disconnectWidget();
       return;
@@ -532,12 +625,6 @@
 
     prefs = normalizePrefs(changes[STORAGE_KEY].newValue);
     collapsedState = getCollapsedForHost();
-
-    if (!isEnabled()) {
-      disconnectWidget();
-      return;
-    }
-
     ensureWidget();
   }
 

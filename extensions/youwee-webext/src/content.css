@@ -332,3 +332,34 @@
     width: 260px;
   }
 }
+
+.youwee-x-btn {
+  align-self: center;
+  width: 34px;
+  height: 34px;
+  margin-right: 4px;
+  padding: 0;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: rgb(113, 118, 123);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition:
+    background-color 0.2s,
+    color 0.2s;
+}
+
+.youwee-x-btn:hover,
+.youwee-x-btn:focus-visible {
+  background: rgba(244, 63, 94, 0.1);
+  color: #f43f5e;
+  outline: none;
+}
+
+.youwee-x-btn svg {
+  width: 19px;
+  height: 19px;
+}
