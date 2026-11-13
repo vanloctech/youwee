@@ -811,7 +811,11 @@
     "localFree": "Local / Free",
     "custom": "Custom",
     "enableAI": "Activate AI",
-    "chooseProvider": "Choose AI Provider"
+    "chooseProvider": "Choose AI Provider",
+    "sponsored": "Sponsored",
+    "enterInfistarApiKey": "Enter your Infistar API key (sk-...)",
+    "infistarHelp": "One key for Claude, GPT, Gemini, Grok, DeepSeek and 200+ more models, at a fraction of official prices. Youwee users get CNY 5 free when signing up through this link.",
+    "infistarSignup": "Sign up and get CNY 5 free"
   },
   "extension": {
     "title": "Browser Extension",

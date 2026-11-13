@@ -265,6 +265,21 @@ async fn generate_summary_custom_once(
             )
             .await
         }
+        AIProvider::Infistar => {
+            let api_key = config.api_key.as_ref().ok_or(AIError::NoApiKey)?;
+            generate_with_proxy(
+                super::INFISTAR_BASE_URL,
+                api_key,
+                &config.model,
+                transcript,
+                style,
+                language,
+                title,
+                config.timeout_seconds,
+                config.summary_max_tokens,
+            )
+            .await
+        }
         AIProvider::Proxy => {
             let api_key = config.api_key.as_ref().ok_or(AIError::NoApiKey)?;
             let proxy_url = config

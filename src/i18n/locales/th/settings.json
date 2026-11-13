@@ -738,7 +738,11 @@
     "localFree": "Local / Free",
     "custom": "Custom",
     "enableAI": "Activate AI",
-    "chooseProvider": "Choose AI Provider"
+    "chooseProvider": "Choose AI Provider",
+    "sponsored": "ผู้สนับสนุน",
+    "enterInfistarApiKey": "กรอก API key ของ Infistar (sk-...)",
+    "infistarHelp": "คีย์เดียวใช้ได้กับ Claude, GPT, Gemini, Grok, DeepSeek และกว่า 200 โมเดล ในราคาเพียงเศษเสี้ยวของราคาทางการ ผู้ใช้ Youwee รับฟรี 5 หยวนเมื่อสมัครผ่านลิงก์นี้",
+    "infistarSignup": "สมัครและรับ 5 หยวนฟรี"
   },
   "extension": {
     "title": "ส่วนขยายเบราว์เซอร์",

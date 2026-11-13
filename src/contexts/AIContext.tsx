@@ -111,7 +111,11 @@ export function AIProvider({ children }: { children: ReactNode }) {
 
   const loadModels = useCallback(async (provider: AIProviderType) => {
     try {
-      const modelList = await invoke<ModelOption[]>('get_ai_models', { provider });
+      // Infistar's list comes from its live catalog (cached by the backend) and is grouped by brand.
+      const modelList =
+        provider === 'infistar'
+          ? await invoke<ModelOption[]>('get_infistar_models')
+          : await invoke<ModelOption[]>('get_ai_models', { provider });
       setModels(modelList);
     } catch (error) {
       console.error('Failed to load models:', error);

@@ -811,7 +811,11 @@
     "localFree": "Nội bộ / Free",
     "custom": "Tùy chỉnh",
     "enableAI": "Kích hoạt AI",
-    "chooseProvider": "Chọn nhà cung cấp AI"
+    "chooseProvider": "Chọn nhà cung cấp AI",
+    "sponsored": "Tài trợ",
+    "enterInfistarApiKey": "Nhập API key Infistar (sk-...)",
+    "infistarHelp": "Một key dùng được Claude, GPT, Gemini, Grok, DeepSeek và hơn 200 mô hình khác, giá chỉ bằng một phần nhỏ giá chính thức. Người dùng Youwee được tặng 5 CNY khi đăng ký qua link này.",
+    "infistarSignup": "Đăng ký và nhận 5 CNY"
   },
   "extension": {
     "title": "Browser Extension",

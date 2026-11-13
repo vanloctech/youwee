@@ -811,7 +811,11 @@
     "localFree": "Mahalliy / Bepul",
     "custom": "Maxsus",
     "enableAI": "AI ni faollashtiring",
-    "chooseProvider": "AI provayderini tanlang"
+    "chooseProvider": "AI provayderini tanlang",
+    "sponsored": "Homiylik",
+    "enterInfistarApiKey": "Infistar API kalitini kiriting (sk-...)",
+    "infistarHelp": "Claude, GPT, Gemini, Grok, DeepSeek va 200 dan ortiq model uchun bitta kalit, rasmiy narxlarning kichik bir qismiga. Youwee foydalanuvchilari ushbu havola orqali roʻyxatdan oʻtsa, 5 CNY bepul oladi.",
+    "infistarSignup": "Roʻyxatdan oʻting va 5 CNY oling"
   },
   "extension": {
     "title": "Brauzer kengaytmasi",

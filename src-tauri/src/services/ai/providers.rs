@@ -1139,6 +1139,18 @@ pub(super) async fn generate_raw_for_provider(
             )
             .await
         }
+        AIProvider::Infistar => {
+            let api_key = config.api_key.as_ref().ok_or(AIError::NoApiKey)?;
+            generate_raw_with_proxy(
+                super::INFISTAR_BASE_URL,
+                api_key,
+                &config.model,
+                prompt,
+                config.timeout_seconds,
+                config.summary_max_tokens,
+            )
+            .await
+        }
         AIProvider::Proxy => {
             let api_key = config.api_key.as_ref().ok_or(AIError::NoApiKey)?;
             let proxy_url = config
@@ -1161,6 +1173,22 @@ pub(super) async fn generate_raw_for_provider(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn infistar_uses_openai_compatible_chat_endpoint() {
+        assert_eq!(
+            chat_completions_url(crate::services::INFISTAR_BASE_URL),
+            "https://infistar.cc/v1/chat/completions"
+        );
+    }
+
+    #[test]
+    fn infistar_provider_serializes_as_lowercase_id() {
+        assert_eq!(
+            serde_json::to_string(&AIProvider::Infistar).unwrap(),
+            "\"infistar\""
+        );
+    }
 
     #[test]
     fn default_summary_max_tokens_is_unlimited() {

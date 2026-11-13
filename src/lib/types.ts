@@ -1010,7 +1010,8 @@ export type AIProvider =
   | 'qwen'
   | 'ollama'
   | 'lmstudio'
-  | 'proxy';
+  | 'proxy'
+  | 'infistar';
 export type SummaryStyle = 'short' | 'concise' | 'detailed';
 export type LongSummaryFormat = 'auto' | 'final' | 'parts';
 
@@ -1098,6 +1099,7 @@ export const DEFAULT_TRANSCRIPT_LANGUAGES = ['en'];
 export interface ModelOption {
   value: string;
   label: string;
+  group?: string; // Brand heading in the model dropdown (Infistar catalog)
 }
 
 export interface LanguageOption {

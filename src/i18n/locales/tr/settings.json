@@ -811,7 +811,11 @@
     "localFree": "Yerel / Ücretsiz",
     "custom": "Gelenek",
     "enableAI": "AI'yu etkinleştirin",
-    "chooseProvider": "AI Sağlayıcısını Seçin"
+    "chooseProvider": "AI Sağlayıcısını Seçin",
+    "sponsored": "Sponsorlu",
+    "enterInfistarApiKey": "Infistar API anahtarınızı girin (sk-...)",
+    "infistarHelp": "Claude, GPT, Gemini, Grok, DeepSeek ve 200'den fazla model için tek anahtar, resmi fiyatların çok altında. Youwee kullanıcıları bu bağlantıyla kaydolunca 5 CNY ücretsiz alır.",
+    "infistarSignup": "Kaydol ve 5 CNY kazan"
   },
   "extension": {
     "title": "Tarayıcı Uzantısı",

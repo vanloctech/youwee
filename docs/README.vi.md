@@ -132,15 +132,33 @@ Mở rộng Youwee bằng plugin `.ywp` đã ký cho workflow sau khi tải xong
 
 Điều khiển Youwee từ xa bằng các lệnh Telegram như thêm link, tải, xem queue, trạng thái và dừng tải. Hướng dẫn: [youwee.app/docs/remote-download](https://youwee.app/docs/remote-download)
 
-### Xây dựng từ mã nguồn
+## Nhà tài trợ
 
-#### Yêu cầu
+<a href="https://www.infistar.cc/register?aff=6VX7D2Z3">
+  <img src="sponsors/infistar.png" alt="Youwee × Infistar.cc: Claude, GPT, Gemini, Grok, DeepSeek và nhiều mô hình khác, một key, giá chỉ bằng một phần nhỏ giá chính thức" width="800">
+</a>
+
+**Youwee × Infistar.cc** | Claude, GPT, Gemini, Grok, DeepSeek và nhiều mô hình khác, một key, giá chỉ bằng một phần nhỏ giá chính thức
+
+- 💥 Giảm tới 99%: chỉ từ 0,1 lần giá chính thức
+- ✅ Nguồn chính thức, mô hình 100% chính hãng: không hạ cấp, không pha loãng, mô hình nào cũng kiểm chứng được
+- ⚡ Hơn 1.000 tuyến dự phòng, tự động chuyển tuyến khi lỗi: một tuyến gặp sự cố thì tuyến khác lập tức thay thế
+- 🧩 Hơn 200 mô hình từ 16 hãng: văn bản, hình ảnh và video chỉ với một key
+- 🏆 Được hơn 100 dự án mã nguồn mở hàng đầu giới thiệu, dự án lớn nhất có hơn 100k sao
+- 🎯 Tóm tắt video và dịch phụ đề chỉ với một API key, không cần quản lý tài khoản riêng ở từng nhà cung cấp
+- 🎁 Người dùng Youwee: đăng ký qua link riêng để được tặng 5 CNY
+
+👉 [https://www.infistar.cc/register?aff=6VX7D2Z3](https://www.infistar.cc/register?aff=6VX7D2Z3)
+
+## Xây dựng từ mã nguồn
+
+### Yêu cầu
 
 - [Bun](https://bun.sh/) (v1.3.5 hoặc mới hơn)
 - [Rust](https://www.rust-lang.org/) (v1.70 hoặc mới hơn)
 - [Tauri CLI](https://tauri.app/v1/guides/getting-started/prerequisites)
 
-#### Các bước
+### Các bước
 
 ```bash
 # Clone repository

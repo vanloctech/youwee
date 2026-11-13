@@ -811,7 +811,11 @@
     "localFree": "Local / Gratuit",
     "custom": "Personalizat",
     "enableAI": "Activați AI",
-    "chooseProvider": "Alegeți furnizorul AI"
+    "chooseProvider": "Alegeți furnizorul AI",
+    "sponsored": "Sponsorizat",
+    "enterInfistarApiKey": "Introdu cheia API Infistar (sk-...)",
+    "infistarHelp": "O singură cheie pentru Claude, GPT, Gemini, Grok, DeepSeek și peste 200 de modele, la o fracțiune din prețurile oficiale. Utilizatorii Youwee primesc 5 CNY gratuit la înregistrarea prin acest link.",
+    "infistarSignup": "Înregistrează-te și primește 5 CNY"
   },
   "extension": {
     "title": "Extensia browser",

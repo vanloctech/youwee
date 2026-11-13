@@ -811,7 +811,11 @@
     "localFree": "ローカル / 無料",
     "custom": "カスタム",
     "enableAI": "AI を起動する",
-    "chooseProvider": "AI プロバイダーを選択"
+    "chooseProvider": "AI プロバイダーを選択",
+    "sponsored": "スポンサー",
+    "enterInfistarApiKey": "Infistar の API キーを入力 (sk-...)",
+    "infistarHelp": "1 つのキーで Claude、GPT、Gemini、Grok、DeepSeek など 200 以上のモデルを公式価格のごく一部で利用できます。このリンクから登録した Youwee ユーザーには 5 元分が無料で付与されます。",
+    "infistarSignup": "登録して 5 元分を受け取る"
   },
   "extension": {
     "title": "ブラウザ拡張機能",

@@ -133,15 +133,33 @@ Extend Youwee with signed `.ywp` plugins for post-download workflows such as not
 
 Control Youwee remotely with Telegram commands such as add, download, queue, status, and stop. Guide: [youwee.app/docs/remote-download](https://youwee.app/docs/remote-download)
 
-### Build from Source
+## Sponsors
 
-#### Prerequisites
+<a href="https://www.infistar.cc/register?aff=6VX7D2Z3">
+  <img src="docs/sponsors/infistar.png" alt="Youwee × Infistar.cc: Claude, GPT, Gemini, Grok, DeepSeek & more, one key, a fraction of official prices" width="800">
+</a>
+
+**Youwee × Infistar.cc** | Claude, GPT, Gemini, Grok, DeepSeek & more, one key, a fraction of official prices
+
+- 💥 Up to 99% off: from 0.1x official pricing
+- ✅ Official upstreams, 100% genuine models: no downgrades, no dilution, every model verifiable
+- ⚡ 1,000+ redundant routes with automatic failover: one route stumbles, the next takes over
+- 🧩 200+ models from 16 brands: text, image and video with one key
+- 🏆 Recommended by 100+ top open-source projects, the largest with 100k+ stars
+- 🎯 Summarize videos and translate subtitles with one API key instead of managing separate provider accounts
+- 🎁 Youwee users: sign up through the exclusive link and get CNY 5 free
+
+👉 [https://www.infistar.cc/register?aff=6VX7D2Z3](https://www.infistar.cc/register?aff=6VX7D2Z3)
+
+## Build from Source
+
+### Prerequisites
 
 - [Bun](https://bun.sh/) (v1.3.5 or later)
 - [Rust](https://www.rust-lang.org/) (v1.70 or later)
 - [Tauri CLI](https://tauri.app/v1/guides/getting-started/prerequisites)
 
-#### Steps
+### Steps
 
 ```bash
 # Clone the repository
