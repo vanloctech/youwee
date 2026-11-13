@@ -18,6 +18,9 @@ Youwee 的所有重要更改都将记录在此文件中。
 - **YouTube 机器人验证提示** - 当 YouTube 要求“确认你不是机器人”时显示专门的错误提示，引导在 设置 → 网络与认证 中启用 Cookie 或更换网络/代理，而不是显示容易误导的“此视频需要登录”
 - **YouTube 年龄限制视频画质提示** - 当 YouTube 要求账号进行年龄验证时记录清晰的日志说明；此时 yt-dlp 只能获取低画质格式（通常为 360p），不再静默下载而不提示
 
+### 变更
+- **依赖更新** - 将 Tauri 升级到 2.12 及全部 Tauri 插件，并更新 React 19.3、Vite 8.3、i18next 27、react-i18next 18、Biome 2.6、Radix UI、lucide-react 等前端依赖，以及 zip 9、rusqlite 0.42 等 Rust crate
+
 ## [0.20.4] - 2026-09-20
 
 ### 修复

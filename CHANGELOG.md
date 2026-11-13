@@ -18,6 +18,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **YouTube bot check message** - Show a dedicated error when YouTube asks to "confirm you're not a bot", pointing to cookies in Settings → Network & Auth or a network/proxy change, instead of the misleading "This video requires sign-in" message
 - **Age-restricted YouTube quality notice** - Log a clear explanation when YouTube requires account age-verification for an age-restricted video, which limits yt-dlp to low-quality formats (usually 360p) instead of silently downloading them
 
+### Changed
+- **Dependency updates** - Updated Tauri to 2.12 with all Tauri plugins, React 19.3, Vite 8.3, i18next 27, react-i18next 18, Biome 2.6, Radix UI, lucide-react, and other frontend packages, plus Rust crates including zip 9 and rusqlite 0.42
+
 ## [0.20.4] - 2026-09-20
 
 ### Fixed

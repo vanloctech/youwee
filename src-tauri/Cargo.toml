@@ -6,29 +6,29 @@ authors = ["locnguyen"]
 license = "MIT"
 repository = ""
 edition = "2021"
-rust-version = "1.77.2"
+rust-version = "1.90"
 
 [lib]
 name = "app_lib"
 crate-type = ["staticlib", "cdylib", "rlib"]
 
 [build-dependencies]
-tauri-build = { version = "2.6.3", features = [] }
+tauri-build = { version = "2.7.4", features = [] }
 
 [dependencies]
 serde_json = "1.0"
 serde = { version = "1.0", features = ["derive"] }
 log = "0.4"
-tauri = { version = "2.11.5", features = ["protocol-asset", "macos-private-api", "tray-icon", "image-png"] }
-tauri-plugin-log = "2.9.0"
-tauri-plugin-dialog = "2.7.2"
-tauri-plugin-fs = "2.5.1"
-tauri-plugin-shell = "2.3.5"
-tauri-plugin-updater = "2.10.1"
-tauri-plugin-process = "2.3.1"
-tauri-plugin-deep-link = "2.4.9"
-tauri-plugin-single-instance = "2.4.3"
-tauri-plugin-cli = "2.4.1"
+tauri = { version = "2.12.5", features = ["protocol-asset", "macos-private-api", "tray-icon", "image-png"] }
+tauri-plugin-log = "2.10.2"
+tauri-plugin-dialog = "2.8.4"
+tauri-plugin-fs = "2.7.1"
+tauri-plugin-shell = "2.6.0"
+tauri-plugin-updater = "2.14.1"
+tauri-plugin-process = "2.4.0"
+tauri-plugin-deep-link = "2.6.3"
+tauri-plugin-single-instance = "2.5.5"
+tauri-plugin-cli = "2.5.0"
 tokio = { version = "1", features = ["full"] }
 regex = "1"
 reqwest = { version = "0.13", features = ["json", "multipart", "stream"] }
@@ -38,12 +38,12 @@ hex = "0.4"
 flate2 = "1"
 tar = "0.4"
 xz2 = { version = "0.1", features = ["static"] }
-zip = "8.6"
-rusqlite = { version = "0.39", features = ["bundled"] }
+zip = "9.5"
+rusqlite = { version = "0.42", features = ["bundled"] }
 uuid = { version = "1", features = ["v4"] }
 chrono = "0.4"
-tauri-plugin-opener = "2.5.4"
-tauri-plugin-notification = "2.3.3"
+tauri-plugin-opener = "2.7.3"
+tauri-plugin-notification = "2.8.1"
 image = { version = "0.25", default-features = false, features = ["png", "jpeg", "webp", "gif"] }
 base64 = "0.23"
 ed25519-dalek = "3"

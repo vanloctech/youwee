@@ -107,7 +107,10 @@ pub fn extract_zip_sync(
             .by_index(i)
             .map_err(|e| format!("Failed to read zip entry: {}", e))?;
 
-        let name = file.name().to_string();
+        let name = file
+            .name()
+            .map_err(|e| format!("Invalid zip entry name: {}", e))?
+            .into_owned();
 
         let file_name = Path::new(&name)
             .file_name()
@@ -152,7 +155,10 @@ pub fn extract_deno_zip_sync(
             .by_index(i)
             .map_err(|e| format!("Failed to read zip entry: {}", e))?;
 
-        let name = file.name().to_string();
+        let name = file
+            .name()
+            .map_err(|e| format!("Invalid zip entry name: {}", e))?
+            .into_owned();
 
         // Look for deno binary
         #[cfg(windows)]
