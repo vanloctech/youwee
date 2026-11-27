@@ -31,6 +31,7 @@ import {
   findHistoryFilepathByUrl,
   openFileLocation,
   openFolderLocation,
+  openChannelFolderLocation as openResolvedChannelFolderLocation,
 } from '@/lib/open-file-location';
 import type {
   CreatorProcessingSettings,
@@ -55,11 +56,6 @@ type ChannelDetailViewProps = {
   channel: FollowedChannel;
   onBack: () => void;
 };
-
-function getParentPath(filepath: string): string | null {
-  const separatorIndex = Math.max(filepath.lastIndexOf('/'), filepath.lastIndexOf('\\'));
-  return separatorIndex > 0 ? filepath.slice(0, separatorIndex) : null;
-}
 
 export function ChannelDetailView({ channel, onBack }: ChannelDetailViewProps) {
   const { t } = useTranslation('channels');
@@ -224,23 +220,14 @@ export function ChannelDetailView({ channel, onBack }: ChannelDetailViewProps) {
   );
 
   const openChannelFolderLocation = useCallback(async () => {
-    for (const video of activeChannelVideos) {
-      const filepath = await resolveChannelVideoFilepath(video);
-      const parentPath = filepath ? getParentPath(filepath) : null;
-      if (parentPath) {
-        try {
-          await openFolderLocation(parentPath);
-          return;
-        } catch {
-          // Continue with the configured channel folder fallback.
-        }
-      }
-    }
-
     if (outputPath) {
-      await openFolderLocation(`${outputPath}/${sanitizeChannelFolderName(channel.name)}`);
+      await openResolvedChannelFolderLocation(
+        channel.id,
+        activeChannelVideos.map((video) => video.url),
+        `${outputPath}/${sanitizeChannelFolderName(channel.name)}`,
+      );
     }
-  }, [activeChannelVideos, channel.name, outputPath, resolveChannelVideoFilepath]);
+  }, [activeChannelVideos, channel.id, channel.name, outputPath]);
 
   const handleSaveSettings = useCallback(async () => {
     setSavingSettings(true);
@@ -547,6 +534,15 @@ export function ChannelDetailView({ channel, onBack }: ChannelDetailViewProps) {
             onClick={() => void openChannelFolderLocation()}
           >
             <FolderOpen className="h-4 w-4" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-8 w-8"
+            title={t('manager.openChannelWeb')}
+            onClick={() => void openUrl(channel.url)}
+          >
+            <ExternalLink className="h-4 w-4" />
           </Button>
           <Button
             variant={showHistory ? 'secondary' : 'ghost'}

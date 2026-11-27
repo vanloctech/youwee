@@ -197,6 +197,14 @@ fn is_youtube_host(host: &str) -> bool {
     host == "youtube.com" || host.ends_with(".youtube.com")
 }
 
+pub fn is_youtube_url(url: &str) -> bool {
+    tauri::Url::parse(url.trim()).is_ok_and(|parsed| {
+        parsed
+            .host_str()
+            .is_some_and(|host| is_youtube_host(host) || host == "youtu.be")
+    })
+}
+
 /// Try to normalize a Douyin modal URL to a direct video URL.
 /// Returns `None` when the URL does not match the expected pattern.
 fn normalize_douyin(url: &str) -> Option<String> {

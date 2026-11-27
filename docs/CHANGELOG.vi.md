@@ -7,6 +7,73 @@ và dự án tuân theo [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 
 ## [Unreleased]
 
+## [0.20.18] - 2026-11-25
+
+### Sửa lỗi
+- **Không gian Kênh thích ứng** - Giữ phần điều khiển kênh, tiến trình tải, lịch sử hàng chờ và danh sách video luôn truy cập được trên cửa sổ thấp hoặc hẹp bằng vùng cuộn riêng cho từng phần.
+- **Chẩn đoán lỗi Creator** - Hiển thị lỗi FFmpeg có ý nghĩa thay cho dòng thống kê âm thanh cuối log và dừng lượt render không tăng tiến trình trong ba phút.
+- **Điều khiển bulk độc lập** - Dừng hoặc tạm dừng lượt tải bulk không còn hủy hàng chờ creator/edit; vẫn có nút khẩn cấp riêng để dừng cả hai luồng.
+- **Chọn video bulk ổn định** - Lượt bulk luôn bỏ qua video trùng trong Library bất kể bộ lọc hiển thị của trang Kênh, từ chối lượt tải kênh chồng nhau và giới hạn thời gian quét kênh dài.
+- **Tự phục hồi phiên player YouTube** - Thử lại không dùng cookie đã cấu hình, sau đó dùng player `android_vr` không cookie nếu YouTube vẫn yêu cầu tải lại trang. Chỉ báo lỗi cuối khi không còn phương án thử lại phù hợp.
+
+### Thay đổi
+- **yt-dlp đi kèm Windows** - Dùng yt-dlp stable 2026.11.23 chính thức trong bộ cài Windows.
+- **Bản FFmpeg Windows ổn định** - Cài bản Gyan release essentials có xác minh checksum trên Windows thay cho snapshot BtbN master thay đổi liên tục, giúp môi trường NVENC trên máy phát triển và máy khách đồng nhất.
+- **Tiến trình kênh gọn hơn** - Thay các thẻ trạng thái bulk và nhiều thanh edit lồng nhau bằng phần tổng kết ngắn cùng một thanh tiến trình edit tổng hợp.
+
+## [0.20.17] - 2026-10-09
+
+### Thay đổi
+- **Lịch sử bulk trong một ngày** - Chỉ giữ lịch sử các lượt tải bulk đã hoàn thành trong 24 giờ và dọn các mục cũ khỏi dữ liệu lưu.
+
+### Sửa lỗi
+- **Luôn hiển thị vùng chọn lượt lịch sử** - Dành một hàng cố định không bị co cho danh sách chọn lượt tải, tránh danh sách job lớn che mất vùng chọn.
+
+## [0.20.16] - 2026-10-09
+
+### Sửa lỗi
+- **Phân trang tìm video chưa tải trong bulk** - Quét kênh theo từng nhóm nhỏ và tiếp tục bỏ qua các video đã có trong Library hoặc bị bộ lọc thời lượng loại cho đến khi tìm đủ số video hợp lệ được yêu cầu.
+
+## [0.20.15] - 2026-10-09
+
+### Sửa lỗi
+- **Khóa chạy lặp job bulk** - Ngăn cập nhật trạng thái edit nền khởi chạy trùng scan hoặc download và làm con trỏ kênh nhảy nhiều hơn một lần.
+
+## [0.20.14] - 2026-10-09
+
+### Thay đổi
+- **Giới hạn quét kênh bulk** - Mặc định chỉ đọc 10 mục mỗi kênh và chỉ tăng số mục quét khi người dùng yêu cầu số video mỗi kênh cao hơn.
+
+### Sửa lỗi
+- **Cô lập trạng thái scan bulk** - Ngăn lệnh hủy đến muộn và callback scan cũ tác động vào kênh kế tiếp hoặc đánh dấu sai các kênh chưa quét thành không có video mới.
+- **Watchdog quét kênh** - Dừng yt-dlp sau 60 giây, ghi nhận kênh lỗi và cho hàng chờ còn lại cùng lượt retry tự động tiếp tục chạy.
+
+## [0.20.13] - 2026-10-09
+
+### Thêm mới
+- **Lịch sử các lượt bulk** - Lưu từng lượt bulk và vòng đời của mỗi kênh, phân biệt tải xong, chờ/đang edit, hoàn tất, lỗi tải, lỗi edit, kênh bị bỏ qua và job đã dừng.
+
+### Sửa lỗi
+- **Khôi phục đúng thư mục của lượt bulk** - Lưu snapshot thư mục đầu ra cùng cài đặt tải/edit của từng lượt kênh, không tự chạy lại dữ liệu cũ thiếu snapshot và ngăn lượt thủ công được khôi phục tranh chấp với lượt bulk mới rồi rơi về thư mục toàn cục.
+- **Độ ổn định của trình quản lý bulk** - Thu gọn các lượt đang chờ, giữ nguyên nút điều khiển lượt hiện tại khi xem lịch sử, luôn cho mở lại lịch sử đã hoàn tất, đồng bộ trạng thái edit sau khi khởi động lại và không cho kết quả khôi phục muộn thay thế lượt bulk đang chạy hoặc tạm dừng.
+
+## [0.20.12] - 2026-10-08
+
+### Sửa lỗi
+- **Khôi phục nút bắt đầu bulk** - Bỏ khóa submit dựa trên timer WebView, thêm đường submit form native, hiển thị xác nhận nhận lệnh và lỗi ngay cạnh nút, đồng thời giới hạn quét Phổ biến nhất ở 500 mục để cú bấm không trông như bị treo vì quét vô hạn.
+
+## [0.20.11] - 2026-10-08
+
+### Thêm mới
+- **Hàng chờ tải kênh theo lượt** - Xếp nhiều lượt tải kênh, mỗi lượt giữ riêng thư mục đầu ra, giới hạn quét, cài đặt tải và cấu hình edit.
+- **Bộ lọc thời lượng bulk** - Tùy chọn bỏ video từ 50 phút trở lên và tiếp tục tìm video phù hợp tiếp theo.
+
+### Sửa lỗi
+- **Quản lý lượt tải trực quan** - Hiển thị lượt đang chạy và các lượt đang chờ ngay dưới form bulk, gồm thư mục đầu ra và nút xóa từng lượt chờ.
+- **Tải YouTube ổn định hơn** - Thử lại không cookie khi cookie gây báo nhầm video unavailable, phục hồi tải thiếu bằng native chunk và hạ Best xuống 1080p khi cần.
+- **Tương thích GPU khi edit** - Chuyển sang decode và filter bằng CPU với nguồn AV1 không được GPU hỗ trợ nhưng vẫn encode bằng NVIDIA NVENC.
+- **Dọn video gốc an toàn** - Chỉ xóa video tải gốc sau khi output edit đã được kiểm tra thành công.
+
 ## [0.20.10] - 2026-09-27
 
 ### Sửa lỗi

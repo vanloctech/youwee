@@ -22,6 +22,9 @@ static POPULAR_CHANNEL_CACHE: OnceLock<
     Mutex<std::collections::HashMap<String, PopularCacheEntry>>,
 > = OnceLock::new();
 const POPULAR_CHANNEL_CACHE_TTL: Duration = Duration::from_secs(10 * 60);
+const MIN_CHANNEL_SCAN_LIMIT: u32 = 10;
+const MAX_CHANNEL_SCAN_LIMIT: u32 = 500;
+const CHANNEL_FETCH_TIMEOUT: Duration = Duration::from_secs(60);
 
 #[derive(Clone)]
 struct PopularCacheEntry {
@@ -76,6 +79,7 @@ pub struct PendingChannelBatch {
     pub channel_name: Option<String>,
     pub content_type: String,
     pub videos: Vec<PlaylistVideoEntry>,
+    pub download_options: Option<serde_json::Value>,
 }
 
 #[tauri::command]
@@ -84,6 +88,7 @@ pub fn save_channel_batch_items(
     channel_name: Option<String>,
     content_type: String,
     videos: Vec<PlaylistVideoEntry>,
+    download_options: Option<serde_json::Value>,
 ) -> Result<(), String> {
     let mut conn = database::get_db()?;
     let transaction = conn.transaction().map_err(|e| e.to_string())?;
@@ -92,12 +97,16 @@ pub fn save_channel_batch_items(
     transaction
         .execute("DELETE FROM channel_batch_items", [])
         .map_err(|e| e.to_string())?;
+    let options_json = download_options
+        .map(|options| serde_json::to_string(&options))
+        .transpose()
+        .map_err(|e| e.to_string())?;
     for video in videos {
         let json = serde_json::to_string(&video).map_err(|e| e.to_string())?;
         transaction.execute(
-            "INSERT OR IGNORE INTO channel_batch_items (channel_url, video_id, channel_name, content_type, video_json, created_at)
-             VALUES (?1, ?2, ?3, ?4, ?5, ?6)",
-            rusqlite::params![channel_url, video.id, channel_name, content_type, json, chrono::Utc::now().to_rfc3339()],
+            "INSERT OR IGNORE INTO channel_batch_items (channel_url, video_id, channel_name, content_type, video_json, options_json, created_at)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)",
+            rusqlite::params![channel_url, video.id, channel_name, content_type, json, options_json, chrono::Utc::now().to_rfc3339()],
         ).map_err(|e| e.to_string())?;
     }
     transaction.commit().map_err(|e| e.to_string())
@@ -150,7 +159,7 @@ pub fn discard_channel_batch(channel_url: Option<String>) -> Result<u64, String>
 pub fn list_pending_channel_batch() -> Result<Option<PendingChannelBatch>, String> {
     let conn = database::get_db()?;
     let mut statement = conn.prepare(
-        "SELECT channel_url, channel_name, content_type, video_json
+        "SELECT channel_url, channel_name, content_type, video_json, options_json
          FROM channel_batch_items WHERE status IN ('pending', 'running') ORDER BY created_at, rowid"
     ).map_err(|e| e.to_string())?;
     let rows = statement
@@ -160,22 +169,29 @@ pub fn list_pending_channel_batch() -> Result<Option<PendingChannelBatch>, Strin
                 row.get::<_, Option<String>>(1)?,
                 row.get::<_, String>(2)?,
                 row.get::<_, String>(3)?,
+                row.get::<_, Option<String>>(4)?,
             ))
         })
         .map_err(|e| e.to_string())?;
     let mut batch: Option<PendingChannelBatch> = None;
     for row in rows {
-        let (url, name, content_type, json) = row.map_err(|e| e.to_string())?;
+        let (url, name, content_type, json, options_json) = row.map_err(|e| e.to_string())?;
         if batch.as_ref().is_some_and(|item| item.channel_url != url) {
             break;
         }
         let video = serde_json::from_str::<PlaylistVideoEntry>(&json).map_err(|e| e.to_string())?;
+        let download_options = options_json
+            .as_deref()
+            .map(serde_json::from_str::<serde_json::Value>)
+            .transpose()
+            .map_err(|e| e.to_string())?;
         batch
             .get_or_insert_with(|| PendingChannelBatch {
                 channel_url: url,
                 channel_name: name,
                 content_type,
                 videos: Vec::new(),
+                download_options,
             })
             .videos
             .push(video);
@@ -319,6 +335,7 @@ async fn run_channel_ytdlp_with_progress(
             Ok::<String, std::io::Error>(output)
         });
 
+        let started_at = Instant::now();
         let status = loop {
             tokio::select! {
                 status = child.wait() => {
@@ -331,6 +348,16 @@ async fn run_channel_ytdlp_with_progress(
                         let _ = stdout_task.await;
                         let _ = stderr_task.await;
                         return Err("Channel fetch cancelled".to_string());
+                    }
+                    if started_at.elapsed() >= CHANNEL_FETCH_TIMEOUT {
+                        child.kill().await.ok();
+                        let _ = child.wait().await;
+                        let _ = stdout_task.await;
+                        let _ = stderr_task.await;
+                        return Err(format!(
+                            "Channel scan timed out after {} seconds",
+                            CHANNEL_FETCH_TIMEOUT.as_secs()
+                        ));
                     }
                 }
             }
@@ -360,7 +387,15 @@ async fn run_channel_ytdlp_with_progress(
         return Err("Channel fetch cancelled".to_string());
     }
 
-    let output_result = run_ytdlp_with_stderr(app, args).await?;
+    let output_result =
+        tokio::time::timeout(CHANNEL_FETCH_TIMEOUT, run_ytdlp_with_stderr(app, args))
+            .await
+            .map_err(|_| {
+                format!(
+                    "Channel scan timed out after {} seconds",
+                    CHANNEL_FETCH_TIMEOUT.as_secs()
+                )
+            })??;
     if is_channel_fetch_cancelled(cancel_generation) {
         return Err("Channel fetch cancelled".to_string());
     }
@@ -408,7 +443,12 @@ pub async fn get_channel_videos(
         .iter()
         .all(|url| url.contains("youtube.com") || url.contains("youtu.be") || is_tiktok_url(url));
     let exact_popular = popular_requested && supports_exact_popular;
-    let popular_cache_key = urls.join("\n");
+    let popular_scan_limit = start
+        .unwrap_or(1)
+        .saturating_sub(1)
+        .saturating_add(limit.unwrap_or(MIN_CHANNEL_SCAN_LIMIT))
+        .clamp(MIN_CHANNEL_SCAN_LIMIT, MAX_CHANNEL_SCAN_LIMIT);
+    let popular_cache_key = format!("{}\nlimit={popular_scan_limit}", urls.join("\n"));
     if exact_popular {
         if let Some(entries) = get_cached_popular_entries(&popular_cache_key) {
             return Ok(sort_and_page_popular(entries, start, limit));
@@ -436,7 +476,11 @@ pub async fn get_channel_videos(
             match fetch_channel_videos_once(
                 &app,
                 source_url,
-                if exact_popular { None } else { limit },
+                if exact_popular {
+                    Some(popular_scan_limit)
+                } else {
+                    limit
+                },
                 if exact_popular { None } else { start },
                 request_id,
                 cancel_generation,
@@ -1142,6 +1186,11 @@ pub async fn bulk_update_channel_settings(
     download_threads: i64,
     youtube_content_type: Option<String>,
     creator_processing: Option<CreatorProcessingSettings>,
+    filter_min_duration: Option<i64>,
+    filter_max_duration: Option<i64>,
+    filter_include_keywords: Option<String>,
+    filter_exclude_keywords: Option<String>,
+    filter_max_videos: Option<i64>,
 ) -> Result<BulkChannelMutationResult, String> {
     database::bulk_update_channel_settings_db(
         ids,
@@ -1155,6 +1204,11 @@ pub async fn bulk_update_channel_settings(
         download_threads.max(1),
         sanitize_youtube_content_type(youtube_content_type.as_deref()),
         sanitize_creator_processing(creator_processing),
+        filter_min_duration,
+        filter_max_duration,
+        filter_include_keywords,
+        filter_exclude_keywords,
+        filter_max_videos,
     )
 }
 
@@ -1266,36 +1320,6 @@ pub async fn update_channel_video_status_by_video_id(
         status.clone(),
         filepath.clone(),
     )?;
-    if status == "downloaded" {
-        if let (Some(filepath), Ok(channel)) = (
-            filepath,
-            database::get_followed_channel_db(channel_id.clone()),
-        ) {
-            if channel.creator_processing.mode == "none" {
-                let video_title = database::get_channel_videos_by_video_ids_db(
-                    channel_id.clone(),
-                    vec![video_id.clone()],
-                )?
-                .into_iter()
-                .next()
-                .map(|video| video.title)
-                .unwrap_or_else(|| video_id.clone());
-                if let Err(error) =
-                    crate::services::telegram::send_channel_media_ready_notification(
-                        &channel_id,
-                        &channel.name,
-                        &video_id,
-                        &video_title,
-                        &filepath,
-                        false,
-                    )
-                    .await
-                {
-                    log::warn!("Failed to send Telegram download-ready notification: {error}");
-                }
-            }
-        }
-    }
     Ok(())
 }
 
@@ -1305,35 +1329,30 @@ pub async fn complete_channel_creator_processing(
     video_id: String,
     output_paths: Vec<String>,
 ) -> Result<(), String> {
-    let channel_id = database::get_channel_id_by_url_db(channel_url)?
-        .ok_or_else(|| "Channel not found".to_string())?;
-    let channel = database::get_followed_channel_db(channel_id.clone())?;
-    let video_title =
-        database::get_channel_videos_by_video_ids_db(channel_id.clone(), vec![video_id.clone()])?
-            .into_iter()
-            .next()
-            .map(|video| video.title)
-            .unwrap_or_else(|| video_id.clone());
+    // Bulk channel downloads do not require the channel to be followed. The
+    // creator render is already complete when this bookkeeping command runs,
+    // so a missing followed-channel row must not turn a successful render into
+    // a failed creator job.
+    let Some(channel_id) = database::get_channel_id_by_url_db(channel_url.clone())? else {
+        log::debug!(
+            "Skipping followed-channel creator bookkeeping for unfollowed channel: {channel_url}"
+        );
+        return Ok(());
+    };
     database::complete_channel_creator_processing_db(
         channel_id.clone(),
         video_id.clone(),
-        output_paths.clone(),
+        output_paths,
     )?;
-    if let Some(filepath) = output_paths.first() {
-        if let Err(error) = crate::services::telegram::send_channel_media_ready_notification(
-            &channel_id,
-            &channel.name,
-            &video_id,
-            &video_title,
-            filepath,
-            true,
-        )
-        .await
-        {
-            log::warn!("Failed to send Telegram edit-ready notification: {error}");
-        }
-    }
     Ok(())
+}
+
+#[tauri::command]
+pub async fn bulk_set_channel_auto_download(
+    ids: Vec<String>,
+    auto_download: bool,
+) -> Result<BulkChannelMutationResult, String> {
+    database::bulk_set_channel_auto_download_db(ids, auto_download)
 }
 
 /// Get count of new (unwatched) videos across all channels

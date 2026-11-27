@@ -564,6 +564,16 @@ pub fn parse_ytdlp_error(stderr: &str) -> Option<BackendError> {
         return Some(BackendError::from_message("This video is unavailable."));
     }
 
+    // Metadata callers also use this parser, so report the cause without
+    // promising a retry that only the download command can perform.
+    if stderr_lower.contains("the page needs to be reloaded")
+        || stderr_lower.contains("tv_downgraded")
+    {
+        return Some(BackendError::from_message(
+            "YouTube requested a player page reload (tv_downgraded).",
+        ));
+    }
+
     // Private video - needs authentication
     if stderr_lower.contains("private video") {
         return Some(BackendError::from_message("This video is private. Please enable authentication in Settings → Video Authentication to access it."));
@@ -1250,6 +1260,17 @@ mod tests {
 
         assert_eq!(error.code(), crate::types::code::YT_UPCOMING_LIVE);
         assert_eq!(error.to_wire().retryable, Some(false));
+    }
+
+    #[test]
+    fn parse_ytdlp_error_explains_youtube_page_reload() {
+        let error = parse_ytdlp_error(
+            "ERROR: [youtube] abc: The page needs to be reloaded (tv_downgraded player response)",
+        )
+        .expect("page reload errors should be parsed");
+
+        assert!(error.message().contains("tv_downgraded"));
+        assert!(error.message().contains("player page reload"));
     }
 
     #[test]

@@ -1,6 +1,6 @@
 [package]
 name = "youwee"
-version = "0.20.10"
+version = "0.20.18"
 description = "Youwee - Modern YouTube Video Downloader"
 authors = ["locnguyen"]
 license = "MIT"

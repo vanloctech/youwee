@@ -428,6 +428,13 @@ async fn check_channel_for_new_videos(
         return Ok(Vec::new());
     }
 
+    let is_initial_baseline = channel.last_checked_at.is_none();
+    if is_initial_baseline {
+        for video in &mut new_videos {
+            video.status = "skipped".to_string();
+        }
+    }
+
     // Save first and use the inserted rows for the notification. A channel
     // scan can contain rows already stored by an earlier scan or task.
     let inserted_videos = database::save_new_channel_videos_db(channel.id.clone(), new_videos)?;
@@ -441,6 +448,13 @@ async fn check_channel_for_new_videos(
             .or(newest_video_id)
     };
     let _ = database::update_channel_last_checked_db(channel.id.clone(), last_video_id);
+
+    // The first scan only records the current channel state. Publishing it as
+    // new would auto-download the existing back catalog immediately after a
+    // follow, instead of waiting for uploads made after the follow time.
+    if is_initial_baseline {
+        return Ok(Vec::new());
+    }
 
     if inserted_videos.is_empty()
         || generation.is_some_and(|value| !is_polling_generation_current(value))
@@ -513,8 +527,12 @@ async fn publish_new_videos(app: &AppHandle, channel: &FollowedChannel, videos: 
     crate::rebuild_tray_menu(app);
     send_notification(app, &channel.name, new_count);
 
-    if let Err(error) =
-        crate::services::telegram::send_new_video_notification(&channel.name, videos).await
+    if let Err(error) = crate::services::telegram::send_new_video_notification(
+        &channel.name,
+        videos,
+        channel.auto_download,
+    )
+    .await
     {
         log::warn!("Failed to send Telegram new-video notification: {}", error);
     }

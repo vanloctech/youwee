@@ -229,6 +229,29 @@ fn build_output_template(
     format!("{item_prefix}{metadata_prefix}%(title)s.%(ext)s")
 }
 
+fn build_channel_output_template(
+    number_playlist_items: bool,
+    playlist_index: Option<u32>,
+    playlist_total: Option<u32>,
+    number_queue_items: bool,
+    queue_index: Option<u32>,
+    queue_total: Option<u32>,
+    filename_metadata_enabled: bool,
+    filename_metadata_fields: &[String],
+) -> String {
+    let template = build_output_template(
+        number_playlist_items,
+        playlist_index,
+        playlist_total,
+        number_queue_items,
+        queue_index,
+        queue_total,
+        filename_metadata_enabled,
+        filename_metadata_fields,
+    );
+    template.replace("%(title)s.%(ext)s", "%(title)s [%(id)s].%(ext)s")
+}
+
 fn build_chapter_output_template(
     number_playlist_items: bool,
     playlist_index: Option<u32>,
@@ -416,7 +439,11 @@ fn display_title_for_download(
     if total_count.unwrap_or(1) > 1 {
         current_title.or_else(filepath_title).or(metadata_title)
     } else {
-        metadata_title.or_else(filepath_title).or(current_title)
+        // The channel/playlist listing title can be localized by YouTube (for
+        // example an English translation of a French title). The filepath is
+        // produced by the direct video extraction and therefore reflects the
+        // video's primary/original metadata.
+        filepath_title().or(metadata_title).or(current_title)
     }
 }
 
@@ -434,6 +461,23 @@ mod display_title_tests {
         );
 
         assert_eq!(title.as_deref(), Some("Machiot - Đổi Nhạc Nền Vol. 2"));
+    }
+
+    #[test]
+    fn single_download_prefers_direct_extraction_filepath_title() {
+        let final_filepath =
+            Some(r"D:\Videos\L'Engrais Oublié des Romains [lB2WF5N7a8U].mp4".to_string());
+        let title = display_title_for_download(
+            Some("The Forgotten Roman Fertilizer".to_string()),
+            None,
+            &final_filepath,
+            None,
+        );
+
+        assert_eq!(
+            title.as_deref(),
+            Some("L'Engrais Oublié des Romains [lB2WF5N7a8U]")
+        );
     }
 
     #[test]
@@ -472,6 +516,14 @@ mod playlist_chapter_tests {
         assert_eq!(
             build_output_template(false, None, None, false, None, None, false, &[]),
             "%(title)s.%(ext)s"
+        );
+    }
+
+    #[test]
+    fn channel_output_template_includes_video_id_to_avoid_title_collisions() {
+        assert_eq!(
+            build_channel_output_template(false, None, None, false, None, None, false, &[]),
+            "%(title)s [%(id)s].%(ext)s"
         );
     }
 
@@ -1213,11 +1265,351 @@ fn without_aria2_downloader_args(args: &[String]) -> Vec<String> {
     native_args
 }
 
+fn has_cookie_args(args: &[String]) -> bool {
+    args.iter()
+        .any(|arg| matches!(arg.as_str(), "--cookies-from-browser" | "--cookies"))
+}
+
+fn without_cookie_args(args: &[String]) -> Vec<String> {
+    let mut cookie_free_args = Vec::with_capacity(args.len());
+    let mut index = 0;
+    while index < args.len() {
+        match args[index].as_str() {
+            "--cookies-from-browser" | "--cookies" => index += 2,
+            "--no-cookies" | "--no-cookies-from-browser" => index += 1,
+            _ => {
+                cookie_free_args.push(args[index].clone());
+                index += 1;
+            }
+        }
+    }
+    let insert_at = cookie_free_args
+        .iter()
+        .position(|arg| arg == "--")
+        .unwrap_or(cookie_free_args.len());
+    cookie_free_args.splice(
+        insert_at..insert_at,
+        [
+            "--no-cookies".to_string(),
+            "--no-cookies-from-browser".to_string(),
+        ],
+    );
+    cookie_free_args
+}
+
+fn is_video_unavailable(error: &str) -> bool {
+    let lower = error.to_ascii_lowercase();
+    lower.contains("video unavailable") || lower.contains("this video is unavailable")
+}
+
+fn is_youtube_page_reload_error(error: &str) -> bool {
+    let lower = error.to_ascii_lowercase();
+    lower.contains("the page needs to be reloaded") || lower.contains("tv_downgraded")
+}
+
+#[derive(Clone, Copy)]
+enum YoutubeSessionRetry {
+    WithoutCookies,
+    AndroidVr,
+}
+
+impl YoutubeSessionRetry {
+    fn for_args(is_youtube_url: bool, args: &[String]) -> Option<Self> {
+        if !is_youtube_url {
+            return None;
+        }
+        if has_cookie_args(args) {
+            return Some(Self::WithoutCookies);
+        }
+        let already_android_vr = args.windows(2).any(|pair| {
+            pair[0] == "--extractor-args"
+                && pair[1].strip_prefix("youtube:").is_some_and(|options| {
+                    options
+                        .split(';')
+                        .any(|option| option == "player-client=android_vr")
+                })
+        });
+        (!already_android_vr).then_some(Self::AndroidVr)
+    }
+
+    fn applies(self, error: &str) -> bool {
+        is_youtube_page_reload_error(error)
+            || (matches!(self, Self::WithoutCookies) && is_video_unavailable(error))
+    }
+
+    fn retry_args(self, args: &[String]) -> Vec<String> {
+        let cookie_free_args = without_cookie_args(args);
+        match self {
+            Self::WithoutCookies => cookie_free_args,
+            Self::AndroidVr => with_youtube_player_client(&cookie_free_args, "android_vr"),
+        }
+    }
+
+    fn log_message(self) -> &'static str {
+        match self {
+            Self::WithoutCookies => {
+                "Retrying the YouTube download without browser or file cookies."
+            }
+            Self::AndroidVr => {
+                "Retrying the YouTube download with the cookie-free android_vr player client."
+            }
+        }
+    }
+}
+
+fn with_youtube_player_client(args: &[String], player_client: &str) -> Vec<String> {
+    let mut result = Vec::with_capacity(args.len() + 2);
+    let mut replaced = false;
+    let mut index = 0;
+
+    while index < args.len() {
+        if args[index] == "--extractor-args"
+            && args
+                .get(index + 1)
+                .is_some_and(|value| value.starts_with("youtube:"))
+        {
+            let value = &args[index + 1];
+            let mut parts = value
+                .strip_prefix("youtube:")
+                .unwrap_or_default()
+                .split(';')
+                .filter(|part| !part.is_empty() && !part.starts_with("player-client="))
+                .map(str::to_string)
+                .collect::<Vec<_>>();
+            parts.push(format!("player-client={player_client}"));
+            result.push("--extractor-args".to_string());
+            result.push(format!("youtube:{}", parts.join(";")));
+            replaced = true;
+            index += 2;
+            continue;
+        }
+        result.push(args[index].clone());
+        index += 1;
+    }
+
+    if !replaced {
+        let insert_at = result
+            .iter()
+            .position(|value| value == "--")
+            .unwrap_or(result.len());
+        result.splice(
+            insert_at..insert_at,
+            [
+                "--extractor-args".to_string(),
+                format!("youtube:player-client={player_client}"),
+            ],
+        );
+    }
+
+    result
+}
+
 fn is_aria2_runtime_failure(error: &str) -> bool {
     let lower = error.to_ascii_lowercase();
     lower.contains("aria2c exited with code")
         || lower.contains("aria2 exited with code")
         || lower.contains("aria2c not found")
+}
+
+#[cfg(test)]
+mod incomplete_recovery_tests {
+    use super::*;
+    #[test]
+    fn recovery_keeps_url_and_cookies_and_switches_to_small_native_chunks() {
+        assert!(is_incomplete_download(
+            "17482 bytes read, 10056278 more expected"
+        ));
+        assert!(!is_incomplete_download(
+            "This video is only available to members"
+        ));
+        assert!(!is_incomplete_download("Download cancelled"));
+        let args: Vec<String> = [
+            "--downloader",
+            "aria2c",
+            "--cookies-from-browser",
+            "firefox:profile",
+            "--",
+            "https://www.youtube.com/watch?v=vN278rR0kvw",
+        ]
+        .iter()
+        .map(|s| s.to_string())
+        .collect();
+        let recovered = recovery_download_args(&args);
+        assert!(!recovered.iter().any(|s| s == "aria2c"));
+        assert!(recovered
+            .windows(2)
+            .any(|p| p == ["--http-chunk-size", "1M"]));
+        assert_eq!(recovered.last(), args.last());
+        assert!(recovered
+            .windows(2)
+            .any(|p| p == ["--cookies-from-browser", "firefox:profile"]));
+    }
+
+    #[test]
+    fn cookie_fallback_removes_only_cookie_options() {
+        let args: Vec<String> = [
+            "--cookies-from-browser",
+            "firefox:profile",
+            "--proxy",
+            "http://127.0.0.1:8080",
+            "--",
+            "https://www.youtube.com/watch?v=WML6JNp5tWM",
+        ]
+        .iter()
+        .map(|s| s.to_string())
+        .collect();
+
+        assert!(has_cookie_args(&args));
+        let cookie_free = without_cookie_args(&args);
+        assert!(!has_cookie_args(&cookie_free));
+        assert!(cookie_free
+            .windows(2)
+            .any(|pair| pair == ["--proxy", "http://127.0.0.1:8080"]));
+        assert!(cookie_free
+            .windows(3)
+            .any(|args| args == ["--no-cookies", "--no-cookies-from-browser", "--"]));
+        assert_eq!(cookie_free.last(), args.last());
+        assert_eq!(without_cookie_args(&cookie_free), cookie_free);
+    }
+
+    #[test]
+    fn unavailable_detection_accepts_structured_backend_errors() {
+        assert!(is_video_unavailable(
+            r#"{"code":"YT_VIDEO_UNAVAILABLE","message":"This video is unavailable."}"#
+        ));
+        assert!(!is_video_unavailable(
+            "This video is only available to members"
+        ));
+    }
+
+    #[test]
+    fn page_reload_detection_accepts_tv_downgrade_errors() {
+        assert!(is_youtube_page_reload_error(
+            "ERROR: [youtube] abc: The page needs to be reloaded (tv_downgraded player response)"
+        ));
+        assert!(!is_youtube_page_reload_error("This video is unavailable."));
+    }
+
+    #[test]
+    fn youtube_session_retry_only_defers_failures_with_a_distinct_next_attempt() {
+        let reload = build_download_error_message(
+            Some(1),
+            &["ERROR: [youtube] abc: The page needs to be reloaded.".to_string()],
+        );
+        let args = ["--cookies", "cookies.txt", "--", "https://youtu.be/abc"].map(str::to_string);
+        let cookie_retry = YoutubeSessionRetry::for_args(true, &args).unwrap();
+        assert!(cookie_retry.applies(&reload.to_wire_string()));
+        assert!(cookie_retry.applies("This video is unavailable."));
+
+        let cookie_free_args = cookie_retry.retry_args(&args);
+        let client_retry = YoutubeSessionRetry::for_args(true, &cookie_free_args).unwrap();
+        assert!(client_retry.applies(reload.message()));
+        assert!(!client_retry.applies("This video is unavailable."));
+        assert!(!client_retry.applies("This video is private."));
+
+        let android_args = client_retry.retry_args(&cookie_free_args);
+        assert!(YoutubeSessionRetry::for_args(true, &android_args).is_none());
+        assert!(YoutubeSessionRetry::for_args(false, &args).is_none());
+        assert!(!crate::utils::is_youtube_url(
+            "https://example.com/?url=https://www.youtube.com/watch?v=abc",
+        ));
+    }
+
+    #[test]
+    fn youtube_player_client_fallback_replaces_existing_client() {
+        let args = vec![
+            "--extractor-args".to_string(),
+            "youtube:player_js_version=actual;player-client=web_safari".to_string(),
+            "--".to_string(),
+            "https://www.youtube.com/watch?v=abc123".to_string(),
+        ];
+        let fallback = with_youtube_player_client(&args, "android_vr");
+        assert_eq!(
+            fallback,
+            vec![
+                "--extractor-args",
+                "youtube:player_js_version=actual;player-client=android_vr",
+                "--",
+                "https://www.youtube.com/watch?v=abc123",
+            ]
+        );
+    }
+
+    #[test]
+    fn youtube_player_client_fallback_is_inserted_before_url() {
+        let args = vec![
+            "--cookies-from-browser".to_string(),
+            "firefox:profile".to_string(),
+            "--".to_string(),
+            "https://www.youtube.com/watch?v=abc123".to_string(),
+        ];
+        let fallback = with_youtube_player_client(&args, "android_vr");
+        assert!(fallback
+            .windows(2)
+            .any(|pair| { pair == ["--extractor-args", "youtube:player-client=android_vr"] }));
+        assert_eq!(
+            fallback.last().map(String::as_str),
+            Some("https://www.youtube.com/watch?v=abc123")
+        );
+    }
+
+    #[test]
+    fn format_fallback_replaces_only_the_format_selector() {
+        let args: Vec<String> = [
+            "--proxy",
+            "http://127.0.0.1:8080",
+            "-f",
+            "bestvideo+bestaudio/best",
+            "--",
+            "https://www.youtube.com/watch?v=WML6JNp5tWM",
+        ]
+        .iter()
+        .map(|value| value.to_string())
+        .collect();
+
+        let fallback = replace_format_selector(&args, "1080-selector".to_string());
+        assert!(fallback
+            .windows(2)
+            .any(|pair| pair == ["-f", "1080-selector"]));
+        assert!(fallback
+            .windows(2)
+            .any(|pair| pair == ["--proxy", "http://127.0.0.1:8080"]));
+        assert_eq!(fallback.last(), args.last());
+    }
+}
+
+fn is_incomplete_download(error: &str) -> bool {
+    let lower = error.to_ascii_lowercase();
+    (lower.contains("bytes read") && lower.contains("more expected"))
+        || lower.contains("incompleteread")
+}
+
+fn recovery_download_args(args: &[String]) -> Vec<String> {
+    let mut result = without_aria2_downloader_args(args);
+    let position = result
+        .iter()
+        .position(|arg| arg == "--")
+        .unwrap_or(result.len());
+    result.splice(
+        position..position,
+        [
+            "--http-chunk-size".to_string(),
+            "1M".to_string(),
+            "--retry-sleep".to_string(),
+            "http:exp=1:8".to_string(),
+        ],
+    );
+    result
+}
+
+fn replace_format_selector(args: &[String], format_selector: String) -> Vec<String> {
+    let mut result = args.to_vec();
+    if let Some(index) = result.iter().position(|arg| arg == "-f") {
+        if let Some(value) = result.get_mut(index + 1) {
+            *value = format_selector;
+        }
+    }
+    result
 }
 
 fn build_download_error_message(exit_code: Option<i32>, recent_lines: &[String]) -> BackendError {
@@ -1410,16 +1802,29 @@ pub async fn download_video(
     let has_filename_metadata =
         build_filename_metadata_prefix(filename_metadata_enabled, &filename_metadata_fields)
             .is_some();
-    let output_template = build_output_template(
-        number_playlist_items,
-        playlist_index,
-        playlist_total,
-        number_queue_items,
-        queue_index,
-        queue_total,
-        filename_metadata_enabled,
-        &filename_metadata_fields,
-    );
+    let output_template = if download_kind.starts_with("channel-") {
+        build_channel_output_template(
+            number_playlist_items,
+            playlist_index,
+            playlist_total,
+            number_queue_items,
+            queue_index,
+            queue_total,
+            filename_metadata_enabled,
+            &filename_metadata_fields,
+        )
+    } else {
+        build_output_template(
+            number_playlist_items,
+            playlist_index,
+            playlist_total,
+            number_queue_items,
+            queue_index,
+            queue_total,
+            filename_metadata_enabled,
+            &filename_metadata_fields,
+        )
+    };
 
     let mut aria2_enabled = use_aria2.unwrap_or(false);
     #[cfg(windows)]
@@ -1560,7 +1965,7 @@ pub async fn download_video(
 
     // Merge YouTube extractor settings into a single --extractor-args value.
     // See: https://github.com/yt-dlp/yt-dlp/issues/14680
-    let is_youtube_url = url.contains("youtube.com") || url.contains("youtu.be");
+    let is_youtube_url = crate::utils::is_youtube_url(&url);
     if is_youtube_url {
         if let Some(extractor_args) = build_youtube_extractor_args(
             use_actual_player_js.unwrap_or(false),
@@ -1774,96 +2179,254 @@ pub async fn download_video(
             &download_kind,
         );
 
-        let first_result = handle_tokio_download(
-            app.clone(),
-            id.clone(),
-            process,
-            quality.clone(),
-            format.clone(),
-            url.clone(),
-            should_log_stderr,
-            title.clone(),
-            thumbnail.clone(),
-            source.clone(),
-            download_sections.clone(),
-            history_id.clone(),
-            filepath_tmp.clone(),
-            sanitized_path.clone(),
-            completed_workflow_steps.clone(),
-            failed_workflow_steps.clone(),
-            emit_failed_workflow && !aria2_enabled,
-            aria2_enabled,
-            download_kind.clone(),
-            auto_organize_collections.unwrap_or(false),
-            playlist_collection_name.clone(),
-            split_embedded_chapters,
-        )
-        .await;
-        let Err(first_error) = first_result else {
-            return Ok(());
+        let mut recovery_base_args = args.clone();
+        let mut attempt_process = process;
+        let first_error = loop {
+            let session_retry = YoutubeSessionRetry::for_args(is_youtube_url, &recovery_base_args);
+            let result = handle_tokio_download(
+                app.clone(),
+                id.clone(),
+                attempt_process,
+                quality.clone(),
+                format.clone(),
+                url.clone(),
+                should_log_stderr,
+                title.clone(),
+                thumbnail.clone(),
+                source.clone(),
+                download_sections.clone(),
+                history_id.clone(),
+                filepath_tmp.clone(),
+                sanitized_path.clone(),
+                completed_workflow_steps.clone(),
+                failed_workflow_steps.clone(),
+                emit_failed_workflow,
+                true,
+                session_retry,
+                download_kind.clone(),
+                auto_organize_collections.unwrap_or(false),
+                playlist_collection_name.clone(),
+                split_embedded_chapters,
+            )
+            .await;
+            let Err(error) = result else {
+                return Ok(());
+            };
+            let Some(retry) = session_retry.filter(|retry| retry.applies(&error)) else {
+                break error;
+            };
+            if CANCEL_FLAG.load(Ordering::SeqCst) {
+                return Err(download_cancelled_error().to_wire_string());
+            }
+
+            recovery_base_args = retry.retry_args(&recovery_base_args);
+            add_log_internal("info", retry.log_message(), Some(&error), Some(&url)).ok();
+            let retry_command = format!(
+                "[{}] yt-dlp {}",
+                binary_path.display(),
+                redact_ytdlp_advanced_args(&recovery_base_args).join(" ")
+            );
+            add_log_internal("command", &retry_command, None, Some(&url)).ok();
+            std::fs::remove_file(&filepath_tmp).ok();
+            let mut retry_cmd = Command::new(&binary_path);
+            retry_cmd
+                .args(&recovery_base_args)
+                .env("HOME", &home_dir)
+                .env("PATH", &extended_path)
+                .stdout(Stdio::piped())
+                .stderr(Stdio::piped());
+            retry_cmd.hide_window();
+            attempt_process = match retry_cmd.spawn() {
+                Ok(process) => process,
+                Err(error) => {
+                    let error =
+                        BackendError::from_message(format!("Failed to restart yt-dlp: {error}"));
+                    add_log_internal("error", error.message(), None, Some(&url)).ok();
+                    if emit_failed_workflow {
+                        enqueue_failed_workflow(
+                            &app,
+                            &failed_workflow_steps,
+                            &id,
+                            trigger_source.clone(),
+                            &sanitized_path,
+                            Some(format.clone()),
+                            Some(quality.clone()),
+                            &url,
+                            title.clone(),
+                            thumbnail.clone(),
+                            history_id.clone(),
+                            trigger_time_range.clone(),
+                            &download_kind,
+                        );
+                    }
+                    return Err(error.to_wire_string());
+                }
+            };
         };
-        if !aria2_enabled || !is_aria2_runtime_failure(&first_error) {
+        if !is_incomplete_download(&first_error)
+            && !(aria2_enabled && is_aria2_runtime_failure(&first_error))
+        {
             return Err(first_error);
         }
+        let mut recovery_error = first_error;
+        for attempt in 1..=2 {
+            for _ in 0..(attempt * 2) {
+                if CANCEL_FLAG.load(Ordering::SeqCst) {
+                    return Err(download_cancelled_error().to_wire_string());
+                }
+                tokio::time::sleep(std::time::Duration::from_secs(1)).await;
+            }
+            if CANCEL_FLAG.load(Ordering::SeqCst) {
+                return Err(download_cancelled_error().to_wire_string());
+            }
+            add_log_internal(
+                "info",
+                "Retrying with fresh stream URLs, native downloader and 1 MB HTTP chunks.",
+                Some(&recovery_error),
+                Some(&url),
+            )
+            .ok();
+            let retry_args = recovery_download_args(&recovery_base_args);
+            let retry_command = format!(
+                "[{}] yt-dlp {}",
+                binary_path.display(),
+                redact_ytdlp_advanced_args(&retry_args).join(" ")
+            );
+            add_log_internal("command", &retry_command, None, Some(&url)).ok();
 
-        add_log_internal(
-            "info",
-            "aria2c failed; retrying once with yt-dlp's native downloader.",
-            Some(&first_error),
-            Some(&url),
-        )
-        .ok();
-        let retry_args = without_aria2_downloader_args(&args);
-        let retry_command = format!(
-            "[{}] yt-dlp {}",
-            binary_path.display(),
-            redact_ytdlp_advanced_args(&retry_args).join(" ")
-        );
-        add_log_internal("command", &retry_command, None, Some(&url)).ok();
+            // Remove only yt-dlp's filepath report; partial media is intentionally
+            // preserved so the native downloader can overwrite/resume safely.
+            std::fs::remove_file(&filepath_tmp).ok();
+            let mut retry_cmd = Command::new(&binary_path);
+            retry_cmd
+                .args(&retry_args)
+                .env("HOME", &home_dir)
+                .env("PATH", &extended_path)
+                .stdout(Stdio::piped())
+                .stderr(Stdio::piped());
+            retry_cmd.hide_window();
+            let retry_process = retry_cmd.spawn().map_err(|error| {
+                BackendError::from_message(format!(
+                    "Failed to restart yt-dlp with native downloader: {error}"
+                ))
+                .to_wire_string()
+            })?;
 
-        // Remove only yt-dlp's filepath report; partial media is intentionally
-        // preserved so the native downloader can overwrite/resume safely.
-        std::fs::remove_file(&filepath_tmp).ok();
-        let mut retry_cmd = Command::new(&binary_path);
-        retry_cmd
-            .args(&retry_args)
-            .env("HOME", &home_dir)
-            .env("PATH", &extended_path)
-            .stdout(Stdio::piped())
-            .stderr(Stdio::piped());
-        retry_cmd.hide_window();
-        let retry_process = retry_cmd.spawn().map_err(|error| {
-            BackendError::from_message(format!(
-                "Failed to restart yt-dlp with native downloader: {error}"
-            ))
-            .to_wire_string()
-        })?;
+            let result = handle_tokio_download(
+                app.clone(),
+                id.clone(),
+                retry_process,
+                quality.clone(),
+                format.clone(),
+                url.clone(),
+                should_log_stderr,
+                title.clone(),
+                thumbnail.clone(),
+                source.clone(),
+                download_sections.clone(),
+                history_id.clone(),
+                filepath_tmp.clone(),
+                sanitized_path.clone(),
+                completed_workflow_steps.clone(),
+                failed_workflow_steps.clone(),
+                emit_failed_workflow,
+                attempt < 2 || (quality.eq_ignore_ascii_case("best") && !is_audio_format),
+                None,
+                download_kind.clone(),
+                auto_organize_collections.unwrap_or(false),
+                playlist_collection_name.clone(),
+                split_embedded_chapters,
+            )
+            .await;
+            match result {
+                Ok(()) => return Ok(()),
+                Err(error)
+                    if attempt < 2
+                        && (is_incomplete_download(&error) || is_aria2_runtime_failure(&error)) =>
+                {
+                    recovery_error = error;
+                    continue;
+                }
+                Err(error) => {
+                    recovery_error = error;
+                    break;
+                }
+            }
+        }
 
-        return handle_tokio_download(
-            app,
-            id,
-            retry_process,
-            quality,
-            format,
-            url,
-            should_log_stderr,
-            title,
-            thumbnail,
-            source,
-            download_sections,
-            history_id,
-            filepath_tmp,
-            sanitized_path,
-            completed_workflow_steps,
-            failed_workflow_steps,
-            emit_failed_workflow,
-            false,
-            download_kind,
-            auto_organize_collections.unwrap_or(false),
-            playlist_collection_name,
-            split_embedded_chapters,
-        )
-        .await;
+        if quality.eq_ignore_ascii_case("best")
+            && !is_audio_format
+            && (is_incomplete_download(&recovery_error)
+                || is_aria2_runtime_failure(&recovery_error))
+        {
+            if CANCEL_FLAG.load(Ordering::SeqCst) {
+                return Err(download_cancelled_error().to_wire_string());
+            }
+            let fallback_selector =
+                build_format_string("1080", &format, &video_codec, preferred_fps.as_deref());
+            let fallback_args = replace_format_selector(
+                &recovery_download_args(&recovery_base_args),
+                fallback_selector,
+            );
+            add_log_internal(
+                "info",
+                "Best-quality recovery did not complete. Retrying this video at up to 1080p.",
+                Some(&recovery_error),
+                Some(&url),
+            )
+            .ok();
+            let fallback_command = format!(
+                "[{}] yt-dlp {}",
+                binary_path.display(),
+                redact_ytdlp_advanced_args(&fallback_args).join(" ")
+            );
+            add_log_internal("command", &fallback_command, None, Some(&url)).ok();
+            std::fs::remove_file(&filepath_tmp).ok();
+
+            let mut fallback_cmd = Command::new(&binary_path);
+            fallback_cmd
+                .args(&fallback_args)
+                .env("HOME", &home_dir)
+                .env("PATH", &extended_path)
+                .stdout(Stdio::piped())
+                .stderr(Stdio::piped());
+            fallback_cmd.hide_window();
+            let fallback_process = fallback_cmd.spawn().map_err(|error| {
+                BackendError::from_message(format!(
+                    "Failed to restart yt-dlp with the 1080p fallback: {error}"
+                ))
+                .to_wire_string()
+            })?;
+
+            return handle_tokio_download(
+                app.clone(),
+                id.clone(),
+                fallback_process,
+                "1080".to_string(),
+                format.clone(),
+                url.clone(),
+                should_log_stderr,
+                title.clone(),
+                thumbnail.clone(),
+                source.clone(),
+                download_sections.clone(),
+                history_id.clone(),
+                filepath_tmp.clone(),
+                sanitized_path.clone(),
+                completed_workflow_steps.clone(),
+                failed_workflow_steps.clone(),
+                emit_failed_workflow,
+                false,
+                None,
+                download_kind.clone(),
+                auto_organize_collections.unwrap_or(false),
+                playlist_collection_name.clone(),
+                split_embedded_chapters,
+            )
+            .await;
+        }
+
+        return Err(recovery_error);
     }
 
     let ytdlp_source = get_ytdlp_source(&app).await;
@@ -2522,6 +3085,7 @@ pub async fn download_video(
                 failed_workflow_steps,
                 emit_failed_workflow,
                 false,
+                None,
                 download_kind,
                 auto_organize_collections.unwrap_or(false),
                 playlist_collection_name,
@@ -2550,7 +3114,8 @@ async fn handle_tokio_download(
     completed_workflow_steps: Vec<PluginWorkflowStepSnapshot>,
     failed_workflow_steps: Vec<PluginWorkflowStepSnapshot>,
     emit_failed_workflow: bool,
-    defer_terminal_failure: bool,
+    retry_transport_errors: bool,
+    youtube_session_retry: Option<YoutubeSessionRetry>,
     download_kind: String,
     auto_organize_collections: bool,
     playlist_collection_name: Option<String>,
@@ -3007,6 +3572,10 @@ async fn handle_tokio_download(
 
         let recent_lines = recent_output_snapshot(&recent_output);
         let error = build_download_error_message(status.code(), &recent_lines);
+        let defer_terminal_failure = (retry_transport_errors
+            && (is_incomplete_download(error.message())
+                || is_aria2_runtime_failure(error.message())))
+            || youtube_session_retry.is_some_and(|retry| retry.applies(error.message()));
         if !defer_terminal_failure {
             add_log_internal("error", error.message(), None, Some(&url)).ok();
         }
@@ -3036,7 +3605,7 @@ async fn handle_tokio_download(
             app.emit("download-progress", progress).ok();
         }
 
-        if emit_failed_workflow && !failed_workflow_steps.is_empty() {
+        if !defer_terminal_failure && emit_failed_workflow && !failed_workflow_steps.is_empty() {
             let payload = build_trigger_payload(
                 &id,
                 source.clone().or_else(|| detect_source(&url)),

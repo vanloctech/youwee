@@ -1,5 +1,35 @@
 use std::path::{Path, PathBuf};
 
+fn normalized_windows_path(value: &str) -> PathBuf {
+    let value = value.trim();
+    #[cfg(windows)]
+    {
+        if let Some(unc_path) = value.strip_prefix(r"\\?\UNC\") {
+            return PathBuf::from(format!(r"\\{}", unc_path));
+        }
+        if let Some(path) = value.strip_prefix(r"\\?\") {
+            return PathBuf::from(path);
+        }
+    }
+    PathBuf::from(value)
+}
+
+fn nearest_existing_directory(path: &Path) -> Option<PathBuf> {
+    let mut candidate = if path.is_dir() {
+        path.to_path_buf()
+    } else {
+        path.parent()?.to_path_buf()
+    };
+    loop {
+        if candidate.is_dir() {
+            return Some(candidate);
+        }
+        if !candidate.pop() {
+            return None;
+        }
+    }
+}
+
 use crate::database::{
     add_history_internal, add_history_with_summary, assign_history_collections_in_db,
     assign_history_tags_in_db, clear_history_from_db, create_collection_in_db,
@@ -98,18 +128,18 @@ fn delete_history_media_file(filepath: &str) -> Result<(), String> {
         return Ok(());
     }
 
-    let path = Path::new(trimmed);
+    let path = normalized_windows_path(trimmed);
     if !path.exists() {
         return Ok(());
     }
 
-    let metadata = std::fs::symlink_metadata(path)
+    let metadata = std::fs::symlink_metadata(&path)
         .map_err(|e| format!("Failed to inspect media file before deleting: {}", e))?;
     if metadata.is_dir() {
         return Err("Refusing to delete a directory from Library item deletion".to_string());
     }
 
-    std::fs::remove_file(path).map_err(|e| format!("Failed to delete media file: {}", e))
+    std::fs::remove_file(&path).map_err(|e| format!("Failed to delete media file: {}", e))
 }
 
 #[tauri::command]
@@ -179,7 +209,7 @@ pub fn remove_history_from_collection(
 
 #[tauri::command]
 pub fn check_file_exists(filepath: String) -> bool {
-    std::path::Path::new(&filepath).exists()
+    normalized_windows_path(&filepath).exists()
 }
 
 #[derive(serde::Serialize)]
@@ -236,8 +266,8 @@ pub fn rename_downloaded_file(
     new_name: String,
     history_id: Option<String>,
 ) -> Result<RenameDownloadedFileResult, String> {
-    let old_path = Path::new(&filepath);
-    let (new_path, new_title) = build_renamed_path(old_path, &new_name)?;
+    let old_path = normalized_windows_path(&filepath);
+    let (new_path, new_title) = build_renamed_path(&old_path, &new_name)?;
 
     // No-op rename (same target path)
     if new_path == old_path {
@@ -251,7 +281,7 @@ pub fn rename_downloaded_file(
         return Err("A file with this name already exists".to_string());
     }
 
-    std::fs::rename(old_path, &new_path).map_err(|e| format!("Failed to rename file: {}", e))?;
+    std::fs::rename(&old_path, &new_path).map_err(|e| format!("Failed to rename file: {}", e))?;
 
     let new_filepath = new_path
         .to_str()
@@ -292,10 +322,13 @@ pub fn sync_history_renamed_entry(
 
 #[tauri::command]
 pub async fn open_file_location(filepath: String) -> Result<(), String> {
-    let path = Path::new(&filepath);
+    let path = normalized_windows_path(&filepath);
 
     if !path.exists() {
-        return Err("File not found".to_string());
+        if let Some(folder) = nearest_existing_directory(&path) {
+            return open_folder_location(folder.to_string_lossy().into_owned()).await;
+        }
+        return Err("File and its parent folder were not found".to_string());
     }
 
     let is_dir = path.is_dir();
@@ -305,14 +338,14 @@ pub async fn open_file_location(filepath: String) -> Result<(), String> {
         if is_dir {
             // Open directory directly in Finder
             tokio::process::Command::new("open")
-                .arg(&filepath)
+                .arg(&path)
                 .spawn()
                 .map_err(|e| format!("Failed to open folder: {}", e))?;
         } else {
             // Reveal file in Finder
             tokio::process::Command::new("open")
                 .arg("-R")
-                .arg(&filepath)
+                .arg(&path)
                 .spawn()
                 .map_err(|e| format!("Failed to open location: {}", e))?;
         }
@@ -323,7 +356,7 @@ pub async fn open_file_location(filepath: String) -> Result<(), String> {
         if is_dir {
             // Open directory in Explorer
             tokio::process::Command::new("explorer")
-                .arg(&filepath)
+                .arg(&path)
                 .spawn()
                 .map_err(|e| format!("Failed to open folder: {}", e))?;
         } else {
@@ -331,7 +364,7 @@ pub async fn open_file_location(filepath: String) -> Result<(), String> {
             tokio::process::Command::new("explorer")
                 // Explorer expects /select,<path> as one argument. Passing the
                 // comma and path separately makes it open the wrong location.
-                .arg(format!("/select,{}", filepath))
+                .arg(format!("/select,{}", path.to_string_lossy()))
                 .spawn()
                 .map_err(|e| format!("Failed to open location: {}", e))?;
         }
@@ -360,7 +393,7 @@ pub async fn open_file_location(filepath: String) -> Result<(), String> {
 
 #[tauri::command]
 pub async fn open_folder_location(folderpath: String) -> Result<(), String> {
-    let path = Path::new(&folderpath);
+    let path = normalized_windows_path(&folderpath);
     if !path.exists() {
         return Err("Folder not found".to_string());
     }
@@ -387,6 +420,48 @@ pub async fn open_folder_location(folderpath: String) -> Result<(), String> {
         .map_err(|error| format!("Failed to open folder: {error}"))?;
 
     Ok(())
+}
+
+/// Open the real folder previously used for a followed channel. Channel display
+/// names can change, so deriving a folder from the current name is only a final
+/// fallback; recorded output and history paths are authoritative.
+#[tauri::command]
+pub async fn open_channel_folder_location(
+    channel_id: Option<String>,
+    video_urls: Vec<String>,
+    fallback_folderpath: String,
+) -> Result<(), String> {
+    let mut candidates = Vec::new();
+    let mut history_urls = video_urls;
+
+    if let Some(channel_id) = channel_id {
+        for video in crate::database::get_channel_videos_db(channel_id, None, Some(200))? {
+            candidates.extend(video.edited_output_paths);
+            if let Some(path) = video.output_path {
+                candidates.push(path);
+            }
+            history_urls.push(video.url);
+        }
+    }
+
+    for url in history_urls {
+        if let Ok(Some(path)) = find_history_filepath_by_url_db(url) {
+            candidates.push(path);
+        }
+    }
+
+    for candidate in candidates {
+        let path = normalized_windows_path(&candidate);
+        let folder = nearest_existing_directory(&path);
+        if let Some(folder) = folder {
+            return open_folder_location(folder.to_string_lossy().into_owned()).await;
+        }
+    }
+
+    let fallback = normalized_windows_path(&fallback_folderpath);
+    let folder = nearest_existing_directory(&fallback)
+        .ok_or_else(|| "Channel folder and its download root were not found".to_string())?;
+    open_folder_location(folder.to_string_lossy().into_owned()).await
 }
 
 #[tauri::command]

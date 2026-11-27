@@ -56,6 +56,7 @@ import {
   saveCookieSettings,
   saveProxySettings,
 } from '@/lib/network-config';
+import { findHistoryFilepathByUrl } from '@/lib/open-file-location';
 import {
   enqueuePluginWorkflowTrigger,
   loadPluginWorkflowSnapshots,
@@ -1567,9 +1568,14 @@ export function DownloadProvider({ children }: { children: ReactNode }) {
             downloadKind: 'download',
           });
 
-          const completedFilepath = completedFilepathsRef.current.get(item.id);
+          const eventFilepath = completedFilepathsRef.current.get(item.id);
           completedFilepathsRef.current.delete(item.id);
           const creatorSettings = itemSettings?.creatorProcessing;
+          const completedFilepath =
+            eventFilepath ??
+            (creatorSettings && creatorSettings.mode !== 'none'
+              ? await findHistoryFilepathByUrl(item.url).catch(() => null)
+              : null);
           if (completedFilepath && creatorSettings && creatorSettings.mode !== 'none') {
             const completedTitle =
               itemsRef.current.find((current) => current.id === item.id)?.title || item.title;

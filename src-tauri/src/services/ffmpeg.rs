@@ -8,6 +8,18 @@ use tokio::process::Command;
 const SOURCE_CONFIG_FILE: &str = "ffmpeg-source.txt";
 const RELEASE_VERSION_FILE: &str = "ffmpeg-release-version.txt";
 
+#[cfg(target_os = "windows")]
+const WINDOWS_FFMPEG_RELEASE_URL: &str =
+    "https://www.gyan.dev/ffmpeg/builds/ffmpeg-release-essentials.zip";
+#[cfg(target_os = "windows")]
+const WINDOWS_FFMPEG_RELEASE_CHECKSUM_URL: &str =
+    "https://www.gyan.dev/ffmpeg/builds/ffmpeg-release-essentials.zip.sha256";
+#[cfg(target_os = "windows")]
+const WINDOWS_FFMPEG_RELEASE_VERSION_URL: &str =
+    "https://www.gyan.dev/ffmpeg/builds/ffmpeg-release-essentials.zip.ver";
+#[cfg(target_os = "windows")]
+const WINDOWS_FFMPEG_RELEASE_PAGE: &str = "https://www.gyan.dev/ffmpeg/builds/";
+
 pub fn system_ffmpeg_upgrade_message() -> String {
     #[cfg(target_os = "macos")]
     {
@@ -204,10 +216,48 @@ fn ffmpeg_version_has_update(current_version: &str, latest_version: &str) -> boo
     let current_date = extract_date_from_version(&current_normalized);
     let latest_date = extract_date_from_version(&latest_normalized);
 
-    match (current_date, latest_date) {
-        (Some(curr), Some(lat)) => lat > curr,
+    if let (Some(curr), Some(lat)) = (current_date, latest_date) {
+        return lat > curr;
+    }
+
+    fn release_version(version: &str) -> Option<(u64, u64, u64)> {
+        let captures = regex::Regex::new(r"(?:^|[^0-9])(\d+)\.(\d+)(?:\.(\d+))?")
+            .ok()?
+            .captures(version)?;
+        Some((
+            captures.get(1)?.as_str().parse().ok()?,
+            captures.get(2)?.as_str().parse().ok()?,
+            captures
+                .get(3)
+                .map(|value| value.as_str().parse().ok())
+                .unwrap_or(Some(0))?,
+        ))
+    }
+
+    match (
+        release_version(current_version),
+        release_version(latest_version),
+    ) {
+        (Some(current), Some(latest)) => latest > current,
         _ => false,
     }
+}
+
+#[cfg(target_os = "windows")]
+fn windows_ffmpeg_version_has_update(current_version: &str, latest_version: &str) -> bool {
+    let current_normalized = current_version.replace('.', "-");
+    let latest_normalized = latest_version.replace('.', "-");
+
+    // Previous Youwee releases installed BtbN master snapshots whose versions
+    // are dates. Gyan release builds use semantic versions, so mark the old
+    // distribution as updatable once even though the formats are incomparable.
+    if extract_date_from_version(&current_normalized).is_some()
+        && extract_date_from_version(&latest_normalized).is_none()
+    {
+        return true;
+    }
+
+    ffmpeg_version_has_update(current_version, latest_version)
 }
 
 /// FFmpeg download info with checksum support
@@ -254,10 +304,13 @@ pub fn get_ffmpeg_download_info() -> FfmpegDownloadInfo {
     #[cfg(target_os = "windows")]
     {
         FfmpegDownloadInfo {
-            url: "https://github.com/BtbN/FFmpeg-Builds/releases/latest/download/ffmpeg-master-latest-win64-gpl.zip",
+            // Use Gyan's release build instead of a moving master snapshot so
+            // development and customer machines run the same Windows FFmpeg
+            // distribution with a substantially more predictable NVENC ABI.
+            url: WINDOWS_FFMPEG_RELEASE_URL,
             archive_type: "zip",
-            checksum_url: "https://github.com/BtbN/FFmpeg-Builds/releases/latest/download/checksums.sha256",
-            checksum_filename: "ffmpeg-master-latest-win64-gpl.zip",
+            checksum_url: WINDOWS_FFMPEG_RELEASE_CHECKSUM_URL,
+            checksum_filename: "ffmpeg-release-essentials.zip",
         }
     }
     #[cfg(target_os = "linux")]
@@ -315,7 +368,7 @@ fn get_ffmpeg_release_api_url() -> &'static str {
     }
     #[cfg(target_os = "windows")]
     {
-        "https://api.github.com/repos/BtbN/FFmpeg-Builds/releases/latest"
+        WINDOWS_FFMPEG_RELEASE_VERSION_URL
     }
     #[cfg(target_os = "linux")]
     {
@@ -361,17 +414,36 @@ pub async fn get_latest_ffmpeg_release_info() -> Result<FfmpegReleaseInfo, Strin
         ));
     }
 
-    let json: serde_json::Value = response
-        .json()
-        .await
-        .map_err(|e| format!("Failed to parse release info: {}", e))?;
+    #[cfg(target_os = "windows")]
+    {
+        let version = response
+            .text()
+            .await
+            .map_err(|e| format!("Failed to read release version: {}", e))?;
+        let version = normalize_ffmpeg_release_version(version.trim());
+        if version.is_empty() {
+            return Err("Empty FFmpeg release version".to_string());
+        }
+        return Ok(FfmpegReleaseInfo {
+            version,
+            html_url: Some(WINDOWS_FFMPEG_RELEASE_PAGE.to_string()),
+        });
+    }
 
-    let tag_name = json["tag_name"].as_str().ok_or("No tag_name in release")?;
+    #[cfg(not(target_os = "windows"))]
+    {
+        let json: serde_json::Value = response
+            .json()
+            .await
+            .map_err(|e| format!("Failed to parse release info: {}", e))?;
 
-    Ok(FfmpegReleaseInfo {
-        version: normalize_ffmpeg_release_version(tag_name),
-        html_url: json["html_url"].as_str().map(|s| s.to_string()),
-    })
+        let tag_name = json["tag_name"].as_str().ok_or("No tag_name in release")?;
+
+        Ok(FfmpegReleaseInfo {
+            version: normalize_ffmpeg_release_version(tag_name),
+            html_url: json["html_url"].as_str().map(|s| s.to_string()),
+        })
+    }
 }
 
 /// Check if FFmpeg update is available
@@ -407,7 +479,14 @@ pub async fn check_ffmpeg_update_internal(app: &AppHandle) -> Result<FfmpegUpdat
     // Current version format: "git-2026-01-25-1e1dde8" -> extract "2026-01-25"
     // Latest version format: "2026.01.25" or "ffmpeg-2026.01.25" -> extract "2026.01.25"
     let has_update = if let Some(ref current) = current_version {
-        ffmpeg_version_has_update(current, &latest_version)
+        #[cfg(target_os = "windows")]
+        {
+            windows_ffmpeg_version_has_update(current, &latest_version)
+        }
+        #[cfg(not(target_os = "windows"))]
+        {
+            ffmpeg_version_has_update(current, &latest_version)
+        }
     } else {
         false
     };
@@ -422,7 +501,38 @@ pub async fn check_ffmpeg_update_internal(app: &AppHandle) -> Result<FfmpegUpdat
 
 #[cfg(test)]
 mod tests {
-    use super::{ffmpeg_version_has_update, normalize_ffmpeg_release_version};
+    use super::{
+        ffmpeg_version_has_update, get_ffmpeg_download_info, normalize_ffmpeg_release_version,
+    };
+
+    #[cfg(target_os = "windows")]
+    use super::windows_ffmpeg_version_has_update;
+
+    #[cfg(target_os = "windows")]
+    #[test]
+    fn windows_uses_gyan_release_build_with_individual_checksum() {
+        let info = get_ffmpeg_download_info();
+        assert_eq!(
+            info.url,
+            "https://www.gyan.dev/ffmpeg/builds/ffmpeg-release-essentials.zip"
+        );
+        assert_eq!(
+            info.checksum_url,
+            "https://www.gyan.dev/ffmpeg/builds/ffmpeg-release-essentials.zip.sha256"
+        );
+        assert_eq!(info.checksum_filename, "ffmpeg-release-essentials.zip");
+    }
+
+    #[cfg(target_os = "windows")]
+    #[test]
+    fn windows_migrates_legacy_master_build_and_compares_gyan_versions() {
+        assert!(windows_ffmpeg_version_has_update("2026.06.11", "9.0.2"));
+        assert!(windows_ffmpeg_version_has_update(
+            "8.0.1-full_build-www.gyan.dev",
+            "9.0.2"
+        ));
+        assert!(!windows_ffmpeg_version_has_update("9.0.2", "9.0.2"));
+    }
 
     #[test]
     fn normalizes_ffmpeg_macos_release_tags() {

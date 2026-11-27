@@ -48,6 +48,16 @@ export interface PendingChannelBatch {
   channelName: string | null;
   contentType: YoutubeChannelContentType;
   videos: PlaylistVideoEntry[];
+  downloadOptions: PendingChannelBatchDownloadOptions | null;
+}
+
+export interface PendingChannelBatchDownloadOptions {
+  outputPath: string;
+  quality: string;
+  format: string;
+  videoCodec: string;
+  preferredFps: string;
+  creatorSettings: CreatorProcessingSettings;
 }
 
 export async function listPendingChannelBatch(): Promise<PendingChannelBatch | null> {
@@ -60,6 +70,7 @@ export async function saveChannelBatchItems(batch: PendingChannelBatch): Promise
     channelName: batch.channelName,
     contentType: batch.contentType,
     videos: batch.videos,
+    downloadOptions: batch.downloadOptions,
   });
 }
 
@@ -148,6 +159,11 @@ export async function bulkUpdateChannelSettingsCommand(input: {
   downloadThreads: number;
   youtubeContentType?: YoutubeChannelContentType;
   creatorProcessing?: CreatorProcessingSettings;
+  filterMinDuration?: number | null;
+  filterMaxDuration?: number | null;
+  filterIncludeKeywords?: string | null;
+  filterExcludeKeywords?: string | null;
+  filterMaxVideos?: number | null;
 }): Promise<BulkChannelMutationResult> {
   return invoke<BulkChannelMutationResult>('bulk_update_channel_settings', input);
 }
@@ -157,6 +173,13 @@ export async function bulkUpdateChannelCreatorProcessingCommand(input: {
   creatorProcessing: CreatorProcessingSettings;
 }): Promise<BulkChannelMutationResult> {
   return invoke<BulkChannelMutationResult>('bulk_update_channel_creator_processing', input);
+}
+
+export async function bulkSetChannelAutoDownloadCommand(input: {
+  ids: string[];
+  autoDownload: boolean;
+}): Promise<BulkChannelMutationResult> {
+  return invoke<BulkChannelMutationResult>('bulk_set_channel_auto_download', input);
 }
 
 export async function rebuildTrayMenu(): Promise<void> {

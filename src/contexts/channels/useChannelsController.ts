@@ -1,19 +1,32 @@
 import { invoke } from '@tauri-apps/api/core';
 import { listen } from '@tauri-apps/api/event';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { localizeProgressError, localizeUnknownError } from '@/lib/backend-error';
+import {
+  extractBackendError,
+  localizeProgressError,
+  localizeUnknownError,
+} from '@/lib/backend-error';
+import {
+  getBulkChannelScanLimit,
+  isWithinBulkDurationLimit,
+  MAX_BULK_CHANNEL_VIDEO_COUNT,
+  normalizeBulkChannelVideoCount,
+  selectBulkDurationCandidates,
+} from '@/lib/bulk-channel-filter';
+import { prepareFailedBulkChannelRetry } from '@/lib/bulk-channel-retry';
 import { isTikTokChannelContentUrl, matchesChannelContentType } from '@/lib/channel-content';
 import { createClientId } from '@/lib/client-id';
 import {
   type CreatorProcessingSettings,
+  type CreatorQueueItem,
   enqueueCreatorVideo,
   listCreatorJobs,
   loadCreatorProcessingSettings,
-  pauseCreatorProcessingQueue,
   resumeCreatorProcessingQueue,
   stopCreatorProcessingQueue,
   withCreatorOutputFolder,
 } from '@/lib/creator-processing';
+import { watchCreatorQueue } from '@/lib/creator-queue-events';
 import {
   buildDownloadDuplicateIdentity,
   getDownloadDuplicateIdentityKey,
@@ -21,6 +34,7 @@ import {
 import { sanitizeFilenameMetadataFields } from '@/lib/download-settings';
 import { announceGlobalOutputPath, onGlobalOutputPathChanged } from '@/lib/global-output-path';
 import { buildCookieProxyInvokeOptions, loadNetworkSettings } from '@/lib/network-config';
+import { findHistoryFilepathByUrl } from '@/lib/open-file-location';
 import {
   enqueuePluginWorkflowTrigger,
   loadPluginWorkflowSnapshots,
@@ -47,6 +61,7 @@ import {
 } from './channel-downloads';
 import {
   bulkFollowChannelsCommand,
+  bulkSetChannelAutoDownloadCommand,
   bulkUnfollowChannelsCommand,
   bulkUpdateChannelCreatorProcessingCommand,
   bulkUpdateChannelSettingsCommand,
@@ -67,6 +82,7 @@ import {
   onChannelNewVideos,
   onDownloadProgress,
   onTrayOpenChannel,
+  type PendingChannelBatchDownloadOptions,
   pickChannelsOutputFolder,
   rebuildTrayMenu,
   saveChannelBatchItems,
@@ -98,7 +114,47 @@ const CHANNEL_SCAN_ORDER_STORAGE_KEY = 'youwee-channel-scan-order';
 const MIN_CHANNEL_FETCH_LIMIT = 1;
 const MAX_CHANNEL_FETCH_LIMIT = 500;
 const BULK_CHANNEL_STATE_STORAGE_KEY = 'youwee-bulk-channel-state';
+const BULK_CHANNEL_HISTORY_RETENTION_MS = 24 * 60 * 60 * 1_000;
+const MEMBERS_ONLY_VIDEO_SKIP_STORAGE_KEY = 'youwee-members-only-video-skip-keys';
 const DEFAULT_YOUTUBE_CONTENT_TYPE: YoutubeChannelContentType = 'videos';
+
+function loadMembersOnlyVideoSkipKeys(): Set<string> {
+  try {
+    const stored = localStorage.getItem(MEMBERS_ONLY_VIDEO_SKIP_STORAGE_KEY);
+    if (!stored) return new Set();
+    const parsed: unknown = JSON.parse(stored);
+    if (!Array.isArray(parsed)) return new Set();
+    return new Set(parsed.filter((value): value is string => typeof value === 'string'));
+  } catch {
+    return new Set();
+  }
+}
+
+function getVideoDuplicateKey(video: PlaylistVideoEntry): string {
+  return getDownloadDuplicateIdentityKey(
+    buildDownloadDuplicateIdentity(
+      video.url,
+      detectPlatform(video.url) === 'youtube' ? video.id : null,
+    ),
+  );
+}
+
+function isMembersOnlyVideoSkipped(video: PlaylistVideoEntry, skipKeys: Set<string>): boolean {
+  const key = getVideoDuplicateKey(video);
+  return Boolean(key && skipKeys.has(key));
+}
+
+function rememberMembersOnlyVideo(video: PlaylistVideoEntry): void {
+  const key = getVideoDuplicateKey(video);
+  if (!key) return;
+  try {
+    const keys = loadMembersOnlyVideoSkipKeys();
+    keys.add(key);
+    localStorage.setItem(MEMBERS_ONLY_VIDEO_SKIP_STORAGE_KEY, JSON.stringify([...keys]));
+  } catch {
+    // A storage failure must not turn a handled members-only download error into a new error.
+  }
+}
 
 export type Platform = (typeof SUPPORTED_PLATFORMS)[number]['platform'] | 'other';
 
@@ -273,20 +329,27 @@ export type BulkChannelJobStatus =
   | 'pending'
   | 'fetching'
   | 'downloading'
+  | 'downloaded'
+  | 'editing'
   | 'paused'
   | 'completed'
+  | 'edit_failed'
   | 'skipped'
   | 'failed'
   | 'stopped';
 
 export interface BulkChannelJob {
   url: string;
+  channelName?: string;
   status: BulkChannelJobStatus;
   error?: string;
+  retryCount?: number;
+  videoIds?: string[];
 }
 
 export interface BulkChannelOptions {
   urls: string[];
+  outputPath: string;
   videoCount: number;
   scanOrder: ChannelScanOrder;
   youtubeContentType: YoutubeChannelContentType;
@@ -294,7 +357,19 @@ export interface BulkChannelOptions {
   format: string;
   videoCodec: string;
   preferredFps: string;
+  maxDurationSeconds: number | null;
   creatorSettings: CreatorProcessingSettings;
+}
+
+export interface QueuedBulkChannelBatch {
+  id: string;
+  createdAt: number;
+  jobs: BulkChannelJob[];
+  options: BulkChannelOptions;
+}
+
+export interface BulkChannelBatchHistory extends QueuedBulkChannelBatch {
+  finishedAt: number;
 }
 
 export interface BulkChannelState {
@@ -304,9 +379,100 @@ export interface BulkChannelState {
   phase: BulkChannelPhase;
   error: string | null;
   options: BulkChannelOptions | null;
+  autoRetryPerformed: boolean;
+  queuedBatches: QueuedBulkChannelBatch[];
+  activeBatchId: string | null;
+  activeBatchCreatedAt: number | null;
+  history: BulkChannelBatchHistory[];
 }
 
-function loadPersistedBulkChannelState(): BulkChannelState {
+export function pruneBulkBatchHistory(
+  history: BulkChannelBatchHistory[],
+  now = Date.now(),
+): BulkChannelBatchHistory[] {
+  const cutoff = now - BULK_CHANNEL_HISTORY_RETENTION_MS;
+  const retained = history.filter((batch) => batch.finishedAt >= cutoff);
+  return retained.length === history.length ? history : retained;
+}
+
+function appendBulkBatchHistory(
+  history: BulkChannelBatchHistory[],
+  entry: BulkChannelBatchHistory | null,
+): BulkChannelBatchHistory[] {
+  const retained = pruneBulkBatchHistory(history);
+  if (!entry) return retained;
+  const existingIndex = retained.findIndex((item) => item.id === entry.id);
+  if (existingIndex < 0) return [...retained, entry];
+  return retained.map((item, index) => (index === existingIndex ? entry : item));
+}
+
+function currentBulkBatchHistory(state: BulkChannelState): BulkChannelBatchHistory | null {
+  if (!state.activeBatchId || !state.options || state.jobs.length === 0) return null;
+  return {
+    id: state.activeBatchId,
+    createdAt: state.activeBatchCreatedAt ?? Date.now(),
+    finishedAt: Date.now(),
+    jobs: state.jobs,
+    options: state.options,
+  };
+}
+
+export function reconcileBulkJobsWithCreatorQueue(
+  jobs: BulkChannelJob[],
+  creatorJobs: CreatorQueueItem[],
+): BulkChannelJob[] {
+  let changed = false;
+  const next = jobs.map((job) => {
+    if (!job.videoIds?.length || ['failed', 'skipped', 'stopped'].includes(job.status)) {
+      return job;
+    }
+    const matching = creatorJobs.filter(
+      (creatorJob) =>
+        creatorJob.channelUrl === job.url &&
+        Boolean(creatorJob.videoId && job.videoIds?.includes(creatorJob.videoId)),
+    );
+    if (matching.length === 0) return job;
+
+    const failed = matching.find((creatorJob) => creatorJob.status === 'failed');
+    let status: BulkChannelJobStatus = job.status;
+    let error = job.error;
+    if (failed) {
+      status = 'edit_failed';
+      error = failed.errorMessage || 'Creator processing failed';
+    } else if (
+      job.videoIds.every((videoId) =>
+        matching.some(
+          (creatorJob) => creatorJob.videoId === videoId && creatorJob.status === 'completed',
+        ),
+      )
+    ) {
+      status = 'completed';
+      error = undefined;
+    } else if (matching.some((creatorJob) => creatorJob.status === 'running')) {
+      status = 'editing';
+      error = undefined;
+    } else if (matching.some((creatorJob) => creatorJob.status === 'pending')) {
+      status = 'downloaded';
+      error = undefined;
+    }
+    if (status === job.status && error === job.error) return job;
+    changed = true;
+    return { ...job, status, error };
+  });
+  return changed ? next : jobs;
+}
+
+function hasBulkCreatorJobsToReconcile(state: BulkChannelState): boolean {
+  const batches = [{ jobs: state.jobs }, ...state.history];
+  return batches.some(({ jobs }) =>
+    jobs.some(
+      (job) =>
+        job.videoIds?.length && ['downloaded', 'editing', 'edit_failed'].includes(job.status),
+    ),
+  );
+}
+
+export function loadPersistedBulkChannelState(): BulkChannelState {
   const empty: BulkChannelState = {
     running: false,
     jobs: [],
@@ -314,28 +480,161 @@ function loadPersistedBulkChannelState(): BulkChannelState {
     phase: 'idle',
     error: null,
     options: null,
+    autoRetryPerformed: false,
+    queuedBatches: [],
+    activeBatchId: null,
+    activeBatchCreatedAt: null,
+    history: [],
   };
   try {
     const stored = localStorage.getItem(BULK_CHANNEL_STATE_STORAGE_KEY);
     if (!stored) return empty;
     const parsed = JSON.parse(stored) as Partial<BulkChannelState>;
+    const history = pruneBulkBatchHistory(
+      Array.isArray(parsed.history)
+        ? parsed.history.filter((batch): batch is BulkChannelBatchHistory =>
+            Boolean(
+              batch &&
+                typeof batch.id === 'string' &&
+                typeof batch.createdAt === 'number' &&
+                typeof batch.finishedAt === 'number' &&
+                Array.isArray(batch.jobs) &&
+                batch.options,
+            ),
+          )
+        : [],
+    );
     if (parsed.phase === 'stopped' || parsed.phase === 'idle') {
-      localStorage.removeItem(BULK_CHANNEL_STATE_STORAGE_KEY);
-      return empty;
+      return { ...empty, history };
     }
-    if (!Array.isArray(parsed.jobs) || parsed.jobs.length === 0 || !parsed.options) return empty;
+    let fallbackOutputPath = '';
+    try {
+      const savedSettings = localStorage.getItem('youwee-settings');
+      if (savedSettings) {
+        fallbackOutputPath = JSON.parse(savedSettings).outputPath || '';
+      }
+    } catch {
+      // Old queue snapshots can still resume with the folder stored in their options.
+    }
+    const queuedBatches = Array.isArray(parsed.queuedBatches)
+      ? parsed.queuedBatches
+          .filter((batch): batch is QueuedBulkChannelBatch =>
+            Boolean(
+              batch &&
+                typeof batch.id === 'string' &&
+                Array.isArray(batch.jobs) &&
+                batch.jobs.length > 0 &&
+                batch.options,
+            ),
+          )
+          .map((batch) => ({
+            ...batch,
+            options: {
+              ...batch.options,
+              outputPath: batch.options.outputPath || fallbackOutputPath,
+              videoCount: normalizeBulkChannelVideoCount(batch.options.videoCount),
+              maxDurationSeconds:
+                typeof batch.options.maxDurationSeconds === 'number'
+                  ? batch.options.maxDurationSeconds
+                  : null,
+              creatorSettings: {
+                ...batch.options.creatorSettings,
+                deleteInputAfterSuccess:
+                  batch.options.creatorSettings.mode === 'none'
+                    ? batch.options.creatorSettings.deleteInputAfterSuccess
+                    : true,
+              },
+            },
+          }))
+          .filter((batch) => Boolean(batch.options.outputPath))
+      : [];
+    if (!Array.isArray(parsed.jobs) || parsed.jobs.length === 0 || !parsed.options) {
+      const nextBatch = queuedBatches[0];
+      if (!nextBatch) return { ...empty, history };
+      return {
+        running: false,
+        jobs: nextBatch.jobs,
+        currentIndex: 0,
+        phase: 'paused',
+        error: null,
+        options: nextBatch.options,
+        autoRetryPerformed: false,
+        queuedBatches: queuedBatches.slice(1),
+        activeBatchId: nextBatch.id,
+        activeBatchCreatedAt: nextBatch.createdAt,
+        history,
+      };
+    }
     const currentIndex = Math.min(
       Math.max(0, Number(parsed.currentIndex) || 0),
       parsed.jobs.length,
     );
     const unfinished = currentIndex < parsed.jobs.length;
+    if (!unfinished && queuedBatches[0]) {
+      const nextBatch = queuedBatches[0];
+      return {
+        running: false,
+        jobs: nextBatch.jobs,
+        currentIndex: 0,
+        phase: 'paused',
+        error: null,
+        options: nextBatch.options,
+        autoRetryPerformed: false,
+        queuedBatches: queuedBatches.slice(1),
+        activeBatchId: nextBatch.id,
+        activeBatchCreatedAt: nextBatch.createdAt,
+        history: appendBulkBatchHistory(
+          history,
+          parsed.options && parsed.jobs.length > 0
+            ? {
+                id: parsed.activeBatchId || `restored-${Date.now()}`,
+                createdAt: parsed.activeBatchCreatedAt ?? Date.now(),
+                finishedAt: Date.now(),
+                jobs: parsed.jobs,
+                options: parsed.options,
+              }
+            : null,
+        ),
+      };
+    }
+    const activeBatchId = parsed.activeBatchId || `restored-${Date.now()}`;
+    const activeBatchCreatedAt = parsed.activeBatchCreatedAt ?? Date.now();
+    const normalizedOptions: BulkChannelOptions = {
+      ...parsed.options,
+      outputPath: parsed.options.outputPath || fallbackOutputPath,
+      videoCount: normalizeBulkChannelVideoCount(parsed.options.videoCount),
+      maxDurationSeconds:
+        typeof parsed.options.maxDurationSeconds === 'number'
+          ? parsed.options.maxDurationSeconds
+          : null,
+      creatorSettings: {
+        ...parsed.options.creatorSettings,
+        deleteInputAfterSuccess:
+          parsed.options.creatorSettings.mode === 'none'
+            ? parsed.options.creatorSettings.deleteInputAfterSuccess
+            : true,
+      },
+    };
     return {
       running: false,
       jobs: parsed.jobs,
       currentIndex,
       phase: unfinished ? 'paused' : 'complete',
       error: typeof parsed.error === 'string' ? parsed.error : null,
-      options: parsed.options,
+      options: normalizedOptions,
+      autoRetryPerformed: parsed.autoRetryPerformed === true,
+      queuedBatches,
+      activeBatchId,
+      activeBatchCreatedAt,
+      history: unfinished
+        ? history
+        : appendBulkBatchHistory(history, {
+            id: activeBatchId,
+            createdAt: activeBatchCreatedAt,
+            finishedAt: Date.now(),
+            jobs: parsed.jobs,
+            options: normalizedOptions,
+          }),
     };
   } catch {
     return empty;
@@ -393,11 +692,17 @@ export interface ChannelsContextType {
     downloadThreads: number;
     youtubeContentType?: YoutubeChannelContentType;
     creatorProcessing?: CreatorProcessingSettings;
+    filterMinDuration?: number | null;
+    filterMaxDuration?: number | null;
+    filterIncludeKeywords?: string | null;
+    filterExcludeKeywords?: string | null;
+    filterMaxVideos?: number | null;
   }) => Promise<void>;
   bulkUpdateChannelCreatorProcessing: (input: {
     ids: string[];
     creatorProcessing: CreatorProcessingSettings;
   }) => Promise<void>;
+  bulkSetChannelAutoDownload: (ids: string[], autoDownload: boolean) => Promise<void>;
   refreshFollowedChannelInfo: () => Promise<void>;
   updateChannelSettings: (settings: {
     id: string;
@@ -461,6 +766,7 @@ export interface ChannelsContextType {
     videoCodec?: string,
     preferredFps?: string,
     creatorSettingsOverride?: CreatorProcessingSettings,
+    outputPathOverride?: string,
   ) => Promise<void>;
   stopDownload: () => Promise<void>;
   isDownloading: boolean;
@@ -469,8 +775,11 @@ export interface ChannelsContextType {
   bulkChannelState: BulkChannelState;
   startBulkChannelDownload: (options: BulkChannelOptions) => void;
   stopBulkChannelDownload: () => void;
+  stopAllChannelWork: () => void;
   pauseBulkChannelDownload: () => void;
   resumeBulkChannelDownload: () => void;
+  retryFailedBulkChannelDownloads: () => void;
+  removeQueuedBulkChannelBatch: (batchId: string) => void;
 
   // Per-video progress
   videoStates: Map<string, VideoDownloadState>;
@@ -573,19 +882,56 @@ export function useChannelsController(): ChannelsContextType {
   const [selectedVideoIds, setSelectedVideoIds] = useState<Set<string>>(new Set());
   const [downloadingIds, setDownloadingIds] = useState<Set<string>>(new Set());
   const [restoredBatchReady, setRestoredBatchReady] = useState(false);
+  const restoredBatchOptionsRef = useRef<PendingChannelBatchDownloadOptions | null>(null);
   const [channelProgressByUrl, setChannelProgressByUrl] = useState<
     Record<string, ChannelBatchProgress>
   >({});
   const channelProgressRef = useRef<Record<string, ChannelBatchProgress>>({});
   const downloadStopGenerationRef = useRef<Record<string, number>>({});
   const bulkRunGenerationRef = useRef(0);
+  const bulkFetchInFlightRef = useRef<string | null>(null);
+  const bulkDownloadInFlightRef = useRef<string | null>(null);
   const [bulkChannelState, setBulkChannelState] = useState<BulkChannelState>(
     loadPersistedBulkChannelState,
   );
+  const bulkChannelStateRef = useRef(bulkChannelState);
+  const bulkChannelStateDirtyRef = useRef(true);
 
   useEffect(() => {
-    localStorage.setItem(BULK_CHANNEL_STATE_STORAGE_KEY, JSON.stringify(bulkChannelState));
+    bulkChannelStateRef.current = bulkChannelState;
+    bulkChannelStateDirtyRef.current = true;
   }, [bulkChannelState]);
+
+  useEffect(() => {
+    const persistBulkChannelState = () => {
+      if (!bulkChannelStateDirtyRef.current) return;
+      bulkChannelStateDirtyRef.current = false;
+      try {
+        localStorage.setItem(
+          BULK_CHANNEL_STATE_STORAGE_KEY,
+          JSON.stringify(bulkChannelStateRef.current),
+        );
+      } catch (error) {
+        console.error('Failed to persist bulk channel queue:', error);
+      }
+    };
+    const intervalId = window.setInterval(persistBulkChannelState, 500);
+    return () => {
+      window.clearInterval(intervalId);
+      persistBulkChannelState();
+    };
+  }, []);
+
+  useEffect(() => {
+    const pruneExpiredHistory = () => {
+      setBulkChannelState((current) => {
+        const history = pruneBulkBatchHistory(current.history);
+        return history === current.history ? current : { ...current, history };
+      });
+    };
+    const intervalId = window.setInterval(pruneExpiredHistory, 5 * 60 * 1_000);
+    return () => window.clearInterval(intervalId);
+  }, []);
 
   const currentChannelProgress = channelProgressByUrl[browseUrl];
   const isDownloading = Boolean(
@@ -593,17 +939,35 @@ export function useChannelsController(): ChannelsContextType {
       (currentChannelProgress.active > 0 || currentChannelProgress.queued > 0),
   );
 
-  // Creator processing is a persistent queue. Polling keeps channel progress accurate even
-  // when the queue continues while the user switches to another channel.
+  // Refresh at queue transitions, including completion of jobs shorter than a
+  // polling interval. Idle channels do not query historical jobs or probe files.
   useEffect(() => {
     let disposed = false;
     const refreshCreatorProgress = async () => {
-      if (Object.keys(channelProgressRef.current).length === 0) return;
+      if (
+        Object.keys(channelProgressRef.current).length === 0 &&
+        !hasBulkCreatorJobsToReconcile(bulkChannelStateRef.current)
+      ) {
+        return;
+      }
       try {
         const jobs = await listCreatorJobs();
         if (disposed) return;
+        setBulkChannelState((current) => {
+          const currentJobs = reconcileBulkJobsWithCreatorQueue(current.jobs, jobs);
+          let historyChanged = false;
+          const history = current.history.map((batch) => {
+            const batchJobs = reconcileBulkJobsWithCreatorQueue(batch.jobs, jobs);
+            if (batchJobs === batch.jobs) return batch;
+            historyChanged = true;
+            return { ...batch, jobs: batchJobs };
+          });
+          if (currentJobs === current.jobs && !historyChanged) return current;
+          return { ...current, jobs: currentJobs, history };
+        });
         setChannelProgressByUrl((previous) => {
           const next = { ...previous };
+          let changed = false;
           for (const [url, progress] of Object.entries(next)) {
             const channelJobs = progress.editInputPrefix
               ? jobs.filter((job) =>
@@ -612,27 +976,37 @@ export function useChannelsController(): ChannelsContextType {
                   ),
                 )
               : jobs;
+            const editTotal = Math.max(progress.editTotal, channelJobs.length);
+            const editCompleted = channelJobs.filter((job) => job.status === 'completed').length;
+            const editActive = channelJobs.filter(
+              (job) => job.status === 'pending' || job.status === 'running',
+            ).length;
+            if (
+              progress.editTotal === editTotal &&
+              progress.editCompleted === editCompleted &&
+              progress.editActive === editActive
+            ) {
+              continue;
+            }
+            changed = true;
             next[url] = {
               ...progress,
-              editTotal: Math.max(progress.editTotal, channelJobs.length),
-              editCompleted: channelJobs.filter((job) => job.status === 'completed').length,
-              editActive: channelJobs.filter(
-                (job) => job.status === 'pending' || job.status === 'running',
-              ).length,
+              editTotal,
+              editCompleted,
+              editActive,
             };
             channelProgressRef.current[url] = next[url];
           }
-          return next;
+          return changed ? next : previous;
         });
       } catch {
         // The queue is unavailable during first-run database initialization.
       }
     };
-    void refreshCreatorProgress();
-    const timer = window.setInterval(() => void refreshCreatorProgress(), 2000);
+    const stopWatching = watchCreatorQueue(refreshCreatorProgress);
     return () => {
       disposed = true;
-      window.clearInterval(timer);
+      stopWatching();
     };
   }, []);
 
@@ -710,9 +1084,28 @@ export function useChannelsController(): ChannelsContextType {
     // Persisted jobs already contain their own settings snapshot. Resume them
     // regardless of the current global template used for future downloads.
     void resumeCreatorProcessingQueue();
+    const restoreGeneration = bulkRunGenerationRef.current;
     void listPendingChannelBatch()
       .then((batch) => {
         if (!batch) return;
+        // The asynchronous restore may finish after the user has already
+        // started a fresh bulk batch. Never let that late result replace the
+        // fresh batch selection or start a second download with stale options.
+        const bulkState = bulkChannelStateRef.current;
+        const hasActiveBulkBatch =
+          bulkState.running ||
+          bulkState.phase === 'paused' ||
+          (bulkState.jobs.length > 0 && !['idle', 'complete', 'stopped'].includes(bulkState.phase));
+        if (restoreGeneration !== bulkRunGenerationRef.current || hasActiveBulkBatch) return;
+        // Older builds persisted the video list but not the batch's folder and
+        // processing settings. Resuming those rows would silently fall back to
+        // the global output path, which can move a bulk download outside its
+        // selected folder. Do not auto-run a legacy, unsafe snapshot.
+        if (!batch.downloadOptions?.outputPath) {
+          void discardChannelBatch(batch.channelUrl);
+          return;
+        }
+        restoredBatchOptionsRef.current = batch.downloadOptions;
         setBrowseUrl(batch.channelUrl);
         setBrowseChannelName(batch.channelName);
         setBrowseYoutubeContentType(batch.contentType);
@@ -735,6 +1128,34 @@ export function useChannelsController(): ChannelsContextType {
     >
   >(new Map());
   const creatorSettingsByDownloadRef = useRef<Map<string, CreatorProcessingSettings>>(new Map());
+  const creatorQueuedDownloadIdsRef = useRef<Set<string>>(new Set());
+
+  const enqueueCreatorVideoOnce = useCallback(
+    async (
+      downloadId: string,
+      filepath: string,
+      title: string | undefined,
+      settings: CreatorProcessingSettings | undefined,
+      origin: { channelUrl: string; videoId: string },
+    ) => {
+      if (
+        !settings ||
+        settings.mode === 'none' ||
+        !settings.outputFolder ||
+        creatorQueuedDownloadIdsRef.current.has(downloadId)
+      ) {
+        return;
+      }
+      creatorQueuedDownloadIdsRef.current.add(downloadId);
+      try {
+        await enqueueCreatorVideo(filepath, title, settings, origin);
+      } catch (error) {
+        creatorQueuedDownloadIdsRef.current.delete(downloadId);
+        throw error;
+      }
+    },
+    [],
+  );
 
   // Output folder
   const [outputPath, setOutputPath] = useState(() => {
@@ -916,7 +1337,9 @@ export function useChannelsController(): ChannelsContextType {
 
       // Immediately sync current browseVideos to DB (no need to wait for polling)
       if (browseVideos.length > 0) {
-        await syncVideosToDb(id, browseVideos);
+        // Existing uploads establish the follow-time baseline. Only videos
+        // discovered after this point are eligible for auto-download.
+        await syncVideosToDb(id, browseVideos, { initialStatus: 'skipped' });
         await refreshChannelNewCounts();
       }
 
@@ -953,6 +1376,11 @@ export function useChannelsController(): ChannelsContextType {
       downloadAudioBitrate?: string;
       youtubeContentType?: YoutubeChannelContentType;
       creatorProcessing?: CreatorProcessingSettings;
+      filterMinDuration?: number | null;
+      filterMaxDuration?: number | null;
+      filterIncludeKeywords?: string | null;
+      filterExcludeKeywords?: string | null;
+      filterMaxVideos?: number | null;
     }) => {
       await bulkFollowChannelsCommand(input);
       await refreshChannels();
@@ -990,6 +1418,11 @@ export function useChannelsController(): ChannelsContextType {
       downloadThreads: number;
       youtubeContentType?: YoutubeChannelContentType;
       creatorProcessing?: CreatorProcessingSettings;
+      filterMinDuration?: number | null;
+      filterMaxDuration?: number | null;
+      filterIncludeKeywords?: string | null;
+      filterExcludeKeywords?: string | null;
+      filterMaxVideos?: number | null;
     }) => {
       await bulkUpdateChannelSettingsCommand(input);
       await refreshChannels();
@@ -1000,6 +1433,15 @@ export function useChannelsController(): ChannelsContextType {
   const bulkUpdateChannelCreatorProcessing = useCallback(
     async (input: { ids: string[]; creatorProcessing: CreatorProcessingSettings }) => {
       await bulkUpdateChannelCreatorProcessingCommand(input);
+      await refreshChannels();
+    },
+    [refreshChannels],
+  );
+
+  const bulkSetChannelAutoDownload = useCallback(
+    async (ids: string[], autoDownload: boolean) => {
+      if (ids.length === 0) return;
+      await bulkSetChannelAutoDownloadCommand({ ids, autoDownload });
       await refreshChannels();
     },
     [refreshChannels],
@@ -1062,7 +1504,13 @@ export function useChannelsController(): ChannelsContextType {
       url: string,
       options?: {
         limit?: number | null;
+        targetCount?: number;
+        scanBudget?: number;
+        maxDurationSeconds?: number | null;
+        throwOnError?: boolean;
         append?: boolean;
+        includeDownloaded?: boolean;
+        maxScanDurationMs?: number;
         youtubeContentType?: YoutubeChannelContentType;
         scanOrder?: ChannelScanOrder;
       },
@@ -1070,10 +1518,26 @@ export function useChannelsController(): ChannelsContextType {
       await stopChannelFetchCommand().catch(() => {});
 
       const requestId = ++fetchRequestIdRef.current;
+      const isStaleRequest = () => requestId !== fetchRequestIdRef.current;
+      const stopIfStale = () => {
+        if (!isStaleRequest()) return false;
+        if (options?.throwOnError) {
+          throw new Error('Channel scan was superseded by a newer request');
+        }
+        return true;
+      };
       const effectiveLimit = options?.limit ?? channelFetchLimit;
+      const targetCount = Math.max(1, Math.floor(options?.targetCount ?? effectiveLimit ?? 1));
+      const scanBudget = Math.max(
+        targetCount,
+        Math.floor(options?.scanBudget ?? Number.POSITIVE_INFINITY),
+      );
+      const maxDurationSeconds = options?.maxDurationSeconds ?? null;
       const isLoadMore = options?.append ?? false;
       const youtubeContentType = options?.youtubeContentType ?? browseYoutubeContentTypeRef.current;
       const scanOrder = options?.scanOrder ?? browseScanOrderRef.current;
+      const includeDownloaded = options?.includeDownloaded ?? showDownloadedVideos;
+      const scanStartedAt = Date.now();
       const sourceCount =
         detectPlatform(url) === 'youtube'
           ? getYoutubeContentTypeSourceCount(youtubeContentType)
@@ -1120,8 +1584,16 @@ export function useChannelsController(): ChannelsContextType {
         let lastPageWasFull = false;
         let lastPageLength = 0;
         let visibleVideos: PlaylistVideoEntry[] = [];
+        let inspectedEntries = 0;
+        const membersOnlySkipKeys = loadMembersOnlyVideoSkipKeys();
 
         for (let page = 0; page < 50; page += 1) {
+          if (
+            options?.maxScanDurationMs &&
+            Date.now() - scanStartedAt >= options.maxScanDurationMs
+          ) {
+            throw new Error('Channel scan timed out before finding enough eligible videos');
+          }
           const pageVideos = await getChannelVideos({
             url,
             limit: effectiveLimit,
@@ -1131,9 +1603,14 @@ export function useChannelsController(): ChannelsContextType {
             scanOrder,
             ...networkOptions,
           });
-          if (requestId !== fetchRequestIdRef.current) return;
+          if (stopIfStale()) return;
           lastPageLength = pageVideos.length;
+          inspectedEntries += pageVideos.length;
           for (const video of pageVideos) {
+            if (isMembersOnlyVideoSkipped(video, membersOnlySkipKeys)) {
+              fetchedIds.add(video.id);
+              continue;
+            }
             if (fetchedIds.has(video.id)) continue;
             fetchedIds.add(video.id);
             fetchedVideos.push(video);
@@ -1142,8 +1619,10 @@ export function useChannelsController(): ChannelsContextType {
           lastPageWasFull =
             pageVideos.length >=
             (scanOrder === 'popular' ? effectiveLimit : effectiveLimit * sourceCount);
-          visibleVideos = showDownloadedVideos
-            ? fetchedVideos.slice(0, effectiveLimit)
+          visibleVideos = includeDownloaded
+            ? fetchedVideos.filter((video) =>
+                isWithinBulkDurationLimit(video.duration, maxDurationSeconds),
+              )
             : (
                 await filterDownloadedDuplicateCandidates(
                   fetchedVideos.map((video) => ({
@@ -1157,10 +1636,13 @@ export function useChannelsController(): ChannelsContextType {
                   })),
                   { ask: false, notify: false, force: true, trustHistory: true },
                 )
-              ).map((candidate) => candidate.video);
+              )
+                .map((candidate) => candidate.video)
+                .filter((video) => isWithinBulkDurationLimit(video.duration, maxDurationSeconds));
 
           if (
-            visibleVideos.length >= effectiveLimit ||
+            visibleVideos.length >= targetCount ||
+            inspectedEntries >= scanBudget ||
             !lastPageWasFull ||
             pageVideos.length === 0
           ) {
@@ -1174,11 +1656,11 @@ export function useChannelsController(): ChannelsContextType {
           );
           const previousStart = nextStart;
           nextStart += pageAdvance;
-          if (nextStart <= previousStart || fetchedVideos.length === 0) break;
+          if (nextStart <= previousStart) break;
         }
 
         // Discard stale response if duplicate lookup took long enough for another fetch.
-        if (requestId !== fetchRequestIdRef.current) return;
+        if (stopIfStale()) return;
 
         const videos = fetchedVideos;
         browseFetchedCountRef.current = isLoadMore
@@ -1198,7 +1680,7 @@ export function useChannelsController(): ChannelsContextType {
           return Array.from(next.values());
         });
 
-        if (showDownloadedVideos && videos.length > 0) {
+        if (includeDownloaded && videos.length > 0) {
           try {
             const identities = videos.map((video) =>
               buildDownloadDuplicateIdentity(
@@ -1288,7 +1770,7 @@ export function useChannelsController(): ChannelsContextType {
             }
 
             // Discard if stale (another fetch started while syncing)
-            if (requestId !== fetchRequestIdRef.current) return;
+            if (stopIfStale()) return;
 
             // Apply DB statuses to videoStates
             setVideoStates((prev) => {
@@ -1313,9 +1795,13 @@ export function useChannelsController(): ChannelsContextType {
         }
       } catch (error) {
         // Discard stale error
-        if (requestId !== fetchRequestIdRef.current) return;
+        if (isStaleRequest()) {
+          if (options?.throwOnError) throw error;
+          return;
+        }
         const msg = localizeUnknownError(error);
         setBrowseError(msg);
+        if (options?.throwOnError) throw error;
       } finally {
         // Only update loading state if this is still the current request
         if (requestId === fetchRequestIdRef.current) {
@@ -1383,9 +1869,11 @@ export function useChannelsController(): ChannelsContextType {
   }, []);
 
   // Clear browse state
-  const clearBrowse = useCallback(() => {
+  const clearBrowse = useCallback((stopActiveFetch = true) => {
     fetchRequestIdRef.current += 1;
-    stopChannelFetchCommand().catch(() => {});
+    if (stopActiveFetch) {
+      stopChannelFetchCommand().catch(() => {});
+    }
     browseVideosRef.current = [];
     browseFetchedCountRef.current = 0;
     browseYoutubeContentTypeRef.current = DEFAULT_YOUTUBE_CONTENT_TYPE;
@@ -1451,6 +1939,7 @@ export function useChannelsController(): ChannelsContextType {
       const fetchAllAtOnce = isTikTok && count === null;
       const unseenVideos: PlaylistVideoEntry[] = [];
       const unseenIds = new Set<string>();
+      const membersOnlySkipKeys = loadMembersOnlyVideoSkipKeys();
       let start = 1;
       browseFetchedCountRef.current = 0;
       try {
@@ -1467,8 +1956,10 @@ export function useChannelsController(): ChannelsContextType {
           browseFetchedCountRef.current += batch.length;
 
           const candidates = batch
-            .filter((video) =>
-              matchesChannelContentType(detectPlatform(browseUrl), contentType, video.duration),
+            .filter(
+              (video) =>
+                matchesChannelContentType(detectPlatform(browseUrl), contentType, video.duration) &&
+                !isMembersOnlyVideoSkipped(video, membersOnlySkipKeys),
             )
             .map((video) => ({
               video,
@@ -1538,13 +2029,14 @@ export function useChannelsController(): ChannelsContextType {
       overrideVideoCodec?: string,
       overridePreferredFps?: string,
       creatorSettingsOverride?: CreatorProcessingSettings,
+      outputPathOverride?: string,
     ) => {
       // Capture this synchronously on the click turn, before any duplicate
       // lookup awaits or channel switching can change the global setting.
       const creatorSettingsAtStart = creatorSettingsOverride ?? loadCreatorProcessingSettings();
       const currentProgress = channelProgressRef.current[browseUrl];
       if (currentProgress && (currentProgress.active > 0 || currentProgress.queued > 0)) {
-        return;
+        throw new Error('A channel download is already active');
       }
       const selectedVideosToDownload = browseVideos.filter((v) => selectedVideoIds.has(v.id));
       const duplicateCandidates = selectedVideosToDownload.map((video) => ({
@@ -1571,7 +2063,7 @@ export function useChannelsController(): ChannelsContextType {
       );
       if (videosToDownload.length === 0) return;
 
-      let currentOutputPath = outputPath;
+      let currentOutputPath = outputPathOverride || outputPath;
       let quality = overrideQuality || 'best';
       let format = overrideFormat || 'mp4';
       let videoCodec: string = overrideVideoCodec || 'auto';
@@ -1601,7 +2093,9 @@ export function useChannelsController(): ChannelsContextType {
         const saved = localStorage.getItem('youwee-settings');
         if (saved) {
           const parsed = JSON.parse(saved) as Partial<DownloadSettings>;
-          currentOutputPath = parsed.outputPath || currentOutputPath || '';
+          if (!outputPathOverride) {
+            currentOutputPath = parsed.outputPath || currentOutputPath || '';
+          }
           if (!overrideQuality) quality = parsed.quality || 'best';
           if (!overrideFormat) format = parsed.format || 'mp4';
           if (!overrideVideoCodec) videoCodec = parsed.videoCodec || 'auto';
@@ -1681,6 +2175,14 @@ export function useChannelsController(): ChannelsContextType {
         channelName,
         contentType: browseYoutubeContentTypeRef.current,
         videos: videosToDownload,
+        downloadOptions: {
+          outputPath: outputPathOverride || outputPath,
+          quality,
+          format,
+          videoCodec,
+          preferredFps,
+          creatorSettings: creatorSettingsAtStart,
+        },
       });
 
       const downloadGeneration = (downloadStopGenerationRef.current[browseUrl] || 0) + 1;
@@ -1822,6 +2324,18 @@ export function useChannelsController(): ChannelsContextType {
               console.error('Failed to update video status in DB:', error);
             },
           });
+          if (creatorSettingsSnapshot.mode !== 'none') {
+            const historyFilepath = await findHistoryFilepathByUrl(video.url).catch(() => null);
+            if (historyFilepath) {
+              await enqueueCreatorVideoOnce(
+                downloadId,
+                historyFilepath,
+                video.title,
+                creatorSettingsSnapshot,
+                { channelUrl: browseUrl, videoId: video.id },
+              );
+            }
+          }
           await completeChannelBatchItem(browseUrl, video.id);
           updateChannelProgress(browseUrl, (current) => ({
             ...current,
@@ -1834,6 +2348,10 @@ export function useChannelsController(): ChannelsContextType {
           await setChannelBatchItemStatus(browseUrl, video.id, 'failed').catch((statusError) => {
             console.error('Failed to persist channel item failure:', statusError);
           });
+          const backendError = extractBackendError(error);
+          if (backendError.code === 'YT_MEMBERS_ONLY') {
+            rememberMembersOnlyVideo(video);
+          }
           const msg = localizeUnknownError(error);
           console.error(`Failed to download ${video.title}:`, error);
           setVideoStates((prev) => {
@@ -1901,18 +2419,42 @@ export function useChannelsController(): ChannelsContextType {
       outputPath,
       getNetworkOptions,
       filterDownloadedDuplicateCandidates,
+      enqueueCreatorVideoOnce,
       updateChannelProgress,
     ],
   );
 
   useEffect(() => {
-    if (!restoredBatchReady || isDownloading || selectedVideoIds.size === 0) return;
+    if (
+      !restoredBatchReady ||
+      bulkChannelState.running ||
+      isDownloading ||
+      selectedVideoIds.size === 0
+    ) {
+      return;
+    }
+    const restoredOptions = restoredBatchOptionsRef.current;
+    if (!restoredOptions) return;
     setRestoredBatchReady(false);
-    void downloadSelectedVideos().catch((error) => {
+    restoredBatchOptionsRef.current = null;
+    void downloadSelectedVideos(
+      restoredOptions.quality,
+      restoredOptions.format,
+      restoredOptions.videoCodec,
+      restoredOptions.preferredFps,
+      restoredOptions.creatorSettings,
+      restoredOptions.outputPath,
+    ).catch((error) => {
       console.error('Cannot resume channel batch:', error);
       setBrowseError(localizeUnknownError(error));
     });
-  }, [downloadSelectedVideos, isDownloading, restoredBatchReady, selectedVideoIds.size]);
+  }, [
+    bulkChannelState.running,
+    downloadSelectedVideos,
+    isDownloading,
+    restoredBatchReady,
+    selectedVideoIds.size,
+  ]);
 
   // Stop all downloads
   const stopDownload = useCallback(async () => {
@@ -1942,41 +2484,103 @@ export function useChannelsController(): ChannelsContextType {
     }));
   }, []);
 
-  const startBulkChannelDownload = useCallback((options: BulkChannelOptions) => {
-    const urls = Array.from(new Set(options.urls.map((url) => url.trim()).filter(Boolean)));
-    if (urls.length === 0) return;
-    bulkRunGenerationRef.current += 1;
-    setBulkChannelState({
-      running: true,
-      jobs: urls.map((url) => ({ url, status: 'pending' })),
-      currentIndex: 0,
-      phase: 'prepare',
-      error: null,
-      options: {
+  const startBulkChannelDownload = useCallback(
+    (options: BulkChannelOptions) => {
+      const urls = Array.from(new Set(options.urls.map((url) => url.trim()).filter(Boolean)));
+      if (urls.length === 0 || !options.outputPath.trim()) return;
+      // A persisted manual-channel resume must never race a newly submitted
+      // bulk batch, because the resume may carry a different output folder.
+      restoredBatchOptionsRef.current = null;
+      setRestoredBatchReady(false);
+      const normalizedOptions: BulkChannelOptions = {
         ...options,
         urls,
-        videoCount: Math.max(1, Math.floor(options.videoCount)),
-        creatorSettings: { ...options.creatorSettings },
-      },
-    });
-  }, []);
+        outputPath: options.outputPath.trim(),
+        videoCount: normalizeBulkChannelVideoCount(options.videoCount),
+        maxDurationSeconds:
+          typeof options.maxDurationSeconds === 'number' && options.maxDurationSeconds > 0
+            ? Math.floor(options.maxDurationSeconds)
+            : null,
+        creatorSettings: {
+          ...options.creatorSettings,
+          deleteInputAfterSuccess:
+            options.creatorSettings.mode === 'none'
+              ? options.creatorSettings.deleteInputAfterSuccess
+              : true,
+        },
+      };
+      const jobs: BulkChannelJob[] = urls.map((url) => ({ url, status: 'pending' }));
+      const queuedBatch: QueuedBulkChannelBatch = {
+        id: createClientId(),
+        createdAt: Date.now(),
+        jobs,
+        options: normalizedOptions,
+      };
+      const hasActiveBatch =
+        bulkChannelState.running ||
+        bulkChannelState.phase === 'paused' ||
+        (bulkChannelState.jobs.length > 0 &&
+          !['idle', 'complete', 'stopped'].includes(bulkChannelState.phase));
+      if (!hasActiveBatch) bulkRunGenerationRef.current += 1;
+
+      setBulkChannelState((current) => {
+        const stillHasActiveBatch =
+          current.running ||
+          current.phase === 'paused' ||
+          (current.jobs.length > 0 && !['idle', 'complete', 'stopped'].includes(current.phase));
+        if (stillHasActiveBatch) {
+          return { ...current, queuedBatches: [...current.queuedBatches, queuedBatch] };
+        }
+        return {
+          running: true,
+          jobs,
+          currentIndex: 0,
+          phase: 'prepare',
+          error: null,
+          options: normalizedOptions,
+          autoRetryPerformed: false,
+          queuedBatches: current.queuedBatches,
+          activeBatchId: queuedBatch.id,
+          activeBatchCreatedAt: queuedBatch.createdAt,
+          history: current.history,
+        };
+      });
+    },
+    [bulkChannelState.jobs.length, bulkChannelState.phase, bulkChannelState.running],
+  );
 
   const stopBulkChannelDownload = useCallback(() => {
     bulkRunGenerationRef.current += 1;
-    setBulkChannelState({
-      running: false,
-      phase: 'idle',
-      jobs: [],
-      currentIndex: 0,
-      error: null,
-      options: null,
+    setBulkChannelState((current) => {
+      const stoppedJobs = current.jobs.map((job) =>
+        ['pending', 'fetching', 'downloading', 'paused'].includes(job.status)
+          ? { ...job, status: 'stopped' as const }
+          : job,
+      );
+      const stoppedEntry = currentBulkBatchHistory({ ...current, jobs: stoppedJobs });
+      return {
+        running: false,
+        phase: 'idle',
+        jobs: [],
+        currentIndex: 0,
+        error: null,
+        options: null,
+        autoRetryPerformed: false,
+        queuedBatches: [],
+        activeBatchId: null,
+        activeBatchCreatedAt: null,
+        history: appendBulkBatchHistory(current.history, stoppedEntry),
+      };
     });
-    localStorage.removeItem(BULK_CHANNEL_STATE_STORAGE_KEY);
     void stopChannelFetch();
     void stopDownload();
-    void stopCreatorProcessingQueue();
     void discardChannelBatch();
   }, [stopChannelFetch, stopDownload]);
+
+  const stopAllChannelWork = useCallback(() => {
+    stopBulkChannelDownload();
+    void stopCreatorProcessingQueue();
+  }, [stopBulkChannelDownload]);
 
   const pauseBulkChannelDownload = useCallback(() => {
     bulkRunGenerationRef.current += 1;
@@ -1996,8 +2600,8 @@ export function useChannelsController(): ChannelsContextType {
       ),
     }));
     void stopChannelFetch();
-    void pauseCreatorProcessingQueue();
-  }, [browseUrl, stopChannelFetch]);
+    void stopDownload();
+  }, [browseUrl, stopChannelFetch, stopDownload]);
 
   const resumeBulkChannelDownload = useCallback(() => {
     bulkRunGenerationRef.current += 1;
@@ -2011,21 +2615,76 @@ export function useChannelsController(): ChannelsContextType {
         error: null,
       };
     });
-    void resumeCreatorProcessingQueue();
   }, [browseUrl, browseVideos.length]);
+
+  const retryFailedBulkChannelDownloads = useCallback(() => {
+    bulkRunGenerationRef.current += 1;
+    setBulkChannelState((current) => {
+      if (current.running || !current.options) return current;
+      const retry = prepareFailedBulkChannelRetry(current.jobs);
+      if (retry.failedCount === 0) return current;
+      return {
+        ...current,
+        running: true,
+        jobs: retry.jobs as BulkChannelJob[],
+        currentIndex: retry.retryStartIndex,
+        phase: 'prepare',
+        error: null,
+        autoRetryPerformed: true,
+      };
+    });
+    void resumeCreatorProcessingQueue();
+  }, []);
+
+  const removeQueuedBulkChannelBatch = useCallback((batchId: string) => {
+    setBulkChannelState((current) => ({
+      ...current,
+      queuedBatches: current.queuedBatches.filter((batch) => batch.id !== batchId),
+    }));
+  }, []);
 
   useEffect(() => {
     if (!bulkChannelState.running || bulkChannelState.phase !== 'prepare') return;
     const job = bulkChannelState.jobs[bulkChannelState.currentIndex];
     if (!job) {
-      setBulkChannelState((current) => ({
-        ...current,
-        running: false,
-        phase: 'complete',
-      }));
+      setBulkChannelState((current) => {
+        const retry = prepareFailedBulkChannelRetry(current.jobs);
+        if (!current.autoRetryPerformed && retry.failedCount > 0) {
+          return {
+            ...current,
+            jobs: retry.jobs as BulkChannelJob[],
+            currentIndex: retry.retryStartIndex,
+            phase: 'prepare',
+            error: null,
+            autoRetryPerformed: true,
+          };
+        }
+        const history = appendBulkBatchHistory(current.history, currentBulkBatchHistory(current));
+        return {
+          ...(current.queuedBatches[0]
+            ? {
+                ...current,
+                running: true,
+                jobs: current.queuedBatches[0].jobs,
+                currentIndex: 0,
+                phase: 'prepare' as const,
+                error: null,
+                options: current.queuedBatches[0].options,
+                autoRetryPerformed: false,
+                queuedBatches: current.queuedBatches.slice(1),
+                activeBatchId: current.queuedBatches[0].id,
+                activeBatchCreatedAt: current.queuedBatches[0].createdAt,
+                history,
+              }
+            : { ...current, running: false, phase: 'complete' as const, history }),
+        };
+      });
       return;
     }
-    clearBrowse();
+    // fetchChannelVideosBatch awaits its own cancellation barrier before
+    // starting the next yt-dlp process. A second fire-and-forget cancellation
+    // here can arrive late and kill the new channel scan.
+    clearBrowse(false);
     setBrowseUrl(job.url);
     updateBulkJob(bulkChannelState.currentIndex, { status: 'fetching', error: undefined });
     setBulkChannelState((current) => ({ ...current, phase: 'fetching' }));
@@ -2044,34 +2703,82 @@ export function useChannelsController(): ChannelsContextType {
     const job = bulkChannelState.jobs[bulkChannelState.currentIndex];
     if (!options || !job || browseUrl !== job.url) return;
     const generation = bulkRunGenerationRef.current;
+    const jobIndex = bulkChannelState.currentIndex;
+    const jobUrl = job.url;
+    const runKey = `${bulkChannelState.activeBatchId || 'active'}:${jobIndex}:${jobUrl}`;
+    if (bulkFetchInFlightRef.current === runKey) return;
+    bulkFetchInFlightRef.current = runKey;
     const contentType = isTikTokChannelContentUrl(job.url)
       ? 'videos_shorts'
       : options.youtubeContentType;
-    void fetchChannelVideos(job.url, options.videoCount, contentType, options.scanOrder)
+    const scanLimit = getBulkChannelScanLimit(options.videoCount, options.maxDurationSeconds);
+    void fetchChannelVideosBatch(job.url, {
+      limit: scanLimit,
+      targetCount: options.videoCount,
+      // Fetch in small pages, but keep advancing past downloaded or
+      // duration-filtered entries until the requested unseen count is found.
+      scanBudget: MAX_BULK_CHANNEL_VIDEO_COUNT,
+      maxDurationSeconds: options.maxDurationSeconds,
+      includeDownloaded: false,
+      maxScanDurationMs: 120_000,
+      throwOnError: true,
+      append: false,
+      youtubeContentType: contentType,
+      scanOrder: options.scanOrder,
+    })
       .then(() => {
         if (generation !== bulkRunGenerationRef.current) return;
-        setBulkChannelState((current) => ({ ...current, phase: 'selecting' }));
+        setBulkChannelState((current) => {
+          if (
+            !current.running ||
+            current.phase !== 'fetching' ||
+            current.currentIndex !== jobIndex ||
+            current.jobs[jobIndex]?.url !== jobUrl
+          ) {
+            return current;
+          }
+          return { ...current, phase: 'selecting' };
+        });
       })
       .catch((error) => {
         if (generation !== bulkRunGenerationRef.current) return;
         const message = localizeUnknownError(error);
-        updateBulkJob(bulkChannelState.currentIndex, { status: 'failed', error: message });
-        setBulkChannelState((current) => ({
-          ...current,
-          currentIndex: current.currentIndex + 1,
-          phase: 'prepare',
-          error: message,
-        }));
+        setBulkChannelState((current) => {
+          if (
+            !current.running ||
+            current.phase !== 'fetching' ||
+            current.currentIndex !== jobIndex ||
+            current.jobs[jobIndex]?.url !== jobUrl
+          ) {
+            return current;
+          }
+          return {
+            ...current,
+            jobs: current.jobs.map((currentJob, index) =>
+              index === jobIndex
+                ? { ...currentJob, status: 'failed' as const, error: message }
+                : currentJob,
+            ),
+            currentIndex: jobIndex + 1,
+            phase: 'prepare',
+            error: message,
+          };
+        });
+      })
+      .finally(() => {
+        if (bulkFetchInFlightRef.current === runKey) {
+          bulkFetchInFlightRef.current = null;
+        }
       });
   }, [
     browseUrl,
+    bulkChannelState.activeBatchId,
     bulkChannelState.currentIndex,
     bulkChannelState.jobs,
     bulkChannelState.options,
     bulkChannelState.phase,
     bulkChannelState.running,
-    fetchChannelVideos,
-    updateBulkJob,
+    fetchChannelVideosBatch,
   ]);
 
   useEffect(() => {
@@ -2083,11 +2790,28 @@ export function useChannelsController(): ChannelsContextType {
       ? 'videos_shorts'
       : options.youtubeContentType;
     const platform = detectPlatform(job.url);
-    const selectable = browseVideos.filter((video) =>
-      matchesChannelContentType(platform, contentType, video.duration),
+    const selectable = selectBulkDurationCandidates(
+      browseVideos.filter((video) =>
+        matchesChannelContentType(platform, contentType, video.duration),
+      ),
+      options.videoCount,
+      options.maxDurationSeconds,
     );
     if (selectable.length === 0) {
-      updateBulkJob(bulkChannelState.currentIndex, { status: 'skipped' });
+      updateChannelProgress(job.url, (current) => ({
+        ...current,
+        total: 0,
+        completed: 0,
+        failed: 0,
+        active: 0,
+        queued: 0,
+        currentDownloadTitle: undefined,
+        errors: [],
+      }));
+      updateBulkJob(bulkChannelState.currentIndex, {
+        status: 'skipped',
+        channelName: browseChannelName || undefined,
+      });
       setBulkChannelState((current) => ({
         ...current,
         currentIndex: current.currentIndex + 1,
@@ -2096,15 +2820,21 @@ export function useChannelsController(): ChannelsContextType {
       return;
     }
     setSelectedVideoIds(new Set(selectable.map((video) => video.id)));
-    updateBulkJob(bulkChannelState.currentIndex, { status: 'downloading' });
+    updateBulkJob(bulkChannelState.currentIndex, {
+      status: 'downloading',
+      videoIds: selectable.map((video) => video.id),
+      channelName: browseChannelName || selectable[0]?.channel || undefined,
+    });
     setBulkChannelState((current) => ({ ...current, phase: 'downloading' }));
   }, [
     browseVideos,
+    browseChannelName,
     bulkChannelState.currentIndex,
     bulkChannelState.jobs,
     bulkChannelState.options,
     bulkChannelState.phase,
     bulkChannelState.running,
+    updateChannelProgress,
     updateBulkJob,
   ]);
 
@@ -2115,40 +2845,95 @@ export function useChannelsController(): ChannelsContextType {
     const job = bulkChannelState.jobs[jobIndex];
     if (!options || !job || selectedVideoIds.size === 0) return;
     const generation = bulkRunGenerationRef.current;
+    const runKey = `${bulkChannelState.activeBatchId || 'active'}:${jobIndex}:${job.url}`;
+    if (bulkDownloadInFlightRef.current === runKey) return;
+    bulkDownloadInFlightRef.current = runKey;
     void downloadSelectedVideos(
       options.quality,
       options.format,
       options.videoCodec,
       options.preferredFps,
       options.creatorSettings,
+      options.outputPath,
     )
       .then(() => {
         if (generation !== bulkRunGenerationRef.current) return;
         const progress = channelProgressRef.current[job.url];
-        if (progress?.failed) {
-          updateBulkJob(jobIndex, {
-            status: 'failed',
-            error: `${progress.failed}/${progress.total} video failed`,
-          });
-        } else {
-          updateBulkJob(jobIndex, { status: 'completed', error: undefined });
-        }
+        setBulkChannelState((current) => {
+          if (
+            !current.running ||
+            current.phase !== 'downloading' ||
+            current.currentIndex !== jobIndex ||
+            current.jobs[jobIndex]?.url !== job.url
+          ) {
+            return current;
+          }
+          return {
+            ...current,
+            jobs: current.jobs.map((currentJob, index) =>
+              index === jobIndex
+                ? {
+                    ...currentJob,
+                    status: progress?.failed
+                      ? ('failed' as const)
+                      : options.creatorSettings.mode === 'none'
+                        ? ('completed' as const)
+                        : ('downloaded' as const),
+                    error: progress?.failed
+                      ? `${progress.failed}/${progress.total} video failed`
+                      : undefined,
+                  }
+                : currentJob,
+            ),
+          };
+        });
       })
       .catch((error) => {
         if (generation !== bulkRunGenerationRef.current) return;
         const message = localizeUnknownError(error);
-        updateBulkJob(jobIndex, { status: 'failed', error: message });
-        setBulkChannelState((current) => ({ ...current, error: message }));
+        setBulkChannelState((current) => {
+          if (
+            !current.running ||
+            current.phase !== 'downloading' ||
+            current.currentIndex !== jobIndex ||
+            current.jobs[jobIndex]?.url !== job.url
+          ) {
+            return current;
+          }
+          return {
+            ...current,
+            jobs: current.jobs.map((currentJob, index) =>
+              index === jobIndex
+                ? { ...currentJob, status: 'failed' as const, error: message }
+                : currentJob,
+            ),
+            error: message,
+          };
+        });
       })
       .finally(() => {
+        if (bulkDownloadInFlightRef.current === runKey) {
+          bulkDownloadInFlightRef.current = null;
+        }
         if (generation !== bulkRunGenerationRef.current) return;
-        setBulkChannelState((current) => ({
-          ...current,
-          currentIndex: current.currentIndex + 1,
-          phase: 'prepare',
-        }));
+        setBulkChannelState((current) => {
+          if (
+            !current.running ||
+            current.phase !== 'downloading' ||
+            current.currentIndex !== jobIndex ||
+            current.jobs[jobIndex]?.url !== job.url
+          ) {
+            return current;
+          }
+          return {
+            ...current,
+            currentIndex: jobIndex + 1,
+            phase: 'prepare',
+          };
+        });
       });
   }, [
+    bulkChannelState.activeBatchId,
     bulkChannelState.currentIndex,
     bulkChannelState.jobs,
     bulkChannelState.options,
@@ -2156,7 +2941,6 @@ export function useChannelsController(): ChannelsContextType {
     bulkChannelState.running,
     downloadSelectedVideos,
     selectedVideoIds.size,
-    updateBulkJob,
   ]);
 
   // Listen for download progress events — match downloadId back to videoId
@@ -2207,7 +2991,7 @@ export function useChannelsController(): ChannelsContextType {
           progress.filepath &&
           creatorSettings.outputFolder
         ) {
-          void enqueueCreatorVideo(progress.filepath, title, creatorSettings, {
+          void enqueueCreatorVideoOnce(progress.id, progress.filepath, title, creatorSettings, {
             channelUrl,
             videoId,
           }).catch((error) => {
@@ -2252,7 +3036,7 @@ export function useChannelsController(): ChannelsContextType {
     return () => {
       unlisten.then((fn) => fn());
     };
-  }, []);
+  }, [enqueueCreatorVideoOnce]);
 
   // Refresh active channel videos
   const refreshActiveChannelVideos = useCallback(async () => {
@@ -2585,6 +3369,19 @@ export function useChannelsController(): ChannelsContextType {
               downloadKind: 'channel-auto',
             });
 
+            if (creatorSettingsSnapshot.mode !== 'none') {
+              const historyFilepath = await findHistoryFilepathByUrl(video.url).catch(() => null);
+              if (historyFilepath) {
+                await enqueueCreatorVideoOnce(
+                  downloadId,
+                  historyFilepath,
+                  video.title,
+                  creatorSettingsSnapshot,
+                  { channelUrl: autoChannelUrl, videoId: video.video_id },
+                );
+              }
+            }
+
             await updateChannelVideoStatus({ id: video.id, status: 'downloaded' });
             updateChannelProgress(autoChannelUrl, (current) => ({
               ...current,
@@ -2634,6 +3431,7 @@ export function useChannelsController(): ChannelsContextType {
   }, [
     filterDownloadedDuplicateCandidates,
     getNetworkOptions,
+    enqueueCreatorVideoOnce,
     refreshChannelNewCounts,
     updateChannelProgress,
   ]);
@@ -2655,6 +3453,7 @@ export function useChannelsController(): ChannelsContextType {
     bulkUnfollowChannels,
     bulkUpdateChannelSettings,
     bulkUpdateChannelCreatorProcessing,
+    bulkSetChannelAutoDownload,
     refreshFollowedChannelInfo,
     updateChannelSettings,
     browseUrl,
@@ -2691,8 +3490,11 @@ export function useChannelsController(): ChannelsContextType {
     bulkChannelState,
     startBulkChannelDownload,
     stopBulkChannelDownload,
+    stopAllChannelWork,
     pauseBulkChannelDownload,
     resumeBulkChannelDownload,
+    retryFailedBulkChannelDownloads,
+    removeQueuedBulkChannelBatch,
     videoStates,
     outputPath,
     selectOutputFolder,

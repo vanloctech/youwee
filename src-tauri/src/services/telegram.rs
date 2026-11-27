@@ -323,6 +323,7 @@ pub async fn send_reply(chat_id: String, text: String) -> Result<(), String> {
 pub async fn send_new_video_notification(
     channel_name: &str,
     videos: &[ChannelVideo],
+    auto_download: bool,
 ) -> Result<(), String> {
     let config = TELEGRAM_CONFIG
         .lock()
@@ -346,11 +347,17 @@ pub async fn send_new_video_notification(
     if videos.len() > lines.len() {
         lines.push(format!("…and {} more", videos.len() - lines.len()));
     }
+    let download_status = if auto_download {
+        "⏳ Tự động tải: đang chờ tải"
+    } else {
+        "⏸ Tự động tải: đang tắt (chưa tải)"
+    };
     let text = format!(
-        "🆕 {}: {} new video{}\n\n{}",
+        "🆕 {}: {} new video{}\n{}\n\n{}",
         channel_name,
         videos.len(),
         if videos.len() == 1 { "" } else { "s" },
+        download_status,
         lines.join("\n\n")
     );
 

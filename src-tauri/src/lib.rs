@@ -430,6 +430,7 @@ pub fn run() {
             commands::remove_history_from_collection,
             commands::open_file_location,
             commands::open_folder_location,
+            commands::open_channel_folder_location,
             commands::check_file_exists,
             // Asset scope & history helpers
             commands::allow_asset_file,
@@ -530,6 +531,7 @@ pub fn run() {
             commands::bulk_unfollow_channels,
             commands::bulk_update_channel_settings,
             commands::bulk_update_channel_creator_processing,
+            commands::bulk_set_channel_auto_download,
             commands::get_followed_channels,
             commands::update_channel_settings,
             commands::save_channel_videos,

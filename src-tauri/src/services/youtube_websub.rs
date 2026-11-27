@@ -24,8 +24,7 @@ use crate::{database, services::run_ytdlp_json, types::FollowedChannel};
 
 const WEBSUB_PATH: &str = "/youtube/websub";
 const YOUTUBE_HUB_URL: &str = "https://pubsubhubbub.appspot.com/subscribe";
-const YOUTUBE_FEED_URL_PREFIX: &str =
-    "https://www.youtube.com/xml/feeds/videos.xml?channel_id=";
+const YOUTUBE_FEED_URL_PREFIX: &str = "https://www.youtube.com/xml/feeds/videos.xml?channel_id=";
 const RENEW_INTERVAL_SECS: u64 = 6 * 60 * 60;
 
 static ACTIVE: AtomicBool = AtomicBool::new(false);

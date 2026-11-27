@@ -2,7 +2,7 @@ use super::*;
 use crate::database::add_history_internal;
 use sha2::{Digest, Sha256};
 use std::sync::atomic::{AtomicBool, Ordering};
-use std::time::Duration;
+use std::time::{Duration, Instant};
 
 const VIDEO_EXTENSIONS: &[&str] = &[
     "mp4", "mov", "mkv", "avi", "m4v", "ts", "wmv", "flv", "webm",
@@ -12,6 +12,63 @@ const CREATOR_FONT_FILE: &str = "NotoSansCJKjp-Regular.otf";
 const CREATOR_LINE_SPACING: usize = 86;
 
 static CREATOR_CANCEL_REQUESTED: AtomicBool = AtomicBool::new(false);
+
+fn ffmpeg_diagnostic_detail(lines: &std::collections::VecDeque<String>) -> &str {
+    fn is_progress_or_summary(line: &str) -> bool {
+        let trimmed = line.trim();
+        trimmed.is_empty()
+            || trimmed.starts_with("frame=")
+            || trimmed.starts_with("fps=")
+            || trimmed.starts_with("stream_")
+            || trimmed.starts_with("bitrate=")
+            || trimmed.starts_with("total_size=")
+            || trimmed.starts_with("out_time")
+            || trimmed.starts_with("dup_frames=")
+            || trimmed.starts_with("drop_frames=")
+            || trimmed.starts_with("speed=")
+            || trimmed.starts_with("progress=")
+            || trimmed.contains("Qavg:")
+            || trimmed.starts_with("video:")
+            || trimmed.starts_with("audio:")
+            || trimmed.contains("muxing overhead")
+            || trimmed == "Conversion failed!"
+    }
+
+    fn is_specific_error(line: &str) -> bool {
+        let normalized = line.to_ascii_lowercase();
+        [
+            "failed",
+            "invalid",
+            "cannot",
+            "could not",
+            "unsupported",
+            "not supported",
+            "not available",
+            "no capable devices",
+            "permission denied",
+            "no space left",
+            "device not found",
+            "encoder not found",
+        ]
+        .iter()
+        .any(|needle| normalized.contains(needle))
+            && line.trim() != "Error opening output files: Invalid argument"
+            && line.trim() != "Error parsing global options: Invalid argument"
+    }
+
+    lines
+        .iter()
+        .rev()
+        .find(|line| !is_progress_or_summary(line) && is_specific_error(line))
+        .or_else(|| {
+            lines
+                .iter()
+                .rev()
+                .find(|line| !is_progress_or_summary(line))
+        })
+        .map(String::as_str)
+        .unwrap_or("FFmpeg failed without a diagnostic message")
+}
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -48,6 +105,12 @@ pub struct CreatorJob {
     pub channel_url: Option<String>,
     #[serde(default)]
     pub video_id: Option<String>,
+    #[serde(default)]
+    pub input_exists: bool,
+    #[serde(default)]
+    pub output_paths: Vec<String>,
+    #[serde(default)]
+    pub output_exists: bool,
 }
 
 #[tauri::command]
@@ -99,6 +162,9 @@ pub fn enqueue_creator_job(
         error_message: None,
         channel_url,
         video_id,
+        input_exists: false,
+        output_paths: Vec::new(),
+        output_exists: false,
     })
     .map_err(|e| e.to_string())?;
     conn.execute(
@@ -112,6 +178,27 @@ pub fn enqueue_creator_job(
 #[tauri::command]
 pub fn list_creator_jobs() -> Result<Vec<CreatorJob>, String> {
     let conn = get_db()?;
+    let mut outputs_by_input: HashMap<String, Vec<String>> = HashMap::new();
+    {
+        let mut output_statement = conn
+            .prepare(
+                "SELECT input_path, output_path FROM processing_jobs
+                 WHERE task_type LIKE 'creator-%' AND output_path IS NOT NULL",
+            )
+            .map_err(|e| e.to_string())?;
+        let output_rows = output_statement
+            .query_map([], |row| {
+                Ok((row.get::<_, String>(0)?, row.get::<_, String>(1)?))
+            })
+            .map_err(|e| e.to_string())?;
+        for row in output_rows {
+            let (input_path, output_path) = row.map_err(|e| e.to_string())?;
+            outputs_by_input
+                .entry(input_path)
+                .or_default()
+                .push(output_path);
+        }
+    }
     let mut statement = conn.prepare(
         "SELECT payload_json, status, error_message FROM creator_jobs ORDER BY created_at, rowid"
     ).map_err(|e| e.to_string())?;
@@ -129,6 +216,15 @@ pub fn list_creator_jobs() -> Result<Vec<CreatorJob>, String> {
         let mut job: CreatorJob = serde_json::from_str(&payload).map_err(|e| e.to_string())?;
         job.status = status;
         job.error_message = error_message;
+        job.input_exists = Path::new(&job.input_path).is_file();
+        job.output_paths = outputs_by_input
+            .get(&job.input_path)
+            .cloned()
+            .unwrap_or_default();
+        job.output_exists = job
+            .output_paths
+            .iter()
+            .any(|output_path| Path::new(output_path).is_file());
         jobs.push(job);
     }
     Ok(jobs)
@@ -301,6 +397,34 @@ fn creator_output_filename(title: &str, part: Option<u32>) -> String {
     match part {
         Some(number) => format!("{title} part {number} #fyp #viral.mp4"),
         None => format!("{title} #fyp #viral.mp4"),
+    }
+}
+
+fn creator_title_from_input(input: &Path) -> String {
+    let stem = safe_stem(input);
+    let without_video_id = stem
+        .strip_suffix(']')
+        .and_then(|value| value.rsplit_once(" ["))
+        .filter(|(_, id)| {
+            id.len() == 11
+                && id
+                    .bytes()
+                    .all(|byte| byte.is_ascii_alphanumeric() || matches!(byte, b'-' | b'_'))
+        })
+        .map(|(title, _)| title)
+        .unwrap_or(&stem);
+
+    safe_filename_component(without_video_id)
+}
+
+fn creator_portrait_scale_filter(encoder: &str) -> &'static str {
+    if encoder == "h264_nvenc" {
+        // NVDEC supplies CUDA frames directly. Keep the expensive resize on
+        // the GPU, then download only the scaled 1080px frame for drawtext
+        // (which has no CUDA implementation) before NVENC encodes it again.
+        "scale_cuda=1080:1080:format=nv12:force_original_aspect_ratio=decrease:force_divisible_by=2,hwdownload,format=nv12,pad=1080:1080:(ow-iw)/2:(oh-ih)/2:black,pad=1080:1920:0:420:black"
+    } else {
+        "scale=1080:1080:force_original_aspect_ratio=decrease,pad=1080:1080:(ow-iw)/2:(oh-ih)/2:black,pad=1080:1920:0:420:black"
     }
 }
 
@@ -585,6 +709,8 @@ async fn run_creator_ffmpeg(
     let mut line_bytes = Vec::new();
     let mut recent = std::collections::VecDeque::new();
     let mut silent_for = Duration::ZERO;
+    let mut last_progress_microseconds = -1.0_f64;
+    let mut last_progress_advance = Instant::now();
     loop {
         if CREATOR_CANCEL_REQUESTED.load(Ordering::Relaxed) {
             child.kill().await.ok();
@@ -606,6 +732,10 @@ async fn run_creator_ffmpeg(
                     .to_string();
                 if let Some(value) = line.strip_prefix("out_time_ms=") {
                     if let Ok(microseconds) = value.parse::<f64>() {
+                        if microseconds > last_progress_microseconds {
+                            last_progress_microseconds = microseconds;
+                            last_progress_advance = Instant::now();
+                        }
                         let current_seconds =
                             (microseconds / 1_000_000.0).max(0.0).min(duration_seconds);
                         let percent = if duration_seconds > 0.0 {
@@ -627,10 +757,18 @@ async fn run_creator_ffmpeg(
                         .ok();
                     }
                 }
-                if recent.len() == 30 {
+                if recent.len() == 120 {
                     recent.pop_front();
                 }
                 recent.push_back(line);
+                if last_progress_advance.elapsed() >= Duration::from_secs(180) {
+                    child.kill().await.ok();
+                    std::fs::remove_file(temp_path).ok();
+                    return Err(
+                        "FFmpeg progress did not advance for 180 seconds; the render appears stuck"
+                            .to_string(),
+                    );
+                }
             }
             Ok(Err(error)) => {
                 child.kill().await.ok();
@@ -644,6 +782,14 @@ async fn run_creator_ffmpeg(
                     std::fs::remove_file(temp_path).ok();
                     return Err("FFmpeg did not respond for 90 seconds".to_string());
                 }
+                if last_progress_advance.elapsed() >= Duration::from_secs(180) {
+                    child.kill().await.ok();
+                    std::fs::remove_file(temp_path).ok();
+                    return Err(
+                        "FFmpeg progress did not advance for 180 seconds; the render appears stuck"
+                            .to_string(),
+                    );
+                }
             }
         }
     }
@@ -653,12 +799,7 @@ async fn run_creator_ffmpeg(
         .map_err(|e| format!("Cannot wait for FFmpeg: {e}"))?;
     if !status.success() {
         std::fs::remove_file(temp_path).ok();
-        let detail = recent
-            .iter()
-            .rev()
-            .find(|line| !line.trim().is_empty())
-            .map(String::as_str)
-            .unwrap_or("FFmpeg failed");
+        let detail = ffmpeg_diagnostic_detail(&recent);
         return Err(detail.to_string());
     }
     if !temp_path.is_file() || temp_path.metadata().map(|m| m.len()).unwrap_or(0) == 0 {
@@ -670,10 +811,11 @@ async fn run_creator_ffmpeg(
     std::fs::rename(temp_path, final_path).map_err(|e| format!("Cannot finalize output: {e}"))
 }
 
-async fn run_with_cpu_fallback(
+async fn run_with_selected_encoder(
     app: &AppHandle,
     ffmpeg_path: &Path,
     args: Vec<String>,
+    nvenc_cpu_filter_args: Option<Vec<String>>,
     encoder: &str,
     temp_path: &Path,
     final_path: &Path,
@@ -709,29 +851,23 @@ async fn run_with_cpu_fallback(
             }
             Ok(())
         }
-        Err(first_error) if encoder != "libx264" => {
-            log::warn!("Creator encoder {encoder} failed; falling back to libx264: {first_error}");
+        Err(first_error) if encoder == "h264_nvenc" && nvenc_cpu_filter_args.is_some() => {
+            std::fs::remove_file(temp_path).ok();
+            let fallback_args = nvenc_cpu_filter_args.unwrap_or_default();
+            log::warn!(
+                "CUDA decode/scale failed; retrying with CPU decode/filter and NVENC encode: {first_error}"
+            );
             app.emit(
                 "creator-processing-encoder",
                 serde_json::json!({
                     "requested": encoder,
-                    "actual": "libx264",
+                    "actual": encoder,
                     "fallback": true,
                     "error": first_error.clone(),
+                    "fallbackStage": "cpu-decode-filter",
                 }),
             )
             .ok();
-            let mut fallback = args;
-            let codec_start = fallback
-                .iter()
-                .position(|arg| arg == "-c:v")
-                .ok_or_else(|| first_error.clone())?;
-            let audio_start = fallback[codec_start + 1..]
-                .iter()
-                .position(|arg| arg == "-c:a")
-                .map(|index| codec_start + 1 + index)
-                .ok_or_else(|| first_error.clone())?;
-            fallback.splice(codec_start..audio_start, codec_args("libx264"));
             run_creator_ffmpeg(
                 app,
                 input_path,
@@ -739,12 +875,33 @@ async fn run_with_cpu_fallback(
                 total,
                 duration_seconds,
                 ffmpeg_path,
-                &fallback,
+                &fallback_args,
                 temp_path,
                 final_path,
             )
             .await
-            .map_err(|fallback_error| format!("GPU: {first_error}; CPU: {fallback_error}"))
+            .map_err(|fallback_error| {
+                format!(
+                    "GPU pipeline failed: {first_error}; NVENC with CPU decode/filter also failed: {fallback_error}"
+                )
+            })
+        }
+        Err(first_error) if encoder != "libx264" => {
+            // A large creator queue must never silently switch from a hardware
+            // encoder to libx264: doing so can saturate the CPU for hours while
+            // the UI still looks like GPU processing was selected.
+            log::warn!("Creator encoder {encoder} failed: {first_error}");
+            app.emit(
+                "creator-processing-encoder",
+                serde_json::json!({
+                    "requested": encoder,
+                    "actual": encoder,
+                    "fallback": false,
+                    "error": first_error.clone(),
+                }),
+            )
+            .ok();
+            Err(format!("GPU encoder {encoder} failed: {first_error}"))
         }
         Err(error) => Err(error),
     }
@@ -847,14 +1004,12 @@ pub async fn process_creator_video(
     if !metadata.duration.is_finite() || metadata.duration <= 0.0 {
         return Err("Input video has no valid duration".to_string());
     }
-    let stem = safe_stem(&input);
-    let title = safe_filename_component(
-        options
-            .title
-            .as_deref()
-            .filter(|title| !title.trim().is_empty())
-            .unwrap_or(&stem),
-    );
+    let title = options
+        .title
+        .as_deref()
+        .filter(|title| !title.trim().is_empty())
+        .map(safe_filename_component)
+        .unwrap_or_else(|| creator_title_from_input(&input));
     let font_path = if matches!(options.mode.as_str(), "parts" | "portrait") {
         Some(creator_font_file(&app).ok_or("Bundled Noto Sans CJK font is unavailable")?)
     } else {
@@ -940,10 +1095,11 @@ pub async fn process_creator_video(
                 "+faststart".into(),
                 temp_path.to_string_lossy().to_string(),
             ]);
-            run_with_cpu_fallback(
+            run_with_selected_encoder(
                 &app,
                 &ffmpeg,
                 args,
+                None,
                 encoder,
                 &temp_path,
                 &final_path,
@@ -1000,7 +1156,14 @@ pub async fn process_creator_video(
         let mut title_text_files = CreatorTempFiles { paths: Vec::new() };
         let mut title_drawtext = String::new();
         for (line_index, line) in title_lines.iter().enumerate() {
-            let text_path = state_root.join(format!("{key}.title-{}.txt", line_index + 1));
+            // FFmpeg's filter parser cannot represent a literal apostrophe
+            // inside a single-quoted option reliably. Channel folders such as
+            // "Arthur's ..." therefore broke drawtext even though the input
+            // and output paths were valid argv values. Keep temporary title
+            // sidecars in the OS temp directory, whose app-owned filename is
+            // guaranteed not to contain channel-name punctuation.
+            let text_path =
+                std::env::temp_dir().join(format!("youwee-creator-{key}-{}.txt", line_index + 1));
             title_text_files.paths.push(text_path.clone());
             std::fs::write(&text_path, line)
                 .map_err(|error| format!("Cannot prepare title text: {error}"))?;
@@ -1061,49 +1224,68 @@ pub async fn process_creator_video(
             } else {
                 String::new()
             };
-            let filter = format!(
-                "[0:v]scale=1080:1080:force_original_aspect_ratio=decrease,pad=1080:1080:(ow-iw)/2:(oh-ih)/2:black,pad=1080:1920:0:420:black{title_drawtext}{part_drawtext},format=yuv420p[v]"
-            );
-            let mut args = vec!["-y".into()];
-            if split_parts {
-                args.extend([
-                    "-ss".into(),
-                    format!("{:.3}", f64::from(part) * segment_duration),
-                ]);
-            }
-            args.extend([
-                "-i".into(),
-                input_path.clone(),
-                "-t".into(),
-                if split_parts {
-                    format!("{segment_duration:.3}")
+            let build_part_args = |cuda_pipeline: bool| {
+                let scale_filter = if cuda_pipeline {
+                    creator_portrait_scale_filter("h264_nvenc")
                 } else {
-                    metadata.duration.to_string()
-                },
-                "-filter_complex".into(),
-                filter,
-                "-map".into(),
-                "[v]".into(),
-                "-map".into(),
-                "0:a?".into(),
-            ]);
-            args.extend(codec_args(encoder));
-            args.extend([
-                "-c:a".into(),
-                "aac".into(),
-                "-movflags".into(),
-                "+faststart".into(),
-                temp_path.to_string_lossy().to_string(),
-            ]);
+                    creator_portrait_scale_filter("libx264")
+                };
+                let filter =
+                    format!("[0:v]{scale_filter}{title_drawtext}{part_drawtext},format=yuv420p[v]");
+                let mut args = vec!["-y".into()];
+                if split_parts {
+                    args.extend([
+                        "-ss".into(),
+                        format!("{:.3}", f64::from(part) * segment_duration),
+                    ]);
+                }
+                if cuda_pipeline {
+                    args.extend([
+                        "-hwaccel".into(),
+                        "cuda".into(),
+                        "-hwaccel_output_format".into(),
+                        "cuda".into(),
+                    ]);
+                }
+                args.extend([
+                    "-i".into(),
+                    input_path.clone(),
+                    "-t".into(),
+                    if split_parts {
+                        format!("{segment_duration:.3}")
+                    } else {
+                        metadata.duration.to_string()
+                    },
+                    "-filter_complex".into(),
+                    filter,
+                    "-map".into(),
+                    "[v]".into(),
+                    "-map".into(),
+                    "0:a?".into(),
+                ]);
+                args.extend(codec_args(encoder));
+                args.extend([
+                    "-c:a".into(),
+                    "aac".into(),
+                    "-movflags".into(),
+                    "+faststart".into(),
+                    temp_path.to_string_lossy().to_string(),
+                ]);
+                args
+            };
+            let use_cuda_pipeline = encoder == "h264_nvenc";
+            let args = build_part_args(use_cuda_pipeline);
+            let nvenc_cpu_filter_args = use_cuda_pipeline.then(|| build_part_args(false));
             let current_duration = if split_parts {
                 (metadata.duration - f64::from(part) * segment_duration).min(segment_duration)
             } else {
                 metadata.duration
             };
-            if let Err(error) = run_with_cpu_fallback(
+            if let Err(error) = run_with_selected_encoder(
                 &app,
                 &ffmpeg,
                 args,
+                nvenc_cpu_filter_args,
                 encoder,
                 &temp_path,
                 &final_path,
@@ -1179,10 +1361,41 @@ mod tests {
     }
 
     #[test]
+    fn channel_source_title_uses_original_downloaded_filename_without_video_id() {
+        assert_eq!(
+            creator_title_from_input(Path::new(
+                r"D:\Videos\L'Engrais Oublié des Romains [lB2WF5N7a8U].mp4"
+            )),
+            "L'Engrais Oublié des Romains"
+        );
+        assert_eq!(
+            creator_title_from_input(Path::new(r"D:\Videos\ordinary [notes].mp4")),
+            "ordinary [notes]"
+        );
+    }
+
+    #[test]
     fn filename_components_are_safe_for_windows_paths() {
         assert_eq!(safe_filename_component("  A/B: title.  "), "A_B_ title");
         assert_eq!(safe_filename_component("CON"), "_CON");
         assert_eq!(safe_filename_component("..."), "video");
+    }
+
+    #[test]
+    fn ffmpeg_diagnostic_ignores_progress_and_audio_summary_lines() {
+        let lines = std::collections::VecDeque::from([
+            "[h264_nvenc @ 000001] No capable devices found".to_string(),
+            "Error while opening encoder - maybe incorrect parameters".to_string(),
+            "out_time_ms=1200000".to_string(),
+            "progress=end".to_string(),
+            "[aac @ 000002] Qavg: 120.000".to_string(),
+            "Conversion failed!".to_string(),
+        ]);
+
+        assert_eq!(
+            ffmpeg_diagnostic_detail(&lines),
+            "[h264_nvenc @ 000001] No capable devices found"
+        );
     }
 
     #[test]
@@ -1195,6 +1408,14 @@ mod tests {
             escape_drawtext_font_path(Path::new(r"\\?\C:\Windows\Fonts\arial.ttf")),
             r"C\:/Windows/Fonts/arial.ttf"
         );
+    }
+
+    #[test]
+    fn nvenc_portrait_filter_scales_on_cuda() {
+        assert!(creator_portrait_scale_filter("h264_nvenc").contains("scale_cuda"));
+        assert!(creator_portrait_scale_filter("h264_nvenc").contains("format=nv12"));
+        assert!(creator_portrait_scale_filter("h264_nvenc").contains("hwdownload"));
+        assert!(!creator_portrait_scale_filter("libx264").contains("scale_cuda"));
     }
 
     #[test]

@@ -16,6 +16,15 @@ import {
   saveCreatorProcessingSettings,
   stopCreatorProcessingQueue,
 } from '@/lib/creator-processing';
+import { watchCreatorQueue } from '@/lib/creator-queue-events';
+
+function creatorJobPathParts(inputPath: string): { channel: string; filename: string } {
+  const parts = inputPath.replaceAll('\\', '/').split('/').filter(Boolean);
+  return {
+    channel: parts.at(-2) || '',
+    filename: parts.at(-1) || inputPath,
+  };
+}
 
 export function CreatorProcessingSettings() {
   const { t } = useTranslation('channels');
@@ -39,6 +48,7 @@ export function CreatorProcessingSettings() {
     requested: string;
     actual: string;
     fallback: boolean;
+    fallbackStage?: string;
   } | null>(null);
   const refreshJobs = useCallback(async () => {
     try {
@@ -51,8 +61,7 @@ export function CreatorProcessingSettings() {
     }
   }, []);
   useEffect(() => {
-    void refreshJobs();
-    const timer = window.setInterval(() => void refreshJobs(), 1000);
+    const stopWatching = watchCreatorQueue(refreshJobs);
     const unlisten = listen<{
       inputPath: string;
       completed: number;
@@ -62,17 +71,17 @@ export function CreatorProcessingSettings() {
       percent?: number;
     }>('creator-processing-progress', (event) => {
       setPartProgress(event.payload);
-      void refreshJobs();
     });
     const unlistenEncoder = listen<{
       requested: string;
       actual: string;
       fallback: boolean;
+      fallbackStage?: string;
     }>('creator-processing-encoder', (event) => {
       setEncoderNotice(event.payload);
     });
     return () => {
-      window.clearInterval(timer);
+      stopWatching();
       unlisten.then((stop) => stop());
       unlistenEncoder.then((stop) => stop());
     };
@@ -83,8 +92,9 @@ export function CreatorProcessingSettings() {
   const runningJobs = jobs.filter((job) => job.status === 'running');
   const completedJobs = jobs.filter((job) => job.status === 'completed');
   const cancelledJobs = jobs.filter((job) => job.status === 'cancelled');
-  const finishedJobs = completedJobs.length + failedJobs.length + cancelledJobs.length;
-  const overallProgress = jobs.length > 0 ? (finishedJobs / jobs.length) * 100 : 0;
+  // Failed and cancelled jobs need attention; they must not make the success
+  // progress bar look complete.
+  const overallProgress = jobs.length > 0 ? (completedJobs.length / jobs.length) * 100 : 0;
   const selectedFailedJobs = failedJobs.filter((job) => selectedJobIds.has(job.id));
   const allFailedSelected =
     failedJobs.length > 0 && failedJobs.every((job) => selectedJobIds.has(job.id));
@@ -129,7 +139,6 @@ export function CreatorProcessingSettings() {
                       try {
                         await retryCreatorJobs(selectedFailedJobs.map((job) => job.id));
                         setSelectedJobIds(new Set());
-                        await refreshJobs();
                       } catch (error) {
                         console.error('Cannot retry selected creator jobs:', error);
                       } finally {
@@ -148,7 +157,6 @@ export function CreatorProcessingSettings() {
                       try {
                         await deleteCreatorJobs(selectedFailedJobs.map((job) => job.id));
                         setSelectedJobIds(new Set());
-                        await refreshJobs();
                       } catch (error) {
                         console.error('Cannot delete selected creator jobs:', error);
                       } finally {
@@ -169,7 +177,6 @@ export function CreatorProcessingSettings() {
                   try {
                     await retryAllCreatorJobs();
                     setSelectedJobIds(new Set());
-                    await refreshJobs();
                   } catch (error) {
                     console.error('Cannot retry all creator jobs:', error);
                   } finally {
@@ -189,6 +196,35 @@ export function CreatorProcessingSettings() {
                 key={job.id}
                 className="rounded-md border border-destructive/10 bg-background/30 p-2"
               >
+                {(() => {
+                  const pathParts = creatorJobPathParts(job.inputPath);
+                  return (
+                    <div className="mb-1 flex min-w-0 items-center gap-2 pl-6">
+                      <span className="truncate font-medium" title={job.inputPath}>
+                        {pathParts.filename}
+                      </span>
+                      {pathParts.channel && (
+                        <span className="shrink-0 rounded bg-muted px-1.5 py-0.5 text-[10px] text-muted-foreground">
+                          {pathParts.channel}
+                        </span>
+                      )}
+                      <span
+                        className={
+                          job.inputExists
+                            ? 'shrink-0 rounded bg-amber-500/10 px-1.5 py-0.5 text-[10px] text-amber-600 dark:text-amber-400'
+                            : 'shrink-0 rounded bg-muted px-1.5 py-0.5 text-[10px] text-muted-foreground'
+                        }
+                      >
+                        {job.inputExists ? t('creator.sourceExists') : t('creator.sourceMissing')}
+                      </span>
+                      {job.outputExists && (
+                        <span className="shrink-0 rounded bg-emerald-500/10 px-1.5 py-0.5 text-[10px] text-emerald-600 dark:text-emerald-400">
+                          {t('creator.outputReady')}
+                        </span>
+                      )}
+                    </div>
+                  );
+                })()}
                 <div className="flex items-center gap-2">
                   <input
                     type="checkbox"
@@ -203,7 +239,10 @@ export function CreatorProcessingSettings() {
                     }
                     aria-label={t('creator.selectJob')}
                   />
-                  <span className="min-w-0 flex-1 truncate" title={job.inputPath}>
+                  <span
+                    className="min-w-0 flex-1 truncate text-muted-foreground"
+                    title={job.inputPath}
+                  >
                     {job.inputPath}
                   </span>
                   <Button
@@ -214,7 +253,6 @@ export function CreatorProcessingSettings() {
                       setRetryingJobId(job.id);
                       try {
                         await retryCreatorJob(job.id);
-                        await refreshJobs();
                       } finally {
                         setRetryingJobId(null);
                       }
@@ -235,7 +273,6 @@ export function CreatorProcessingSettings() {
                           next.delete(job.id);
                           return next;
                         });
-                        await refreshJobs();
                       } finally {
                         setMutatingSelected(false);
                       }
@@ -271,7 +308,7 @@ export function CreatorProcessingSettings() {
           <div className="flex items-center justify-between">
             <span className="font-medium">{t('creator.queueProgress')}</span>
             <span className="text-muted-foreground">
-              {finishedJobs}/{jobs.length}
+              {completedJobs.length}/{jobs.length}
             </span>
           </div>
           <div className="h-2 overflow-hidden rounded-full bg-muted">
@@ -290,7 +327,6 @@ export function CreatorProcessingSettings() {
                   setStoppingQueue(true);
                   try {
                     await stopCreatorProcessingQueue();
-                    await refreshJobs();
                   } catch (error) {
                     console.error('Cannot stop creator processing:', error);
                   } finally {
@@ -372,7 +408,9 @@ export function CreatorProcessingSettings() {
           }
         >
           {encoderNotice.fallback
-            ? t('creator.gpuFallback', { encoder: encoderNotice.requested })
+            ? encoderNotice.fallbackStage === 'cpu-decode-filter'
+              ? t('creator.gpuDecodeFallback', { encoder: encoderNotice.requested })
+              : t('creator.gpuFallback', { encoder: encoderNotice.requested })
             : t('creator.gpuActive', { encoder: encoderNotice.actual })}
         </div>
       )}

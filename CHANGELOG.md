@@ -7,6 +7,73 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.20.18] - 2026-11-25
+
+### Fixed
+- **Responsive Channels workspace** - Keep channel controls, transfer activity, queue history, and video lists reachable on short or narrow windows by constraining each section to its own scroll area.
+- **Creator failure diagnostics** - Report the actionable FFmpeg failure instead of trailing audio statistics and stop renders whose media progress has not advanced for three minutes.
+- **Independent bulk controls** - Stopping or pausing a bulk channel run no longer cancels the creator/edit queue; a separate emergency action remains available to stop both pipelines.
+- **Reliable bulk candidate selection** - Bulk runs always skip Library duplicates regardless of the browse-page display filter, reject overlapping channel downloads, and bound long channel scans.
+- **YouTube player-session recovery** - Retry page-reload/tv-downgrade responses without configured cookies and then with yt-dlp's cookie-free `android_vr` player client if YouTube still requests a reload. Report a final error only once no applicable retry remains.
+
+### Changed
+- **Windows bundled yt-dlp** - Use upstream stable yt-dlp 2026.11.23 in the Windows installers.
+- **Stable Windows FFmpeg distribution** - Install the checksum-verified Gyan release essentials build on Windows instead of the moving BtbN master snapshot, keeping development and customer NVENC environments consistent.
+- **Compact channel activity** - Replace the dense bulk status cards and nested edit progress bars with concise summaries and one aggregate edit-progress indicator.
+
+## [0.20.17] - 2026-10-09
+
+### Changed
+- **One-day bulk history** - Keep completed bulk-download batch history for 24 hours and prune older entries from persisted state.
+
+### Fixed
+- **Visible history batch selector** - Reserve a dedicated, non-shrinking row for choosing history batches so large job lists cannot cover the selector.
+
+## [0.20.16] - 2026-10-09
+
+### Fixed
+- **Bulk unseen-video paging** - Scan channel entries in small pages and continue past videos already recorded in Library or excluded by the duration filter until the requested number of eligible videos is found.
+
+## [0.20.15] - 2026-10-09
+
+### Fixed
+- **Bulk job re-entry guard** - Prevent background edit-status refreshes from launching duplicate channel scans or downloads and advancing the channel cursor more than once.
+
+## [0.20.14] - 2026-10-09
+
+### Changed
+- **Bounded bulk channel scans** - Inspect 10 entries per channel by default and increase the scan only when the requested videos-per-channel count is higher.
+
+### Fixed
+- **Bulk scan state isolation** - Prevent late cancellation and stale scan callbacks from affecting the next channel or falsely marking unscanned channels as having no new videos.
+- **Channel scan watchdog** - Stop yt-dlp channel scans after 60 seconds, record the channel as failed, and allow the remaining queue and automatic retry pass to continue.
+
+## [0.20.13] - 2026-10-09
+
+### Added
+- **Bulk batch history** - Persist every bulk batch and its per-channel lifecycle, distinguishing download completion, waiting/running edits, final completion, download errors, edit errors, skipped channels, and stopped jobs.
+
+### Fixed
+- **Bulk folder snapshot recovery** - Persist each channel batch's output folder and download/edit settings, reject unsafe legacy resumes, and prevent a restored manual batch from racing a newly started bulk batch into the global output folder.
+- **Bulk manager reliability** - Keep queued batches compact, preserve active controls while reviewing history, keep completed history accessible, resync edit states after restart, and prevent late restore results from replacing an active or paused bulk batch.
+
+## [0.20.12] - 2026-10-08
+
+### Fixed
+- **Bulk start recovery** - Remove the WebView timer-based submit lock, use a native form-submit fallback, show command acceptance and runtime errors beside the controls, and cap Most Popular scans at 500 channel entries so a click cannot appear to hang on an unbounded scan.
+
+## [0.20.11] - 2026-10-08
+
+### Added
+- **Bulk channel batch queue** - Queue multiple channel-download batches with independent output folders, scan limits, download settings, and creator-processing snapshots.
+- **Bulk duration filter** - Optionally skip videos lasting 50 minutes or longer and continue scanning for eligible videos.
+
+### Fixed
+- **Visible batch management** - Show the active and waiting batches directly below the bulk form, including output folders and controls for removing waiting batches.
+- **Resilient YouTube downloads** - Retry false cookie-based unavailable responses without cookies, recover incomplete transfers with native chunks, and fall back from Best to 1080p when necessary.
+- **Creator GPU compatibility** - Fall back to CPU decoding and filtering for unsupported AV1 input while retaining NVIDIA NVENC encoding.
+- **Creator source cleanup** - Delete original downloads only after successful edited-output verification.
+
 ## [0.20.10] - 2026-09-27
 
 ### Fixed

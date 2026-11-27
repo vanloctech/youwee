@@ -355,6 +355,7 @@ pub fn init_database(app: &AppHandle) -> Result<(), String> {
             channel_name TEXT,
             content_type TEXT NOT NULL,
             video_json TEXT NOT NULL,
+            options_json TEXT,
             status TEXT NOT NULL DEFAULT 'pending',
             created_at TEXT NOT NULL,
             PRIMARY KEY(channel_url, video_id)
@@ -364,6 +365,11 @@ pub fn init_database(app: &AppHandle) -> Result<(), String> {
     .map_err(|e| format!("Failed to create channel_batch_items: {e}"))?;
     conn.execute(
         "ALTER TABLE channel_batch_items ADD COLUMN status TEXT NOT NULL DEFAULT 'pending'",
+        [],
+    )
+    .ok();
+    conn.execute(
+        "ALTER TABLE channel_batch_items ADD COLUMN options_json TEXT",
         [],
     )
     .ok();
@@ -446,7 +452,7 @@ pub fn init_database(app: &AppHandle) -> Result<(), String> {
             last_checked_at TEXT,
             last_video_id TEXT,
             check_interval INTEGER NOT NULL DEFAULT 15,
-            auto_download INTEGER NOT NULL DEFAULT 0,
+            auto_download INTEGER NOT NULL DEFAULT 1,
             download_quality TEXT NOT NULL DEFAULT 'best',
             download_format TEXT NOT NULL DEFAULT 'mp4',
             created_at TEXT NOT NULL,

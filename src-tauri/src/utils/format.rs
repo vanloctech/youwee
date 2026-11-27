@@ -55,6 +55,35 @@ fn apply_fps_filter(format_string: String, preferred_fps: Option<&str>) -> Strin
         .join("/")
 }
 
+/// Prefer the audio track that YouTube marks as the original language.
+///
+/// Multi-language videos can expose an automatically dubbed track as the plain
+/// `bestaudio` result, especially when the account/browser language is English.
+/// Keep the existing container preference, but fall back progressively so sites
+/// that do not expose `format_note=...original...` continue to work normally.
+fn prefer_original_audio(format_string: String) -> String {
+    const M4A_TOKEN: &str = "__YOUWEE_M4A_AUDIO__";
+    const WEBM_TOKEN: &str = "__YOUWEE_WEBM_AUDIO__";
+    const ANY_TOKEN: &str = "__YOUWEE_ANY_AUDIO__";
+
+    format_string
+        .replace("bestaudio[ext=m4a]", M4A_TOKEN)
+        .replace("bestaudio[ext=webm]", WEBM_TOKEN)
+        .replace("bestaudio", ANY_TOKEN)
+        .replace(
+            M4A_TOKEN,
+            "(bestaudio[ext=m4a][format_note*=original]/bestaudio[format_note*=original]/bestaudio[ext=m4a]/bestaudio)",
+        )
+        .replace(
+            WEBM_TOKEN,
+            "(bestaudio[ext=webm][format_note*=original]/bestaudio[format_note*=original]/bestaudio[ext=webm]/bestaudio)",
+        )
+        .replace(
+            ANY_TOKEN,
+            "(bestaudio[format_note*=original]/bestaudio)",
+        )
+}
+
 /// Build yt-dlp format string based on quality, format, codec and FPS preferences
 pub fn build_format_string(
     quality: &str,
@@ -64,12 +93,14 @@ pub fn build_format_string(
 ) -> String {
     // Audio-only formats
     if quality == "audio" || format == "mp3" || format == "m4a" || format == "opus" {
-        return match format {
+        let format_string = match format {
             "mp3" => "bestaudio/best".to_string(),
             "m4a" => "bestaudio[ext=m4a]/bestaudio/best".to_string(),
             "opus" => "bestaudio[ext=webm]/bestaudio/best".to_string(),
             _ => "bestaudio[ext=m4a]/bestaudio/best".to_string(),
         };
+
+        return prefer_original_audio(format_string);
     }
 
     let height = match quality {
@@ -228,7 +259,7 @@ pub fn build_format_string(
         )
     };
 
-    apply_fps_filter(format_string, preferred_fps)
+    prefer_original_audio(apply_fps_filter(format_string, preferred_fps))
 }
 
 #[cfg(test)]
@@ -240,10 +271,10 @@ mod tests {
         let format = build_format_string("4k", "webm", "h264", None);
 
         assert!(format.contains("[ext=webm]"));
-        assert!(format.contains("bestaudio[ext=webm]"));
+        assert!(format.contains("bestaudio[ext=webm][format_note*=original]"));
         assert!(format.contains("[vcodec^=vp9]"));
         assert!(!format.contains("[vcodec^=avc]"));
-        assert!(!format.contains("+bestaudio/"));
+        assert!(!format.contains("+(bestaudio[format_note*=original]/bestaudio)/"));
     }
 
     #[test]
@@ -251,7 +282,7 @@ mod tests {
         let format = build_format_string("4k", "webm", "av1", None);
 
         assert!(format.contains("bestvideo[height<=2160][ext=webm][vcodec^=av01]"));
-        assert!(format.contains("bestaudio[ext=webm]"));
+        assert!(format.contains("bestaudio[ext=webm][format_note*=original]"));
     }
 
     #[test]
@@ -269,5 +300,22 @@ mod tests {
 
         assert!(!format.contains("[fps<="));
         assert!(format.contains("bestvideo[height<=1080][ext=mp4]"));
+    }
+
+    #[test]
+    fn video_download_prefers_original_audio_with_normal_fallback() {
+        let format = build_format_string("1080", "mp4", "auto", None);
+
+        assert!(format.contains("bestaudio[ext=m4a][format_note*=original]"));
+        assert!(format.contains("bestaudio[format_note*=original]"));
+        assert!(format.contains("bestaudio[ext=m4a]/bestaudio"));
+    }
+
+    #[test]
+    fn audio_only_download_prefers_original_audio_with_normal_fallback() {
+        let format = build_format_string("audio", "mp3", "auto", None);
+
+        assert!(format.starts_with("(bestaudio[format_note*=original]/bestaudio)"));
+        assert!(format.ends_with("/best"));
     }
 }

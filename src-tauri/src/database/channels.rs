@@ -63,8 +63,8 @@ pub fn follow_channel_db(
     let creator_processing_json = serde_json::to_string(&creator_processing)
         .map_err(|e| format!("Failed to serialize creator settings: {}", e))?;
     let rows = conn.execute(
-        "INSERT OR IGNORE INTO followed_channels (id, url, name, thumbnail, platform, download_quality, download_format, download_video_codec, download_audio_bitrate, download_preferred_fps, youtube_content_type, creator_processing_json, download_threads, created_at)
-         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, 3, ?13)",
+        "INSERT OR IGNORE INTO followed_channels (id, url, name, thumbnail, platform, auto_download, download_quality, download_format, download_video_codec, download_audio_bitrate, download_preferred_fps, youtube_content_type, creator_processing_json, download_threads, created_at)
+         VALUES (?1, ?2, ?3, ?4, ?5, 1, ?6, ?7, ?8, ?9, ?10, ?11, ?12, 3, ?13)",
         params![id, url, name, thumbnail, platform, download_quality, download_format, download_video_codec, download_audio_bitrate, download_preferred_fps, youtube_content_type, creator_processing_json, now],
     )
     .map_err(|e| format!("Failed to follow channel: {}", e))?;
@@ -303,8 +303,8 @@ pub fn bulk_follow_channels_db(
                 "INSERT OR IGNORE INTO followed_channels
                  (id, url, name, thumbnail, platform, download_quality, download_format,
                   download_video_codec, download_audio_bitrate, download_preferred_fps,
-                  youtube_content_type, creator_processing_json, download_threads, created_at)
-                 VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, 3, ?13)",
+                  youtube_content_type, creator_processing_json, auto_download, download_threads, created_at)
+                 VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, 1, 3, ?13)",
                 params![
                     id,
                     record.url,
@@ -385,6 +385,11 @@ pub fn bulk_update_channel_settings_db(
     download_threads: i64,
     youtube_content_type: String,
     creator_processing: CreatorProcessingSettings,
+    filter_min_duration: Option<i64>,
+    filter_max_duration: Option<i64>,
+    filter_include_keywords: Option<String>,
+    filter_exclude_keywords: Option<String>,
+    filter_max_videos: Option<i64>,
 ) -> Result<BulkChannelMutationResult, String> {
     let mut conn = get_db()?;
     let requested = ids.len();
@@ -405,8 +410,10 @@ pub fn bulk_update_channel_settings_db(
                     check_interval = ?1, auto_download = ?2, download_quality = ?3,
                     download_format = ?4, download_video_codec = ?5, download_audio_bitrate = ?6,
                     download_preferred_fps = ?7, download_threads = ?8, youtube_content_type = ?9,
-                    creator_processing_json = ?10
-                 WHERE id = ?11",
+                    creator_processing_json = ?10, filter_min_duration = ?11,
+                    filter_max_duration = ?12, filter_include_keywords = ?13,
+                    filter_exclude_keywords = ?14, filter_max_videos = ?15
+                 WHERE id = ?16",
                 params![
                     check_interval,
                     auto_download as i64,
@@ -418,6 +425,11 @@ pub fn bulk_update_channel_settings_db(
                     download_threads,
                     youtube_content_type,
                     creator_processing_json,
+                    filter_min_duration,
+                    filter_max_duration,
+                    filter_include_keywords,
+                    filter_exclude_keywords,
+                    filter_max_videos,
                     id,
                 ],
             )
@@ -470,6 +482,38 @@ pub fn bulk_update_channel_creator_processing_db(
     transaction
         .commit()
         .map_err(|e| format!("Failed to commit bulk creator update: {}", e))?;
+    Ok(result)
+}
+
+pub fn bulk_set_channel_auto_download_db(
+    ids: Vec<String>,
+    auto_download: bool,
+) -> Result<BulkChannelMutationResult, String> {
+    let mut conn = get_db()?;
+    let requested = ids.len();
+    let transaction = conn
+        .transaction()
+        .map_err(|error| format!("Failed to start bulk auto-download update: {error}"))?;
+    let mut result = BulkChannelMutationResult {
+        requested,
+        ..Default::default()
+    };
+    for id in ids {
+        let changed = transaction
+            .execute(
+                "UPDATE followed_channels SET auto_download = ?1 WHERE id = ?2",
+                params![auto_download as i64, id],
+            )
+            .map_err(|error| format!("Failed to update channel auto-download: {error}"))?;
+        if changed > 0 {
+            result.changed += 1;
+        } else {
+            result.skipped += 1;
+        }
+    }
+    transaction
+        .commit()
+        .map_err(|error| format!("Failed to commit bulk auto-download update: {error}"))?;
     Ok(result)
 }
 

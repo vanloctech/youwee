@@ -15,6 +15,8 @@ const RETRYABLE_PATTERNS = [
   /fragment.*(?:failed|error)/i,
   /unable to download video data/i,
   /remote end closed connection/i,
+  /\b\d+ bytes read,\s*\d+ more expected\b/i,
+  /incomplete\s*read/i,
   /tls|ssl/i,
 ];
 

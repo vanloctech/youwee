@@ -1,5 +1,6 @@
 import { invoke } from '@tauri-apps/api/core';
 import { open } from '@tauri-apps/plugin-dialog';
+import { notifyCreatorQueueChanged } from '@/lib/creator-queue-events';
 import type { CreatorProcessingSettings } from '@/lib/types';
 
 export type { CreatorProcessingSettings } from '@/lib/types';
@@ -14,6 +15,9 @@ export interface CreatorQueueItem {
   errorMessage?: string;
   channelUrl?: string;
   videoId?: string;
+  inputExists: boolean;
+  outputPaths: string[];
+  outputExists: boolean;
 }
 
 export const DEFAULT_CREATOR_PROCESSING_SETTINGS: CreatorProcessingSettings = {
@@ -84,6 +88,7 @@ export async function processCreatorVideo(
 
 let drainingQueue = false;
 let creatorQueueStopRequested = false;
+let creatorQueueWakeRequested = false;
 
 export async function listCreatorJobs(): Promise<CreatorQueueItem[]> {
   return invoke<CreatorQueueItem[]>('list_creator_jobs');
@@ -91,6 +96,7 @@ export async function listCreatorJobs(): Promise<CreatorQueueItem[]> {
 
 export async function retryCreatorJob(id: string): Promise<void> {
   await invoke('set_creator_job_status', { id, status: 'pending', errorMessage: null });
+  notifyCreatorQueueChanged();
   void resumeCreatorProcessingQueue();
 }
 
@@ -98,48 +104,81 @@ export async function retryCreatorJobs(ids: string[]): Promise<void> {
   if (ids.length === 0) return;
   for (const id of ids) {
     await invoke('set_creator_job_status', { id, status: 'pending', errorMessage: null });
+    notifyCreatorQueueChanged();
   }
   void resumeCreatorProcessingQueue();
 }
 
 export async function deleteCreatorJobs(ids: string[]): Promise<number> {
   if (ids.length === 0) return 0;
-  return invoke<number>('delete_creator_jobs', { ids });
+  const count = await invoke<number>('delete_creator_jobs', { ids });
+  notifyCreatorQueueChanged();
+  return count;
 }
 
 export async function retryAllCreatorJobs(): Promise<number> {
   const count = await invoke<number>('retry_failed_creator_jobs');
+  notifyCreatorQueueChanged();
   if (count > 0) void resumeCreatorProcessingQueue();
   return count;
 }
 
 export async function stopCreatorProcessingQueue(): Promise<number> {
   creatorQueueStopRequested = true;
-  return invoke<number>('stop_creator_processing_queue');
+  const count = await invoke<number>('stop_creator_processing_queue');
+  notifyCreatorQueueChanged();
+  return count;
 }
 
 export async function pauseCreatorProcessingQueue(): Promise<number> {
   creatorQueueStopRequested = true;
-  return invoke<number>('pause_creator_processing_queue');
+  const count = await invoke<number>('pause_creator_processing_queue');
+  notifyCreatorQueueChanged();
+  return count;
 }
 
 export async function resumeCreatorProcessingQueue(): Promise<void> {
-  if (drainingQueue) return;
-  creatorQueueStopRequested = false;
-  await invoke('start_creator_processing_queue');
+  if (drainingQueue) {
+    // A job may be enqueued while the current consumer is waiting for an
+    // empty-queue response. Remember the wake-up so it checks once more before
+    // releasing the drain; otherwise that job waits until the next app start.
+    creatorQueueWakeRequested = true;
+    return;
+  }
+  // Claim the drain synchronously. React effects and hot reload can invoke this
+  // function more than once before the first backend await resolves; claiming
+  // afterwards allowed multiple consumers to pick and render the same job.
   drainingQueue = true;
+  creatorQueueStopRequested = false;
   try {
+    await invoke('start_creator_processing_queue');
     // A prior running job is restarted after an app crash. Finished parts are skipped by Rust.
     while (!creatorQueueStopRequested) {
       const item = await invoke<CreatorQueueItem | null>('next_creator_job');
-      if (!item) break;
+      if (!item) {
+        if (creatorQueueWakeRequested) {
+          creatorQueueWakeRequested = false;
+          continue;
+        }
+        break;
+      }
+      creatorQueueWakeRequested = false;
       await invoke('set_creator_job_status', {
         id: item.id,
         status: 'running',
         errorMessage: null,
       });
+      notifyCreatorQueueChanged();
       try {
-        const outputPaths = await processCreatorVideo(item.inputPath, item.title, item.settings);
+        // Channel listings may contain a YouTube-localized title. For channel
+        // jobs, let the backend derive the original title from the downloaded
+        // filename created by direct video extraction. This also repairs jobs
+        // that were queued by an older app version.
+        const outputPaths = await processCreatorVideo(
+          item.inputPath,
+          item.channelUrl ? undefined : item.title,
+          item.settings,
+        );
         if (item.channelUrl && item.videoId && outputPaths.length > 0) {
           await invoke('complete_channel_creator_processing', {
             channelUrl: item.channelUrl,
@@ -152,6 +191,7 @@ export async function resumeCreatorProcessingQueue(): Promise<void> {
           status: 'completed',
           errorMessage: null,
         });
+        notifyCreatorQueueChanged();
       } catch (error) {
         console.error('Creator processing failed:', error);
         if (!creatorQueueStopRequested && !String(error).toLowerCase().includes('cancel')) {
@@ -160,11 +200,13 @@ export async function resumeCreatorProcessingQueue(): Promise<void> {
             status: 'failed',
             errorMessage: String(error),
           });
+          notifyCreatorQueueChanged();
         }
       }
     }
   } finally {
     drainingQueue = false;
+    notifyCreatorQueueChanged();
   }
 }
 
@@ -193,5 +235,6 @@ export async function enqueueCreatorVideo(
     channelUrl: origin?.channelUrl ?? null,
     videoId: origin?.videoId ?? null,
   });
+  notifyCreatorQueueChanged();
   void resumeCreatorProcessingQueue();
 }

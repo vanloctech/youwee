@@ -38,7 +38,7 @@ export function ChannelActivityPanel({
       <div
         className={
           compact
-            ? 'max-h-56 space-y-3 overflow-y-auto border-y border-border/50 bg-card/40 px-3 py-2.5'
+            ? 'max-h-[28dvh] space-y-3 overflow-y-auto border-y border-border/50 bg-card/40 px-3 py-2.5'
             : 'max-h-64 space-y-3 overflow-y-auto rounded-lg border border-border/50 bg-card/50 px-3 py-2.5'
         }
       >
@@ -51,14 +51,25 @@ export function ChannelActivityPanel({
           const channel = followedChannels.find((item) => item.url === progress.channelUrl);
           const completed = progress.completed + progress.failed;
           const downloadPercent = Math.min(100, (completed / progress.total) * 100);
-          const editPercent =
-            progress.editTotal > 0
-              ? Math.min(100, (progress.editCompleted / progress.editTotal) * 100)
-              : 0;
           const currentPartPercent = Math.min(100, Math.max(0, progress.editCurrentPercent ?? 0));
           const currentPart = progress.editCurrentTotal
             ? Math.min(progress.editCurrentTotal, (progress.editCurrentCompleted ?? 0) + 1)
             : 0;
+          const activeEditFraction =
+            progress.editActive > 0 && progress.editCurrentTotal && progress.editCurrentTotal > 0
+              ? Math.min(
+                  1,
+                  ((progress.editCurrentCompleted ?? 0) + currentPartPercent / 100) /
+                    progress.editCurrentTotal,
+                )
+              : 0;
+          const editPercent =
+            progress.editTotal > 0
+              ? Math.min(
+                  100,
+                  ((progress.editCompleted + activeEditFraction) / progress.editTotal) * 100,
+                )
+              : 0;
           const busy = progress.active > 0 || progress.queued > 0;
           return (
             <div key={progress.channelUrl} className="space-y-2">
@@ -70,7 +81,9 @@ export function ChannelActivityPanel({
                 <span className="shrink-0 font-medium">
                   {completed}/{progress.total}
                   {progress.failed > 0 && (
-                    <span className="ml-1 text-destructive">({progress.failed} lỗi)</span>
+                    <span className="ml-1 text-destructive">
+                      ({progress.failed} {t('bulkChannels.status.failed')})
+                    </span>
                   )}
                 </span>
               </div>
@@ -82,27 +95,34 @@ export function ChannelActivityPanel({
                   {progress.currentDownloadTitle}
                 </p>
               )}
-              <div className="space-y-1">
-                <div className="h-1.5 overflow-hidden rounded-full bg-muted">
-                  <div
-                    className="h-full rounded-full bg-primary transition-all"
-                    style={{ width: `${downloadPercent}%` }}
-                  />
+              {busy && (
+                <div className="space-y-1">
+                  <div className="flex justify-between text-[11px] text-muted-foreground">
+                    <span>{t('batchDownloadProgress')}</span>
+                    <span>{Math.round(downloadPercent)}%</span>
+                  </div>
+                  <div className="h-1.5 overflow-hidden rounded-full bg-muted">
+                    <div
+                      className="h-full rounded-full bg-primary transition-all"
+                      style={{ width: `${downloadPercent}%` }}
+                    />
+                  </div>
                 </div>
-                <div className="flex justify-between text-[11px] text-muted-foreground">
-                  <span>{t('batchDownloadProgress')}</span>
-                  <span>{Math.round(downloadPercent)}%</span>
-                </div>
-              </div>
+              )}
               {progress.editTotal > 0 && (
                 <div className="space-y-1">
-                  <div className="flex items-center justify-between text-xs">
+                  <div className="flex items-center justify-between gap-2 text-[11px]">
                     <span className="text-muted-foreground">{t('batchEditProgress')}</span>
-                    <span className="font-medium">
+                    <span className="truncate font-medium" title={progress.editCurrentInputPath}>
                       {progress.editCompleted}/{progress.editTotal}
-                      {progress.editActive > 0 && (
-                        <span className="ml-1 text-amber-500">{t('batchEditActive')}</span>
+                      {progress.editActive > 0 && currentPart > 0 && (
+                        <span className="ml-1 text-amber-500">
+                          · {t('batchEditCurrent')} {currentPart}/{progress.editCurrentTotal}
+                        </span>
                       )}
+                      <span className="ml-1 text-muted-foreground">
+                        · {Math.round(editPercent)}%
+                      </span>
                     </span>
                   </div>
                   <div className="h-1.5 overflow-hidden rounded-full bg-muted">
@@ -111,25 +131,6 @@ export function ChannelActivityPanel({
                       style={{ width: `${editPercent}%` }}
                     />
                   </div>
-                  {progress.editCurrentTotal && progress.editCurrentTotal > 0 && (
-                    <div className="space-y-1">
-                      <div className="flex items-center justify-between text-[11px] text-muted-foreground">
-                        <span
-                          className="max-w-[75%] truncate"
-                          title={progress.editCurrentInputPath}
-                        >
-                          {t('batchEditCurrent')} {currentPart}/{progress.editCurrentTotal}
-                        </span>
-                        <span>{Math.round(currentPartPercent)}%</span>
-                      </div>
-                      <div className="h-1 overflow-hidden rounded-full bg-muted">
-                        <div
-                          className="h-full rounded-full bg-orange-400 transition-all"
-                          style={{ width: `${currentPartPercent}%` }}
-                        />
-                      </div>
-                    </div>
-                  )}
                 </div>
               )}
             </div>

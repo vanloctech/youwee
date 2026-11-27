@@ -15,6 +15,7 @@ import {
   Search,
   Settings2,
   Square,
+  Trash2,
   Tv,
   X,
 } from 'lucide-react';
@@ -25,6 +26,7 @@ import { ThemePicker } from '@/components/settings/ThemePicker';
 import { EmptyStateIllustration } from '@/components/shared/EmptyStateIllustration';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Switch } from '@/components/ui/switch';
 import { Textarea } from '@/components/ui/textarea';
 import {
   detectPlatform,
@@ -33,6 +35,11 @@ import {
 } from '@/contexts/channels/useChannelsController';
 import { useChannels } from '@/contexts/channels-context';
 import { useDependencies } from '@/contexts/DependenciesContext';
+import {
+  FIFTY_MINUTES_SECONDS,
+  MAX_BULK_CHANNEL_VIDEO_COUNT,
+  normalizeBulkChannelVideoCount,
+} from '@/lib/bulk-channel-filter';
 import { isTikTokChannelContentUrl, matchesChannelContentType } from '@/lib/channel-content';
 import {
   type CreatorProcessingSettings,
@@ -40,7 +47,11 @@ import {
   pickCreatorFolder,
   saveCreatorProcessingSettings,
 } from '@/lib/creator-processing';
-import { openFileLocation, openFolderLocation } from '@/lib/open-file-location';
+import {
+  openChannelFolderLocation,
+  openFileLocation,
+  openFolderLocation,
+} from '@/lib/open-file-location';
 import type {
   Format,
   PreferredFps,
@@ -112,8 +123,11 @@ export function ChannelsPage() {
     bulkChannelState,
     startBulkChannelDownload,
     stopBulkChannelDownload,
+    stopAllChannelWork,
     pauseBulkChannelDownload,
     resumeBulkChannelDownload,
+    retryFailedBulkChannelDownloads,
+    removeQueuedBulkChannelBatch,
     loadMoreChannelVideos,
     stopChannelFetch,
   } = useChannels();
@@ -137,6 +151,12 @@ export function ChannelsPage() {
   const [bulkVideoCount, setBulkVideoCount] = useState(
     () => localStorage.getItem('youwee-bulk-video-count') || '20',
   );
+  const [bulkUnderFiftyMinutes, setBulkUnderFiftyMinutes] = useState(
+    () => localStorage.getItem('youwee-bulk-under-50-minutes') === 'true',
+  );
+  const [bulkOutputPath, setBulkOutputPath] = useState(
+    () => localStorage.getItem('youwee-bulk-output-path') || outputPath,
+  );
   const [bulkFollowUrls, setBulkFollowUrls] = useState(
     () => localStorage.getItem('youwee-bulk-follow-urls') || '',
   );
@@ -144,6 +164,8 @@ export function ChannelsPage() {
     () => new Set(),
   );
   const [bulkChannelMutationRunning, setBulkChannelMutationRunning] = useState(false);
+  const [bulkSubmitError, setBulkSubmitError] = useState<string | null>(null);
+  const [bulkSubmitNotice, setBulkSubmitNotice] = useState<string | null>(null);
   const previousShowDownloaded = useRef(showDownloadedVideos);
   const [channelsCollapsed, setChannelsCollapsed] = useState(false);
   const showYoutubeContentType = isYoutubeChannelContentUrl(urlInput.trim());
@@ -160,6 +182,10 @@ export function ChannelsPage() {
   useEffect(() => {
     if (bulkChannelState.running) setChannelsCollapsed(false);
   }, [bulkChannelState.running]);
+
+  useEffect(() => {
+    if (!bulkOutputPath && outputPath) setBulkOutputPath(outputPath);
+  }, [bulkOutputPath, outputPath]);
 
   useEffect(() => {
     const validIds = new Set(followedChannels.map((channel) => channel.id));
@@ -375,33 +401,70 @@ export function ChannelsPage() {
           .filter((value) => value && isSupportedPlatform(value)),
       ),
     );
-    if (urls.length === 0) return;
-    const videoCount = Math.max(1, Number.parseInt(bulkVideoCount, 10) || 1);
-    localStorage.setItem('youwee-bulk-channel-urls', bulkChannelUrls);
-    localStorage.setItem('youwee-bulk-video-count', String(videoCount));
-    startBulkChannelDownload({
-      urls,
-      videoCount,
-      scanOrder: channelScanOrder,
-      youtubeContentType,
-      quality,
-      format,
-      videoCodec,
-      preferredFps,
-      creatorSettings: { ...creatorSettings },
-    });
+    if (urls.length === 0) {
+      setBulkSubmitNotice(null);
+      setBulkSubmitError(t('bulkChannels.noValidUrls'));
+      return;
+    }
+    if (!bulkOutputPath.trim()) {
+      setBulkSubmitNotice(null);
+      setBulkSubmitError(t('bulkChannels.noOutputFolder'));
+      return;
+    }
+    setBulkSubmitError(null);
+    setBulkSubmitNotice(t('bulkChannels.commandAccepted', { count: urls.length }));
+    const videoCount = normalizeBulkChannelVideoCount(Number.parseInt(bulkVideoCount, 10));
+    try {
+      try {
+        localStorage.setItem('youwee-bulk-video-count', String(videoCount));
+      } catch {
+        // The in-memory queue remains usable when browser storage is unavailable.
+      }
+      startBulkChannelDownload({
+        urls,
+        outputPath: bulkOutputPath.trim(),
+        videoCount,
+        scanOrder: channelScanOrder,
+        youtubeContentType,
+        quality,
+        format,
+        videoCodec,
+        preferredFps,
+        maxDurationSeconds: bulkUnderFiftyMinutes ? FIFTY_MINUTES_SECONDS : null,
+        creatorSettings: { ...creatorSettings },
+      });
+      setBulkChannelUrls('');
+      try {
+        localStorage.removeItem('youwee-bulk-channel-urls');
+      } catch {
+        // Ignore unavailable local storage.
+      }
+    } catch (error) {
+      setBulkSubmitNotice(null);
+      setBulkSubmitError(error instanceof Error ? error.message : String(error));
+    }
   }, [
     bulkChannelUrls,
+    bulkOutputPath,
     bulkVideoCount,
+    bulkUnderFiftyMinutes,
     channelScanOrder,
     creatorSettings,
     format,
     preferredFps,
     quality,
     startBulkChannelDownload,
+    t,
     videoCodec,
     youtubeContentType,
   ]);
+
+  const selectBulkOutputFolder = useCallback(async () => {
+    const folder = await pickCreatorFolder(bulkOutputPath || outputPath || undefined);
+    if (!folder) return;
+    setBulkOutputPath(folder);
+    localStorage.setItem('youwee-bulk-output-path', folder);
+  }, [bulkOutputPath, outputPath]);
 
   const handleBulkFollow = useCallback(async () => {
     const urls = Array.from(
@@ -531,10 +594,10 @@ export function ChannelsPage() {
       <div className="mx-4 sm:mx-6 h-px bg-gradient-to-r from-transparent via-border/50 to-transparent" />
 
       {/* Top Section: URL Input + Settings */}
-      <div className="flex-shrink-0 p-4 sm:p-6 space-y-3">
+      <div className="max-h-[55dvh] min-h-0 shrink overflow-y-auto overscroll-contain p-4 sm:p-6 space-y-3">
         {/* URL Input */}
-        <div className="relative flex items-center gap-2">
-          <div className="relative flex-1">
+        <div className="relative flex flex-wrap items-center gap-2">
+          <div className="relative min-w-64 flex-1">
             <Link className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
             <Input
               type="url"
@@ -792,7 +855,13 @@ export function ChannelsPage() {
             </select>
           )}
         </div>
-        <div className="rounded-lg border border-dashed border-border/60 p-3">
+        <form
+          className="rounded-lg border border-dashed border-border/60 p-3"
+          onSubmit={(event) => {
+            event.preventDefault();
+            startBulkChannels();
+          }}
+        >
           <div className="mb-2 flex items-center gap-2">
             <ListPlus className="h-4 w-4 text-primary" />
             <span className="text-xs font-medium">{t('bulkChannels.title')}</span>
@@ -805,7 +874,6 @@ export function ChannelsPage() {
                 setBulkChannelUrls(event.target.value);
                 localStorage.setItem('youwee-bulk-channel-urls', event.target.value);
               }}
-              disabled={bulkChannelState.running}
               placeholder={t('bulkChannels.placeholder')}
               className="min-h-20 flex-1 resize-y text-xs"
             />
@@ -817,15 +885,81 @@ export function ChannelsPage() {
                 id="bulk-video-count"
                 type="number"
                 min={1}
+                max={MAX_BULK_CHANNEL_VIDEO_COUNT}
                 value={bulkVideoCount}
                 onChange={(event) => {
                   setBulkVideoCount(event.target.value);
                   localStorage.setItem('youwee-bulk-video-count', event.target.value);
                 }}
-                disabled={bulkChannelState.running}
                 className="h-8 w-20"
               />
+              <label
+                htmlFor="bulk-under-fifty-minutes"
+                className="flex h-8 items-center gap-2 rounded-md border border-dashed border-border px-2 text-xs"
+              >
+                <Switch
+                  id="bulk-under-fifty-minutes"
+                  checked={bulkUnderFiftyMinutes}
+                  onCheckedChange={(checked) => {
+                    setBulkUnderFiftyMinutes(checked);
+                    localStorage.setItem('youwee-bulk-under-50-minutes', String(checked));
+                  }}
+                  aria-label={t('bulkChannels.underFiftyMinutes')}
+                />
+                <span>{t('bulkChannels.underFiftyMinutes')}</span>
+              </label>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="max-w-full"
+                onClick={() => void selectBulkOutputFolder()}
+                title={bulkOutputPath || t('creator.selectOutput')}
+              >
+                <FolderOpen className="mr-1 h-4 w-4 shrink-0" />
+                <span className="max-w-52 truncate">
+                  {bulkOutputPath || t('creator.selectOutput')}
+                </span>
+              </Button>
               {bulkChannelState.running ? (
+                <Button
+                  type="submit"
+                  size="sm"
+                  disabled={!bulkOutputPath || !bulkChannelUrls.trim()}
+                >
+                  <ListPlus className="mr-1 h-4 w-4" />
+                  {t('bulkChannels.addToQueue')}
+                </Button>
+              ) : bulkChannelState.phase === 'paused' ? (
+                <>
+                  <Button
+                    type="submit"
+                    size="sm"
+                    disabled={!bulkOutputPath || !bulkChannelUrls.trim()}
+                  >
+                    <ListPlus className="mr-1 h-4 w-4" />
+                    {t('bulkChannels.addToQueue')}
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={resumeBulkChannelDownload}
+                  >
+                    {t('bulkChannels.resume')}
+                  </Button>
+                </>
+              ) : (
+                <Button
+                  type="submit"
+                  size="sm"
+                  disabled={!bulkOutputPath || !bulkChannelUrls.trim()}
+                >
+                  <Download className="mr-1 h-4 w-4" />
+                  {t('bulkChannels.start')}
+                </Button>
+              )}
+              {bulkChannelState.running && (
                 <Button
                   type="button"
                   variant="outline"
@@ -835,24 +969,92 @@ export function ChannelsPage() {
                   <Pause className="mr-1 h-4 w-4" />
                   {t('bulkChannels.pause')}
                 </Button>
-              ) : bulkChannelState.phase === 'paused' ? (
-                <Button type="button" size="sm" onClick={resumeBulkChannelDownload}>
-                  {t('bulkChannels.resume')}
-                </Button>
-              ) : (
-                <Button type="button" size="sm" onClick={startBulkChannels}>
-                  <Download className="mr-1 h-4 w-4" />
-                  {t('bulkChannels.start')}
-                </Button>
               )}
               <p className="w-full text-[11px] text-muted-foreground">
                 {creatorSettings.mode === 'none'
                   ? t('bulkChannels.downloadOnly')
                   : t('bulkChannels.withEdit')}
               </p>
+              {bulkSubmitError && (
+                <p className="w-full text-[11px] text-destructive">{bulkSubmitError}</p>
+              )}
+              {bulkSubmitNotice && (
+                <p className="w-full text-[11px] text-emerald-500">{bulkSubmitNotice}</p>
+              )}
             </div>
           </div>
-        </div>
+          {((bulkChannelState.jobs.length > 0 &&
+            !['complete', 'idle', 'stopped'].includes(bulkChannelState.phase)) ||
+            bulkChannelState.queuedBatches.length > 0) && (
+            <div className="mt-3 space-y-2 border-t border-border/50 pt-3">
+              <div className="flex items-center justify-between gap-2">
+                <p className="text-xs font-semibold">{t('bulkChannels.queueOverview')}</p>
+                <span className="rounded bg-primary/10 px-2 py-1 text-[11px] text-primary">
+                  {t('bulkChannels.waitingBatches', {
+                    count: bulkChannelState.queuedBatches.length,
+                  })}
+                </span>
+              </div>
+              {bulkChannelState.jobs.length > 0 &&
+                bulkChannelState.options &&
+                !['complete', 'idle', 'stopped'].includes(bulkChannelState.phase) && (
+                  <div className="grid gap-2 rounded-md border border-primary/30 bg-primary/5 p-2.5 text-xs sm:grid-cols-[minmax(0,1fr)_auto]">
+                    <div className="min-w-0">
+                      <p className="font-medium text-primary">{t('bulkChannels.currentBatch')}</p>
+                      <p
+                        className="mt-0.5 truncate text-muted-foreground"
+                        title={bulkChannelState.options.outputPath}
+                      >
+                        {bulkChannelState.options.outputPath}
+                      </p>
+                    </div>
+                    <p className="self-center text-muted-foreground">
+                      {bulkChannelState.jobs.length} {t('bulkChannels.channelsUnit')} ·{' '}
+                      {bulkChannelState.options.videoCount} {t('bulkChannels.videosEach')}
+                    </p>
+                  </div>
+                )}
+              {bulkChannelState.queuedBatches.length > 0 && (
+                <div className="flex snap-x gap-2 overflow-x-auto pb-1">
+                  {bulkChannelState.queuedBatches.map((batch, index) => (
+                    <div
+                      key={batch.id}
+                      className="flex min-w-64 max-w-sm flex-1 snap-start items-center gap-2 rounded-md border border-dashed border-border px-2.5 py-2 text-xs"
+                    >
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-2">
+                          <p className="shrink-0 font-medium">
+                            {t('bulkChannels.queuedBatch', { number: index + 1 })}
+                          </p>
+                          <span className="truncate text-[11px] text-muted-foreground">
+                            {batch.jobs.length} {t('bulkChannels.channelsUnit')} ·{' '}
+                            {batch.options.videoCount} {t('bulkChannels.videosEach')}
+                          </span>
+                        </div>
+                        <p
+                          className="mt-0.5 truncate text-muted-foreground"
+                          title={batch.options.outputPath}
+                        >
+                          {batch.options.outputPath}
+                        </p>
+                      </div>
+                      <Button
+                        type="button"
+                        size="icon"
+                        variant="ghost"
+                        className="h-7 w-7 shrink-0 text-destructive hover:text-destructive"
+                        title={t('bulkChannels.removeBatch')}
+                        onClick={() => removeQueuedBulkChannelBatch(batch.id)}
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+        </form>
         <div className="rounded-lg border border-dashed border-border/60 p-3">
           <div className="mb-2 flex items-center gap-2">
             <Heart className="h-4 w-4 text-primary" />
@@ -891,7 +1093,7 @@ export function ChannelsPage() {
       <div className="mx-4 sm:mx-6 h-px bg-gradient-to-r from-transparent via-border/40 to-transparent" />
 
       {/* Main Content - Split Layout */}
-      <div className="flex-1 flex overflow-hidden">
+      <div className="flex min-h-0 flex-1 overflow-hidden">
         {/* Left Panel - Video List */}
         <div className="flex-1 flex flex-col overflow-hidden">
           {/* Channel Info Bar */}
@@ -932,7 +1134,13 @@ export function ChannelsPage() {
                         const folderName = sanitizeChannelFolderName(
                           browseChannelName || 'Unknown channel',
                         );
-                        void openFolderLocation(`${outputPath}/${folderName}`).catch((error) => {
+                        const fallbackFolder = `${outputPath}/${folderName}`;
+                        const openFolder = openChannelFolderLocation(
+                          followedChannelId || null,
+                          browseVideos.map((video) => video.url),
+                          fallbackFolder,
+                        );
+                        void openFolder.catch((error) => {
                           console.error('Failed to open channel folder:', error);
                         });
                       }}
@@ -1124,10 +1332,11 @@ export function ChannelsPage() {
         {/* Right Panel - Followed Channels */}
         {(followedChannels.length > 0 ||
           Object.keys(channelProgressByUrl).length > 0 ||
-          bulkChannelState.jobs.length > 0) && (
+          bulkChannelState.jobs.length > 0 ||
+          bulkChannelState.history.length > 0) && (
           <div
             className={cn(
-              'flex-shrink-0 border-l border-border/50 flex flex-col overflow-hidden transition-all duration-300',
+              'min-h-0 flex-shrink-0 border-l border-border/50 flex flex-col overflow-hidden transition-all duration-300',
               channelsCollapsed ? 'w-10' : 'w-72',
             )}
           >
@@ -1214,6 +1423,9 @@ export function ChannelsPage() {
                   onPause={pauseBulkChannelDownload}
                   onResume={resumeBulkChannelDownload}
                   onStop={stopBulkChannelDownload}
+                  onStopAll={stopAllChannelWork}
+                  onRetryFailed={retryFailedBulkChannelDownloads}
+                  onRemoveQueuedBatch={removeQueuedBulkChannelBatch}
                 />
                 <ChannelActivityPanel
                   compact
@@ -1316,11 +1528,13 @@ export function ChannelsPage() {
                               onClick={(event) => {
                                 event.stopPropagation();
                                 const folderName = sanitizeChannelFolderName(channel.name);
-                                void openFolderLocation(`${outputPath}/${folderName}`).catch(
-                                  (error) => {
-                                    console.error('Failed to open channel folder:', error);
-                                  },
-                                );
+                                void openChannelFolderLocation(
+                                  channel.id,
+                                  [],
+                                  `${outputPath}/${folderName}`,
+                                ).catch((error) => {
+                                  console.error('Failed to open channel folder:', error);
+                                });
                               }}
                               className="absolute top-1.5 right-8 flex h-5 w-5 items-center justify-center rounded-full bg-muted/80 text-muted-foreground opacity-0 transition-opacity hover:bg-primary/10 hover:text-primary group-hover:opacity-100"
                               title={t('openChannelFolder')}

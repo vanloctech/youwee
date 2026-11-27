@@ -6524,7 +6524,7 @@ dependencies = [
 
 [[package]]
 name = "youwee"
-version = "0.20.10"
+version = "0.20.18"
 dependencies = [
  "axum",
  "base64 0.23.0",
